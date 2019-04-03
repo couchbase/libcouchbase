@@ -19,14 +19,15 @@
 #include <libcouchbase/pktfwd.h>
 #include <memcached/protocol_binary.h>
 #include "mc/pktmaker.h"
-using std::vector;
 using std::string;
+using std::vector;
 using namespace PacketMaker;
 
 class ForwardTests : public MockUnitTest
 {
-protected:
-    virtual void createConnection(HandleWrap& hw, lcb_INSTANCE **instance) {
+  protected:
+    virtual void createConnection(HandleWrap &hw, lcb_INSTANCE **instance)
+    {
         MockEnvironment::getInstance()->createConnection(hw, instance);
         lcb_cntl_string(*instance, "enable_tracing", "off");
         ASSERT_EQ(LCB_SUCCESS, lcb_connect(*instance));
@@ -36,16 +37,17 @@ protected:
 };
 
 struct ForwardCookie {
-    vector<char> orig;
-    vector<char> respbuf;
-    vector<lcb_IOV> iovs;
-    vector<lcb_BACKBUF> bkbuf;
+    vector< char > orig;
+    vector< char > respbuf;
+    vector< lcb_IOV > iovs;
+    vector< lcb_BACKBUF > bkbuf;
     lcb_STATUS err_expected;
     lcb_STATUS err_received;
     bool called;
     bool flushed;
 
-    ForwardCookie() {
+    ForwardCookie()
+    {
         err_expected = LCB_SUCCESS;
         err_received = LCB_SUCCESS;
         called = false;
@@ -54,8 +56,7 @@ struct ForwardCookie {
 };
 
 extern "C" {
-static void pktfwd_callback(lcb_INSTANCE *, const void *cookie, lcb_STATUS err,
-    lcb_PKTFWDRESP *resp)
+static void pktfwd_callback(lcb_INSTANCE *, const void *cookie, lcb_STATUS err, lcb_PKTFWDRESP *resp)
 {
     ForwardCookie *fc = (ForwardCookie *)cookie;
     fc->called = true;
@@ -65,8 +66,7 @@ static void pktfwd_callback(lcb_INSTANCE *, const void *cookie, lcb_STATUS err,
         return;
     }
 
-    protocol_binary_response_header *hdr =
-            (protocol_binary_response_header*)resp->header;
+    protocol_binary_response_header *hdr = (protocol_binary_response_header *)resp->header;
     ASSERT_EQ(PROTOCOL_BINARY_RES, hdr->response.magic);
     lcb_U32 blen = ntohl(hdr->response.bodylen);
 
@@ -79,10 +79,10 @@ static void pktfwd_callback(lcb_INSTANCE *, const void *cookie, lcb_STATUS err,
 
         fc->iovs.push_back(resp->iovs[ii]);
         fc->bkbuf.push_back(resp->bufs[ii]);
-        fc->respbuf.insert(fc->respbuf.end(), buf, buf+len);
+        fc->respbuf.insert(fc->respbuf.end(), buf, buf + len);
     }
 
-    ASSERT_EQ(blen+24, fc->respbuf.size());
+    ASSERT_EQ(blen + 24, fc->respbuf.size());
 }
 
 static void pktflush_callback(lcb_INSTANCE *, const void *cookie)
@@ -106,7 +106,7 @@ TEST_F(ForwardTests, testBasic)
     req.magic(PROTOCOL_BINARY_REQ);
     req.op(PROTOCOL_BINARY_CMD_SET);
 
-    lcb_CMDPKTFWD cmd = { 0 };
+    lcb_CMDPKTFWD cmd = {0};
     req.serialize(fc.orig);
     cmd.vb.vtype = LCB_KV_CONTIG;
     cmd.vb.u_buf.contig.bytes = &fc.orig[0];

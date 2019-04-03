@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2014 Couchbase, Inc.
+ *     Copyright 2014-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 
 #ifdef __cplusplus
 #include <set>
-typedef std::set<void*> lcb_ASPEND_SETTYPE;
+typedef std::set< void * > lcb_ASPEND_SETTYPE;
 #else
 typedef void lcb_ASPEND_SETTYPE;
 #endif
@@ -54,7 +54,7 @@ typedef enum {
 
 /** Items for pending operations */
 typedef struct {
-    lcb_ASPEND_SETTYPE* items[LCB_PENDTYPE_MAX];
+    lcb_ASPEND_SETTYPE *items[LCB_PENDTYPE_MAX];
     unsigned count;
 } lcb_ASPEND;
 

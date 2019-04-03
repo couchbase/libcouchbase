@@ -25,26 +25,26 @@ class RegressionUnitTest : public MockUnitTest
 static bool callbackInvoked = false;
 
 extern "C" {
-    static void get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
-    {
-        EXPECT_EQ(LCB_KEY_ENOENT, lcb_respget_status(resp));
-        int *counter_p;
-        lcb_respget_cookie(resp, (void **)&counter_p);
-        EXPECT_TRUE(counter_p != NULL);
-        EXPECT_GT(*counter_p, 0);
-        *counter_p -= 1;
-        callbackInvoked = true;
-    }
+static void get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
+{
+    EXPECT_EQ(LCB_KEY_ENOENT, lcb_respget_status(resp));
+    int *counter_p;
+    lcb_respget_cookie(resp, (void **)&counter_p);
+    EXPECT_TRUE(counter_p != NULL);
+    EXPECT_GT(*counter_p, 0);
+    *counter_p -= 1;
+    callbackInvoked = true;
+}
 
-    static void stats_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
-    {
-        EXPECT_EQ(resp->rc, LCB_SUCCESS);
-        if (resp->nkey == 0) {
-            int *counter_p = reinterpret_cast<int *>(const_cast<void *>(resp->cookie));
-            *counter_p -= 1;
-        }
-        callbackInvoked = true;
+static void stats_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
+{
+    EXPECT_EQ(resp->rc, LCB_SUCCESS);
+    if (resp->nkey == 0) {
+        int *counter_p = reinterpret_cast< int * >(const_cast< void * >(resp->cookie));
+        *counter_p -= 1;
     }
+    callbackInvoked = true;
+}
 }
 
 TEST_F(RegressionUnitTest, CCBC_150)
@@ -110,7 +110,6 @@ static void get_callback_275(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lc
     info->last_err = lcb_respget_status(resp);
     lcb_breakout(instance);
 }
-
 }
 
 TEST_F(RegressionUnitTest, CCBC_275)
@@ -119,9 +118,9 @@ TEST_F(RegressionUnitTest, CCBC_275)
     lcb_INSTANCE *instance;
     lcb_STATUS err;
     struct lcb_create_st crOpts;
-    const char *argv[] = { "--buckets", "protected:secret:couchbase", NULL };
+    const char *argv[] = {"--buckets", "protected:secret:couchbase", NULL};
     MockEnvironment mock_o(argv, "protected"), *mock = &mock_o;
-    struct ccbc_275_info_st info = { 0, LCB_SUCCESS };
+    struct ccbc_275_info_st info = {0, LCB_SUCCESS};
 
     mock->makeConnectParams(crOpts, NULL);
     crOpts.v.v0.user = "protected";
@@ -165,8 +164,8 @@ TEST_F(RegressionUnitTest, CCBC_275)
     vbi.v.v0.nkey = key.size();
     err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBMAP, &vbi);
     ASSERT_EQ(LCB_SUCCESS, err);
-//    ASSERT_EQ(LCB_CONNSTATE_UNINIT,
-//              instance->servers[vbi.v.v0.server_index].connection.state);
+    //    ASSERT_EQ(LCB_CONNSTATE_UNINIT,
+    //              instance->servers[vbi.v.v0.server_index].connection.state);
 
     // Restore the timeout to something sane
     tmo_usec = 5000000;
@@ -185,7 +184,6 @@ TEST_F(RegressionUnitTest, CCBC_275)
     lcb_destroy(instance);
 }
 
-
 TEST_F(MockUnitTest, testIssue59)
 {
     // lcb_wait() blocks forever if there is nothing queued
@@ -203,57 +201,56 @@ TEST_F(MockUnitTest, testIssue59)
     lcb_wait(instance);
 }
 
-
 extern "C" {
-    struct rvbuf {
-        lcb_STATUS error;
-        lcb_cas_t cas1;
-        lcb_cas_t cas2;
-        char *bytes;
-        lcb_size_t nbytes;
-        lcb_int32_t counter;
-    };
+struct rvbuf {
+    lcb_STATUS error;
+    lcb_cas_t cas1;
+    lcb_cas_t cas2;
+    char *bytes;
+    lcb_size_t nbytes;
+    lcb_int32_t counter;
+};
 
-    static void df_store_callback1(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
-    {
-        struct rvbuf *rv;
-        lcb_respstore_cookie(resp, (void **)&rv);
-        rv->error = lcb_respstore_status(resp);
-        lcb_stop_loop(instance);
-    }
+static void df_store_callback1(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
+{
+    struct rvbuf *rv;
+    lcb_respstore_cookie(resp, (void **)&rv);
+    rv->error = lcb_respstore_status(resp);
+    lcb_stop_loop(instance);
+}
 
-    static void df_store_callback2(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
-    {
-        struct rvbuf *rv;
-        lcb_respstore_cookie(resp, (void **)&rv);
-        rv->error = lcb_respstore_status(resp);
-        lcb_respstore_cas(resp, &rv->cas2);
-        lcb_stop_loop(instance);
-    }
+static void df_store_callback2(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
+{
+    struct rvbuf *rv;
+    lcb_respstore_cookie(resp, (void **)&rv);
+    rv->error = lcb_respstore_status(resp);
+    lcb_respstore_cas(resp, &rv->cas2);
+    lcb_stop_loop(instance);
+}
 
-    static void df_get_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
-    {
-        struct rvbuf *rv;
+static void df_get_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
+{
+    struct rvbuf *rv;
 
-        lcb_respget_cookie(resp, (void **)&rv);
-        rv->error = lcb_respget_status(resp);
-        lcb_respget_cas(resp, &rv->cas1);
+    lcb_respget_cookie(resp, (void **)&rv);
+    rv->error = lcb_respget_status(resp);
+    lcb_respget_cas(resp, &rv->cas1);
 
-        const char *key;
-        size_t nkey;
-        lcb_respget_key(resp, &key, &nkey);
+    const char *key;
+    size_t nkey;
+    lcb_respget_key(resp, &key, &nkey);
 
-        const char *value = "{\"bar\"=>1, \"baz\"=>2}";
-        lcb_size_t nvalue = strlen(value);
+    const char *value = "{\"bar\"=>1, \"baz\"=>2}";
+    lcb_size_t nvalue = strlen(value);
 
-        lcb_CMDSTORE *storecmd;
-        lcb_cmdstore_create(&storecmd, LCB_STORE_SET);
-        lcb_cmdstore_key(storecmd, key, nkey);
-        lcb_cmdstore_value(storecmd, value, nvalue);
-        lcb_cmdstore_cas(storecmd, rv->cas1);
-        ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, rv, storecmd));
-        lcb_cmdstore_destroy(storecmd);
-    }
+    lcb_CMDSTORE *storecmd;
+    lcb_cmdstore_create(&storecmd, LCB_STORE_SET);
+    lcb_cmdstore_key(storecmd, key, nkey);
+    lcb_cmdstore_value(storecmd, value, nvalue);
+    lcb_cmdstore_cas(storecmd, rv->cas1);
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, rv, storecmd));
+    lcb_cmdstore_destroy(storecmd);
+}
 }
 
 TEST_F(MockUnitTest, testDoubleFreeError)

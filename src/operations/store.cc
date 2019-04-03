@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010-2018 Couchbase, Inc.
+ *     Copyright 2010-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@
 #include "mc/compress.h"
 #include "trace.h"
 #include "durability_internal.h"
-
 
 LIBCOUCHBASE_API int lcb_mutation_token_is_valid(const lcb_MUTATION_TOKEN *token)
 {
@@ -80,7 +79,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respstore_operation(const lcb_RESPSTORE *resp, l
     *operation = resp->op;
     return LCB_SUCCESS;
 }
-
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_observe_stored(const lcb_RESPSTORE *resp, int *store_ok)
 {
@@ -180,7 +178,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_parent_span(lcb_CMDSTORE *cmd, lcbtrace
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_collection(lcb_CMDSTORE *cmd, const char *scope, size_t scope_len, const char *collection, size_t collection_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_collection(lcb_CMDSTORE *cmd, const char *scope, size_t scope_len,
+                                                    const char *collection, size_t collection_len)
 {
     cmd->scope = scope;
     cmd->nscope = scope_len;
@@ -413,7 +412,7 @@ static lcb_STATUS store_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie,
     int hsize;
     int should_compress = 0;
     if (cid > 0) {
-        lcb_CMDSTORE *mut = const_cast<lcb_CMDSTORE *>(cmd);
+        lcb_CMDSTORE *mut = const_cast< lcb_CMDSTORE * >(cmd);
         mut->cid = cid;
     }
     hdr->request.magic = PROTOCOL_BINARY_REQ;
@@ -540,7 +539,6 @@ static lcb_STATUS store_validate(lcb_INSTANCE *instance, const lcb_CMDSTORE *cmd
             break;
     }
 
-
     return LCB_SUCCESS;
 }
 
@@ -553,7 +551,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_store(lcb_INSTANCE *instance, void *cookie, cons
         return err;
     }
 
-    return collcache_exec(cmd->scope, cmd->nscope, cmd->collection, cmd->ncollection,
-            instance, cookie, store_impl, (lcb_COLLCACHE_ARG_CLONE)lcb_cmdstore_clone,
-            (lcb_COLLCACHE_ARG_DTOR)lcb_cmdstore_destroy, cmd);
+    return collcache_exec(cmd->scope, cmd->nscope, cmd->collection, cmd->ncollection, instance, cookie, store_impl,
+                          (lcb_COLLCACHE_ARG_CLONE)lcb_cmdstore_clone, (lcb_COLLCACHE_ARG_DTOR)lcb_cmdstore_destroy,
+                          cmd);
 }

@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2011-2018 Couchbase, Inc.
+ *     Copyright 2011-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -21,36 +21,33 @@ struct BcastCookie : mc_REQDATAEX {
     lcb_CALLBACK_TYPE type;
     int remaining;
 
-    BcastCookie(lcb_CALLBACK_TYPE type_,
-                const mc_REQDATAPROCS* procs_, const void *cookie_)
-        : mc_REQDATAEX(cookie_, *procs_, gethrtime()),
-          type(type_), remaining(0) {
+    BcastCookie(lcb_CALLBACK_TYPE type_, const mc_REQDATAPROCS *procs_, const void *cookie_)
+        : mc_REQDATAEX(cookie_, *procs_, gethrtime()), type(type_), remaining(0)
+    {
     }
 };
 
-static void
-refcnt_dtor_common(mc_PACKET *pkt)
+static void refcnt_dtor_common(mc_PACKET *pkt)
 {
-    BcastCookie *ck = static_cast<BcastCookie *>(pkt->u_rdata.exdata);
+    BcastCookie *ck = static_cast< BcastCookie * >(pkt->u_rdata.exdata);
     if (!--ck->remaining) {
         delete ck;
     }
 }
 
-static const char *
-make_hp_string(const lcb::Server& server, std::string& out) {
+static const char *make_hp_string(const lcb::Server &server, std::string &out)
+{
     out.assign(server.get_host().host);
     out.append(":");
     out.append(server.get_host().port);
     return out.c_str();
 }
 
-static void
-stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_STATUS err, const void *arg)
+static void stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_STATUS err, const void *arg)
 {
-    BcastCookie *ck = static_cast<BcastCookie *>(req->u_rdata.exdata);
-    lcb::Server *server = static_cast<lcb::Server*>(pl);
-    lcb_RESPSTATS *resp = reinterpret_cast<lcb_RESPSTATS*>(const_cast<void*>(arg));
+    BcastCookie *ck = static_cast< BcastCookie * >(req->u_rdata.exdata);
+    lcb::Server *server = static_cast< lcb::Server * >(pl);
+    lcb_RESPSTATS *resp = reinterpret_cast< lcb_RESPSTATS * >(const_cast< void * >(arg));
 
     lcb_RESPCALLBACK callback;
     lcb_INSTANCE *instance = server->get_instance();
@@ -58,39 +55,35 @@ stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_STATUS err, const void *arg)
     callback = lcb_find_callback(instance, LCB_CALLBACK_STATS);
 
     if (!arg) {
-        lcb_RESPSTATS s_resp = { 0 };
+        lcb_RESPSTATS s_resp = {0};
         if (--ck->remaining) {
             /* still have other servers which must reply. */
             return;
         }
 
         s_resp.rc = err;
-        s_resp.cookie = const_cast<void *>(ck->cookie);
-        s_resp.rflags = LCB_RESP_F_CLIENTGEN|LCB_RESP_F_FINAL;
+        s_resp.cookie = const_cast< void * >(ck->cookie);
+        s_resp.rflags = LCB_RESP_F_CLIENTGEN | LCB_RESP_F_FINAL;
         callback(instance, LCB_CALLBACK_STATS, (lcb_RESPBASE *)&s_resp);
         delete ck;
 
     } else {
         std::string epbuf;
         resp->server = make_hp_string(*server, epbuf);
-        resp->cookie = const_cast<void *>(ck->cookie);
+        resp->cookie = const_cast< void * >(ck->cookie);
         callback(instance, LCB_CALLBACK_STATS, (lcb_RESPBASE *)resp);
         return;
     }
 }
 
-static mc_REQDATAPROCS stats_procs = {
-        stats_handler,
-        refcnt_dtor_common
-};
+static mc_REQDATAPROCS stats_procs = {stats_handler, refcnt_dtor_common};
 
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_stats3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS * cmd)
+lcb_STATUS lcb_stats3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS *cmd)
 {
     unsigned ii;
     int vbid = -1;
-    char ksbuf[512] = { 0 };
+    char ksbuf[512] = {0};
     mc_CMDQUEUE *cq = &instance->cmdq;
     lcbvb_CONFIG *vbc = cq->config;
     const lcb_CONTIGBUF *kbuf_in = &cmd->key.contig;
@@ -113,25 +106,23 @@ lcb_stats3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS * cmd)
             return LCB_CLIENT_ETMPFAIL;
         }
         for (ii = 0; ii < kbuf_in->nbytes; ii++) {
-            if (isspace( ((char *)kbuf_in->bytes)[ii])) {
+            if (isspace(((char *)kbuf_in->bytes)[ii])) {
                 return LCB_EINVAL;
             }
         }
-        sprintf(ksbuf, "key %.*s %d", (int)kbuf_in->nbytes,
-                (const char *)kbuf_in->bytes, vbid);
+        sprintf(ksbuf, "key %.*s %d", (int)kbuf_in->nbytes, (const char *)kbuf_in->bytes, vbid);
         kbuf_out.contig.nbytes = strlen(ksbuf);
         kbuf_out.contig.bytes = ksbuf;
     } else {
         kbuf_out.contig = *kbuf_in;
     }
 
-    BcastCookie *ckwrap = new BcastCookie(LCB_CALLBACK_STATS,
-                                            &stats_procs, cookie);
+    BcastCookie *ckwrap = new BcastCookie(LCB_CALLBACK_STATS, &stats_procs, cookie);
 
     for (ii = 0; ii < cq->npipelines; ii++) {
         mc_PACKET *pkt;
         mc_PIPELINE *pl = cq->pipelines[ii];
-        protocol_binary_request_header hdr = { { 0 } };
+        protocol_binary_request_header hdr = {{0}};
 
         if (vbid > -1 && lcbvb_has_vbucket(vbc, vbid, ii) == 0) {
             continue;
@@ -172,11 +163,9 @@ lcb_stats3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS * cmd)
     return LCB_SUCCESS;
 }
 
-static void
-handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS err,
-             const void *arg)
+static void handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS err, const void *arg)
 {
-    lcb::Server *server = static_cast<lcb::Server*>(pipeline);
+    lcb::Server *server = static_cast< lcb::Server * >(pipeline);
     BcastCookie *ck = (BcastCookie *)req->u_rdata.exdata;
     lcb_RESPCALLBACK callback;
 
@@ -197,14 +186,14 @@ handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS err,
     memset(&u_empty, 0, sizeof(u_empty));
 
     if (arg) {
-        u_resp.base = (lcb_RESPSERVERBASE*)arg;
+        u_resp.base = (lcb_RESPSERVERBASE *)arg;
     } else {
         u_resp.base = &u_empty.base;
         u_resp.base->rflags = LCB_RESP_F_CLIENTGEN;
     }
 
     u_resp.base->rc = err;
-    u_resp.base->cookie = const_cast<void*>(ck->cookie);
+    u_resp.base->cookie = const_cast< void * >(ck->cookie);
 
     std::string epbuf;
     u_resp.base->server = make_hp_string(*server, epbuf);
@@ -217,19 +206,15 @@ handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS err,
 
     u_empty.base.server = NULL;
     u_empty.base.rc = err;
-    u_empty.base.rflags = LCB_RESP_F_CLIENTGEN|LCB_RESP_F_FINAL;
-    u_empty.base.cookie = const_cast<void*>(ck->cookie);
+    u_empty.base.rflags = LCB_RESP_F_CLIENTGEN | LCB_RESP_F_FINAL;
+    u_empty.base.cookie = const_cast< void * >(ck->cookie);
     callback(server->get_instance(), ck->type, (lcb_RESPBASE *)&u_empty.base);
     delete ck;
 }
 
-static mc_REQDATAPROCS bcast_procs = {
-        handle_bcast,
-        refcnt_dtor_common
-};
+static mc_REQDATAPROCS bcast_procs = {handle_bcast, refcnt_dtor_common};
 
-static lcb_STATUS
-pkt_bcast_simple(lcb_INSTANCE *instance, const void *cookie, lcb_CALLBACK_TYPE type)
+static lcb_STATUS pkt_bcast_simple(lcb_INSTANCE *instance, const void *cookie, lcb_CALLBACK_TYPE type)
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;
@@ -279,23 +264,19 @@ pkt_bcast_simple(lcb_INSTANCE *instance, const void *cookie, lcb_CALLBACK_TYPE t
 }
 
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_server_versions3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDVERSIONS *)
+lcb_STATUS lcb_server_versions3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDVERSIONS *)
 {
     return pkt_bcast_simple(instance, cookie, LCB_CALLBACK_VERSIONS);
 }
 
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_noop3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDNOOP *)
+lcb_STATUS lcb_noop3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDNOOP *)
 {
     return pkt_bcast_simple(instance, cookie, LCB_CALLBACK_NOOP);
 }
 
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_server_verbosity3(lcb_INSTANCE *instance, const void *cookie,
-                      const lcb_CMDVERBOSITY *cmd)
+lcb_STATUS lcb_server_verbosity3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDVERBOSITY *cmd)
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;
@@ -304,12 +285,11 @@ lcb_server_verbosity3(lcb_INSTANCE *instance, const void *cookie,
         return LCB_CLIENT_ETMPFAIL;
     }
 
-    BcastCookie *ckwrap = new BcastCookie(
-        LCB_CALLBACK_VERBOSITY, &bcast_procs, cookie);
+    BcastCookie *ckwrap = new BcastCookie(LCB_CALLBACK_VERBOSITY, &bcast_procs, cookie);
 
     for (ii = 0; ii < cq->npipelines; ii++) {
         mc_PACKET *pkt;
-        lcb::Server *server = static_cast<lcb::Server*>(cq->pipelines[ii]);
+        lcb::Server *server = static_cast< lcb::Server * >(cq->pipelines[ii]);
         protocol_binary_request_verbosity vcmd;
         protocol_binary_request_header *hdr = &vcmd.message.header;
         uint32_t level;

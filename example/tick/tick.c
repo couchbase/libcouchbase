@@ -1,5 +1,5 @@
 /*
- *     Copyright 2015 Couchbase, Inc.
+ *     Copyright 2015-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     lcb_INSTANCE *instance;
     lcb_STATUS rc;
     int ii;
-    struct lcb_create_st options = { 0 };
+    struct lcb_create_st options = {0};
     lcb_CMDSTORE *cmd;
 
     if (argc != 2) {

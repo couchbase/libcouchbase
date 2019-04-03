@@ -17,7 +17,9 @@
 
 #include "rdbtest.h"
 
-class RopeTest : public ::testing::Test {};
+class RopeTest : public ::testing::Test
+{
+};
 using std::string;
 
 TEST_F(RopeTest, testBasic)
@@ -58,7 +60,7 @@ TEST_F(RopeTest, testFragmented)
     ASSERT_EQ(hello.size(), rope.usedSize());
 
     // Now we should be able to extract it properly
-    char tmpbuf[32] = { 0 };
+    char tmpbuf[32] = {0};
     rdb_copyread(&rope, tmpbuf, hello.size());
     ASSERT_STREQ(tmpbuf, hello.c_str());
 
@@ -83,7 +85,7 @@ TEST_F(RopeTest, testFragmented)
     ASSERT_STREQ(tmpbuf, hello.c_str());
 
     nitems = rdb_refread_ex(&rope, iovs2, backs, 32, hello.size());
-    ASSERT_EQ(hello.size()-4, nitems);
+    ASSERT_EQ(hello.size() - 4, nitems);
 }
 
 // This tests the functionality where we want _subsequent_ reads to be
@@ -111,7 +113,6 @@ TEST_F(RopeTest, testConsolidatedReadAhead)
     ASSERT_EQ(*(char *)iovs[1].iov_base, '7');
     ASSERT_EQ(*(char *)iovs[2].iov_base, '8');
 }
-
 
 // When I was integrating this into LCBIO, I realized this scenario. Trying to
 // figure out what the intended outcome is.

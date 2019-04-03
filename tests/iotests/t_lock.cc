@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -23,19 +23,19 @@ class LockUnitTest : public MockUnitTest
 };
 
 extern "C" {
-    static void getLockedCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
-    {
-        Item *itm;
-        lcb_respget_cookie(resp, (void **)&itm);
-        itm->assign(resp);
-    }
+static void getLockedCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
+{
+    Item *itm;
+    lcb_respget_cookie(resp, (void **)&itm);
+    itm->assign(resp);
+}
 
-    static void unlockCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPUNLOCK *resp)
-    {
-        lcb_STATUS *rc;
-        lcb_respunlock_cookie(resp, (void **)&rc);
-        *rc = lcb_respunlock_status(resp);
-    }
+static void unlockCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPUNLOCK *resp)
+{
+    lcb_STATUS *rc;
+    lcb_respunlock_cookie(resp, (void **)&rc);
+    *rc = lcb_respunlock_status(resp);
+}
 }
 
 /**
@@ -133,12 +133,12 @@ TEST_F(LockUnitTest, testUnlockMissingCas)
 }
 
 extern "C" {
-    static void lockedStorageCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
-    {
-        Item *itm;
-        lcb_respstore_cookie(resp, (void **)&itm);
-        itm->assign(resp);
-    }
+static void lockedStorageCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
+{
+    Item *itm;
+    lcb_respstore_cookie(resp, (void **)&itm);
+    itm->assign(resp);
+}
 }
 /**
  * @test Lock (Storage Contention)
@@ -165,8 +165,7 @@ TEST_F(LockUnitTest, testStorageLockContention)
 
     createConnection(hw, &instance);
     Item itm;
-    std::string key = "lockedKey", value = "lockedValue",
-                newvalue = "newUnlockedValue";
+    std::string key = "lockedKey", value = "lockedValue", newvalue = "newUnlockedValue";
 
     /* undo any funny business on our key */
     removeKey(instance, key);

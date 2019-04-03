@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2018 Couchbase, Inc.
+ *     Copyright 2018-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@
 #include <list>
 
 #define LOGFMT "(NR=%p) "
-#define LOGID(req) static_cast<const void*>(req)
+#define LOGID(req) static_cast< const void * >(req)
 #define LOGARGS(req, lvl) req->instance->settings, "n1ql", LCB_LOG_##lvl, __FILE__, __LINE__
 
 /**
@@ -61,12 +61,11 @@ struct lcb_CMDN1QL_ {
      * lcb_n1ql_cancel() */
     lcb_N1QL_HANDLE **handle;
 
-    lcb_CMDN1QL_(): callback(NULL), handle(NULL)
+    lcb_CMDN1QL_() : callback(NULL), handle(NULL)
     {
         RESET_CMD_BASE(this);
     }
 };
-
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respn1ql_status(const lcb_RESPN1QL *resp)
 {
@@ -102,7 +101,6 @@ LIBCOUCHBASE_API int lcb_respn1ql_is_final(const lcb_RESPN1QL *resp)
 {
     return resp->rflags & LCB_RESP_F_FINAL;
 }
-
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_create(lcb_CMDN1QL **cmd)
 {
@@ -176,7 +174,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_statement(lcb_CMDN1QL *cmd, const char *
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_named_param(lcb_CMDN1QL *cmd, const char *name, size_t name_len, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_named_param(lcb_CMDN1QL *cmd, const char *name, size_t name_len,
+                                                    const char *value, size_t value_len)
 {
     std::string key = "$" + std::string(name, name_len);
     return lcb_cmdn1ql_option(cmd, key.c_str(), key.size(), value, value_len);
@@ -239,19 +238,20 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_consistency(lcb_CMDN1QL *cmd, lcb_N1QL_C
     return LCB_SUCCESS;
 }
 
-static void
-encode_mutation_token(Json::Value& sparse, const lcb_MUTATION_TOKEN *sv)
+static void encode_mutation_token(Json::Value &sparse, const lcb_MUTATION_TOKEN *sv)
 {
-    char buf[64] = { 0 };
+    char buf[64] = {0};
     sprintf(buf, "%u", sv->vbid_);
-    Json::Value& cur_sv = sparse[buf];
+    Json::Value &cur_sv = sparse[buf];
 
-    cur_sv[0] = static_cast<Json::UInt64>(sv->seqno_);
+    cur_sv[0] = static_cast< Json::UInt64 >(sv->seqno_);
     sprintf(buf, "%llu", (unsigned long long)sv->uuid_);
     cur_sv[1] = buf;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_consistency_token_for_keyspace(lcb_CMDN1QL *cmd, const char *keyspace, size_t keyspace_len, const lcb_MUTATION_TOKEN *token)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_consistency_token_for_keyspace(lcb_CMDN1QL *cmd, const char *keyspace,
+                                                                       size_t keyspace_len,
+                                                                       const lcb_MUTATION_TOKEN *token)
 {
     if (!LCB_MUTATION_TOKEN_ISVALID(token)) {
         return LCB_EINVAL;
@@ -276,7 +276,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_consistency_tokens(lcb_CMDN1QL *cmd, lcb
         return rc;
     }
 
-    Json::Value* sv_json = NULL;
+    Json::Value *sv_json = NULL;
 
     size_t vbmax = vbc->nvb;
     for (size_t ii = 0; ii < vbmax; ++ii) {
@@ -300,7 +300,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_consistency_tokens(lcb_CMDN1QL *cmd, lcb
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_option(lcb_CMDN1QL *cmd, const char *name, size_t name_len, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_option(lcb_CMDN1QL *cmd, const char *name, size_t name_len, const char *value,
+                                               size_t value_len)
 {
     fix_strlen(name, name_len);
     fix_strlen(value, value_len);
@@ -322,17 +323,17 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_handle(lcb_CMDN1QL *cmd, lcb_N1QL_HANDLE
 }
 
 // Indicate that the 'creds' field is to be used.
-#define F_CMDN1QL_CREDSAUTH 1<<15
+#define F_CMDN1QL_CREDSAUTH 1 << 15
 
-class Plan {
-private:
+class Plan
+{
+  private:
     friend struct lcb_N1QLCACHE_st;
     std::string key;
     std::string planstr;
-    Plan(const std::string& k) : key(k) {
-    }
+    Plan(const std::string &k) : key(k) {}
 
-public:
+  public:
     /**
      * Applies the plan to the output 'bodystr'. We don't assign the
      * Json::Value directly, as this appears to be horribly slow. On my system
@@ -340,7 +341,8 @@ public:
      * @param body The request body (e.g. N1QLREQ::json)
      * @param[out] bodystr the actual request payload
      */
-    void apply_plan(Json::Value& body, std::string& bodystr) const {
+    void apply_plan(Json::Value &body, std::string &bodystr) const
+    {
         body.removeMember("statement");
         bodystr = Json::FastWriter().write(body);
 
@@ -355,12 +357,13 @@ public:
         bodystr.append("}");
     }
 
-private:
+  private:
     /**
      * Assign plan data to this entry
      * @param plan The JSON returned from the PREPARE request
      */
-    void set_plan(const Json::Value& plan) {
+    void set_plan(const Json::Value &plan)
+    {
         // Set the plan as a string
         planstr = "\"prepared\":";
         planstr += Json::FastWriter().write(plan["name"]);
@@ -372,14 +375,17 @@ private:
 
 // LRU Cache structure..
 struct lcb_N1QLCACHE_st {
-    typedef std::list<Plan*> LruCache;
-    typedef std::map<std::string, LruCache::iterator> Lookup;
+    typedef std::list< Plan * > LruCache;
+    typedef std::map< std::string, LruCache::iterator > Lookup;
 
     Lookup by_name;
     LruCache lru;
 
     /** Maximum number of entries in LRU cache. This is fixed at 5000 */
-    static size_t max_size() { return 5000; }
+    static size_t max_size()
+    {
+        return 5000;
+    }
 
     /**
      * Adds an entry for a given key
@@ -387,7 +393,8 @@ struct lcb_N1QLCACHE_st {
      * @param json The prepared statement returned by the server
      * @return the newly added plan.
      */
-    const Plan& add_entry(const std::string& key, const Json::Value& json) {
+    const Plan &add_entry(const std::string &key, const Json::Value &json)
+    {
         if (lru.size() == max_size()) {
             // Purge entry from end
             remove_entry(lru.back()->key);
@@ -407,13 +414,14 @@ struct lcb_N1QLCACHE_st {
      * @param key The statement (key) to look up
      * @return a pointer to the plan if present, NULL if no entry exists for key
      */
-    const Plan* get_entry(const std::string& key) {
+    const Plan *get_entry(const std::string &key)
+    {
         Lookup::iterator m = by_name.find(key);
         if (m == by_name.end()) {
             return NULL;
         }
 
-        const Plan* cur = *m->second;
+        const Plan *cur = *m->second;
 
         // Update LRU:
         lru.splice(lru.begin(), lru, m->second);
@@ -423,7 +431,8 @@ struct lcb_N1QLCACHE_st {
     }
 
     /** Removes an entry with the given key */
-    void remove_entry(const std::string& key) {
+    void remove_entry(const std::string &key)
+    {
         Lookup::iterator m = by_name.find(key);
         if (m == by_name.end()) {
             return;
@@ -436,7 +445,8 @@ struct lcb_N1QLCACHE_st {
     }
 
     /** Clears the LRU cache */
-    void clear() {
+    void clear()
+    {
         for (LruCache::iterator ii = lru.begin(); ii != lru.end(); ++ii) {
             delete *ii;
         }
@@ -444,7 +454,8 @@ struct lcb_N1QLCACHE_st {
         by_name.clear();
     }
 
-    ~lcb_N1QLCACHE_st() {
+    ~lcb_N1QLCACHE_st()
+    {
         clear();
     }
 };
@@ -467,7 +478,10 @@ typedef struct lcb_N1QL_HANDLE_ : lcb::jsparse::Parser::Actions {
 
     /** Request body as received from the application */
     Json::Value json;
-    const Json::Value& json_const() const { return json; }
+    const Json::Value &json_const() const
+    {
+        return json;
+    }
 
     /** String of the original statement. Cached here to avoid jsoncpp lookups */
     std::string statement;
@@ -480,7 +494,10 @@ typedef struct lcb_N1QL_HANDLE_ : lcb::jsparse::Parser::Actions {
 
     lcbtrace_SPAN *span;
 
-    lcb_N1QLCACHE& cache() { return *instance->n1ql_cache; }
+    lcb_N1QLCACHE &cache()
+    {
+        return *instance->n1ql_cache;
+    }
 
     /**
      * Creates the sub-N1QLREQ for the PREPARE statement. This inspects the
@@ -495,16 +512,17 @@ typedef struct lcb_N1QL_HANDLE_ : lcb::jsparse::Parser::Actions {
      * @param plan The plan itself
      * @return see issue_htreq()
      */
-    inline lcb_STATUS apply_plan(const Plan& plan);
+    inline lcb_STATUS apply_plan(const Plan &plan);
 
     /**
      * Issues the HTTP request for the query
      * @param payload The body to send
      * @return Error code from lcb's http subsystem
      */
-    inline lcb_STATUS issue_htreq(const std::string& payload);
+    inline lcb_STATUS issue_htreq(const std::string &payload);
 
-    lcb_STATUS issue_htreq() {
+    lcb_STATUS issue_htreq()
+    {
         std::string s = Json::FastWriter().write(json);
         return issue_htreq(s);
     }
@@ -520,13 +538,16 @@ typedef struct lcb_N1QL_HANDLE_ : lcb::jsparse::Parser::Actions {
     /**
      * Returns true if payload matches retry conditions.
      */
-    inline bool has_retriable_error(const Json::Value& root);
+    inline bool has_retriable_error(const Json::Value &root);
 
     /**
      * Did the application request this query to use prepared statements
      * @return true if using prepared statements
      */
-    inline bool use_prepcache() const { return flags & LCB_CMDN1QL_F_PREPCACHE; }
+    inline bool use_prepcache() const
+    {
+        return flags & LCB_CMDN1QL_F_PREPCACHE;
+    }
 
     /**
      * Pass a row back to the application
@@ -548,106 +569,100 @@ typedef struct lcb_N1QL_HANDLE_ : lcb::jsparse::Parser::Actions {
     inline ~lcb_N1QL_HANDLE_();
 
     // Parser overrides:
-    void JSPARSE_on_row(const lcb::jsparse::Row& row) {
-        lcb_RESPN1QL resp = { 0 };
-        resp.row = static_cast<const char *>(row.row.iov_base);
+    void JSPARSE_on_row(const lcb::jsparse::Row &row)
+    {
+        lcb_RESPN1QL resp = {0};
+        resp.row = static_cast< const char * >(row.row.iov_base);
         resp.nrow = row.row.iov_len;
         nrows++;
         invoke_row(&resp, false);
     }
-    void JSPARSE_on_error(const std::string&) {
+    void JSPARSE_on_error(const std::string &)
+    {
         lasterr = LCB_PROTOCOL_ERROR;
     }
-    void JSPARSE_on_complete(const std::string&) {
+    void JSPARSE_on_complete(const std::string &)
+    {
         // Nothing
     }
 
 } N1QLREQ;
 
-static bool
-parse_json(const char *s, size_t n, Json::Value& res)
+static bool parse_json(const char *s, size_t n, Json::Value &res)
 {
     return Json::Reader().parse(s, s + n, res);
 }
 
-lcb_N1QLCACHE *
-lcb_n1qlcache_create(void)
+lcb_N1QLCACHE *lcb_n1qlcache_create(void)
 {
     return new lcb_N1QLCACHE;
 }
 
-void
-lcb_n1qlcache_destroy(lcb_N1QLCACHE *cache)
+void lcb_n1qlcache_destroy(lcb_N1QLCACHE *cache)
 {
     delete cache;
 }
 
-void
-lcb_n1qlcache_clear(lcb_N1QLCACHE *cache)
+void lcb_n1qlcache_clear(lcb_N1QLCACHE *cache)
 {
     cache->clear();
 }
 
 // Special function for debugging. This returns the name and encoded form of
 // the plan
-void
-lcb_n1qlcache_getplan(lcb_N1QLCACHE *cache,
-    const std::string& key, std::string& out)
+void lcb_n1qlcache_getplan(lcb_N1QLCACHE *cache, const std::string &key, std::string &out)
 {
-    const Plan* plan = cache->get_entry(key);
+    const Plan *plan = cache->get_entry(key);
     if (plan != NULL) {
         Json::Value tmp(Json::objectValue);
         plan->apply_plan(tmp, out);
     }
 }
 
-
 static const char *wtf_magic_strings[] = {
-        "index deleted or node hosting the index is down - cause: queryport.indexNotFound",
-        "Index Not Found - cause: queryport.indexNotFound",
-        NULL
-};
+    "index deleted or node hosting the index is down - cause: queryport.indexNotFound",
+    "Index Not Found - cause: queryport.indexNotFound", NULL};
 
-bool
-N1QLREQ::has_retriable_error(const Json::Value& root)
+bool N1QLREQ::has_retriable_error(const Json::Value &root)
 {
     if (!root.isObject()) {
         return false;
     }
-    const Json::Value& errors = root["errors"];
+    const Json::Value &errors = root["errors"];
     if (!errors.isArray()) {
         return false;
     }
     Json::Value::const_iterator ii;
     for (ii = errors.begin(); ii != errors.end(); ++ii) {
-        const Json::Value& cur = *ii;
+        const Json::Value &cur = *ii;
         if (!cur.isObject()) {
             continue; // eh?
         }
-        const Json::Value& jmsg = cur["msg"];
-        const Json::Value& jcode = cur["code"];
+        const Json::Value &jmsg = cur["msg"];
+        const Json::Value &jcode = cur["code"];
         unsigned code = 0;
         if (jcode.isNumeric()) {
             code = jcode.asUInt();
             switch (code) {
-                /* n1ql */
-            case 4050:
-            case 4070:
-                /* analytics */
-            case 23000:
-            case 23003:
-            case 23007:
-                lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d", LOGID(this), code);
-                return true;
-            default:
-                break;
+                    /* n1ql */
+                case 4050:
+                case 4070:
+                    /* analytics */
+                case 23000:
+                case 23003:
+                case 23007:
+                    lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d", LOGID(this), code);
+                    return true;
+                default:
+                    break;
             }
         }
         if (jmsg.isString()) {
             const char *jmstr = jmsg.asCString();
             for (const char **curs = wtf_magic_strings; *curs; curs++) {
                 if (!strstr(jmstr, *curs)) {
-                    lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d, msg: %s", LOGID(this), code, jmstr);
+                    lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d, msg: %s", LOGID(this), code,
+                            jmstr);
                     return true;
                 }
             }
@@ -656,8 +671,7 @@ N1QLREQ::has_retriable_error(const Json::Value& root)
     return false;
 }
 
-bool
-N1QLREQ::maybe_retry()
+bool N1QLREQ::maybe_retry()
 {
     // Examines the buffer to determine the type of error
     Json::Value root;
@@ -684,7 +698,7 @@ N1QLREQ::maybe_retry()
 
     was_retried = true;
     parser->get_postmortem(meta);
-    if (!parse_json(static_cast<const char*>(meta.iov_base), meta.iov_len, root)) {
+    if (!parse_json(static_cast< const char * >(meta.iov_base), meta.iov_len, root)) {
         return false; // Not JSON
     }
     if (!has_retriable_error(root)) {
@@ -707,10 +721,9 @@ N1QLREQ::maybe_retry()
     return false;
 }
 
-void
-N1QLREQ::invoke_row(lcb_RESPN1QL *resp, bool is_last)
+void N1QLREQ::invoke_row(lcb_RESPN1QL *resp, bool is_last)
 {
-    resp->cookie = const_cast<void*>(cookie);
+    resp->cookie = const_cast< void * >(cookie);
     resp->htresp = cur_htresp;
     resp->handle = this;
 
@@ -719,7 +732,7 @@ N1QLREQ::invoke_row(lcb_RESPN1QL *resp, bool is_last)
         resp->rflags |= LCB_RESP_F_FINAL;
         resp->rc = lasterr;
         parser->get_postmortem(meta);
-        resp->row = static_cast<const char*>(meta.iov_base);
+        resp->row = static_cast< const char * >(meta.iov_base);
         resp->nrow = meta.iov_len;
     }
 
@@ -739,7 +752,7 @@ lcb_N1QL_HANDLE_::~lcb_N1QL_HANDLE_()
     }
 
     if (callback) {
-        lcb_RESPN1QL resp = { 0 };
+        lcb_RESPN1QL resp = {0};
         invoke_row(&resp, 1);
     }
 
@@ -770,13 +783,13 @@ lcb_N1QL_HANDLE_::~lcb_N1QL_HANDLE_()
     }
 }
 
-static void
-chunk_callback(lcb_INSTANCE *instance, int ign, const lcb_RESPBASE *rb)
+static void chunk_callback(lcb_INSTANCE *instance, int ign, const lcb_RESPBASE *rb)
 {
     const lcb_RESPHTTP *rh = (const lcb_RESPHTTP *)rb;
-    N1QLREQ *req = static_cast<N1QLREQ*>(rh->cookie);
+    N1QLREQ *req = static_cast< N1QLREQ * >(rh->cookie);
 
-    (void)ign; (void)instance;
+    (void)ign;
+    (void)instance;
 
     req->cur_htresp = rh;
     if (rh->rc != LCB_SUCCESS || rh->htstatus != 200) {
@@ -797,17 +810,16 @@ chunk_callback(lcb_INSTANCE *instance, int ign, const lcb_RESPBASE *rb)
         delete req;
         return;
     }
-    req->parser->feed(static_cast<const char*>(rh->body), rh->nbody);
+    req->parser->feed(static_cast< const char * >(rh->body), rh->nbody);
 }
 
-void
-N1QLREQ::fail_prepared(const lcb_RESPN1QL *orig, lcb_STATUS err)
+void N1QLREQ::fail_prepared(const lcb_RESPN1QL *orig, lcb_STATUS err)
 {
     lcb_log(LOGARGS(this, ERROR), LOGFMT "Prepare failed!", LOGID(this));
 
     lcb_RESPN1QL newresp = *orig;
     newresp.rflags = LCB_RESP_F_FINAL;
-    newresp.cookie = const_cast<void*>(cookie);
+    newresp.cookie = const_cast< void * >(cookie);
     newresp.rc = err;
     if (err == LCB_SUCCESS) {
         newresp.rc = LCB_ERROR;
@@ -821,10 +833,9 @@ N1QLREQ::fail_prepared(const lcb_RESPN1QL *orig, lcb_STATUS err)
 }
 
 // Received internally for PREPARE
-static void
-prepare_rowcb(lcb_INSTANCE *instance, int, const lcb_RESPN1QL *row)
+static void prepare_rowcb(lcb_INSTANCE *instance, int, const lcb_RESPN1QL *row)
 {
-    lcb_N1QL_HANDLE_ *origreq = reinterpret_cast<lcb_N1QL_HANDLE_*>(row->cookie);
+    lcb_N1QL_HANDLE_ *origreq = reinterpret_cast< lcb_N1QL_HANDLE_ * >(row->cookie);
 
     lcb_n1ql_cancel(instance, origreq->prepare_req);
     origreq->prepare_req = NULL;
@@ -841,9 +852,9 @@ prepare_rowcb(lcb_INSTANCE *instance, int, const lcb_RESPN1QL *row)
         }
 
         // Insert plan into cache
-        lcb_log(LOGARGS(origreq, DEBUG), LOGFMT "Got prepared statement. Inserting into cache and reissuing", LOGID(origreq));
-        const Plan& ent =
-                origreq->cache().add_entry(origreq->statement, prepared);
+        lcb_log(LOGARGS(origreq, DEBUG), LOGFMT "Got prepared statement. Inserting into cache and reissuing",
+                LOGID(origreq));
+        const Plan &ent = origreq->cache().add_entry(origreq->statement, prepared);
 
         // Issue the query with the newly prepared plan
         lcb_STATUS rc = origreq->apply_plan(ent);
@@ -853,8 +864,7 @@ prepare_rowcb(lcb_INSTANCE *instance, int, const lcb_RESPN1QL *row)
     }
 }
 
-lcb_STATUS
-N1QLREQ::issue_htreq(const std::string& body)
+lcb_STATUS N1QLREQ::issue_htreq(const std::string &body)
 {
     std::string content_type("application/json");
 
@@ -882,8 +892,7 @@ N1QLREQ::issue_htreq(const std::string& body)
     return rc;
 }
 
-lcb_STATUS
-N1QLREQ::request_plan()
+lcb_STATUS N1QLREQ::request_plan()
 {
     Json::Value newbody(Json::objectValue);
     newbody["statement"] = "PREPARE " + statement;
@@ -899,8 +908,7 @@ N1QLREQ::request_plan()
     return lcb_n1ql(instance, this, &newcmd);
 }
 
-lcb_STATUS
-N1QLREQ::apply_plan(const Plan& plan)
+lcb_STATUS N1QLREQ::apply_plan(const Plan &plan)
 {
     lcb_log(LOGARGS(this, DEBUG), LOGFMT "Using prepared plan", LOGID(this));
     std::string bodystr;
@@ -908,8 +916,7 @@ N1QLREQ::apply_plan(const Plan& plan)
     return issue_htreq(bodystr);
 }
 
-lcb_U32
-lcb_n1qlreq_parsetmo(const std::string& s)
+lcb_U32 lcb_n1qlreq_parsetmo(const std::string &s)
 {
     double num;
     int nchars, rv;
@@ -923,15 +930,15 @@ lcb_n1qlreq_parsetmo(const std::string& s)
     // Get the actual timeout value in microseconds. Note we can't use the macros
     // since they will truncate the double value.
     if (mults == "s") {
-        return num * static_cast<double>(LCB_S2US(1));
+        return num * static_cast< double >(LCB_S2US(1));
     } else if (mults == "ms") {
-        return num * static_cast<double>(LCB_MS2US(1));
+        return num * static_cast< double >(LCB_MS2US(1));
     } else if (mults == "h") {
-        return num * static_cast<double>(LCB_S2US(3600));
+        return num * static_cast< double >(LCB_S2US(3600));
     } else if (mults == "us") {
         return num;
     } else if (mults == "m") {
-        return num * static_cast<double>(LCB_S2US(60));
+        return num * static_cast< double >(LCB_S2US(60));
     } else if (mults == "ns") {
         return LCB_NS2US(num);
     } else {
@@ -939,13 +946,10 @@ lcb_n1qlreq_parsetmo(const std::string& s)
     }
 }
 
-lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj,
-    const void *user_cookie, const lcb_CMDN1QL *cmd)
-    : cur_htresp(NULL), htreq(NULL),
-      parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this)),
-      cookie(user_cookie), callback(cmd->callback), instance(obj),
-      lasterr(LCB_SUCCESS), flags(cmd->cmdflags), timeout(0),
-      nrows(0), prepare_req(NULL), was_retried(false), is_cbas(false), span(NULL)
+lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj, const void *user_cookie, const lcb_CMDN1QL *cmd)
+    : cur_htresp(NULL), htreq(NULL), parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this)),
+      cookie(user_cookie), callback(cmd->callback), instance(obj), lasterr(LCB_SUCCESS), flags(cmd->cmdflags),
+      timeout(0), nrows(0), prepare_req(NULL), was_retried(false), is_cbas(false), span(NULL)
 {
     if (cmd->handle) {
         *cmd->handle = this;
@@ -969,7 +973,7 @@ lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj,
         return;
     }
 
-    const Json::Value& j_statement = json_const()["statement"];
+    const Json::Value &j_statement = json_const()["statement"];
     if (j_statement.isString()) {
         statement = j_statement.asString();
     } else if (!j_statement.isNull()) {
@@ -977,11 +981,11 @@ lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj,
         return;
     }
 
-    Json::Value& tmoval = json["timeout"];
+    Json::Value &tmoval = json["timeout"];
     if (tmoval.isNull()) {
         // Set the default timeout as the server-side query timeout if no
         // other timeout is used.
-        char buf[64] = { 0 };
+        char buf[64] = {0};
         sprintf(buf, "%uus", LCBT_SETTING(obj, n1ql_timeout));
         tmoval = buf;
         timeout = LCBT_SETTING(obj, n1ql_timeout);
@@ -997,12 +1001,12 @@ lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj,
     // Because N1QL multi-bucket auth will not work on server versions < 4.5
     // using JSON encoding, we need to only use the multi-bucket auth feature
     // if there are actually multiple credentials to employ.
-    const lcb::Authenticator& auth = *instance->settings->auth;
+    const lcb::Authenticator &auth = *instance->settings->auth;
     if (auth.buckets().size() > 1 && (cmd->cmdflags & LCB_CMD_F_MULTIAUTH)) {
         flags |= F_CMDN1QL_CREDSAUTH;
-        Json::Value& creds = json["creds"];
+        Json::Value &creds = json["creds"];
         lcb::Authenticator::Map::const_iterator ii = auth.buckets().begin();
-        if (! (creds.isNull() || creds.isArray())) {
+        if (!(creds.isNull() || creds.isArray())) {
             lasterr = LCB_EINVAL;
             return;
         }
@@ -1010,7 +1014,7 @@ lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj,
             if (ii->second.empty()) {
                 continue;
             }
-            Json::Value& curCreds = creds.append(Json::Value(Json::objectValue));
+            Json::Value &curCreds = creds.append(Json::Value(Json::objectValue));
             curCreds["user"] = ii->first;
             curCreds["pass"] = ii->second;
         }
@@ -1020,13 +1024,13 @@ lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj,
         snprintf(id, sizeof(id), "%p", (void *)this);
         span = lcbtrace_span_start(instance->settings->tracer, LCBTRACE_OP_DISPATCH_TO_SERVER, LCBTRACE_NOW, NULL);
         lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_OPERATION_ID, id);
-        lcbtrace_span_add_system_tags(span, instance->settings, is_cbas ? LCBTRACE_TAG_SERVICE_ANALYTICS : LCBTRACE_TAG_SERVICE_N1QL);
+        lcbtrace_span_add_system_tags(span, instance->settings,
+                                      is_cbas ? LCBTRACE_TAG_SERVICE_ANALYTICS : LCBTRACE_TAG_SERVICE_N1QL);
     }
 }
 
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_n1ql(lcb_INSTANCE *instance, void *cookie, const lcb_CMDN1QL *cmd)
+lcb_STATUS lcb_n1ql(lcb_INSTANCE *instance, void *cookie, const lcb_CMDN1QL *cmd)
 {
     lcb_STATUS err;
     N1QLREQ *req = NULL;
@@ -1069,7 +1073,7 @@ lcb_n1ql(lcb_INSTANCE *instance, void *cookie, const lcb_CMDN1QL *cmd)
 
     return LCB_SUCCESS;
 
-    GT_DESTROY:
+GT_DESTROY:
     if (cmd->handle) {
         *cmd->handle = NULL;
     }

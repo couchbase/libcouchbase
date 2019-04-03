@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2018 Couchbase, Inc.
+ *     Copyright 2018-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -78,16 +78,16 @@ typedef struct lcbcrypto_PROVIDER {
             lcb_STATUS (*generate_iv)(struct lcbcrypto_PROVIDER *provider, uint8_t **iv, size_t *iv_len);
             /** generate cryptographic signature for the data */
             lcb_STATUS (*sign)(struct lcbcrypto_PROVIDER *provider, const lcbcrypto_SIGV *inputs, size_t input_num,
-                                uint8_t **sig, size_t *sig_len);
+                               uint8_t **sig, size_t *sig_len);
             /** verify signature of the data */
             lcb_STATUS (*verify_signature)(struct lcbcrypto_PROVIDER *provider, const lcbcrypto_SIGV *inputs,
-                                            size_t input_num, uint8_t *sig, size_t sig_len);
+                                           size_t input_num, uint8_t *sig, size_t sig_len);
             /** encrypt data */
             lcb_STATUS (*encrypt)(struct lcbcrypto_PROVIDER *provider, const uint8_t *input, size_t input_len,
-                                   const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len);
+                                  const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len);
             /** decrypt data */
             lcb_STATUS (*decrypt)(struct lcbcrypto_PROVIDER *provider, const uint8_t *input, size_t input_len,
-                                   const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len);
+                                  const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len);
             /** returns key identifier, associated with the crypto-provider */
             const char *(*get_key_id)(struct lcbcrypto_PROVIDER *provider);
         } v1;

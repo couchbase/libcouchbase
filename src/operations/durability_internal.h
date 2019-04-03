@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2014 Couchbase, Inc.
+ *     Copyright 2014-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ void lcbdur_cas_update(lcb_INSTANCE *, void *dset, lcb_STATUS, const lcb_RESPOBS
  * Called from the OBSERVE codebase to update an item's status for seqno-based
  * observe
  */
-void lcbdur_update_seqno(lcb_INSTANCE *, void *dset, const lcb_RESPOBSEQNO*);
+void lcbdur_update_seqno(lcb_INSTANCE *, void *dset, const lcb_RESPOBSEQNO *);
 
 /** Indicate that this durability command context is for an original storage op */
 void lcbdurctx_set_durstore(lcb_MULTICMD_CTX *ctx, int enabled);
@@ -61,8 +61,10 @@ lcb_MULTICMD_CTX *lcb_observe_ctx_dur_new(lcb_INSTANCE *instance);
 #endif
 
 #ifdef LCBDUR_PRIV_SYMS
-namespace lcb {
-namespace durability {
+namespace lcb
+{
+namespace durability
+{
 
 /**
  * Here is the internal API for the durability functions.
@@ -84,13 +86,13 @@ namespace durability {
  */
 struct ServerInfo {
     const lcb::Server *server; /**< Server pointer (for comparison only) */
-    lcb_U16 persisted; /**< Exists on server */
-    lcb_U16 exists; /**< Persisted to server */
+    lcb_U16 persisted;         /**< Exists on server */
+    lcb_U16 exists;            /**< Persisted to server */
 
-    ServerInfo() : server(NULL), persisted(0), exists(0) {
-    }
+    ServerInfo() : server(NULL), persisted(0), exists(0) {}
 
-    void clear() {
+    void clear()
+    {
         server = NULL;
         persisted = 0;
         exists = 0;
@@ -109,16 +111,7 @@ struct CallbackCookie {
 /**Information a single entry in a durability set. Each entry contains a single
  * key */
 struct Item : public CallbackCookie {
-    Item():
-        reqcas(0),
-        reqseqno(0),
-        uuid(0),
-        result(),
-        parent(NULL),
-        vbid(0),
-        done(0)
-    {
-    }
+    Item() : reqcas(0), reqseqno(0), uuid(0), result(), parent(NULL), vbid(0), done(0) {}
 
     /**
      * Returns true if the entry is complete, false otherwise. This only assumes
@@ -141,7 +134,7 @@ struct Item : public CallbackCookie {
      *         OR if the item has been replicated, but replication is not
      *         required for the item.
      */
-    bool is_server_done(const ServerInfo& info, bool is_master) const;
+    bool is_server_done(const ServerInfo &info, bool is_master) const;
 
     /**
      * Updates the state of the given entry and synchronizes it with the
@@ -162,11 +155,7 @@ struct Item : public CallbackCookie {
      */
     size_t prepare(uint16_t ixarray[4]);
 
-    enum UpdateFlags {
-        NO_CHANGES = 0x00,
-        UPDATE_PERSISTED = 0x01,
-        UPDATE_REPLICATED = 0x02
-    };
+    enum UpdateFlags { NO_CHANGES = 0x00, UPDATE_PERSISTED = 0x01, UPDATE_REPLICATED = 0x02 };
 
     /**
      * Update an item's status.
@@ -181,22 +170,29 @@ struct Item : public CallbackCookie {
      */
     void finish();
 
-    void finish(lcb_STATUS err) {
+    void finish(lcb_STATUS err)
+    {
         result.rc = err;
         finish();
     }
 
-    lcb_RESPENDURE& res() { return result; }
-    const lcb_RESPENDURE& res() const { return result; }
-    ServerInfo* get_server_info(int index);
+    lcb_RESPENDURE &res()
+    {
+        return result;
+    }
+    const lcb_RESPENDURE &res() const
+    {
+        return result;
+    }
+    ServerInfo *get_server_info(int index);
 
-    lcb_U64 reqcas; /**< Last known CAS for the user */
+    lcb_U64 reqcas;   /**< Last known CAS for the user */
     lcb_U64 reqseqno; /**< Last known seqno for the user */
     lcb_U64 uuid;
     lcb_RESPENDURE result; /**< Result to be passed to user */
     Durset *parent;
     lcb_U16 vbid; /**< vBucket ID (computed via hashkey) */
-    lcb_U8 done; /**< Whether we have a conclusive result for this entry */
+    lcb_U8 done;  /**< Whether we have a conclusive result for this entry */
 
     /** Array of servers which have satisfied constraints */
     ServerInfo sinfo[4];
@@ -213,20 +209,23 @@ struct Durset : public MultiCmdContext {
      */
     void on_poll_done();
 
-    void incref() { refcnt++; }
+    void incref()
+    {
+        refcnt++;
+    }
 
     /**
      * Decrement the refcount for the 'dset'. When it hits zero then the dset is
      * freed
      */
-    void decref() { if (!--refcnt) { delete this; } }
+    void decref()
+    {
+        if (!--refcnt) {
+            delete this;
+        }
+    }
 
-    enum State {
-        STATE_OBSPOLL,
-        STATE_INIT,
-        STATE_TIMEOUT,
-        STATE_IGNORE
-    };
+    enum State { STATE_OBSPOLL, STATE_INIT, STATE_TIMEOUT, STATE_IGNORE };
 
     /**
      * Schedules us to be notified with the given state within a particular amount
@@ -239,7 +238,8 @@ struct Durset : public MultiCmdContext {
      * additional bookeeping, having guaranteed that all items are now
      * added.
      */
-    virtual lcb_STATUS prepare_schedule() {
+    virtual lcb_STATUS prepare_schedule()
+    {
         return LCB_SUCCESS;
     }
 
@@ -249,7 +249,8 @@ struct Durset : public MultiCmdContext {
      * @param itm the newly added item
      * @param the original command, for more context
      */
-    virtual lcb_STATUS after_add(Item&, const lcb_CMDENDURE*) {
+    virtual lcb_STATUS after_add(Item &, const lcb_CMDENDURE *)
+    {
         return LCB_SUCCESS;
     }
 
@@ -260,7 +261,7 @@ struct Durset : public MultiCmdContext {
     virtual lcb_STATUS poll_impl() = 0;
 
     virtual ~Durset();
-    Durset(lcb_INSTANCE *instance, const lcb_durability_opts_t* options);
+    Durset(lcb_INSTANCE *instance, const lcb_durability_opts_t *options);
 
     // Implementation for MULTICMD_CTX
     lcb_STATUS MCTX_done(const void *cookie);
@@ -277,19 +278,19 @@ struct Durset : public MultiCmdContext {
     /** Called after timeouts and intervals. */
     inline void tick();
 
-    static Durset* createCasDurset(lcb_INSTANCE *, const lcb_durability_opts_t*);
-    static Durset* createSeqnoDurset(lcb_INSTANCE *, const lcb_durability_opts_t*);
+    static Durset *createCasDurset(lcb_INSTANCE *, const lcb_durability_opts_t *);
+    static Durset *createSeqnoDurset(lcb_INSTANCE *, const lcb_durability_opts_t *);
 
     lcb_DURABILITYOPTSv0 opts; /**< Sanitized user options */
-    std::vector<Item> entries;
+    std::vector< Item > entries;
     unsigned nremaining; /**< Number of entries remaining to poll for */
-    int waiting; /**< Set if currently awaiting an observe callback */
-    unsigned refcnt; /**< Reference count */
-    State next_state; /**< Internal state */
+    int waiting;         /**< Set if currently awaiting an observe callback */
+    unsigned refcnt;     /**< Reference count */
+    State next_state;    /**< Internal state */
     lcb_STATUS lasterr;
-    bool is_durstore; /** Whether the callback should be DURSTORE */
-    std::string kvbufs; /**< Backing storage for key buffers */
-    const void *cookie; /**< User cookie */
+    bool is_durstore;    /** Whether the callback should be DURSTORE */
+    std::string kvbufs;  /**< Backing storage for key buffers */
+    const void *cookie;  /**< User cookie */
     hrtime_t ns_timeout; /**< Timestamp of next timeout */
     void *timer;
     lcb_INSTANCE *instance;

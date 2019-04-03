@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2014 Couchbase, Inc.
+ *     Copyright 2014-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -17,20 +17,32 @@
 
 #include "internal.h"
 
-#define DEFINE_DUMMY_CALLBACK(name, resptype) \
-    static void name(lcb_INSTANCE *i, const void *c, lcb_STATUS e, const resptype *r) \
-    { (void)i;(void)e;(void)c;(void)r; }
+#define DEFINE_DUMMY_CALLBACK(name, resptype)                                                                          \
+    static void name(lcb_INSTANCE *i, const void *c, lcb_STATUS e, const resptype *r)                                  \
+    {                                                                                                                  \
+        (void)i;                                                                                                       \
+        (void)e;                                                                                                       \
+        (void)c;                                                                                                       \
+        (void)r;                                                                                                       \
+    }
 
-static void dummy_bootstrap_callback(lcb_INSTANCE *instance, lcb_STATUS err) {
-    (void)instance; (void)err;
+static void dummy_bootstrap_callback(lcb_INSTANCE *instance, lcb_STATUS err)
+{
+    (void)instance;
+    (void)err;
 }
 
-static void dummy_pktfwd_callback(lcb_INSTANCE *instance, const void *cookie,
-    lcb_STATUS err, lcb_PKTFWDRESP *resp) {
-    (void)instance;(void)cookie;(void)err;(void)resp;
+static void dummy_pktfwd_callback(lcb_INSTANCE *instance, const void *cookie, lcb_STATUS err, lcb_PKTFWDRESP *resp)
+{
+    (void)instance;
+    (void)cookie;
+    (void)err;
+    (void)resp;
 }
-static void dummy_pktflushed_callback(lcb_INSTANCE *instance, const void *cookie) {
-    (void)instance;(void)cookie;
+static void dummy_pktflushed_callback(lcb_INSTANCE *instance, const void *cookie)
+{
+    (void)instance;
+    (void)cookie;
 }
 
 typedef union {
@@ -50,10 +62,11 @@ typedef union {
     lcb_RESPGETCID getcid;
 } uRESP;
 
-static void
-nocb_fallback(lcb_INSTANCE *instance, int type, const lcb_RESPBASE *response)
+static void nocb_fallback(lcb_INSTANCE *instance, int type, const lcb_RESPBASE *response)
 {
-    (void)instance; (void)type; (void)response;
+    (void)instance;
+    (void)type;
+    (void)response;
 }
 
 void lcb_initialize_packet_handlers(lcb_INSTANCE *instance)
@@ -65,19 +78,19 @@ void lcb_initialize_packet_handlers(lcb_INSTANCE *instance)
     instance->callbacks.v3callbacks[LCB_CALLBACK_DEFAULT] = nocb_fallback;
 }
 
-#define CALLBACK_ACCESSOR(name, cbtype, field) \
-LIBCOUCHBASE_API \
-cbtype name(lcb_INSTANCE *instance, cbtype cb) { \
-    cbtype ret = instance->callbacks.field; \
-    if (cb != NULL) { \
-        instance->callbacks.field = cb; \
-    } \
-    return ret; \
-}
+#define CALLBACK_ACCESSOR(name, cbtype, field)                                                                         \
+    LIBCOUCHBASE_API                                                                                                   \
+    cbtype name(lcb_INSTANCE *instance, cbtype cb)                                                                     \
+    {                                                                                                                  \
+        cbtype ret = instance->callbacks.field;                                                                        \
+        if (cb != NULL) {                                                                                              \
+            instance->callbacks.field = cb;                                                                            \
+        }                                                                                                              \
+        return ret;                                                                                                    \
+    }
 
 LIBCOUCHBASE_API
-lcb_destroy_callback
-lcb_set_destroy_callback(lcb_INSTANCE *instance, lcb_destroy_callback cb)
+lcb_destroy_callback lcb_set_destroy_callback(lcb_INSTANCE *instance, lcb_destroy_callback cb)
 {
     lcb_destroy_callback ret = LCBT_SETTING(instance, dtorcb);
     if (cb) {
@@ -92,8 +105,7 @@ CALLBACK_ACCESSOR(lcb_set_pktfwd_callback, lcb_pktfwd_callback, pktfwd)
 CALLBACK_ACCESSOR(lcb_set_pktflushed_callback, lcb_pktflushed_callback, pktflushed)
 
 LIBCOUCHBASE_API
-lcb_RESPCALLBACK
-lcb_install_callback3(lcb_INSTANCE *instance, int cbtype, lcb_RESPCALLBACK cb)
+lcb_RESPCALLBACK lcb_install_callback3(lcb_INSTANCE *instance, int cbtype, lcb_RESPCALLBACK cb)
 {
     lcb_RESPCALLBACK ret;
     if (cbtype >= LCB_CALLBACK__MAX) {
@@ -106,8 +118,7 @@ lcb_install_callback3(lcb_INSTANCE *instance, int cbtype, lcb_RESPCALLBACK cb)
 }
 
 LIBCOUCHBASE_API
-lcb_RESPCALLBACK
-lcb_get_callback3(lcb_INSTANCE *instance, int cbtype)
+lcb_RESPCALLBACK lcb_get_callback3(lcb_INSTANCE *instance, int cbtype)
 {
     if (cbtype >= LCB_CALLBACK__MAX) {
         return NULL;
@@ -116,55 +127,53 @@ lcb_get_callback3(lcb_INSTANCE *instance, int cbtype)
 }
 
 LIBCOUCHBASE_API
-const char *
-lcb_strcbtype(int cbtype)
+const char *lcb_strcbtype(int cbtype)
 {
     switch (cbtype) {
-    case LCB_CALLBACK_GET:
-        return "GET";
-    case LCB_CALLBACK_STORE:
-        return "STORE";
-    case LCB_CALLBACK_COUNTER:
-        return "COUNTER";
-    case LCB_CALLBACK_TOUCH:
-        return "TOUCH";
-    case LCB_CALLBACK_REMOVE:
-        return "REMOVE";
-    case LCB_CALLBACK_UNLOCK:
-        return "UNLOCK";
-    case LCB_CALLBACK_STATS:
-        return "STATS";
-    case LCB_CALLBACK_VERSIONS:
-        return "VERSIONS";
-    case LCB_CALLBACK_VERBOSITY:
-        return "VERBOSITY";
-    case LCB_CALLBACK_OBSERVE:
-        return "OBSERVE";
-    case LCB_CALLBACK_GETREPLICA:
-        return "GETREPLICA";
-    case LCB_CALLBACK_ENDURE:
-        return "ENDURE";
-    case LCB_CALLBACK_HTTP:
-        return "HTTP";
-    case LCB_CALLBACK_CBFLUSH:
-        return "CBFLUSH";
-    case LCB_CALLBACK_OBSEQNO:
-        return "OBSEQNO";
-    case LCB_CALLBACK_STOREDUR:
-        return "STOREDUR";
-    case LCB_CALLBACK_SDMUTATE:
-        return "SDMUTATE";
-    case LCB_CALLBACK_SDLOOKUP:
-        return "SDLOOKUP";
-    case LCB_CALLBACK_NOOP:
-        return "NOOP";
-    default:
-        return "UNKNOWN";
+        case LCB_CALLBACK_GET:
+            return "GET";
+        case LCB_CALLBACK_STORE:
+            return "STORE";
+        case LCB_CALLBACK_COUNTER:
+            return "COUNTER";
+        case LCB_CALLBACK_TOUCH:
+            return "TOUCH";
+        case LCB_CALLBACK_REMOVE:
+            return "REMOVE";
+        case LCB_CALLBACK_UNLOCK:
+            return "UNLOCK";
+        case LCB_CALLBACK_STATS:
+            return "STATS";
+        case LCB_CALLBACK_VERSIONS:
+            return "VERSIONS";
+        case LCB_CALLBACK_VERBOSITY:
+            return "VERBOSITY";
+        case LCB_CALLBACK_OBSERVE:
+            return "OBSERVE";
+        case LCB_CALLBACK_GETREPLICA:
+            return "GETREPLICA";
+        case LCB_CALLBACK_ENDURE:
+            return "ENDURE";
+        case LCB_CALLBACK_HTTP:
+            return "HTTP";
+        case LCB_CALLBACK_CBFLUSH:
+            return "CBFLUSH";
+        case LCB_CALLBACK_OBSEQNO:
+            return "OBSEQNO";
+        case LCB_CALLBACK_STOREDUR:
+            return "STOREDUR";
+        case LCB_CALLBACK_SDMUTATE:
+            return "SDMUTATE";
+        case LCB_CALLBACK_SDLOOKUP:
+            return "SDLOOKUP";
+        case LCB_CALLBACK_NOOP:
+            return "NOOP";
+        default:
+            return "UNKNOWN";
     }
 }
 
-lcb_RESPCALLBACK
-lcb_find_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE cbtype)
+lcb_RESPCALLBACK lcb_find_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE cbtype)
 {
     lcb_RESPCALLBACK ret = instance->callbacks.v3callbacks[cbtype];
     if (!ret) {

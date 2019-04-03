@@ -29,7 +29,6 @@
 extern "C" {
 #endif
 
-
 /**
  * Set the key for the command.
  * @param cmd A command derived from lcb_CMDBASE
@@ -44,8 +43,7 @@ extern "C" {
  * The storage for `keybuf` may be released or modified after the command has
  * been spooled.
  */
-#define LCB_CMD_SET_KEY(cmd, keybuf, keylen) \
-        LCB_KREQ_SIMPLE(&(cmd)->key, keybuf, keylen)
+#define LCB_CMD_SET_KEY(cmd, keybuf, keylen) LCB_KREQ_SIMPLE(&(cmd)->key, keybuf, keylen)
 
 /**
  * @name Creating Commands
@@ -64,41 +62,41 @@ extern "C" {
  *
  * @{*/
 
-#define LCB_CMD_BASE \
-    /**Common flags for the command. These modify the command itself. Currently
-     the lower 16 bits of this field are reserved, and the higher 16 bits are
-     used for individual commands.*/ \
-    lcb_U32 cmdflags; \
-    \
-    /**Specify the expiration time. This is either an absolute Unix time stamp
-     or a relative offset from now, in seconds. If the value of this number
-     is greater than the value of thirty days in seconds, then it is a Unix
-     timestamp.
-
-     This field is used in mutation operations (lcb_store3()) to indicate
-     the lifetime of the item. It is used in lcb_get3() with the lcb_CMDGET::lock
-     option to indicate the lock expiration itself. */ \
-    lcb_U32 exptime; \
-    \
-    /**The known CAS of the item. This is passed to mutation to commands to
-     ensure the item is only changed if the server-side CAS value matches the
-     one specified here. For other operations (such as lcb_CMDENDURE) this
-     is used to ensure that the item has been persisted/replicated to a number
-     of servers with the value specified here. */ \
-    lcb_U64 cas; \
-    \
-    /**< Collection ID */ \
-    lcb_U32 cid;  \
-    const char *scope;  \
-    size_t nscope;  \
-    const char *collection;  \
-    size_t ncollection;  \
-    /**The key for the document itself. This should be set via LCB_CMD_SET_KEY() */ \
-    lcb_KEYBUF key; \
-    \
-    /** Operation timeout (in microseconds). When zero, the library will use default value. */ \
-    lcb_U32 timeout; \
-    /** Parent tracing span */ \
+#define LCB_CMD_BASE                                                                                                   \
+    /**Common flags for the command. These modify the command itself. Currently                                        \
+     the lower 16 bits of this field are reserved, and the higher 16 bits are                                          \
+     used for individual commands.*/                                                                                   \
+    lcb_U32 cmdflags;                                                                                                  \
+                                                                                                                       \
+    /**Specify the expiration time. This is either an absolute Unix time stamp                                         \
+     or a relative offset from now, in seconds. If the value of this number                                            \
+     is greater than the value of thirty days in seconds, then it is a Unix                                            \
+     timestamp.                                                                                                        \
+                                                                                                                       \
+     This field is used in mutation operations (lcb_store3()) to indicate                                              \
+     the lifetime of the item. It is used in lcb_get3() with the lcb_CMDGET::lock                                      \
+     option to indicate the lock expiration itself. */                                                                 \
+    lcb_U32 exptime;                                                                                                   \
+                                                                                                                       \
+    /**The known CAS of the item. This is passed to mutation to commands to                                            \
+     ensure the item is only changed if the server-side CAS value matches the                                          \
+     one specified here. For other operations (such as lcb_CMDENDURE) this                                             \
+     is used to ensure that the item has been persisted/replicated to a number                                         \
+     of servers with the value specified here. */                                                                      \
+    lcb_U64 cas;                                                                                                       \
+                                                                                                                       \
+    /**< Collection ID */                                                                                              \
+    lcb_U32 cid;                                                                                                       \
+    const char *scope;                                                                                                 \
+    size_t nscope;                                                                                                     \
+    const char *collection;                                                                                            \
+    size_t ncollection;                                                                                                \
+    /**The key for the document itself. This should be set via LCB_CMD_SET_KEY() */                                    \
+    lcb_KEYBUF key;                                                                                                    \
+                                                                                                                       \
+    /** Operation timeout (in microseconds). When zero, the library will use default value. */                         \
+    lcb_U32 timeout;                                                                                                   \
+    /** Parent tracing span */                                                                                         \
     lcbtrace_SPAN *pspan
 
 /**
@@ -134,24 +132,22 @@ extern "C" {
  * @{
  */
 
-#define LCB_RESP_BASE \
-    /**
-     Application-defined pointer passed as the `cookie` parameter when
-     scheduling the command.
-     */ \
-    void *cookie; \
-    const void *key; /**< Key for request */ \
-    lcb_SIZE nkey; /**< Size of key */ \
-    lcb_CAS cas; /**< CAS for response (if applicable) */ \
-    lcb_STATUS rc; /**< Status code */ \
-    lcb_U16 version; /**< ABI version for response */ \
-    /** Response specific flags. see ::lcb_RESPFLAGS */ \
+#define LCB_RESP_BASE                                                                                                  \
+    /**                                                                                                                \
+     Application-defined pointer passed as the `cookie` parameter when                                                 \
+     scheduling the command.                                                                                           \
+     */                                                                                                                \
+    void *cookie;                                                                                                      \
+    const void *key; /**< Key for request */                                                                           \
+    lcb_SIZE nkey;   /**< Size of key */                                                                               \
+    lcb_CAS cas;     /**< CAS for response (if applicable) */                                                          \
+    lcb_STATUS rc;   /**< Status code */                                                                               \
+    lcb_U16 version; /**< ABI version for response */                                                                  \
+    /** Response specific flags. see ::lcb_RESPFLAGS */                                                                \
     lcb_U16 rflags;
 
-
-
-#define LCB_RESP_SERVER_FIELDS \
-    /** String containing the `host:port` of the server which sent this response */ \
+#define LCB_RESP_SERVER_FIELDS                                                                                         \
+    /** String containing the `host:port` of the server which sent this response */                                    \
     const char *server;
 
 /**
@@ -539,10 +535,7 @@ typedef struct {
  * @endcode
  */
 LIBCOUCHBASE_API
-lcb_MULTICMD_CTX *
-lcb_endure3_ctxnew(lcb_INSTANCE *instance,
-    const lcb_durability_opts_t *options, lcb_STATUS *err);
-
+lcb_MULTICMD_CTX *lcb_endure3_ctxnew(lcb_INSTANCE *instance, const lcb_durability_opts_t *options, lcb_STATUS *err);
 
 #define LCB_DURABILITY_VALIDATE_CAPMAX (1 << 1)
 
@@ -574,12 +567,9 @@ lcb_endure3_ctxnew(lcb_INSTANCE *instance,
  * @return LCB_EINVAL if both `persist_to` and `replicate_to` are 0.
  */
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_durability_validate(lcb_INSTANCE *instance,
-    lcb_U16 *persist_to, lcb_U16 *replicate_to, int options);
+lcb_STATUS lcb_durability_validate(lcb_INSTANCE *instance, lcb_U16 *persist_to, lcb_U16 *replicate_to, int options);
 
 /**@} (NAME) */
-
 
 /**
  * @name Retrieve current persistence/replication status
@@ -598,7 +588,7 @@ typedef struct {
     LCB_CMD_BASE;
     /**For internal use: This determines the servers the command should be
      * routed to. Each entry is an index within the server. */
-    const lcb_U16* servers_;
+    const lcb_U16 *servers_;
     size_t nservers_;
 } lcb_CMDOBSERVE;
 
@@ -625,10 +615,10 @@ typedef enum {
  */
 typedef struct {
     LCB_RESP_BASE
-    lcb_U8 status; /**<Bit set of flags */
+    lcb_U8 status;   /**<Bit set of flags */
     lcb_U8 ismaster; /**< Set to true if this response came from the master node */
-    lcb_U32 ttp; /**<Unused. For internal requests, contains the server index */
-    lcb_U32 ttr; /**<Unused */
+    lcb_U32 ttp;     /**<Unused. For internal requests, contains the server index */
+    lcb_U32 ttr;     /**<Unused */
 } lcb_RESPOBSERVE;
 
 /**
@@ -667,8 +657,7 @@ typedef struct {
  * Operations created by observe cannot be undone using lcb_sched_fail().
  */
 LIBCOUCHBASE_API
-lcb_MULTICMD_CTX *
-lcb_observe3_ctxnew(lcb_INSTANCE *instance);
+lcb_MULTICMD_CTX *lcb_observe3_ctxnew(lcb_INSTANCE *instance);
 
 /**
  * @brief Command structure for lcb_observe_seqno3().
@@ -693,11 +682,11 @@ typedef struct {
  */
 typedef struct {
     LCB_RESP_BASE
-    lcb_U16 vbid; /**< vBucket ID (for potential mapping) */
-    lcb_U16 server_index; /**< Input server index */
-    lcb_U64 cur_uuid; /**< UUID for this vBucket as known to the server */
+    lcb_U16 vbid;            /**< vBucket ID (for potential mapping) */
+    lcb_U16 server_index;    /**< Input server index */
+    lcb_U64 cur_uuid;        /**< UUID for this vBucket as known to the server */
     lcb_U64 persisted_seqno; /**< Highest persisted sequence */
-    lcb_U64 mem_seqno; /**< Highest known sequence */
+    lcb_U64 mem_seqno;       /**< Highest known sequence */
 
     /**
      * In the case where the command's uuid is not the most current, this
@@ -720,8 +709,7 @@ typedef struct {
  * @param cmd the command
  */
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_observe_seqno3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDOBSEQNO *cmd);
+lcb_STATUS lcb_observe_seqno3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDOBSEQNO *cmd);
 
 /**@} (Name: OBSERVE) */
 
@@ -735,8 +723,7 @@ lcb_observe_seqno3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDOBSE
  *         level.
  */
 LIBCOUCHBASE_API
-const lcb_MUTATION_TOKEN *
-lcb_resp_get_mutation_token(int cbtype, const lcb_RESPBASE *rb);
+const lcb_MUTATION_TOKEN *lcb_resp_get_mutation_token(int cbtype, const lcb_RESPBASE *rb);
 
 /**
  * @volatile
@@ -788,8 +775,7 @@ lcb_resp_get_mutation_token(int cbtype, const lcb_RESPBASE *rb);
  * @endcode
  */
 LIBCOUCHBASE_API
-const lcb_MUTATION_TOKEN *
-lcb_get_mutation_token(lcb_INSTANCE *instance, const lcb_KEYBUF *kb, lcb_STATUS *errp);
+const lcb_MUTATION_TOKEN *lcb_get_mutation_token(lcb_INSTANCE *instance, const lcb_KEYBUF *kb, lcb_STATUS *errp);
 
 /**@} (Group: Durability) */
 
@@ -831,7 +817,7 @@ typedef struct {
     LCB_RESP_BASE
     LCB_RESP_SERVER_FIELDS
     const char *value; /**< The value, if any, for the given statistic */
-    lcb_SIZE nvalue; /**< Length of value */
+    lcb_SIZE nvalue;   /**< Length of value */
 } lcb_RESPSTATS;
 
 /**@committed
@@ -874,8 +860,7 @@ typedef struct {
  * @endcode
  */
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_stats3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS * cmd);
+lcb_STATUS lcb_stats3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS *cmd);
 
 LIBCOUCHBASE_API lcb_CMDSTATS *lcb_cmdstats_alloc(void);
 LIBCOUCHBASE_API void lcb_cmdstats_dispose(lcb_CMDSTATS *cmd);
@@ -896,15 +881,14 @@ typedef struct {
     LCB_RESP_BASE
     LCB_RESP_SERVER_FIELDS
     const char *mcversion; /**< The version string */
-    lcb_SIZE nversion; /**< Length of the version string */
+    lcb_SIZE nversion;     /**< Length of the version string */
 } lcb_RESPMCVERSION;
 
 /**
  * @volatile
  */
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_server_versions3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDVERSIONS * cmd);
+lcb_STATUS lcb_server_versions3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDVERSIONS *cmd);
 
 LIBCOUCHBASE_API lcb_CMDVERSIONS *lcb_cmdversions_alloc(void);
 LIBCOUCHBASE_API void lcb_cmdversions_dispose(lcb_CMDVERSIONS *cmd);
@@ -932,8 +916,7 @@ typedef struct {
 typedef lcb_RESPSERVERBASE lcb_RESPVERBOSITY;
 /**@volatile*/
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_server_verbosity3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDVERBOSITY *cmd);
+lcb_STATUS lcb_server_verbosity3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDVERBOSITY *cmd);
 
 LIBCOUCHBASE_API lcb_CMDVERBOSITY *lcb_cmdverbosity_alloc(void);
 LIBCOUCHBASE_API void lcb_cmdverbosity_dispose(lcb_CMDVERBOSITY *cmd);
@@ -982,8 +965,7 @@ typedef struct {
  * pipeline calls such as lcb_sched_enter()/lcb_sched_leave()
  */
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_cbflush3(lcb_INSTANCE *instance, void *cookie, const lcb_CMDCBFLUSH *cmd);
+lcb_STATUS lcb_cbflush3(lcb_INSTANCE *instance, void *cookie, const lcb_CMDCBFLUSH *cmd);
 
 LIBCOUCHBASE_API lcb_CMDCBFLUSH *lcb_cmdcbflush_alloc(void);
 LIBCOUCHBASE_API void lcb_cmdcbflush_dispose(lcb_CMDCBFLUSH *cmd);
@@ -1018,8 +1000,7 @@ typedef lcb_RESPSERVERBASE lcb_RESPNOOP;
  * @return status code for scheduling.
  */
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_noop3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDNOOP *cmd);
+lcb_STATUS lcb_noop3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDNOOP *cmd);
 
 LIBCOUCHBASE_API lcb_CMDNOOP *lcb_cmdnoop_alloc(void);
 LIBCOUCHBASE_API void lcb_cmdnoop_dispose(lcb_CMDNOOP *cmd);
@@ -1105,7 +1086,7 @@ enum lcb_timeunit_t {
     LCB_TIMEUNIT_NSEC = 0, /**< @brief Time is in nanoseconds */
     LCB_TIMEUNIT_USEC = 1, /**< @brief Time is in microseconds */
     LCB_TIMEUNIT_MSEC = 2, /**< @brief Time is in milliseconds */
-    LCB_TIMEUNIT_SEC = 3 /**< @brief Time is in seconds */
+    LCB_TIMEUNIT_SEC = 3   /**< @brief Time is in seconds */
 };
 typedef enum lcb_timeunit_t lcb_timeunit_t;
 
@@ -1123,7 +1104,6 @@ typedef enum lcb_timeunit_t lcb_timeunit_t;
  */
 LIBCOUCHBASE_API
 lcb_STATUS lcb_enable_timings(lcb_INSTANCE *instance);
-
 
 /**
  * Stop recording (and release all resources from previous measurements)
@@ -1151,13 +1131,8 @@ lcb_STATUS lcb_disable_timings(lcb_INSTANCE *instance);
  * @param total The number of hits in this histogram bucket
  * @param maxtotal The highest value in all of the buckets
  */
-typedef void (*lcb_timings_callback)(lcb_INSTANCE *instance,
-                                     const void *cookie,
-                                     lcb_timeunit_t timeunit,
-                                     lcb_U32 min,
-                                     lcb_U32 max,
-                                     lcb_U32 total,
-                                     lcb_U32 maxtotal);
+typedef void (*lcb_timings_callback)(lcb_INSTANCE *instance, const void *cookie, lcb_timeunit_t timeunit, lcb_U32 min,
+                                     lcb_U32 max, lcb_U32 total, lcb_U32 maxtotal);
 
 /**
  * Get the timings histogram
@@ -1169,14 +1144,12 @@ typedef void (*lcb_timings_callback)(lcb_INSTANCE *instance,
  * @committed
  */
 LIBCOUCHBASE_API
-lcb_STATUS lcb_get_timings(lcb_INSTANCE *instance,
-                            const void *cookie,
-                            lcb_timings_callback callback);
+lcb_STATUS lcb_get_timings(lcb_INSTANCE *instance, const void *cookie, lcb_timings_callback callback);
 /**@} (Group: Timings) */
 
 typedef enum {
     /** Dump the raw vbucket configuration */
-    LCB_DUMP_VBCONFIG =  0x01,
+    LCB_DUMP_VBCONFIG = 0x01,
     /** Dump information about each packet */
     LCB_DUMP_PKTINFO = 0x02,
     /** Dump memory usage/reservation information about buffers */
@@ -1202,8 +1175,7 @@ typedef enum {
  * enabled with these flags.
  */
 LIBCOUCHBASE_API
-void
-lcb_dump(lcb_INSTANCE *instance, FILE *fp, lcb_U32 flags);
+void lcb_dump(lcb_INSTANCE *instance, FILE *fp, lcb_U32 flags);
 
 /** Volatile histogram APIs, used by pillowfight and others */
 struct lcb_histogram_st;
@@ -1215,16 +1187,14 @@ typedef struct lcb_histogram_st lcb_HISTOGRAM;
  * @return a new histogram structure
  */
 LIBCOUCHBASE_API
-lcb_HISTOGRAM *
-lcb_histogram_create(void);
+lcb_HISTOGRAM *lcb_histogram_create(void);
 
 /**
  * @volatile free a histogram structure
  * @param hg the histogram
  */
 LIBCOUCHBASE_API
-void
-lcb_histogram_destroy(lcb_HISTOGRAM *hg);
+void lcb_histogram_destroy(lcb_HISTOGRAM *hg);
 
 /**
  * @volatile
@@ -1233,12 +1203,10 @@ lcb_histogram_destroy(lcb_HISTOGRAM *hg);
  * @param duration the duration in nanoseconds
  */
 LIBCOUCHBASE_API
-void
-lcb_histogram_record(lcb_HISTOGRAM *hg, lcb_U64 duration);
+void lcb_histogram_record(lcb_HISTOGRAM *hg, lcb_U64 duration);
 
-typedef void (*lcb_HISTOGRAM_CALLBACK)
-        (const void *cookie, lcb_timeunit_t timeunit, lcb_U32 min, lcb_U32 max,
-                lcb_U32 total, lcb_U32 maxtotal);
+typedef void (*lcb_HISTOGRAM_CALLBACK)(const void *cookie, lcb_timeunit_t timeunit, lcb_U32 min, lcb_U32 max,
+                                       lcb_U32 total, lcb_U32 maxtotal);
 
 /**
  * @volatile
@@ -1248,9 +1216,7 @@ typedef void (*lcb_HISTOGRAM_CALLBACK)
  * @param cb callback to invoke
  */
 LIBCOUCHBASE_API
-void
-lcb_histogram_read(const lcb_HISTOGRAM *hg, const void *cookie,
-    lcb_HISTOGRAM_CALLBACK cb);
+void lcb_histogram_read(const lcb_HISTOGRAM *hg, const void *cookie, lcb_HISTOGRAM_CALLBACK cb);
 
 /**
  * Print the histogram to the specified FILE.
@@ -1263,7 +1229,7 @@ lcb_histogram_read(const lcb_HISTOGRAM *hg, const void *cookie,
  * @param stream File to print the histogram to.
  */
 LIBCOUCHBASE_API
-void lcb_histogram_print(lcb_HISTOGRAM* hg, FILE* stream);
+void lcb_histogram_print(lcb_HISTOGRAM *hg, FILE *stream);
 
 /**
  * @volatile
@@ -1277,8 +1243,7 @@ void lcb_histogram_print(lcb_HISTOGRAM* hg, FILE* stream);
  * @return the pointer to string or NULL if context wasn't specified.
  */
 LIBCOUCHBASE_API
-const char *
-lcb_resp_get_error_context(int cbtype, const lcb_RESPBASE *rb);
+const char *lcb_resp_get_error_context(int cbtype, const lcb_RESPBASE *rb);
 
 /**
  * @uncommitted
@@ -1291,8 +1256,7 @@ lcb_resp_get_error_context(int cbtype, const lcb_RESPBASE *rb);
  * @return the pointer to string or NULL if ref wasn't specified.
  */
 LIBCOUCHBASE_API
-const char *
-lcb_resp_get_error_ref(int cbtype, const lcb_RESPBASE *rb);
+const char *lcb_resp_get_error_ref(int cbtype, const lcb_RESPBASE *rb);
 
 /**
  * @defgroup lcb-collections-api Collections Management
@@ -1308,7 +1272,8 @@ typedef struct lcb_RESPGETMANIFEST_ lcb_RESPGETMANIFEST;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetmanifest_status(const lcb_RESPGETMANIFEST *resp);
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetmanifest_cookie(const lcb_RESPGETMANIFEST *resp, void **cookie);
-LIBCOUCHBASE_API lcb_STATUS lcb_respgetmanifest_value(const lcb_RESPGETMANIFEST *resp, const char **json, size_t *json_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respgetmanifest_value(const lcb_RESPGETMANIFEST *resp, const char **json,
+                                                      size_t *json_len);
 
 typedef struct lcb_CMDGETMANIFEST_ lcb_CMDGETMANIFEST;
 
@@ -1317,15 +1282,14 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetmanifest_destroy(lcb_CMDGETMANIFEST *cmd);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetmanifest_timeout(lcb_CMDGETMANIFEST *cmd, uint32_t timeout);
 LIBCOUCHBASE_API lcb_STATUS lcb_getmanifest(lcb_INSTANCE *instance, void *cookie, const lcb_CMDGETMANIFEST *cmd);
 
-
-
 typedef struct lcb_RESPGETCID_ lcb_RESPGETCID;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetcid_status(const lcb_RESPGETCID *resp);
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetcid_cookie(const lcb_RESPGETCID *resp, void **cookie);
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetcid_manifest_id(const lcb_RESPGETCID *resp, uint64_t *id);
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetcid_collection_id(const lcb_RESPGETCID *resp, uint32_t *id);
-LIBCOUCHBASE_API lcb_STATUS lcb_respgetcid_scoped_collection(const lcb_RESPGETCID *resp, const char **name, size_t *name_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respgetcid_scoped_collection(const lcb_RESPGETCID *resp, const char **name,
+                                                             size_t *name_len);
 
 typedef struct lcb_CMDGETCID_ lcb_CMDGETCID;
 

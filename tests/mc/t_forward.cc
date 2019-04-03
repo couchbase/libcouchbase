@@ -21,36 +21,40 @@
 #include "pktmaker.h"
 
 using namespace PacketMaker;
-using std::vector;
 using std::string;
+using std::vector;
 
 struct Vars {
     mc_PACKET *pkt;
     mc_PIPELINE *pl;
     nb_IOV iovs[10];
     mc_IOVINFO ioi;
-    vector<char> reqbuf;
+    vector< char > reqbuf;
 
-    Vars() {
+    Vars()
+    {
         pkt = NULL;
         pl = NULL;
         memset(&ioi, 0, sizeof(ioi));
         memset(&iovs, 0, sizeof(iovs));
     }
 
-    lcb_STATUS requestPacket(mc_CMDQUEUE *cq) {
+    lcb_STATUS requestPacket(mc_CMDQUEUE *cq)
+    {
         return mc_forward_packet(cq, &ioi, &pkt, &pl, 0);
     }
 
-    void initInfo() {
+    void initInfo()
+    {
         mc_iovinfo_init(&ioi, iovs, 10);
     }
 };
 
-class McFwd : public ::testing::Test {};
+class McFwd : public ::testing::Test
+{
+};
 
-static void
-setupRequestBuf(vector<char>& out, size_t nkey, size_t nval)
+static void setupRequestBuf(vector< char > &out, size_t nkey, size_t nval)
 {
     string k(nkey, 'K');
     string v(nval, 'V');
@@ -69,7 +73,7 @@ TEST_F(McFwd, testForwardSingle)
 
     nb_IOV iovs[10];
     // Enqueue first packet inside entire body.
-    vector<char> reqbody;
+    vector< char > reqbody;
     sr.serialize(reqbody);
 
     memset(iovs, 0, sizeof(iovs));
@@ -98,7 +102,7 @@ TEST_F(McFwd, testFragmentedBasic)
 {
     CQWrap cq;
     nb_IOV iovs[10];
-    vector<char> reqbuf;
+    vector< char > reqbuf;
 
     memset(iovs, 0, sizeof(iovs));
     setupRequestBuf(reqbuf, 10, 10);
@@ -126,7 +130,8 @@ TEST_F(McFwd, testFragmentedBasic)
     mcreq_sched_fail(&cq);
 }
 
-TEST_F(McFwd, testFragmentedHeader) {
+TEST_F(McFwd, testFragmentedHeader)
+{
     CQWrap cq;
     Vars vars;
 
@@ -198,7 +203,7 @@ TEST_F(McFwd, testMultiValue)
     vars.iovs[0].iov_len = 25;
 
     for (int ii = 1; ii < 10; ii++) {
-        vars.iovs[ii].iov_base = &vars.reqbuf[25 + (ii-1) * 90];
+        vars.iovs[ii].iov_base = &vars.reqbuf[25 + (ii - 1) * 90];
         vars.iovs[ii].iov_len = 90;
     }
 
@@ -227,7 +232,7 @@ TEST_F(McFwd, testNoMap)
     hdr.request.extlen = 8;
     hdr.request.bodylen = htonl(8);
     hdr.request.vbucket = 0;
-    char reqbuf[32] = { 0 };
+    char reqbuf[32] = {0};
     memcpy(reqbuf, hdr.bytes, sizeof hdr.bytes);
     mc_IOVINFO ioi;
     nb_IOV iov;

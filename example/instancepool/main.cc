@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2013 Couchbase, Inc.
+ *     Copyright 2013-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -18,13 +18,15 @@
 #include "pool.h"
 #include <stdio.h>
 #include <vector>
+#include <cstring>
+#include <cstdlib>
 
 using namespace lcb;
 
 extern "C" {
 static void get_callback(lcb_INSTANCE *instance, int, const lcb_RESPBASE *rb)
 {
-    const lcb_RESPGET *rg = reinterpret_cast<const lcb_RESPGET*>(rb);
+    const lcb_RESPGET *rg = reinterpret_cast< const lcb_RESPGET * >(rb);
     if (lcb_respget_status(rg) != LCB_SUCCESS) {
         fprintf(stderr, "%p: Couldn't get key", instance);
     } else {
@@ -37,11 +39,14 @@ static void get_callback(lcb_INSTANCE *instance, int, const lcb_RESPBASE *rb)
 }
 }
 
-class MyPool : public Pool {
-public:
-    MyPool(const lcb_create_st& opts, size_t items) : Pool(opts, items) {}
-protected:
-    void initialize(lcb_INSTANCE *instance) {
+class MyPool : public Pool
+{
+  public:
+    MyPool(const lcb_create_st &opts, size_t items) : Pool(opts, items) {}
+
+  protected:
+    void initialize(lcb_INSTANCE *instance)
+    {
         // We override the initialize function to set the proper callback we
         // care about
         fprintf(stderr, "Initializing %p\n", instance);
@@ -50,9 +55,9 @@ protected:
 };
 
 extern "C" {
-static void *
-pthr_func(void *arg) {
-    Pool *pool = reinterpret_cast<Pool*>(arg);
+static void *pthr_func(void *arg)
+{
+    Pool *pool = reinterpret_cast< Pool * >(arg);
     lcb_CMDGET *gcmd;
     lcb_cmdget_create(&gcmd);
     lcb_cmdget_key(gcmd, "foo", 3);
@@ -75,7 +80,8 @@ pthr_func(void *arg) {
 }
 
 #define NUM_WORKERS 20
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     lcb_create_st options;
     pthread_t workers[NUM_WORKERS];
     Pool *pool;

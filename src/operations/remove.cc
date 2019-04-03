@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010-2018 Couchbase, Inc.
+ *     Copyright 2010-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -106,7 +106,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdremove_parent_span(lcb_CMDREMOVE *cmd, lcbtra
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdremove_collection(lcb_CMDREMOVE *cmd, const char *scope, size_t scope_len, const char *collection, size_t collection_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdremove_collection(lcb_CMDREMOVE *cmd, const char *scope, size_t scope_len,
+                                                     const char *collection, size_t collection_len)
 {
     cmd->scope = scope;
     cmd->nscope = scope_len;
@@ -148,7 +149,7 @@ static lcb_STATUS remove_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
 {
     const lcb_CMDREMOVE *cmd = (const lcb_CMDREMOVE *)arg;
     if (cid > 0) {
-        lcb_CMDREMOVE *mut = const_cast<lcb_CMDREMOVE *>(cmd);
+        lcb_CMDREMOVE *mut = const_cast< lcb_CMDREMOVE * >(cmd);
         mut->cid = cid;
     }
 
@@ -204,7 +205,7 @@ lcb_STATUS lcb_remove(lcb_INSTANCE *instance, void *cookie, const lcb_CMDREMOVE 
         return err;
     }
 
-    return collcache_exec(cmd->scope, cmd->nscope, cmd->collection, cmd->ncollection,
-            instance, cookie, remove_impl, (lcb_COLLCACHE_ARG_CLONE)lcb_cmdremove_clone,
-            (lcb_COLLCACHE_ARG_DTOR)lcb_cmdremove_destroy, cmd);
+    return collcache_exec(cmd->scope, cmd->nscope, cmd->collection, cmd->ncollection, instance, cookie, remove_impl,
+                          (lcb_COLLCACHE_ARG_CLONE)lcb_cmdremove_clone, (lcb_COLLCACHE_ARG_DTOR)lcb_cmdremove_destroy,
+                          cmd);
 }

@@ -28,20 +28,18 @@ class Logger : public ::testing::Test
 {
 };
 
-
 struct MyLogprocs : lcb_logprocs {
-    set<string> messages;
+    set< string > messages;
 };
 
 extern "C" {
-static void fallback_logger(lcb_logprocs *procs, unsigned int,
-                            const char *, int, const char *,
-                            int, const char *fmt, va_list ap)
+static void fallback_logger(lcb_logprocs *procs, unsigned int, const char *, int, const char *, int, const char *fmt,
+                            va_list ap)
 {
     char buf[2048];
     vsprintf(buf, fmt, ap);
     EXPECT_FALSE(procs == NULL);
-    MyLogprocs *myprocs = static_cast<MyLogprocs *>(procs);
+    MyLogprocs *myprocs = static_cast< MyLogprocs * >(procs);
     myprocs->messages.insert(buf);
 }
 }
@@ -53,7 +51,7 @@ TEST_F(Logger, testLogger)
 
     lcb_create(&instance, NULL);
     MyLogprocs procs;
-    lcb_logprocs *ptrprocs = static_cast<lcb_logprocs *>(&procs);
+    lcb_logprocs *ptrprocs = static_cast< lcb_logprocs * >(&procs);
     ptrprocs->version = 0;
     memset(ptrprocs, 0, sizeof(*ptrprocs));
 
@@ -66,7 +64,7 @@ TEST_F(Logger, testLogger)
     LCB_LOG_BASIC(instance->getSettings(), "bar");
     LCB_LOG_BASIC(instance->getSettings(), "baz");
 
-    set<string>& msgs = procs.messages;
+    set< string > &msgs = procs.messages;
     ASSERT_FALSE(msgs.find("foo") == msgs.end());
     ASSERT_FALSE(msgs.find("bar") == msgs.end());
     ASSERT_FALSE(msgs.find("baz") == msgs.end());

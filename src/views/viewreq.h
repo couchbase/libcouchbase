@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2014-2018 Couchbase, Inc.
+ *     Copyright 2014-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -30,34 +30,48 @@ struct VRDocRequest : lcb::docreq::DocRequest {
 };
 
 struct lcb_VIEW_HANDLE_ : lcb::jsparse::Parser::Actions {
-    lcb_VIEW_HANDLE_(lcb_INSTANCE *, const void*, const lcb_CMDVIEW*);
+    lcb_VIEW_HANDLE_(lcb_INSTANCE *, const void *, const lcb_CMDVIEW *);
     ~lcb_VIEW_HANDLE_();
     void invoke_last(lcb_STATUS err);
-    void invoke_last() { invoke_last(lasterr); }
-    void invoke_row(lcb_RESPVIEW*);
-    void unref() {if(!--refcount){delete this;}}
-    void ref() {refcount++;}
+    void invoke_last()
+    {
+        invoke_last(lasterr);
+    }
+    void invoke_row(lcb_RESPVIEW *);
+    void unref()
+    {
+        if (!--refcount) {
+            delete this;
+        }
+    }
+    void ref()
+    {
+        refcount++;
+    }
     void cancel();
 
     /**
      * Perform the actual HTTP request
      * @param cmd User's command
      */
-    inline lcb_STATUS request_http(const lcb_CMDVIEW* cmd);
+    inline lcb_STATUS request_http(const lcb_CMDVIEW *cmd);
 
-    bool is_include_docs() const {
+    bool is_include_docs() const
+    {
         return cmdflags & LCB_CMDVIEWQUERY_F_INCLUDE_DOCS;
     }
-    bool is_no_rowparse() const {
+    bool is_no_rowparse() const
+    {
         return cmdflags & LCB_CMDVIEWQUERY_F_NOROWPARSE;
     }
-    bool is_spatial() const {
+    bool is_spatial() const
+    {
         return cmdflags & LCB_CMDVIEWQUERY_F_SPATIAL;
     }
 
-    void JSPARSE_on_row(const lcb::jsparse::Row&);
-    void JSPARSE_on_error(const std::string&);
-    void JSPARSE_on_complete(const std::string&);
+    void JSPARSE_on_row(const lcb::jsparse::Row &);
+    void JSPARSE_on_error(const std::string &);
+    void JSPARSE_on_complete(const std::string &);
 
     /** Current HTTP response to provide in callbacks */
     const lcb_RESPHTTP *cur_htresp;
@@ -73,5 +87,4 @@ struct lcb_VIEW_HANDLE_ : lcb::jsparse::Parser::Actions {
     uint32_t cmdflags;
     lcb_STATUS lasterr;
     lcbtrace_SPAN *span;
-
 };

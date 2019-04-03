@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2014 Couchbase, Inc.
+ *     Copyright 2014-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -23,15 +23,14 @@
 #include "rdb/rope.h"
 
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_pktfwd3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDPKTFWD *cmd)
+lcb_STATUS lcb_pktfwd3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDPKTFWD *cmd)
 {
     int fwdopts = 0;
     mc_PIPELINE *pl;
     mc_PACKET *packet;
     nb_IOV *iov, iov_s;
     unsigned niov;
-    mc_IOVINFO ioi = { { 0 } };
+    mc_IOVINFO ioi = {{0}};
     lcb_STATUS err;
 
     if (cmd->nomap) {
@@ -39,7 +38,7 @@ lcb_pktfwd3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDPKTFWD *cmd
         if (cmd->server_index >= LCBT_NSERVERS(instance)) {
             return LCB_NO_MATCHING_SERVER;
         } else {
-            pl = (mc_PIPELINE*)LCBT_GET_SERVER(instance, cmd->server_index);
+            pl = (mc_PIPELINE *)LCBT_GET_SERVER(instance, cmd->server_index);
         }
     }
 
@@ -53,7 +52,7 @@ lcb_pktfwd3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDPKTFWD *cmd
             fwdopts |= MC_FWD_OPT_COPY;
         }
     } else {
-        iov = (nb_IOV*)cmd->vb.u_buf.multi.iov;
+        iov = (nb_IOV *)cmd->vb.u_buf.multi.iov;
         niov = cmd->vb.u_buf.multi.niov;
         ioi.total = cmd->vb.u_buf.multi.total_length;
     }
@@ -71,15 +70,13 @@ lcb_pktfwd3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDPKTFWD *cmd
 }
 
 LIBCOUCHBASE_API
-void
-lcb_backbuf_ref(lcb_BACKBUF buf)
+void lcb_backbuf_ref(lcb_BACKBUF buf)
 {
     rdb_seg_ref(buf);
 }
 
 LIBCOUCHBASE_API
-void
-lcb_backbuf_unref(lcb_BACKBUF buf)
+void lcb_backbuf_unref(lcb_BACKBUF buf)
 {
     rdb_seg_unref(buf);
 }

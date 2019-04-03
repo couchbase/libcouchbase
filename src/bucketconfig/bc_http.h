@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2013 Couchbase, Inc.
+ *     Copyright 2013-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 
 /**
  * HTTP-based 'REST' configuration. This module works by connecting to the
@@ -33,14 +32,16 @@
 #define REQBUCKET_TERSE_PREFIX "/pools/default/bs/"
 
 #define REQPOOLS_URI "/pools/"
-#define HOSTHDR_FMT  "Host: %s:%s\r\n"
+#define HOSTHDR_FMT "Host: %s:%s\r\n"
 #define LAST_HTTP_HEADER "X-Libcouchbase: " LCB_CLIENT_ID "\r\n"
 #define CONFIG_DELIMITER "\n\n\n\n"
 
-namespace lcb {
-namespace clconfig {
+namespace lcb
+{
+namespace clconfig
+{
 struct HttpProvider : Provider {
-    HttpProvider(Confmon*);
+    HttpProvider(Confmon *);
     ~HttpProvider();
 
     void reset_stream_state();
@@ -62,18 +63,18 @@ struct HttpProvider : Provider {
     /* Overrides */
     bool pause();
     lcb_STATUS refresh();
-    ConfigInfo* get_cached();
-    void config_updated(lcbvb_CONFIG*);
-    void configure_nodes(const lcb::Hostlist&);
-    const lcb::Hostlist* get_nodes() const;
-    void dump(FILE*) const;
-    lcb_STATUS setup_request_header(const lcb_host_t& host);
+    ConfigInfo *get_cached();
+    void config_updated(lcbvb_CONFIG *);
+    void configure_nodes(const lcb::Hostlist &);
+    const lcb::Hostlist *get_nodes() const;
+    void dump(FILE *) const;
+    lcb_STATUS setup_request_header(const lcb_host_t &host);
     /* END Overrides */
 
     /** Base configuration structure */
     lcbio_pCONNSTART creq;
     lcbio_CTX *ioctx;
-    lcb::htparse::Parser* htp;
+    lcb::htparse::Parser *htp;
 
     /**
      * Buffer to use for writing our request header. Recreated for each
@@ -86,9 +87,9 @@ struct HttpProvider : Provider {
      * timer waits until the current stream times out and then proceeds to the
      * next connection.
      */
-    lcb::io::Timer<HttpProvider, &HttpProvider::delayed_disconn> disconn_timer;
-    lcb::io::Timer<HttpProvider, &HttpProvider::on_timeout> io_timer;
-    lcb::io::Timer<HttpProvider, &HttpProvider::delayed_reconnect> as_reconnect;
+    lcb::io::Timer< HttpProvider, &HttpProvider::delayed_disconn > disconn_timer;
+    lcb::io::Timer< HttpProvider, &HttpProvider::on_timeout > io_timer;
+    lcb::io::Timer< HttpProvider, &HttpProvider::delayed_reconnect > as_reconnect;
 
     /** List of hosts to try */
     lcb::Hostlist *nodes;
@@ -102,6 +103,6 @@ struct HttpProvider : Provider {
     int uritype;
 };
 
-} // namespace
-} // namespace
+} // namespace clconfig
+} // namespace lcb
 #endif /* LCB_CLPROVIDER_HTTP_H */

@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2018 Couchbase, Inc.
+ *     Copyright 2018-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -76,8 +76,7 @@ static void store_encrypted(lcb_INSTANCE *instance, const char *key, const char 
 
     LCB_CMD_SET_KEY(&cmd, key, strlen(key));
     LCB_CMD_SET_VALUE(&cmd, ecmd.out, ecmd.nout);
-    cmd.operation = LCB_STORE_SET
-    cmd.datatype = LCB_DATATYPE_JSON;
+    cmd.operation = LCB_STORE_SET cmd.datatype = LCB_DATATYPE_JSON;
 
     err = lcb_store3(instance, NULL, &cmd);
     free(ecmd.out); // NOTE: it should be compatible with what providers use to allocate memory
@@ -137,9 +136,12 @@ int main(int argc, char *argv[])
     printf("\n");
     store_encrypted(instance, "secret-3", "{\"message\":\"10\"}");
     printf("\n");
-    store_encrypted(instance, "secret-4", "{\"message\":[\"The\",\"Old\",\"Grey\",\"Goose\",\"Jumped\",\"over\",\"the\",\"wrickety\",\"gate\"]}");
+    store_encrypted(
+        instance, "secret-4",
+        "{\"message\":[\"The\",\"Old\",\"Grey\",\"Goose\",\"Jumped\",\"over\",\"the\",\"wrickety\",\"gate\"]}");
     printf("\n");
-    store_encrypted(instance, "secret-5", "{\"message\":{\"myValue\":\"The old grey goose jumped over the wrickety gate.\",\"myInt\":10}}");
+    store_encrypted(instance, "secret-5",
+                    "{\"message\":{\"myValue\":\"The old grey goose jumped over the wrickety gate.\",\"myInt\":10}}");
 
     lcb_destroy(instance);
     return 0;

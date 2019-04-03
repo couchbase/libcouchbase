@@ -21,9 +21,8 @@
 
 using namespace std;
 
-#define LOGARGS(instance, lvl) \
-    instance->settings, "tests-dur", LCB_LOG_##lvl, __FILE__, __LINE__
-#define SECS_USECS(f) ((f) * 1000000)
+#define LOGARGS(instance, lvl) instance->settings, "tests-dur", LCB_LOG_##lvl, __FILE__, __LINE__
+#define SECS_USECS(f) ((f)*1000000)
 
 static bool supportsMutationTokens(lcb_INSTANCE *instance)
 {
@@ -33,7 +32,6 @@ static bool supportsMutationTokens(lcb_INSTANCE *instance)
     int val = 0;
     lcb_STATUS rc;
     rc = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_MUTATION_TOKENS_SUPPORTED, &val);
-
 
     EXPECT_EQ(LCB_SUCCESS, rc);
     if (val == 0) {
@@ -46,58 +44,60 @@ static bool supportsMutationTokens(lcb_INSTANCE *instance)
 
 class DurabilityUnitTest : public MockUnitTest
 {
-protected:
-    static void defaultOptions(lcb_INSTANCE *instance, lcb_durability_opts_st &opts) {
+  protected:
+    static void defaultOptions(lcb_INSTANCE *instance, lcb_durability_opts_st &opts)
+    {
         lcb_size_t nservers = lcb_get_num_nodes(instance);
         lcb_size_t nreplicas = lcb_get_num_replicas(instance);
 
-        opts.v.v0.persist_to = (lcb_uint16_t) min(nreplicas + 1, nservers);
-        opts.v.v0.replicate_to = (lcb_uint16_t) min(nreplicas, nservers - 1);
+        opts.v.v0.persist_to = (lcb_uint16_t)min(nreplicas + 1, nservers);
+        opts.v.v0.replicate_to = (lcb_uint16_t)min(nreplicas, nservers - 1);
     }
 };
 
 extern "C" {
-static void defaultDurabilityCallback(lcb_INSTANCE *, int, const lcb_RESPENDURE*);
-static void multiDurabilityCallback(lcb_INSTANCE *, int, const lcb_RESPENDURE*);
+static void defaultDurabilityCallback(lcb_INSTANCE *, int, const lcb_RESPENDURE *);
+static void multiDurabilityCallback(lcb_INSTANCE *, int, const lcb_RESPENDURE *);
 }
 
 class DurabilityOperation
 {
-public:
-    DurabilityOperation() {
-    }
+  public:
+    DurabilityOperation() {}
 
     string key;
     lcb_RESPENDURE resp;
     lcb_CMDENDURE req;
 
-    void assign(const lcb_RESPENDURE *resp) {
+    void assign(const lcb_RESPENDURE *resp)
+    {
         this->resp = *resp;
         key.assign((const char *)resp->key, resp->nkey);
         this->resp.key = NULL;
     }
 
-    void wait(lcb_INSTANCE *instance) {
-        lcb_install_callback3(instance, LCB_CALLBACK_ENDURE,
-            (lcb_RESPCALLBACK)defaultDurabilityCallback);
+    void wait(lcb_INSTANCE *instance)
+    {
+        lcb_install_callback3(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)defaultDurabilityCallback);
         EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
     }
 
-    void wait(lcb_INSTANCE *instance,
-        const lcb_durability_opts_t *opts, const lcb_CMDENDURE *cmd) {
+    void wait(lcb_INSTANCE *instance, const lcb_durability_opts_t *opts, const lcb_CMDENDURE *cmd)
+    {
 
         lcb_STATUS rc;
         lcb_MULTICMD_CTX *mctx = lcb_endure3_ctxnew(instance, opts, &rc);
         EXPECT_FALSE(mctx == NULL);
-        rc = mctx->addcmd(mctx, (lcb_CMDBASE*)cmd);
+        rc = mctx->addcmd(mctx, (lcb_CMDBASE *)cmd);
         EXPECT_EQ(LCB_SUCCESS, rc);
         rc = mctx->done(mctx, this);
         EXPECT_EQ(LCB_SUCCESS, rc);
         wait(instance);
     }
 
-    void run(lcb_INSTANCE *instance, const lcb_durability_opts_t *opts, const Item &itm) {
-        lcb_CMDENDURE cmd = { 0 };
+    void run(lcb_INSTANCE *instance, const lcb_durability_opts_t *opts, const Item &itm)
+    {
+        lcb_CMDENDURE cmd = {0};
         ASSERT_FALSE(itm.key.empty());
         LCB_CMD_SET_KEY(&cmd, itm.key.data(), itm.key.length());
         cmd.cas = itm.cas;
@@ -105,19 +105,21 @@ public:
     }
 
     // Really wait(), but named as 'run()' here to make usage more consistent.
-    void run(lcb_INSTANCE *instance, const lcb_durability_opts_t *opts,
-        const lcb_CMDENDURE& cmd) {
+    void run(lcb_INSTANCE *instance, const lcb_durability_opts_t *opts, const lcb_CMDENDURE &cmd)
+    {
         wait(instance, opts, &cmd);
     }
 
-    void assertCriteriaMatch(const lcb_durability_opts_st &opts) {
+    void assertCriteriaMatch(const lcb_durability_opts_st &opts)
+    {
         ASSERT_EQ(LCB_SUCCESS, resp.rc);
         ASSERT_TRUE(resp.persisted_master != 0);
         ASSERT_TRUE(opts.v.v0.persist_to <= resp.npersisted);
         ASSERT_TRUE(opts.v.v0.replicate_to <= resp.nreplicated);
     }
 
-    void dump(std::string &str) {
+    void dump(std::string &str)
+    {
         if (key.empty()) {
             str = "<No Key>\n";
             return;
@@ -125,14 +127,14 @@ public:
         std::stringstream ss;
         ss << "Key: " << key << std::endl
            << "Error: " << resp.rc << std::endl
-           << "Persisted (master?): " << resp.npersisted
-           << " (" << resp.persisted_master << ")" << std::endl
+           << "Persisted (master?): " << resp.npersisted << " (" << resp.persisted_master << ")" << std::endl
            << "Replicated: " << resp.nreplicated << std::endl
            << "CAS: 0x" << std::hex << resp.cas << std::endl;
         str += ss.str();
     }
 
-    void dump() {
+    void dump()
+    {
         string s;
         dump(s);
         cout << s;
@@ -141,13 +143,11 @@ public:
 
 class DurabilityMultiOperation
 {
-public:
+  public:
+    DurabilityMultiOperation() : counter(0) {}
 
-    DurabilityMultiOperation() : counter(0) {
-    }
-
-    template <typename T>
-    void run(lcb_INSTANCE *instance, const lcb_durability_opts_t *opts, const T &items) {
+    template < typename T > void run(lcb_INSTANCE *instance, const lcb_durability_opts_t *opts, const T &items)
+    {
         counter = 0;
         unsigned ii = 0;
         typename T::const_iterator iter = items.begin();
@@ -156,18 +156,17 @@ public:
         ASSERT_FALSE(mctx == NULL);
 
         for (; iter != items.end(); iter++, ii++) {
-            lcb_CMDENDURE cmd = { 0 };
+            lcb_CMDENDURE cmd = {0};
             const Item &itm = *iter;
 
             cmd.cas = itm.cas;
             LCB_CMD_SET_KEY(&cmd, itm.key.c_str(), itm.key.length());
-            rc = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);
+            rc = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
             ASSERT_EQ(LCB_SUCCESS, rc);
             kmap[itm.key] = DurabilityOperation();
         }
 
-        lcb_install_callback3(instance, LCB_CALLBACK_ENDURE,
-            (lcb_RESPCALLBACK)multiDurabilityCallback);
+        lcb_install_callback3(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)multiDurabilityCallback);
 
         rc = mctx->done(mctx, this);
         ASSERT_EQ(LCB_SUCCESS, rc);
@@ -175,7 +174,8 @@ public:
         ASSERT_EQ(items.size(), counter);
     }
 
-    void assign(const lcb_RESPENDURE *resp) {
+    void assign(const lcb_RESPENDURE *resp)
+    {
         ASSERT_GT(resp->nkey, 0U);
         counter++;
 
@@ -185,10 +185,9 @@ public:
         kmap[key].assign(resp);
     }
 
-    template <typename T>
-    bool _findItem(const string &s, const T &items, Item &itm) {
-        for (typename T::const_iterator iter = items.begin();
-                iter != items.end(); iter++) {
+    template < typename T > bool _findItem(const string &s, const T &items, Item &itm)
+    {
+        for (typename T::const_iterator iter = items.begin(); iter != items.end(); iter++) {
             if (iter->key.compare(s) == 0) {
                 itm = *iter;
                 return true;
@@ -197,15 +196,12 @@ public:
         return false;
     }
 
-    template <typename T>
-    void assertAllMatch(const lcb_durability_opts_t &opts,
-                        const T &items_ok,
-                        const T &items_missing,
-                        lcb_STATUS missing_err = LCB_KEY_ENOENT) {
+    template < typename T >
+    void assertAllMatch(const lcb_durability_opts_t &opts, const T &items_ok, const T &items_missing,
+                        lcb_STATUS missing_err = LCB_KEY_ENOENT)
+    {
 
-        for (map<string, DurabilityOperation>::iterator iter = kmap.begin();
-                iter != kmap.end();
-                iter++) {
+        for (map< string, DurabilityOperation >::iterator iter = kmap.begin(); iter != kmap.end(); iter++) {
 
             Item itm_tmp;
             // make sure we were expecting it
@@ -216,39 +212,34 @@ public:
                 ASSERT_EQ(missing_err, iter->second.resp.rc);
 
             } else {
-                ASSERT_STREQ("",
-                             "Key not in missing or OK list");
+                ASSERT_STREQ("", "Key not in missing or OK list");
             }
         }
 
         // Finally, make sure they're all there
 
-        for (typename T::const_iterator iter = items_ok.begin();
-                iter != items_ok.end();
-                iter++) {
+        for (typename T::const_iterator iter = items_ok.begin(); iter != items_ok.end(); iter++) {
             ASSERT_TRUE(kmap.find(iter->key) != kmap.end());
         }
 
-        for (typename T::const_iterator iter = items_missing.begin();
-                iter != items_missing.end(); iter++) {
+        for (typename T::const_iterator iter = items_missing.begin(); iter != items_missing.end(); iter++) {
             ASSERT_TRUE(kmap.find(iter->key) != kmap.end());
         }
     }
 
     unsigned counter;
-    map<string, DurabilityOperation> kmap;
+    map< string, DurabilityOperation > kmap;
 };
 
 extern "C" {
 static void defaultDurabilityCallback(lcb_INSTANCE *, int, const lcb_RESPENDURE *res)
 {
-    ((DurabilityOperation*)res->cookie)->assign(res);
+    ((DurabilityOperation *)res->cookie)->assign(res);
 }
 static void multiDurabilityCallback(lcb_INSTANCE *, int, const lcb_RESPENDURE *res)
 {
-    ((DurabilityMultiOperation*)res->cookie)->assign(res);
+    ((DurabilityMultiOperation *)res->cookie)->assign(res);
 }
-
 }
 
 TEST_F(DurabilityUnitTest, testInvalidCriteria)
@@ -261,7 +252,7 @@ TEST_F(DurabilityUnitTest, testInvalidCriteria)
 
     lcb_INSTANCE *instance = hwrap.getLcb();
 
-    lcb_durability_opts_t opts = { 0 };
+    lcb_durability_opts_t opts = {0};
     defaultOptions(instance, opts);
     opts.v.v0.persist_to = 10;
     opts.v.v0.replicate_to = 100;
@@ -285,7 +276,7 @@ TEST_F(DurabilityUnitTest, testDurabilityCriteria)
     createConnection(hwrap);
     instance = hwrap.getLcb();
 
-    lcb_durability_opts_st opts = { 0 };
+    lcb_durability_opts_st opts = {0};
 
     /** test with no persist/replicate */
     defaultOptions(instance, opts);
@@ -351,7 +342,6 @@ TEST_F(DurabilityUnitTest, testSimpleDurability)
     dop.assertCriteriaMatch(opts);
     ASSERT_STREQ(kv.key.c_str(), dop.key.c_str());
 
-
     // Try with more expanded criteria
     defaultOptions(instance, opts);
     dop = DurabilityOperation();
@@ -392,7 +382,7 @@ TEST_F(DurabilityUnitTest, testNonExist)
     Item itm = Item(key, "", 0);
 
     DurabilityOperation dop;
-    lcb_durability_opts_t opts = { 0 };
+    lcb_durability_opts_t opts = {0};
     opts.v.v0.timeout = SECS_USECS(2);
 
     defaultOptions(instance, opts);
@@ -425,7 +415,7 @@ TEST_F(DurabilityUnitTest, testDelete)
 
     HandleWrap hwrap;
     lcb_INSTANCE *instance;
-    lcb_durability_opts_t opts = { 0 };
+    lcb_durability_opts_t opts = {0};
     string key = "deleted-key";
     createConnection(hwrap);
     instance = hwrap.getLcb();
@@ -490,7 +480,7 @@ TEST_F(DurabilityUnitTest, testModified)
 
     HandleWrap hwrap;
     lcb_INSTANCE *instance;
-    lcb_durability_opts_t opts = { 0 };
+    lcb_durability_opts_t opts = {0};
     string key = "mutated-key";
     Item itm = Item(key, key);
     KVOperation kvo_cur(&itm), kvo_stale(&itm);
@@ -531,7 +521,7 @@ TEST_F(DurabilityUnitTest, testQuickTimeout)
     LCB_TEST_REQUIRE_FEATURE("observe");
     lcb_INSTANCE *instance;
     HandleWrap hwrap;
-    lcb_durability_opts_t opts = { 0 };
+    lcb_durability_opts_t opts = {0};
     string key = "a_key";
 
     createConnection(hwrap);
@@ -572,10 +562,10 @@ TEST_F(DurabilityUnitTest, testMulti)
     unsigned ii;
     const unsigned limit = 10;
 
-    vector<Item> items_stored;
-    vector<Item> items_missing;
+    vector< Item > items_stored;
+    vector< Item > items_missing;
 
-    lcb_durability_opts_t opts = { 0 };
+    lcb_durability_opts_t opts = {0};
     HandleWrap hwrap;
     lcb_INSTANCE *instance;
 
@@ -613,17 +603,17 @@ TEST_F(DurabilityUnitTest, testMulti)
      */
     DurabilityMultiOperation dmop = DurabilityMultiOperation();
     dmop.run(instance, &opts, items_stored);
-    dmop.assertAllMatch(opts, items_stored, vector<Item>());
+    dmop.assertAllMatch(opts, items_stored, vector< Item >());
 
     // Store all the missing ones
     opts.v.v0.timeout = (lcb_uint32_t)SECS_USECS(1.5);
     dmop = DurabilityMultiOperation();
     dmop.run(instance, &opts, items_missing);
-    dmop.assertAllMatch(opts, vector<Item>(), items_missing, LCB_KEY_ENOENT);
+    dmop.assertAllMatch(opts, vector< Item >(), items_missing, LCB_KEY_ENOENT);
 
     // Store them all together
     opts.v.v0.timeout = 0;
-    vector<Item> combined;
+    vector< Item > combined;
     combined.insert(combined.end(), items_stored.begin(), items_stored.end());
     combined.insert(combined.end(), items_missing.begin(), items_missing.end());
     dmop.run(instance, &opts, combined);
@@ -636,19 +626,19 @@ struct cb_cookie {
 };
 
 extern "C" {
-    static void dummyObserveCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPOBSERVE *resp)
-    {
-        struct cb_cookie *c = (struct cb_cookie *)resp->cookie;
-        ASSERT_EQ(1, c->is_observe);
-        c->count++;
-    }
+static void dummyObserveCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPOBSERVE *resp)
+{
+    struct cb_cookie *c = (struct cb_cookie *)resp->cookie;
+    ASSERT_EQ(1, c->is_observe);
+    c->count++;
+}
 
-    static void dummyDurabilityCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPENDURE *resp)
-    {
-        struct cb_cookie *c = (struct cb_cookie *)resp->cookie;
-        ASSERT_EQ(0, c->is_observe);
-        c->count++;
-    }
+static void dummyDurabilityCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPENDURE *resp)
+{
+    struct cb_cookie *c = (struct cb_cookie *)resp->cookie;
+    ASSERT_EQ(0, c->is_observe);
+    c->count++;
+}
 }
 
 /**
@@ -673,10 +663,9 @@ TEST_F(DurabilityUnitTest, testObserveSanity)
     lcb_install_callback3(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)dummyDurabilityCallback);
     lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPCALLBACK)dummyObserveCallback);
 
-
     storeKey(instance, "key", "value");
 
-    struct cb_cookie o_cookie = { 1, 0 };
+    struct cb_cookie o_cookie = {1, 0};
     {
         lcb_MULTICMD_CTX *mctx = lcb_observe3_ctxnew(instance);
         ASSERT_NE((lcb_MULTICMD_CTX *)NULL, mctx);
@@ -686,19 +675,18 @@ TEST_F(DurabilityUnitTest, testObserveSanity)
         ASSERT_EQ(LCB_SUCCESS, mctx->done(mctx, &o_cookie));
     }
 
-
-    struct cb_cookie d_cookie = { 0, 0 };
+    struct cb_cookie d_cookie = {0, 0};
     {
-        lcb_durability_opts_t opts = { 0 };
+        lcb_durability_opts_t opts = {0};
         defaultOptions(instance, opts);
 
         lcb_STATUS err = LCB_SUCCESS;
         lcb_MULTICMD_CTX *mctx = lcb_endure3_ctxnew(instance, &opts, &err);
         ASSERT_EQ(LCB_SUCCESS, err);
         ASSERT_NE((lcb_MULTICMD_CTX *)NULL, mctx);
-        lcb_CMDENDURE cmd = { 0 };
+        lcb_CMDENDURE cmd = {0};
         LCB_CMD_SET_KEY(&cmd, "key", 3);
-        ASSERT_EQ(LCB_SUCCESS, mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd));
+        ASSERT_EQ(LCB_SUCCESS, mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd));
         ASSERT_EQ(LCB_SUCCESS, mctx->done(mctx, &d_cookie));
     }
 
@@ -719,7 +707,7 @@ TEST_F(DurabilityUnitTest, testMasterObserve)
 
     lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPCALLBACK)dummyObserveCallback);
 
-    struct cb_cookie o_cookie = { 1, 0 };
+    struct cb_cookie o_cookie = {1, 0};
     lcb_MULTICMD_CTX *mctx = lcb_observe3_ctxnew(instance);
     ASSERT_NE((lcb_MULTICMD_CTX *)NULL, mctx);
     lcb_CMDOBSERVE cmd = {0};
@@ -772,7 +760,7 @@ TEST_F(DurabilityUnitTest, testDurabilityRelocation)
     lcb_install_callback3(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)dummyDurabilityCallback);
 
     std::string key = "key";
-    lcb_durability_opts_t opts = { 0 };
+    lcb_durability_opts_t opts = {0};
     opts.v.v0.persist_to = 100;
     opts.v.v0.replicate_to = 100;
     opts.v.v0.cap_max = 1;
@@ -790,8 +778,7 @@ TEST_F(DurabilityUnitTest, testDurabilityRelocation)
     for (int ii = 1; ii < mock->getNumNodes(); ii++) {
         mock->hiccupNodes(1000, 0);
     }
-    lcbio_pTIMER tm = lcbio_timer_new(handle.getLcb()->iotable,
-        instance, fo_callback);
+    lcbio_pTIMER tm = lcbio_timer_new(handle.getLcb()->iotable, instance, fo_callback);
     lcbio_timer_rearm(tm, 500000);
     lcb_loop_ref(instance);
 
@@ -799,12 +786,12 @@ TEST_F(DurabilityUnitTest, testDurabilityRelocation)
     lcb_MULTICMD_CTX *mctx = lcb_endure3_ctxnew(instance, &opts, &err);
     ASSERT_EQ(LCB_SUCCESS, err);
     ASSERT_NE((lcb_MULTICMD_CTX *)NULL, mctx);
-    lcb_CMDENDURE cmd = { 0 };
+    lcb_CMDENDURE cmd = {0};
     LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
-    err = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);
+    err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
     ASSERT_EQ(LCB_SUCCESS, err);
 
-    struct cb_cookie cookie = { 0, 0 };
+    struct cb_cookie cookie = {0, 0};
     ASSERT_EQ(LCB_SUCCESS, mctx->done(mctx, &cookie));
 
     lcb_wait(instance);
@@ -818,7 +805,7 @@ TEST_F(DurabilityUnitTest, testDuplicateCommands)
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
     std::string key("key");
-    lcb_durability_opts_t options = { 0 };
+    lcb_durability_opts_t options = {0};
     options.v.v0.replicate_to = 100;
     options.v.v0.persist_to = 100;
     options.v.v0.cap_max = 1;
@@ -829,9 +816,9 @@ TEST_F(DurabilityUnitTest, testDuplicateCommands)
     ASSERT_EQ(LCB_SUCCESS, err);
     ASSERT_NE((lcb_MULTICMD_CTX *)NULL, mctx);
     for (int ii = 0; ii < 2; ii++) {
-        lcb_CMDENDURE cmd = { 0 };
+        lcb_CMDENDURE cmd = {0};
         LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
-        err = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);
+        err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
         ASSERT_EQ(LCB_SUCCESS, err);
     }
     err = mctx->done(mctx, NULL);
@@ -851,17 +838,17 @@ TEST_F(DurabilityUnitTest, testMissingSynctoken)
     std::string("nonexist-key");
     lcb_STATUS rc;
     lcb_MULTICMD_CTX *mctx;
-    lcb_durability_opts_t options = { 0 };
+    lcb_durability_opts_t options = {0};
     defaultOptions(instance, options);
     options.version = 1;
     options.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
 
     mctx = lcb_endure3_ctxnew(instance, &options, &rc);
     ASSERT_FALSE(mctx == NULL);
-    lcb_CMDENDURE cmd = { 0 };
+    lcb_CMDENDURE cmd = {0};
     LCB_CMD_SET_KEY(&cmd, "foo", 3);
 
-    rc = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);
+    rc = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
     ASSERT_EQ(LCB_DURABILITY_NO_MUTATION_TOKENS, rc);
 
     mctx->fail(mctx);
@@ -891,8 +878,8 @@ TEST_F(DurabilityUnitTest, testExternalSynctoken)
     ASSERT_TRUE(LCB_MUTATION_TOKEN_ISVALID(ss));
     ASSERT_EQ(LCB_SUCCESS, rc);
 
-    lcb_durability_opts_t options = { 0 };
-    lcb_CMDENDURE cmd = { 0 };
+    lcb_durability_opts_t options = {0};
+    lcb_CMDENDURE cmd = {0};
     defaultOptions(instance2, options);
     options.version = 1;
     options.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
@@ -920,8 +907,7 @@ TEST_F(DurabilityUnitTest, testOptionValidation)
     // Validate simple mode
     persist = -1;
     replicate = -1;
-    rc = lcb_durability_validate(instance, &persist, &replicate,
-        LCB_DURABILITY_VALIDATE_CAPMAX);
+    rc = lcb_durability_validate(instance, &persist, &replicate, LCB_DURABILITY_VALIDATE_CAPMAX);
 
     ASSERT_EQ(LCB_SUCCESS, rc);
     ASSERT_TRUE(persist > replicate);
@@ -930,7 +916,7 @@ TEST_F(DurabilityUnitTest, testOptionValidation)
     rc = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBCONFIG, &vbc);
     ASSERT_EQ(LCB_SUCCESS, rc);
 
-    int replica_max = min(LCBVB_NREPLICAS(vbc), LCBVB_NDATASERVERS(vbc)-1);
+    int replica_max = min(LCBVB_NREPLICAS(vbc), LCBVB_NDATASERVERS(vbc) - 1);
     int persist_max = replica_max + 1;
 
     ASSERT_EQ(replica_max, replicate);
@@ -953,8 +939,7 @@ TEST_F(DurabilityUnitTest, testOptionValidation)
     ASSERT_EQ(persist_max, persist);
     ASSERT_EQ(replica_max, replicate);
 
-    rc = lcb_durability_validate(instance, &persist, &replicate,
-        LCB_DURABILITY_VALIDATE_CAPMAX);
+    rc = lcb_durability_validate(instance, &persist, &replicate, LCB_DURABILITY_VALIDATE_CAPMAX);
     ASSERT_EQ(LCB_SUCCESS, rc);
     ASSERT_EQ(persist_max, persist);
     ASSERT_EQ(replica_max, replicate);
@@ -986,7 +971,7 @@ TEST_F(DurabilityUnitTest, testDurStore)
 {
     HandleWrap hw;
     lcb_INSTANCE *instance;
-    lcb_durability_opts_t options = { 0 };
+    lcb_durability_opts_t options = {0};
     createConnection(hw, &instance);
     lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)durstoreCallback);
 
@@ -994,7 +979,7 @@ TEST_F(DurabilityUnitTest, testDurStore)
     std::string value("value");
 
     lcb_STATUS rc;
-    st_RESULT res = { 0 };
+    st_RESULT res = {0};
 
     lcb_CMDSTORE *cmd;
     lcb_cmdstore_create(&cmd, LCB_STORE_SET);
@@ -1079,7 +1064,7 @@ TEST_F(DurabilityUnitTest, testFailoverAndSeqno)
 
     HandleWrap hwrap;
     lcb_INSTANCE *instance;
-    lcb_durability_opts_t opts = { 0 };
+    lcb_durability_opts_t opts = {0};
     string key = "key-failover-seqno";
     Item itm = Item(key, key);
     KVOperation kvo(&itm);

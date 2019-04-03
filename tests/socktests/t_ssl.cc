@@ -24,21 +24,24 @@ using namespace LCBTest;
 using std::string;
 using std::vector;
 
-class SSLTest : public SockTest {
-protected:
-    void SetUp() {
+class SSLTest : public SockTest
+{
+  protected:
+    void SetUp()
+    {
         lcbio_ssl_global_init();
         lcb_STATUS errp = LCB_SUCCESS;
         // Initialize the SSL stuff
 
         SockTest::SetUp();
-        loop->settings->sslopts = LCB_SSL_ENABLED|LCB_SSL_NOVERIFY;
+        loop->settings->sslopts = LCB_SSL_ENABLED | LCB_SSL_NOVERIFY;
         loop->settings->ssl_ctx = lcbio_ssl_new(NULL, NULL, NULL, 1, &errp, loop->settings);
         loop->server->factory = TestServer::sslSocketFactory;
         EXPECT_FALSE(loop->settings->ssl_ctx == NULL) << lcb_strerror(NULL, errp);
     }
 
-    void TearDown() {
+    void TearDown()
+    {
         lcbio_ssl_free(loop->settings->ssl_ctx);
         loop->settings->ssl_ctx = NULL;
         SockTest::TearDown();
@@ -89,7 +92,9 @@ TEST_F(SSLTest, testBasic)
 }
 
 #else
-class SSLTest : public ::testing::Test {};
+class SSLTest : public ::testing::Test
+{
+};
 TEST_F(SSLTest, DISABLED_testBasic)
 {
     EXPECT_FALSE(true);

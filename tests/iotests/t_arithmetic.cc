@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -24,60 +24,59 @@ class ArithmeticUnitTest : public MockUnitTest
 static lcb_uint64_t arithm_val;
 
 extern "C" {
-    static void arithmetic_incr_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPCOUNTER *resp)
-    {
-        ASSERT_EQ(LCB_SUCCESS, lcb_respcounter_status(resp));
+static void arithmetic_incr_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPCOUNTER *resp)
+{
+    ASSERT_EQ(LCB_SUCCESS, lcb_respcounter_status(resp));
 
-        const char *key;
-        size_t nkey;
-        lcb_respcounter_key(resp, &key, &nkey);
-        ASSERT_EQ(7, nkey);
-        ASSERT_EQ(0, memcmp(key, "counter", 7));
+    const char *key;
+    size_t nkey;
+    lcb_respcounter_key(resp, &key, &nkey);
+    ASSERT_EQ(7, nkey);
+    ASSERT_EQ(0, memcmp(key, "counter", 7));
 
-        uint64_t value;
-        lcb_respcounter_value(resp, &value);
-        ASSERT_EQ(arithm_val + 1, value);
-        arithm_val = value;
-    }
+    uint64_t value;
+    lcb_respcounter_value(resp, &value);
+    ASSERT_EQ(arithm_val + 1, value);
+    arithm_val = value;
+}
 
-    static void arithmetic_decr_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPCOUNTER *resp)
-    {
-        ASSERT_EQ(LCB_SUCCESS, lcb_respcounter_status(resp));
+static void arithmetic_decr_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPCOUNTER *resp)
+{
+    ASSERT_EQ(LCB_SUCCESS, lcb_respcounter_status(resp));
 
-        const char *key;
-        size_t nkey;
-        lcb_respcounter_key(resp, &key, &nkey);
-        ASSERT_EQ(7, nkey);
-        ASSERT_EQ(0, memcmp(key, "counter", 7));
+    const char *key;
+    size_t nkey;
+    lcb_respcounter_key(resp, &key, &nkey);
+    ASSERT_EQ(7, nkey);
+    ASSERT_EQ(0, memcmp(key, "counter", 7));
 
-        uint64_t value;
-        lcb_respcounter_value(resp, &value);
-        ASSERT_EQ(arithm_val - 1, value);
-        arithm_val = value;
-    }
+    uint64_t value;
+    lcb_respcounter_value(resp, &value);
+    ASSERT_EQ(arithm_val - 1, value);
+    arithm_val = value;
+}
 
-    static void arithmetic_create_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPCOUNTER *resp)
-    {
-        ASSERT_EQ(LCB_SUCCESS, lcb_respcounter_status(resp));
+static void arithmetic_create_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPCOUNTER *resp)
+{
+    ASSERT_EQ(LCB_SUCCESS, lcb_respcounter_status(resp));
 
-        const char *key;
-        size_t nkey;
-        lcb_respcounter_key(resp, &key, &nkey);
-        ASSERT_EQ(9, nkey);
-        ASSERT_EQ(0, memcmp(key, "mycounter", 9));
+    const char *key;
+    size_t nkey;
+    lcb_respcounter_key(resp, &key, &nkey);
+    ASSERT_EQ(9, nkey);
+    ASSERT_EQ(0, memcmp(key, "mycounter", 9));
 
-        uint64_t value;
-        lcb_respcounter_value(resp, &value);
-        ASSERT_EQ(0xdeadbeef, value);
-    }
+    uint64_t value;
+    lcb_respcounter_value(resp, &value);
+    ASSERT_EQ(0xdeadbeef, value);
+}
 }
 
 /**
  * Common function to bootstrap an arithmetic key and set the expected/last
  * value counter.
  */
-static void initArithmeticKey(lcb_INSTANCE *instance, std::string key,
-                              lcb_uint64_t value)
+static void initArithmeticKey(lcb_INSTANCE *instance, std::string key, lcb_uint64_t value)
 {
     std::stringstream ss;
     ss << value;
@@ -139,7 +138,6 @@ TEST_F(ArithmeticUnitTest, testDecr)
         lcb_cmdcounter_destroy(cmd);
         lcb_wait(instance);
     }
-
 }
 
 /**

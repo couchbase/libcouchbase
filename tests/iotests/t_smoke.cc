@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012-2018 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -18,32 +18,32 @@
 #include "iotests.h"
 #include <libcouchbase/utils.h>
 
-
-using std::vector;
 using std::string;
+using std::vector;
 
 // This file contains the 'migrated' tests from smoke-test.c
 
-static lcb_config_transport_t transports[] = {
-        LCB_CONFIG_TRANSPORT_HTTP, LCB_CONFIG_TRANSPORT_LIST_END };
+static lcb_config_transport_t transports[] = {LCB_CONFIG_TRANSPORT_HTTP, LCB_CONFIG_TRANSPORT_LIST_END};
 struct rvbuf {
     lcb_STATUS error;
     lcb_STORE_OPERATION operation;
-    vector<char> bytes;
-    vector<char> key;
+    vector< char > bytes;
+    vector< char > key;
     lcb_cas_t cas;
     lcb_uint32_t flags;
     lcb_int32_t counter;
     lcb_uint32_t errorCount;
 
-    template <typename T> void setKey(const T* resp) {
+    template < typename T > void setKey(const T *resp)
+    {
         const char *ktmp, *kend;
-        ktmp = (const char*)resp->key;
+        ktmp = (const char *)resp->key;
         kend = ktmp + resp->nkey;
         key.assign(ktmp, kend);
     }
 
-    void setKey(const lcb_RESPTOUCH* resp) {
+    void setKey(const lcb_RESPTOUCH *resp)
+    {
         const char *ktmp, *kend;
         size_t ntmp;
         lcb_resptouch_key(resp, &ktmp, &ntmp);
@@ -51,7 +51,8 @@ struct rvbuf {
         key.assign(ktmp, kend);
     }
 
-    void setKey(const lcb_RESPSTORE* resp) {
+    void setKey(const lcb_RESPSTORE *resp)
+    {
         const char *ktmp, *kend;
         size_t ntmp;
         lcb_respstore_key(resp, &ktmp, &ntmp);
@@ -59,7 +60,8 @@ struct rvbuf {
         key.assign(ktmp, kend);
     }
 
-    void setKey(const lcb_RESPGET* resp) {
+    void setKey(const lcb_RESPGET *resp)
+    {
         const char *ktmp, *kend;
         size_t ntmp;
         lcb_respget_key(resp, &ktmp, &ntmp);
@@ -67,7 +69,8 @@ struct rvbuf {
         key.assign(ktmp, kend);
     }
 
-    void setValue(const lcb_RESPGET *resp) {
+    void setValue(const lcb_RESPGET *resp)
+    {
         const char *btmp;
         size_t ntmp;
         lcb_respget_value(resp, &btmp, &ntmp);
@@ -75,19 +78,23 @@ struct rvbuf {
         bytes.assign(btmp, bend);
     }
 
-    string getKeyString() {
+    string getKeyString()
+    {
         return string(key.begin(), key.end());
     }
 
-    string getValueString() {
+    string getValueString()
+    {
         return string(bytes.begin(), bytes.end());
     }
 
-    rvbuf() {
+    rvbuf()
+    {
         reset();
     }
 
-    void reset() {
+    void reset()
+    {
         error = LCB_SUCCESS;
         operation = LCB_STORE_SET;
         cas = 0;
@@ -98,7 +105,8 @@ struct rvbuf {
         bytes.clear();
     }
 
-    void setError(lcb_STATUS err) {
+    void setError(lcb_STATUS err)
+    {
         EXPECT_GT(counter, 0);
         counter--;
         if (err != LCB_SUCCESS) {
@@ -106,11 +114,13 @@ struct rvbuf {
             errorCount++;
         }
     }
-    void incRemaining() { counter++; }
+    void incRemaining()
+    {
+        counter++;
+    }
 };
 
-extern "C"
-{
+extern "C" {
 static void store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
 {
     rvbuf *rv;
@@ -164,9 +174,8 @@ static void version_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPMC
     memcpy(str, vstring, nvstring);
     free(str);
 }
-} //extern "C"
-static void
-setupCallbacks(lcb_INSTANCE * instance)
+} // extern "C"
+static void setupCallbacks(lcb_INSTANCE *instance)
 {
     lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
     lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
@@ -176,16 +185,18 @@ setupCallbacks(lcb_INSTANCE * instance)
 
 class SmokeTest : public ::testing::Test
 {
-protected:
+  protected:
     MockEnvironment *mock;
-    lcb_INSTANCE * session;
-    void SetUp() {
+    lcb_INSTANCE *session;
+    void SetUp()
+    {
         assert(session == NULL);
         session = NULL;
         mock = NULL;
     }
 
-    void TearDown() {
+    void TearDown()
+    {
         if (session != NULL) {
             lcb_destroy(session);
         }
@@ -196,7 +207,8 @@ protected:
         session = NULL;
         mock = NULL;
     }
-    void destroySession() {
+    void destroySession()
+    {
         if (session != NULL) {
             lcb_destroy(session);
             session = NULL;
@@ -204,7 +216,8 @@ protected:
     }
 
     SmokeTest() : mock(NULL), session(NULL) {}
-public:
+
+  public:
     void testSet1();
     void testSet2();
     void testGet1();
@@ -218,8 +231,7 @@ public:
     void connectCommon(const char *password = NULL, lcb_STATUS expected = LCB_SUCCESS);
 };
 
-void
-SmokeTest::testSet1()
+void SmokeTest::testSet1()
 {
     rvbuf rv;
     lcb_CMDSTORE *cmd;
@@ -239,8 +251,7 @@ SmokeTest::testSet1()
     EXPECT_EQ(key, rv.getKeyString());
 }
 
-void
-SmokeTest::testSet2()
+void SmokeTest::testSet2()
 {
     struct rvbuf rv;
     lcb_size_t ii;
@@ -261,8 +272,7 @@ SmokeTest::testSet2()
     EXPECT_EQ(0, rv.errorCount);
 }
 
-void
-SmokeTest::testGet1()
+void SmokeTest::testGet1()
 {
     lcb_STATUS err;
     struct rvbuf rv;
@@ -295,8 +305,7 @@ SmokeTest::testGet1()
     EXPECT_EQ(value, rv.getValueString());
 }
 
-static void
-genAZString(vector<string>& coll)
+static void genAZString(vector< string > &coll)
 {
     string base("foo");
     for (size_t ii = 0; ii < 26; ++ii) {
@@ -305,16 +314,15 @@ genAZString(vector<string>& coll)
     }
 }
 
-void
-SmokeTest::testGet2()
+void SmokeTest::testGet2()
 {
     struct rvbuf rv;
     string value("bar");
-    vector<string> coll;
+    vector< string > coll;
     genAZString(coll);
 
     for (size_t ii = 0; ii < coll.size(); ii++) {
-        const string& curKey = coll[ii];
+        const string &curKey = coll[ii];
 
         lcb_CMDSTORE *cmd;
         lcb_cmdstore_create(&cmd, LCB_STORE_SET);
@@ -333,7 +341,7 @@ SmokeTest::testGet2()
     rv.counter = coll.size();
 
     for (size_t ii = 0; ii < coll.size(); ii++) {
-        const string& curKey = coll[ii];
+        const string &curKey = coll[ii];
 
         lcb_CMDGET *cmd;
         lcb_cmdget_create(&cmd);
@@ -347,16 +355,15 @@ SmokeTest::testGet2()
     EXPECT_EQ(value, rv.getValueString());
 }
 
-void
-SmokeTest::testTouch1()
+void SmokeTest::testTouch1()
 {
     struct rvbuf rv;
-    vector<string> coll;
+    vector< string > coll;
     string value("bar");
     genAZString(coll);
 
     for (size_t ii = 0; ii < coll.size(); ii++) {
-        const string& curKey = coll[ii];
+        const string &curKey = coll[ii];
 
         lcb_CMDSTORE *cmd;
         lcb_cmdstore_create(&cmd, LCB_STORE_SET);
@@ -374,7 +381,7 @@ SmokeTest::testTouch1()
 
     rv.counter = coll.size();
     for (size_t ii = 0; ii < coll.size(); ii++) {
-        const string& curKey = coll[ii];
+        const string &curKey = coll[ii];
 
         lcb_CMDTOUCH *cmd;
         lcb_cmdtouch_create(&cmd);
@@ -388,8 +395,7 @@ SmokeTest::testTouch1()
     EXPECT_EQ(LCB_SUCCESS, rv.error);
 }
 
-void
-SmokeTest::testVersion1()
+void SmokeTest::testVersion1()
 {
     struct rvbuf rv;
     lcb_CMDVERSIONS cmd = {0};
@@ -401,8 +407,7 @@ SmokeTest::testVersion1()
     EXPECT_EQ(0, rv.counter);
 }
 
-lcb_STATUS
-SmokeTest::testMissingBucket()
+lcb_STATUS SmokeTest::testMissingBucket()
 {
     destroySession();
     // create a new session
@@ -421,13 +426,12 @@ SmokeTest::testMissingBucket()
     lcb_wait(session);
     err = lcb_get_bootstrap_status(session);
     EXPECT_NE(LCB_SUCCESS, err);
-    EXPECT_TRUE(err == LCB_BUCKET_ENOENT||err == LCB_AUTH_ERROR);
+    EXPECT_TRUE(err == LCB_BUCKET_ENOENT || err == LCB_AUTH_ERROR);
     destroySession();
     return err;
 }
 
-void
-SmokeTest::testSpuriousSaslError()
+void SmokeTest::testSpuriousSaslError()
 {
     int iterations = 50;
     rvbuf rvs[50];
@@ -461,8 +465,7 @@ SmokeTest::testSpuriousSaslError()
     }
 }
 
-void
-SmokeTest::connectCommon(const char *password, lcb_STATUS expected)
+void SmokeTest::connectCommon(const char *password, lcb_STATUS expected)
 {
     lcb_create_st cropts;
     mock->makeConnectParams(cropts, NULL);
@@ -485,7 +488,7 @@ SmokeTest::connectCommon(const char *password, lcb_STATUS expected)
 TEST_F(SmokeTest, testMemcachedBucket)
 {
     SKIP_UNLESS_MOCK();
-    const char *args[] = { "--buckets", "default::memcache", NULL };
+    const char *args[] = {"--buckets", "default::memcache", NULL};
     mock = new MockEnvironment(args);
     mock->setCCCP(false);
     connectCommon();
@@ -524,7 +527,7 @@ TEST_F(SmokeTest, testMemcachedBucket)
 TEST_F(SmokeTest, testCouchbaseBucket)
 {
     SKIP_UNLESS_MOCK();
-    const char *args[] = { "--buckets", "default::couchbase", "--debug", NULL };
+    const char *args[] = {"--buckets", "default::couchbase", "--debug", NULL};
     mock = new MockEnvironment(args);
     mock->setCCCP(false);
     connectCommon();
@@ -539,10 +542,9 @@ TEST_F(SmokeTest, testCouchbaseBucket)
 TEST_F(SmokeTest, testSaslBucket)
 {
     SKIP_UNLESS_MOCK();
-    const char *args[] = { "--buckets", "protected:secret:couchbase", NULL };
+    const char *args[] = {"--buckets", "protected:secret:couchbase", NULL};
     mock = new MockEnvironment(args, "protected");
     mock->setCCCP(false);
-
 
     testMissingBucket();
 

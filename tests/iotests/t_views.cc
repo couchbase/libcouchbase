@@ -21,21 +21,23 @@
 #include <libcouchbase/pktfwd.h>
 #include "contrib/cJSON/cJSON.h"
 
-namespace {
+namespace
+{
 
 class ViewsUnitTest : public MockUnitTest
 {
-protected:
-    void SetUp() { }
-    void TearDown() { }
-    void connectBeerSample(HandleWrap& hw, lcb_INSTANCE **instance, bool first=true);
+  protected:
+    void SetUp() {}
+    void TearDown() {}
+    void connectBeerSample(HandleWrap &hw, lcb_INSTANCE **instance, bool first = true);
 };
 
 using std::string;
 using std::vector;
 
 extern "C" {
-static void bktCreateCb(lcb_INSTANCE *, int, const lcb_RESPHTTP *resp) {
+static void bktCreateCb(lcb_INSTANCE *, int, const lcb_RESPHTTP *resp)
+{
     ASSERT_EQ(LCB_SUCCESS, lcb_resphttp_status(resp));
     uint16_t status;
     lcb_resphttp_http_status(resp, &status);
@@ -45,8 +47,7 @@ static void bktCreateCb(lcb_INSTANCE *, int, const lcb_RESPHTTP *resp) {
 
 static const char *content_type = "application/json";
 
-void
-ViewsUnitTest::connectBeerSample(HandleWrap& hw, lcb_INSTANCE **instance, bool first)
+void ViewsUnitTest::connectBeerSample(HandleWrap &hw, lcb_INSTANCE **instance, bool first)
 {
     lcb_create_st crparams;
     lcb_create_st crparamsAdmin;
@@ -120,10 +121,10 @@ struct ViewRow {
         uint64_t cas;
     } docContents;
 
-    void clear() {
-    }
+    void clear() {}
 
-    ViewRow(const lcb_RESPVIEW *resp) {
+    ViewRow(const lcb_RESPVIEW *resp)
+    {
         const char *p;
         size_t n;
 
@@ -161,12 +162,13 @@ struct ViewRow {
 };
 
 struct ViewInfo {
-    vector<ViewRow> rows;
+    vector< ViewRow > rows;
     size_t totalRows;
     lcb_STATUS err;
     uint16_t http_status;
 
-    void addRow(const lcb_RESPVIEW *resp) {
+    void addRow(const lcb_RESPVIEW *resp)
+    {
         lcb_STATUS rc = lcb_respview_status(resp);
         if (err == LCB_SUCCESS && rc != LCB_SUCCESS) {
             err = rc;
@@ -200,7 +202,8 @@ struct ViewInfo {
         }
     }
 
-    void clear() {
+    void clear()
+    {
         for (size_t ii = 0; ii < rows.size(); ii++) {
             rows[ii].clear();
         }
@@ -210,11 +213,13 @@ struct ViewInfo {
         err = LCB_SUCCESS;
     }
 
-    ~ViewInfo() {
+    ~ViewInfo()
+    {
         clear();
     }
 
-    ViewInfo() {
+    ViewInfo()
+    {
         clear();
     }
 };
@@ -223,13 +228,12 @@ extern "C" {
 static void viewCallback(lcb_INSTANCE *, int cbtype, const lcb_RESPVIEW *resp)
 {
     EXPECT_EQ(LCB_CALLBACK_VIEWQUERY, cbtype);
-//    printf("View Callback invoked!\n");
+    //    printf("View Callback invoked!\n");
     ViewInfo *info;
     lcb_respview_cookie(resp, (void **)&info);
     info->addRow(resp);
 }
 }
-
 
 TEST_F(ViewsUnitTest, testSimpleView)
 {
@@ -258,14 +262,14 @@ TEST_F(ViewsUnitTest, testSimpleView)
     ASSERT_GT(vi.rows.size(), 0U);
     ASSERT_EQ(7303, vi.totalRows);
     // Check the row parses correctly:
-    const ViewRow& row = vi.rows.front();
+    const ViewRow &row = vi.rows.front();
     // Unquoted docid
     ASSERT_EQ("21st_amendment_brewery_cafe", row.docid);
     ASSERT_EQ("[\"21st_amendment_brewery_cafe\"]", row.key);
     ASSERT_EQ("null", row.value);
     vi.clear();
 
-    //apply limit
+    // apply limit
     const char *optstr = "limit=10";
     lcb_cmdview_create(&vq);
     lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
@@ -296,7 +300,8 @@ TEST_F(ViewsUnitTest, testSimpleView)
     ASSERT_EQ(7303, vi.totalRows);
 }
 
-TEST_F(ViewsUnitTest, testIncludeDocs) {
+TEST_F(ViewsUnitTest, testIncludeDocs)
+{
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -321,7 +326,7 @@ TEST_F(ViewsUnitTest, testIncludeDocs) {
     ASSERT_EQ(7303, vi.rows.size());
 
     for (size_t ii = 0; ii < vi.rows.size(); ii++) {
-        const ViewRow& row = vi.rows[ii];
+        const ViewRow &row = vi.rows[ii];
         ASSERT_FALSE(row.docContents.key == NULL);
         ASSERT_EQ(row.docid.size(), row.docContents.nkey);
         ASSERT_EQ(LCB_SUCCESS, row.docContents.rc);
@@ -329,7 +334,8 @@ TEST_F(ViewsUnitTest, testIncludeDocs) {
     }
 }
 
-TEST_F(ViewsUnitTest, testReduce) {
+TEST_F(ViewsUnitTest, testReduce)
+{
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -379,7 +385,7 @@ TEST_F(ViewsUnitTest, testReduce) {
     ASSERT_EQ(10, vi.rows.size());
     ASSERT_EQ(1411, vi.totalRows);
 
-    ViewRow* firstRow = &vi.rows[0];
+    ViewRow *firstRow = &vi.rows[0];
     ASSERT_EQ("[\"Argentina\",\"\",\"Mendoza\"]", firstRow->key);
     ASSERT_EQ("1", firstRow->value);
     ASSERT_EQ("cervecera_jerome", firstRow->docid);
@@ -404,7 +410,8 @@ TEST_F(ViewsUnitTest, testReduce) {
     ASSERT_TRUE(firstRow->docid.empty());
 }
 
-TEST_F(ViewsUnitTest, testEngineErrors) {
+TEST_F(ViewsUnitTest, testEngineErrors)
+{
     SKIP_UNLESS_MOCK();
     // Tests various things which can go wrong; basically negative responses
     HandleWrap hw;
@@ -504,9 +511,7 @@ TEST_F(ViewsUnitTest, testBackslashDocid)
     string doc("{\"type\":\"brewery\", \"name\":\"Backslash IPA\"}");
     storeKey(instance, key, doc);
 
-
-    const char *ddoc = "beer", *view = "brewery_beers",
-          *optstr = "stale=false&key=[\"backslash\\\\docid\"]";
+    const char *ddoc = "beer", *view = "brewery_beers", *optstr = "stale=false&key=[\"backslash\\\\docid\"]";
 
     ViewInfo vi;
     lcb_CMDVIEW *cmd;
@@ -539,4 +544,4 @@ TEST_F(ViewsUnitTest, testBackslashDocid)
     ASSERT_EQ(0, vi.rows.size());
     lcb_cmdview_destroy(cmd);
 }
-}
+} // namespace

@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -56,9 +56,7 @@ static void handle_sigint(int sig)
 #define INSTALL_SIGINT_HANDLER()
 #endif
 
-
-static void
-store_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPSTORE *resp)
+static void store_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPSTORE *resp)
 {
     lcb_STATUS rc = lcb_respstore_status(resp);
     if (rc == LCB_SUCCESS) {
@@ -67,7 +65,7 @@ store_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPSTORE *resp)
         uint64_t cas;
         lcb_respstore_key(resp, &key, &nkey);
         lcb_respstore_cas(resp, &cas);
-        fprintf(stderr, "STORED \"%.*s\" CAS: %"PRIu64"\n", (int)nkey, key, cas);
+        fprintf(stderr, "STORED \"%.*s\" CAS: %" PRIu64 "\n", (int)nkey, key, cas);
     } else {
         fprintf(stderr, "STORE ERROR: %s (0x%x)\n", lcb_strerror(instance, rc), rc);
         exit(EXIT_FAILURE);
@@ -78,11 +76,9 @@ store_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPSTORE *resp)
 const char *view;
 const char *design;
 
-static void
-do_query_view(lcb_INSTANCE *instance);
+static void do_query_view(lcb_INSTANCE *instance);
 
-static void
-viewrow_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPVIEW *resp)
+static void viewrow_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPVIEW *resp)
 {
     if (lcb_respview_is_final(resp)) {
         lcb_STATUS rc = lcb_respview_status(resp);
@@ -107,8 +103,7 @@ viewrow_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPVIEW *resp)
     (void)cbtype;
 }
 
-static void
-http_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPHTTP *resp)
+static void http_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPHTTP *resp)
 {
     const char *path;
     size_t npath;
@@ -134,8 +129,7 @@ http_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPHTTP *resp)
     (void)cbtype;
 }
 
-static void
-do_query_view(lcb_INSTANCE *instance)
+static void do_query_view(lcb_INSTANCE *instance)
 {
     lcb_CMDVIEW *cmd;
     lcb_STATUS err;
@@ -183,8 +177,7 @@ int main(int argc, char *argv[])
 
     err = lcb_create(&instance, &create_options);
     if (err != LCB_SUCCESS) {
-        fprintf(stderr, "Failed to create libcouchbase instance: %s\n",
-                lcb_strerror(NULL, err));
+        fprintf(stderr, "Failed to create libcouchbase instance: %s\n", lcb_strerror(NULL, err));
         exit(EXIT_FAILURE);
     }
     /* Initiate the connect sequence in libcouchbase */
@@ -227,8 +220,8 @@ int main(int argc, char *argv[])
 
     {
         char *content_type = "application/json";
-        char design_path[64] = { 0 };
-        char doc[256] = { 0 };
+        char design_path[64] = {0};
+        char doc[256] = {0};
         lcb_CMDHTTP *cmd;
         sprintf(design_path, "_design/%s", design);
         sprintf(doc, "{\"views\":{\"all\":{\"map\":\"function(doc,meta){if(meta.id=='%s'){emit(meta.id)}}\"}}}", key);

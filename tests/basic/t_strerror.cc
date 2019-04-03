@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010-2012 Couchbase, Inc.
+ *     Copyright 2010-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -26,25 +26,21 @@ class Strerror : public ::testing::Test
 TEST_F(Strerror, testNoCrash)
 {
     for (int ii = -10; ii < 0xffff; ++ii) {
-        EXPECT_NE((const char *)NULL,
-                  lcb_strerror(NULL, (lcb_STATUS)ii));
+        EXPECT_NE((const char *)NULL, lcb_strerror(NULL, (lcb_STATUS)ii));
     }
 }
 
 TEST_F(Strerror, allCodesDocumented)
 {
-    const char *generic = lcb_strerror(NULL, (lcb_STATUS)( LCB_MAX_ERROR -1));
+    const char *generic = lcb_strerror(NULL, (lcb_STATUS)(LCB_MAX_ERROR - 1));
     ASSERT_NE((const char *)NULL, generic);
     for (int ii = 0; ii < LCB_MAX_ERROR_VAL; ++ii) {
-        EXPECT_STRNE(generic,
-                     lcb_strerror(NULL, (lcb_STATUS)ii));
+        EXPECT_STRNE(generic, lcb_strerror(NULL, (lcb_STATUS)ii));
     }
 
     for (int ii = LCB_MAX_ERROR_VAL; ii < LCB_MAX_ERROR; ++ii) {
-        EXPECT_STREQ(generic,
-                     lcb_strerror(NULL, (lcb_STATUS)ii));
+        EXPECT_STREQ(generic, lcb_strerror(NULL, (lcb_STATUS)ii));
     }
-
 }
 
 TEST_F(Strerror, testErrTypes)

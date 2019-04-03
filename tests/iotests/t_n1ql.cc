@@ -20,22 +20,23 @@
 #include <libcouchbase/couchbase.h>
 #include "internal.h"
 
-using std::vector;
 using std::string;
-
+using std::vector;
 
 struct N1QLResult {
-    vector<string> rows;
+    vector< string > rows;
     string meta;
     uint16_t htcode;
     lcb_STATUS rc;
     bool called;
 
-    N1QLResult() {
+    N1QLResult()
+    {
         reset();
     }
 
-    void reset() {
+    void reset()
+    {
         called = false;
         rc = LCB_SUCCESS;
         meta.clear();
@@ -44,8 +45,8 @@ struct N1QLResult {
     }
 };
 
-#define SKIP_QUERY_TEST() \
-    fprintf(stderr, "Requires recent mock with query support"); \
+#define SKIP_QUERY_TEST()                                                                                              \
+    fprintf(stderr, "Requires recent mock with query support");                                                        \
     return
 
 extern "C" {
@@ -75,16 +76,20 @@ static void rowcb(lcb_INSTANCE *, int, const lcb_RESPN1QL *resp)
 }
 }
 
-class QueryUnitTest : public MockUnitTest {
-protected:
+class QueryUnitTest : public MockUnitTest
+{
+  protected:
     lcb_CMDN1QL *cmd;
-    void SetUp() {
+    void SetUp()
+    {
         lcb_cmdn1ql_create(&cmd);
     }
-    void TearDown() {
+    void TearDown()
+    {
         lcb_cmdn1ql_destroy(cmd);
     }
-    bool createQueryConnection(HandleWrap& hw, lcb_INSTANCE **instance) {
+    bool createQueryConnection(HandleWrap &hw, lcb_INSTANCE **instance)
+    {
         if (MockEnvironment::getInstance()->isRealCluster()) {
             return false;
         }
@@ -97,7 +102,8 @@ protected:
         return ix > -1;
     }
 
-    void makeCommand(const char *query, bool prepared=false) {
+    void makeCommand(const char *query, bool prepared = false)
+    {
         lcb_cmdn1ql_reset(cmd);
         lcb_cmdn1ql_statement(cmd, query, strlen(query));
         lcb_cmdn1ql_callback(cmd, rowcb);

@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2011-2018 Couchbase, Inc.
+ *     Copyright 2011-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -41,13 +41,12 @@
 
 using namespace cbc;
 
-using std::string;
 using std::map;
-using std::vector;
+using std::string;
 using std::stringstream;
+using std::vector;
 
-static void
-printEnhancedError(int cbtype, const lcb_RESPBASE *resp, const char *additional = NULL)
+static void printEnhancedError(int cbtype, const lcb_RESPBASE *resp, const char *additional = NULL)
 {
     const char *ctx = lcb_resp_get_error_context(cbtype, resp);
     if (ctx != NULL) {
@@ -62,16 +61,15 @@ printEnhancedError(int cbtype, const lcb_RESPBASE *resp, const char *additional 
     }
 }
 
-static void
-printKeyError(string& key, lcb_STATUS rc, int cbtype, const lcb_RESPBASE *resp, const char *additional = NULL)
+static void printKeyError(string &key, lcb_STATUS rc, int cbtype, const lcb_RESPBASE *resp,
+                          const char *additional = NULL)
 {
     fprintf(stderr, "%-20s %s\n", key.c_str(), lcb_strerror_short(rc));
     printEnhancedError(cbtype, resp, additional);
 }
 
 extern "C" {
-static void
-get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE cbtype, const lcb_RESPGET *resp)
+static void get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE cbtype, const lcb_RESPGET *resp)
 {
     const char *p;
     size_t n;
@@ -89,8 +87,8 @@ get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE cbtype, const lcb_RESPGET *resp)
         lcb_respget_flags(resp, &flags);
         lcb_respget_cas(resp, &cas);
         lcb_respget_datatype(resp, &datatype);
-        fprintf(stderr, "%-20s CAS=0x%" PRIx64 ", Flags=0x%x, Size=%lu, Datatype=0x%02x",
-                key.c_str(), cas, flags, (unsigned long)nvalue, (int)datatype);
+        fprintf(stderr, "%-20s CAS=0x%" PRIx64 ", Flags=0x%x, Size=%lu, Datatype=0x%02x", key.c_str(), cas, flags,
+                (unsigned long)nvalue, (int)datatype);
         if (datatype) {
             int nflags = 0;
             fprintf(stderr, "(");
@@ -114,8 +112,7 @@ get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE cbtype, const lcb_RESPGET *resp)
     }
 }
 
-static void
-getreplica_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE cbtype, const lcb_RESPGETREPLICA *resp)
+static void getreplica_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE cbtype, const lcb_RESPGETREPLICA *resp)
 {
     const char *p;
     size_t n;
@@ -133,8 +130,8 @@ getreplica_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE cbtype, const lcb_RESPGETR
         lcb_respgetreplica_flags(resp, &flags);
         lcb_respgetreplica_cas(resp, &cas);
         lcb_respgetreplica_datatype(resp, &datatype);
-        fprintf(stderr, "%-20s CAS=0x%" PRIx64 ", Flags=0x%x, Size=%lu, Datatype=0x%02x",
-                key.c_str(), cas, flags, (unsigned long)nvalue, (int)datatype);
+        fprintf(stderr, "%-20s CAS=0x%" PRIx64 ", Flags=0x%x, Size=%lu, Datatype=0x%02x", key.c_str(), cas, flags,
+                (unsigned long)nvalue, (int)datatype);
         if (datatype) {
             int nflags = 0;
             fprintf(stderr, "(");
@@ -158,9 +155,7 @@ getreplica_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE cbtype, const lcb_RESPGETR
     }
 }
 
-
-static void
-storePrintSuccess(const lcb_RESPSTORE *resp, const char *message = NULL)
+static void storePrintSuccess(const lcb_RESPSTORE *resp, const char *message = NULL)
 {
     const char *key;
     size_t nkey;
@@ -178,13 +173,11 @@ storePrintSuccess(const lcb_RESPSTORE *resp, const char *message = NULL)
     lcb_MUTATION_TOKEN token = {0};
     lcb_respstore_mutation_token(resp, &token);
     if (lcb_mutation_token_is_valid(&token)) {
-        fprintf(stderr, "%-20s SYNCTOKEN=%u,%" PRIu64 ",%" PRIu64 "\n", "",
-                token.vbid_, token.uuid_, token.seqno_);
+        fprintf(stderr, "%-20s SYNCTOKEN=%u,%" PRIu64 ",%" PRIu64 "\n", "", token.vbid_, token.uuid_, token.seqno_);
     }
 }
 
-static void
-storePrintError(const lcb_RESPSTORE *resp, const char *message = NULL)
+static void storePrintError(const lcb_RESPSTORE *resp, const char *message = NULL)
 {
     size_t sz = 0;
     const char *key;
@@ -209,8 +202,7 @@ storePrintError(const lcb_RESPSTORE *resp, const char *message = NULL)
     }
 }
 
-static void
-store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
+static void store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
 {
     lcb_STATUS rc = lcb_respstore_status(resp);
 
@@ -242,8 +234,7 @@ store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
     }
 }
 
-static void
-unlock_callback(lcb_INSTANCE *, int type, const lcb_RESPUNLOCK *resp)
+static void unlock_callback(lcb_INSTANCE *, int type, const lcb_RESPUNLOCK *resp)
 {
     const char *p;
     size_t n;
@@ -259,8 +250,7 @@ unlock_callback(lcb_INSTANCE *, int type, const lcb_RESPUNLOCK *resp)
     fprintf(stderr, "%-20s Unlocked\n", key.c_str());
 }
 
-static void
-remove_callback(lcb_INSTANCE *, int type, const lcb_RESPREMOVE *resp)
+static void remove_callback(lcb_INSTANCE *, int type, const lcb_RESPREMOVE *resp)
 {
     const char *p;
     size_t n;
@@ -276,8 +266,7 @@ remove_callback(lcb_INSTANCE *, int type, const lcb_RESPREMOVE *resp)
     fprintf(stderr, "%-20s Deleted\n", key.c_str());
 }
 
-static void
-touch_callback(lcb_INSTANCE *, int type, const lcb_RESPTOUCH *resp)
+static void touch_callback(lcb_INSTANCE *, int type, const lcb_RESPTOUCH *resp)
 {
     const char *p;
     size_t n;
@@ -293,8 +282,7 @@ touch_callback(lcb_INSTANCE *, int type, const lcb_RESPTOUCH *resp)
     fprintf(stderr, "%-20s Touch\n", key.c_str());
 }
 
-static void
-observe_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE cbtype, const lcb_RESPOBSERVE *resp)
+static void observe_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE cbtype, const lcb_RESPOBSERVE *resp)
 {
     if (resp->nkey == 0) {
         return;
@@ -302,22 +290,18 @@ observe_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE cbtype, const lcb_RESPOBSERVE
 
     string key((const char *)resp->key, resp->nkey);
     if (resp->rc == LCB_SUCCESS) {
-        fprintf(stderr,
-            "%-20s [%s] Status=0x%x, CAS=0x%" PRIx64 "\n", key.c_str(),
-            resp->ismaster ? "Master" : "Replica",
-                    resp->status, resp->cas);
+        fprintf(stderr, "%-20s [%s] Status=0x%x, CAS=0x%" PRIx64 "\n", key.c_str(),
+                resp->ismaster ? "Master" : "Replica", resp->status, resp->cas);
     } else {
         printKeyError(key, resp->rc, cbtype, (const lcb_RESPBASE *)resp);
     }
 }
 
-static void
-obseqno_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPOBSEQNO *resp)
+static void obseqno_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPOBSEQNO *resp)
 {
     int ix = resp->server_index;
     if (resp->rc != LCB_SUCCESS) {
-        fprintf(stderr,
-            "[%d] ERROR %s\n", ix, lcb_strerror_long(resp->rc));
+        fprintf(stderr, "[%d] ERROR %s\n", ix, lcb_strerror_long(resp->rc));
         return;
     }
     lcb_U64 uuid, seq_disk, seq_mem;
@@ -329,18 +313,16 @@ obseqno_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPOBSEQNO *resp)
         seq_disk = resp->persisted_seqno;
         seq_mem = resp->mem_seqno;
     }
-    fprintf(stderr, "[%d] UUID=0x%" PRIx64 ", Cache=%" PRIu64 ", Disk=%" PRIu64,
-        ix, uuid, seq_mem, seq_disk);
+    fprintf(stderr, "[%d] UUID=0x%" PRIx64 ", Cache=%" PRIu64 ", Disk=%" PRIu64, ix, uuid, seq_mem, seq_disk);
     if (resp->old_uuid) {
         fprintf(stderr, "\n");
-        fprintf(stderr, "    FAILOVER. New: UUID=%" PRIx64 ", Cache=%" PRIu64 ", Disk=%" PRIu64,
-            resp->cur_uuid, resp->mem_seqno, resp->persisted_seqno);
+        fprintf(stderr, "    FAILOVER. New: UUID=%" PRIx64 ", Cache=%" PRIu64 ", Disk=%" PRIu64, resp->cur_uuid,
+                resp->mem_seqno, resp->persisted_seqno);
     }
     fprintf(stderr, "\n");
 }
 
-static void
-stats_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
+static void stats_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
 {
     if (resp->rc != LCB_SUCCESS) {
         fprintf(stderr, "ERROR %s\n", lcb_strerror_long(resp->rc));
@@ -353,12 +335,12 @@ stats_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
     string server = resp->server;
     string key((const char *)resp->key, resp->nkey);
     string value;
-    if (resp->nvalue >  0) {
+    if (resp->nvalue > 0) {
         value.assign((const char *)resp->value, resp->nvalue);
     }
     fprintf(stdout, "%s\t%s", server.c_str(), key.c_str());
     if (!value.empty()) {
-        if (*static_cast<bool*>(resp->cookie) && key == "key_flags") {
+        if (*static_cast< bool * >(resp->cookie) && key == "key_flags") {
             // Is keystats
             // Flip the bits so the display formats correctly
             unsigned flags_u = 0;
@@ -372,8 +354,7 @@ stats_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
     fprintf(stdout, "\n");
 }
 
-static void
-watch_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
+static void watch_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
 {
     if (resp->rc != LCB_SUCCESS) {
         fprintf(stderr, "ERROR %s\n", lcb_strerror_long(resp->rc));
@@ -384,7 +365,7 @@ watch_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
     }
 
     string key((const char *)resp->key, resp->nkey);
-    if (resp->nvalue >  0) {
+    if (resp->nvalue > 0) {
         char *nptr = NULL;
         uint64_t val =
 #ifdef _WIN32
@@ -394,14 +375,13 @@ watch_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
 #endif
             ((const char *)resp->value, &nptr, 10);
         if (nptr != (const char *)resp->value) {
-            map<string, int64_t> *entry = reinterpret_cast< map<string, int64_t> *>(resp->cookie);
+            map< string, int64_t > *entry = reinterpret_cast< map< string, int64_t > * >(resp->cookie);
             (*entry)[key] += val;
         }
     }
 }
 
-static void
-common_server_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSERVERBASE *sbase)
+static void common_server_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSERVERBASE *sbase)
 {
     string msg;
     if (cbtype == LCB_CALLBACK_VERBOSITY) {
@@ -416,15 +396,13 @@ common_server_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSERVERBASE *sba
         return;
     }
     if (sbase->rc != LCB_SUCCESS) {
-        fprintf(stderr, "%s failed for server %s: %s\n", msg.c_str(), sbase->server,
-            lcb_strerror_short(sbase->rc));
+        fprintf(stderr, "%s failed for server %s: %s\n", msg.c_str(), sbase->server, lcb_strerror_short(sbase->rc));
     } else {
         fprintf(stderr, "%s: %s\n", msg.c_str(), sbase->server);
     }
 }
 
-static void
-ping_callback(lcb_INSTANCE *, int, const lcb_RESPPING *resp)
+static void ping_callback(lcb_INSTANCE *, int, const lcb_RESPPING *resp)
 {
     lcb_STATUS rc = lcb_respping_status(resp);
     if (rc != LCB_SUCCESS) {
@@ -439,8 +417,7 @@ ping_callback(lcb_INSTANCE *, int, const lcb_RESPPING *resp)
     }
 }
 
-static void
-arithmetic_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE type, const lcb_RESPCOUNTER *resp)
+static void arithmetic_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE type, const lcb_RESPCOUNTER *resp)
 {
     const char *p;
     size_t n;
@@ -459,14 +436,12 @@ arithmetic_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE type, const lcb_RESPCOUNTE
         lcb_MUTATION_TOKEN token = {0};
         lcb_respcounter_mutation_token(resp, &token);
         if (lcb_mutation_token_is_valid(&token)) {
-            fprintf(stderr, "%-20sSYNCTOKEN=%u,%" PRIu64 ",%" PRIu64 "\n", "",
-                    token.vbid_, token.uuid_, token.seqno_);
+            fprintf(stderr, "%-20sSYNCTOKEN=%u,%" PRIu64 ",%" PRIu64 "\n", "", token.vbid_, token.uuid_, token.seqno_);
         }
     }
 }
 
-static void
-http_callback(lcb_INSTANCE *, int, const lcb_RESPHTTP *resp)
+static void http_callback(lcb_INSTANCE *, int, const lcb_RESPHTTP *resp)
 {
     HttpReceiver *ctx;
     lcb_resphttp_cookie(resp, (void **)&ctx);
@@ -483,8 +458,7 @@ http_callback(lcb_INSTANCE *, int, const lcb_RESPHTTP *resp)
     }
 }
 
-static void
-view_callback(lcb_INSTANCE *, int, const lcb_RESPVIEW *resp)
+static void view_callback(lcb_INSTANCE *, int, const lcb_RESPVIEW *resp)
 {
     if (lcb_respview_is_final(resp)) {
         fprintf(stderr, "View query complete!\n");
@@ -541,7 +515,6 @@ view_callback(lcb_INSTANCE *, int, const lcb_RESPVIEW *resp)
 }
 }
 
-
 Handler::Handler(const char *name) : parser(name), instance(NULL)
 {
     if (name != NULL) {
@@ -559,8 +532,7 @@ Handler::~Handler()
     }
 }
 
-void
-Handler::execute(int argc, char **argv)
+void Handler::execute(int argc, char **argv)
 {
     addOptions();
     parser.default_settings.argstring = usagestr();
@@ -573,14 +545,12 @@ Handler::execute(int argc, char **argv)
     }
 }
 
-void
-Handler::addOptions()
+void Handler::addOptions()
 {
     params.addToParser(parser);
 }
 
-void
-Handler::run()
+void Handler::run()
 {
     lcb_create_st cropts;
     params.fillCropts(cropts);
@@ -605,12 +575,11 @@ Handler::run()
     }
 }
 
-const string&
-Handler::getLoneArg(bool required)
+const string &Handler::getLoneArg(bool required)
 {
     static string empty("");
 
-    const vector<string>& args = parser.getRestArgs();
+    const vector< string > &args = parser.getRestArgs();
     if (args.empty() || args.size() != 1) {
         if (required) {
             throw std::runtime_error("Command requires single argument");
@@ -620,8 +589,7 @@ Handler::getLoneArg(bool required)
     return args[0];
 }
 
-void
-GetHandler::addOptions()
+void GetHandler::addOptions()
 {
     Handler::addOptions();
     o_exptime.abbrev('e');
@@ -630,7 +598,8 @@ GetHandler::addOptions()
     } else {
         o_exptime.description("Update the expiration time for the item");
         o_replica.abbrev('r');
-        o_replica.description("Read from replica. Possible values are 'first': read from first available replica. 'all': read from all replicas, and <N>, where 0 < N < nreplicas");
+        o_replica.description("Read from replica. Possible values are 'first': read from first available replica. "
+                              "'all': read from all replicas, and <N>, where 0 < N < nreplicas");
         parser.addOption(o_replica);
     }
     parser.addOption(o_exptime);
@@ -639,13 +608,12 @@ GetHandler::addOptions()
     parser.addOption(o_durability);
 }
 
-void
-GetHandler::run()
+void GetHandler::run()
 {
     Handler::run();
     lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
     lcb_install_callback3(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)getreplica_callback);
-    const vector<string>& keys = parser.getRestArgs();
+    const vector< string > &keys = parser.getRestArgs();
     std::string replica_mode = o_replica.result();
 
     lcb_sched_enter(instance);
@@ -674,7 +642,7 @@ GetHandler::run()
             }
             lcb_CMDGETREPLICA *cmd;
             lcb_cmdgetreplica_create(&cmd, mode);
-            const string& key = keys[ii];
+            const string &key = keys[ii];
             lcb_cmdgetreplica_key(cmd, key.c_str(), key.size());
             if (o_collection.passed()) {
                 std::string s = o_scope.result();
@@ -686,7 +654,7 @@ GetHandler::run()
             lcb_CMDGET *cmd;
 
             lcb_cmdget_create(&cmd);
-            const string& key = keys[ii];
+            const string &key = keys[ii];
             lcb_cmdget_key(cmd, key.c_str(), key.size());
             if (o_collection.passed()) {
                 std::string s = o_scope.result();
@@ -711,24 +679,22 @@ GetHandler::run()
     lcb_wait(instance);
 }
 
-void
-TouchHandler::addOptions()
+void TouchHandler::addOptions()
 {
     Handler::addOptions();
     parser.addOption(o_exptime);
     parser.addOption(o_durability);
 }
 
-void
-TouchHandler::run()
+void TouchHandler::run()
 {
     Handler::run();
     lcb_install_callback3(instance, LCB_CALLBACK_TOUCH, (lcb_RESPCALLBACK)touch_callback);
-    const vector<string>& keys = parser.getRestArgs();
+    const vector< string > &keys = parser.getRestArgs();
     lcb_STATUS err;
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < keys.size(); ++ii) {
-        const string& key = keys[ii];
+        const string &key = keys[ii];
         lcb_CMDTOUCH *cmd;
         lcb_cmdtouch_create(&cmd);
         lcb_cmdtouch_key(cmd, key.c_str(), key.size());
@@ -743,8 +709,7 @@ TouchHandler::run()
     lcb_wait(instance);
 }
 
-void
-SetHandler::addOptions()
+void SetHandler::addOptions()
 {
     Handler::addOptions();
     parser.addOption(o_mode);
@@ -762,8 +727,7 @@ SetHandler::addOptions()
     parser.addOption(o_durability);
 }
 
-lcb_STORE_OPERATION
-SetHandler::mode()
+lcb_STORE_OPERATION SetHandler::mode()
 {
     if (o_add.passed()) {
         return LCB_STORE_ADD;
@@ -787,8 +751,7 @@ SetHandler::mode()
     }
 }
 
-void
-SetHandler::storeItem(const string& key, const char *value, size_t nvalue)
+void SetHandler::storeItem(const string &key, const char *value, size_t nvalue)
 {
     lcb_STATUS err;
     lcb_CMDSTORE *cmd;
@@ -823,11 +786,10 @@ SetHandler::storeItem(const string& key, const char *value, size_t nvalue)
     lcb_cmdstore_destroy(cmd);
 }
 
-void
-SetHandler::storeItem(const string& key, FILE *input)
+void SetHandler::storeItem(const string &key, FILE *input)
 {
     char tmpbuf[4096];
-    vector<char> vbuf;
+    vector< char > vbuf;
     size_t nr;
     while ((nr = fread(tmpbuf, 1, sizeof tmpbuf, input))) {
         vbuf.insert(vbuf.end(), tmpbuf, &tmpbuf[nr]);
@@ -835,19 +797,18 @@ SetHandler::storeItem(const string& key, FILE *input)
     storeItem(key, &vbuf[0], vbuf.size());
 }
 
-void
-SetHandler::run()
+void SetHandler::run()
 {
     Handler::run();
     lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
     lcb_install_callback3(instance, LCB_CALLBACK_STOREDUR, (lcb_RESPCALLBACK)store_callback);
-    const vector<string>& keys = parser.getRestArgs();
+    const vector< string > &keys = parser.getRestArgs();
 
     lcb_sched_enter(instance);
 
     if (hasFileList()) {
         for (size_t ii = 0; ii < keys.size(); ii++) {
-            const string& key = keys[ii];
+            const string &key = keys[ii];
             FILE *fp = fopen(key.c_str(), "rb");
             if (fp == NULL) {
                 perror(key.c_str());
@@ -859,9 +820,9 @@ SetHandler::run()
     } else if (keys.size() > 1 || keys.empty()) {
         throw BadArg("create must be passed a single key");
     } else {
-        const string& key = keys[0];
+        const string &key = keys[0];
         if (o_value.passed()) {
-            const string& value = o_value.const_result();
+            const string &value = o_value.const_result();
             storeItem(key, value.c_str(), value.size());
         } else {
             storeItem(key, stdin);
@@ -872,8 +833,7 @@ SetHandler::run()
     lcb_wait(instance);
 }
 
-void
-HashHandler::run()
+void HashHandler::run()
 {
     Handler::run();
 
@@ -884,16 +844,15 @@ HashHandler::run()
         throw LcbError(err);
     }
 
-    const vector<string>& args = parser.getRestArgs();
+    const vector< string > &args = parser.getRestArgs();
     for (size_t ii = 0; ii < args.size(); ii++) {
-        const string& key = args[ii];
+        const string &key = args[ii];
         const void *vkey = (const void *)key.c_str();
         int vbid, srvix;
         lcbvb_map_key(vbc, vkey, key.size(), &vbid, &srvix);
         fprintf(stderr, "%s: [vBucket=%d, Index=%d]", key.c_str(), vbid, srvix);
         if (srvix != -1) {
-            fprintf(stderr, " Server: %s",
-                lcbvb_get_hostport(vbc, srvix, LCBVB_SVCTYPE_DATA, LCBVB_SVCMODE_PLAIN));
+            fprintf(stderr, " Server: %s", lcbvb_get_hostport(vbc, srvix, LCBVB_SVCTYPE_DATA, LCBVB_SVCMODE_PLAIN));
             const char *vapi = lcbvb_get_capibase(vbc, srvix, LCBVB_SVCMODE_PLAIN);
             if (vapi) {
                 fprintf(stderr, ", CouchAPI: %s", vapi);
@@ -915,12 +874,11 @@ HashHandler::run()
     }
 }
 
-void
-ObserveHandler::run()
+void ObserveHandler::run()
 {
     Handler::run();
     lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPCALLBACK)observe_callback);
-    const vector<string>& keys = parser.getRestArgs();
+    const vector< string > &keys = parser.getRestArgs();
     lcb_MULTICMD_CTX *mctx = lcb_observe3_ctxnew(instance);
     if (mctx == NULL) {
         throw std::bad_alloc();
@@ -928,9 +886,9 @@ ObserveHandler::run()
 
     lcb_STATUS err;
     for (size_t ii = 0; ii < keys.size(); ii++) {
-        lcb_CMDOBSERVE cmd = { 0 };
+        lcb_CMDOBSERVE cmd = {0};
         LCB_KREQ_SIMPLE(&cmd.key, keys[ii].c_str(), keys[ii].size());
-        err = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);
+        err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
         if (err != LCB_SUCCESS) {
             throw LcbError(err);
         }
@@ -947,13 +905,12 @@ ObserveHandler::run()
     }
 }
 
-void
-ObserveSeqnoHandler::run()
+void ObserveSeqnoHandler::run()
 {
     Handler::run();
     lcb_install_callback3(instance, LCB_CALLBACK_OBSEQNO, (lcb_RESPCALLBACK)obseqno_callback);
-    const vector<string>& infos = parser.getRestArgs();
-    lcb_CMDOBSEQNO cmd = { 0 };
+    const vector< string > &infos = parser.getRestArgs();
+    lcb_CMDOBSEQNO cmd = {0};
     lcbvb_CONFIG *vbc;
     lcb_STATUS rc;
 
@@ -965,7 +922,7 @@ ObserveSeqnoHandler::run()
     lcb_sched_enter(instance);
 
     for (size_t ii = 0; ii < infos.size(); ++ii) {
-        const string& cur = infos[ii];
+        const string &cur = infos[ii];
         unsigned vbid;
         unsigned long long uuid;
         int rv = sscanf(cur.c_str(), "%u,%llu", &vbid, &uuid);
@@ -990,12 +947,11 @@ ObserveSeqnoHandler::run()
     lcb_wait(instance);
 }
 
-void
-UnlockHandler::run()
+void UnlockHandler::run()
 {
     Handler::run();
     lcb_install_callback3(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlock_callback);
-    const vector<string>& args = parser.getRestArgs();
+    const vector< string > &args = parser.getRestArgs();
 
     if (args.size() % 2) {
         throw BadArg("Expect key-cas pairs. Argument list must be even");
@@ -1003,10 +959,10 @@ UnlockHandler::run()
 
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < args.size(); ii += 2) {
-        const string& key = args[ii];
+        const string &key = args[ii];
         lcb_CAS cas;
         int rv;
-        rv = sscanf(args[ii+1].c_str(), "0x%" PRIx64, &cas);
+        rv = sscanf(args[ii + 1].c_str(), "0x%" PRIx64, &cas);
         if (rv != 1) {
             throw BadArg("CAS must be formatted as a hex string beginning with '0x'");
         }
@@ -1025,54 +981,51 @@ UnlockHandler::run()
     lcb_wait(instance);
 }
 
-static const char *
-iops_to_string(lcb_io_ops_type_t type)
+static const char *iops_to_string(lcb_io_ops_type_t type)
 {
     switch (type) {
-    case LCB_IO_OPS_LIBEV: return "libev";
-    case LCB_IO_OPS_LIBEVENT: return "libevent";
-    case LCB_IO_OPS_LIBUV: return "libuv";
-    case LCB_IO_OPS_SELECT: return "select";
-    case LCB_IO_OPS_WINIOCP: return "iocp";
-    case LCB_IO_OPS_INVALID: return "user-defined";
-    default: return "invalid";
+        case LCB_IO_OPS_LIBEV:
+            return "libev";
+        case LCB_IO_OPS_LIBEVENT:
+            return "libevent";
+        case LCB_IO_OPS_LIBUV:
+            return "libuv";
+        case LCB_IO_OPS_SELECT:
+            return "select";
+        case LCB_IO_OPS_WINIOCP:
+            return "iocp";
+        case LCB_IO_OPS_INVALID:
+            return "user-defined";
+        default:
+            return "invalid";
     }
 }
 
-void
-VersionHandler::run()
+void VersionHandler::run()
 {
     const char *changeset;
     lcb_STATUS err;
-    err = lcb_cntl(NULL, LCB_CNTL_GET, LCB_CNTL_CHANGESET, (void*)&changeset);
+    err = lcb_cntl(NULL, LCB_CNTL_GET, LCB_CNTL_CHANGESET, (void *)&changeset);
     if (err != LCB_SUCCESS) {
         changeset = "UNKNOWN";
     }
     fprintf(stderr, "cbc:\n");
-    fprintf(stderr, "  Runtime: Version=%s, Changeset=%s\n",
-        lcb_get_version(NULL), changeset);
-    fprintf(stderr, "  Headers: Version=%s, Changeset=%s\n",
-        LCB_VERSION_STRING, LCB_VERSION_CHANGESET);
+    fprintf(stderr, "  Runtime: Version=%s, Changeset=%s\n", lcb_get_version(NULL), changeset);
+    fprintf(stderr, "  Headers: Version=%s, Changeset=%s\n", LCB_VERSION_STRING, LCB_VERSION_CHANGESET);
     fprintf(stderr, "  Build Timestamp: %s\n", LCB_BUILD_TIMESTAMP);
 
     struct lcb_cntl_iops_info_st info;
     memset(&info, 0, sizeof info);
     err = lcb_cntl(NULL, LCB_CNTL_GET, LCB_CNTL_IOPS_DEFAULT_TYPES, &info);
     if (err == LCB_SUCCESS) {
-        fprintf(stderr, "  IO: Default=%s, Current=%s, Accessible=",
-            iops_to_string(info.v.v0.os_default), iops_to_string(info.v.v0.effective));
+        fprintf(stderr, "  IO: Default=%s, Current=%s, Accessible=", iops_to_string(info.v.v0.os_default),
+                iops_to_string(info.v.v0.effective));
     }
     {
         size_t ii;
         char buf[256] = {0}, *p = buf;
-        lcb_io_ops_type_t known_io[] = {
-            LCB_IO_OPS_WINIOCP,
-            LCB_IO_OPS_LIBEVENT,
-            LCB_IO_OPS_LIBUV,
-            LCB_IO_OPS_LIBEV,
-            LCB_IO_OPS_SELECT
-        };
-
+        lcb_io_ops_type_t known_io[] = {LCB_IO_OPS_WINIOCP, LCB_IO_OPS_LIBEVENT, LCB_IO_OPS_LIBUV, LCB_IO_OPS_LIBEV,
+                                        LCB_IO_OPS_SELECT};
 
         for (ii = 0; ii < sizeof(known_io) / sizeof(known_io[0]); ii++) {
             struct lcb_create_io_ops_st cio = {0};
@@ -1103,7 +1056,7 @@ VersionHandler::run()
         printf("  SSL: NOT SUPPORTED\n");
     }
     if (lcb_supports_feature(LCB_SUPPORTS_SNAPPY)) {
-#define EXPAND(VAR)   VAR ## 1
+#define EXPAND(VAR) VAR##1
 #define IS_EMPTY(VAR) EXPAND(VAR)
 
 #if defined(SNAPPY_MAJOR) && (IS_EMPTY(SNAPPY_MAJOR) != 1)
@@ -1120,15 +1073,14 @@ VersionHandler::run()
     printf("  CXX: %s; %s\n", LCB_CXX_COMPILER, LCB_CXX_FLAGS);
 }
 
-void
-RemoveHandler::run()
+void RemoveHandler::run()
 {
     Handler::run();
-    const vector<string> &keys = parser.getRestArgs();
+    const vector< string > &keys = parser.getRestArgs();
     lcb_sched_enter(instance);
     lcb_install_callback3(instance, LCB_CALLBACK_REMOVE, (lcb_RESPCALLBACK)remove_callback);
     for (size_t ii = 0; ii < keys.size(); ++ii) {
-        const string& key = keys[ii];
+        const string &key = keys[ii];
         lcb_CMDREMOVE *cmd;
         lcb_cmdremove_create(&cmd);
         lcb_cmdremove_key(cmd, key.c_str(), key.size());
@@ -1142,19 +1094,18 @@ RemoveHandler::run()
     lcb_wait(instance);
 }
 
-void
-StatsHandler::run()
+void StatsHandler::run()
 {
     Handler::run();
     lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)stats_callback);
-    vector<string> keys = parser.getRestArgs();
+    vector< string > keys = parser.getRestArgs();
     if (keys.empty()) {
         keys.push_back("");
     }
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < keys.size(); ii++) {
-        lcb_CMDSTATS cmd = { 0 };
-        const string& key = keys[ii];
+        lcb_CMDSTATS cmd = {0};
+        const string &key = keys[ii];
         if (!key.empty()) {
             LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
             if (o_keystats.result()) {
@@ -1171,12 +1122,11 @@ StatsHandler::run()
     lcb_wait(instance);
 }
 
-void
-WatchHandler::run()
+void WatchHandler::run()
 {
     Handler::run();
     lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)watch_callback);
-    vector<string> keys = parser.getRestArgs();
+    vector< string > keys = parser.getRestArgs();
     if (keys.empty()) {
         keys.push_back("cmd_total_ops");
         keys.push_back("cmd_total_gets");
@@ -1184,13 +1134,13 @@ WatchHandler::run()
     }
     int interval = o_interval.result();
 
-    map<string, int64_t> prev;
+    map< string, int64_t > prev;
 
     bool first = true;
     while (true) {
-        map<string, int64_t> entry;
+        map< string, int64_t > entry;
         lcb_sched_enter(instance);
-        lcb_CMDSTATS cmd = { 0 };
+        lcb_CMDSTATS cmd = {0};
         lcb_STATUS err = lcb_stats3(instance, (void *)&entry, &cmd);
         if (err != LCB_SUCCESS) {
             throw LcbError(err);
@@ -1198,7 +1148,7 @@ WatchHandler::run()
         lcb_sched_leave(instance);
         lcb_wait(instance);
         if (first) {
-            for (vector<string>::iterator it = keys.begin(); it != keys.end(); ++it) {
+            for (vector< string >::iterator it = keys.begin(); it != keys.end(); ++it) {
                 fprintf(stderr, "%s: %" PRId64 "\n", it->c_str(), entry[*it]);
             }
             first = false;
@@ -1208,7 +1158,7 @@ WatchHandler::run()
                 fprintf(stderr, "\033[%dA", (int)keys.size());
             }
 #endif
-            for (vector<string>::iterator it = keys.begin(); it != keys.end(); ++it) {
+            for (vector< string >::iterator it = keys.begin(); it != keys.end(); ++it) {
                 fprintf(stderr, "%s: %" PRId64 "%20s\n", it->c_str(), (entry[*it] - prev[*it]) / interval, "");
             }
         }
@@ -1221,13 +1171,11 @@ WatchHandler::run()
     }
 }
 
-
-void
-VerbosityHandler::run()
+void VerbosityHandler::run()
 {
     Handler::run();
 
-    const string& slevel = getRequiredArg();
+    const string &slevel = getRequiredArg();
     lcb_verbosity_level_t level;
     if (slevel == "detail") {
         level = LCB_VERBOSITY_DETAIL;
@@ -1242,7 +1190,7 @@ VerbosityHandler::run()
     }
 
     lcb_install_callback3(instance, LCB_CALLBACK_VERBOSITY, (lcb_RESPCALLBACK)common_server_callback);
-    lcb_CMDVERBOSITY cmd = { 0 };
+    lcb_CMDVERBOSITY cmd = {0};
     cmd.level = level;
     lcb_STATUS err;
     lcb_sched_enter(instance);
@@ -1254,13 +1202,12 @@ VerbosityHandler::run()
     lcb_wait(instance);
 }
 
-void
-McVersionHandler::run()
+void McVersionHandler::run()
 {
     Handler::run();
 
     lcb_install_callback3(instance, LCB_CALLBACK_VERSIONS, (lcb_RESPCALLBACK)common_server_callback);
-    lcb_CMDVERSIONS cmd = { 0 };
+    lcb_CMDVERSIONS cmd = {0};
     lcb_STATUS err;
     lcb_sched_enter(instance);
     err = lcb_server_versions3(instance, NULL, &cmd);
@@ -1319,7 +1266,8 @@ static void getcid_callback(lcb_INSTANCE *, int, const lcb_RESPGETCID *resp)
         uint32_t collection_id;
         lcb_respgetcid_manifest_id(resp, &manifest_id);
         lcb_respgetcid_collection_id(resp, &collection_id);
-        printf("%-20.*s ManifestId=0x%02" PRIx64 ", CollectionId=0x%02x\n", (int)nkey, (char *)key, manifest_id, collection_id);
+        printf("%-20.*s ManifestId=0x%02" PRIx64 ", CollectionId=0x%02x\n", (int)nkey, (char *)key, manifest_id,
+               collection_id);
     }
 }
 
@@ -1331,13 +1279,13 @@ void CollectionGetCIDHandler::run()
 
     std::string scope = o_scope.result();
 
-    const vector<string>& collections = parser.getRestArgs();
+    const vector< string > &collections = parser.getRestArgs();
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < collections.size(); ++ii) {
         lcb_STATUS err;
         lcb_CMDGETCID *cmd;
         lcb_cmdgetcid_create(&cmd);
-        const string& collection = collections[ii];
+        const string &collection = collections[ii];
         lcb_cmdgetcid_scope(cmd, scope.c_str(), scope.size());
         lcb_cmdgetcid_collection(cmd, collection.c_str(), collection.size());
         err = lcb_getcid(instance, NULL, cmd);
@@ -1350,8 +1298,7 @@ void CollectionGetCIDHandler::run()
     lcb_wait(instance);
 }
 
-void
-KeygenHandler::run()
+void KeygenHandler::run()
 {
     Handler::run();
 
@@ -1367,7 +1314,7 @@ KeygenHandler::run()
         throw LcbError(LCB_EINVAL, "the configuration does not contain any vBuckets");
     }
     unsigned num_keys_per_vbucket = o_keys_per_vbucket.result();
-    vector < vector < string > > keys(num_vbuckets);
+    vector< vector< string > > keys(num_vbuckets);
 #define MAX_KEY_SIZE 16
     char buf[MAX_KEY_SIZE] = {0};
     unsigned i = 0;
@@ -1385,7 +1332,7 @@ KeygenHandler::run()
         }
     }
     for (i = 0; i < num_vbuckets; i++) {
-        for (vector<string>::iterator it = keys[i].begin(); it != keys[i].end(); ++it) {
+        for (vector< string >::iterator it = keys[i].begin(); it != keys[i].end(); ++it) {
             printf("%s %u\n", it->c_str(), i);
         }
     }
@@ -1394,8 +1341,7 @@ KeygenHandler::run()
     }
 }
 
-void
-PingHandler::run()
+void PingHandler::run()
 {
     Handler::run();
 
@@ -1425,11 +1371,10 @@ static void cbFlushCb(lcb_INSTANCE *, int, const lcb_RESPCBFLUSH *resp)
     }
 }
 }
-void
-BucketFlushHandler::run()
+void BucketFlushHandler::run()
 {
     Handler::run();
-    lcb_CMDCBFLUSH cmd = { 0 };
+    lcb_CMDCBFLUSH cmd = {0};
     lcb_STATUS err;
     lcb_install_callback3(instance, LCB_CALLBACK_CBFLUSH, (lcb_RESPCALLBACK)cbFlushCb);
     err = lcb_cbflush3(instance, NULL, &cmd);
@@ -1440,26 +1385,25 @@ BucketFlushHandler::run()
     }
 }
 
-void
-ArithmeticHandler::run()
+void ArithmeticHandler::run()
 {
     Handler::run();
 
-    const vector<string>& keys = parser.getRestArgs();
+    const vector< string > &keys = parser.getRestArgs();
     lcb_install_callback3(instance, LCB_CALLBACK_COUNTER, (lcb_RESPCALLBACK)arithmetic_callback);
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < keys.size(); ++ii) {
-        const string& key = keys[ii];
+        const string &key = keys[ii];
         lcb_CMDCOUNTER *cmd;
         lcb_cmdcounter_create(&cmd);
         lcb_cmdcounter_key(cmd, key.c_str(), key.size());
         if (o_initial.passed()) {
             lcb_cmdcounter_initial(cmd, o_initial.result());
         }
-        if (o_delta.result() > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+        if (o_delta.result() > static_cast< uint64_t >(std::numeric_limits< int64_t >::max())) {
             throw BadArg("Delta too big");
         }
-        int64_t delta = static_cast<int64_t>(o_delta.result());
+        int64_t delta = static_cast< int64_t >(o_delta.result());
         if (shouldInvert()) {
             delta *= -1;
         }
@@ -1475,19 +1419,18 @@ ArithmeticHandler::run()
     lcb_wait(instance);
 }
 
-void
-ViewsHandler::run()
+void ViewsHandler::run()
 {
     Handler::run();
 
-    const string& s = getRequiredArg();
+    const string &s = getRequiredArg();
     size_t pos = s.find('/');
     if (pos == string::npos) {
         throw BadArg("View must be in the format of design/view");
     }
 
     string ddoc = s.substr(0, pos);
-    string view = s.substr(pos+1);
+    string view = s.substr(pos + 1);
     string opts = o_params.result();
 
     lcb_CMDVIEW *cmd;
@@ -1512,8 +1455,7 @@ ViewsHandler::run()
     lcb_wait(instance);
 }
 
-static void
-splitKvParam(const string& src, string& key, string& value)
+static void splitKvParam(const string &src, string &key, string &value)
 {
     size_t pp = src.find('=');
     if (pp == string::npos) {
@@ -1521,7 +1463,7 @@ splitKvParam(const string& src, string& key, string& value)
     }
 
     key = src.substr(0, pp);
-    value = src.substr(pp+1);
+    value = src.substr(pp + 1);
 }
 
 extern "C" {
@@ -1542,7 +1484,7 @@ static void n1qlCallback(lcb_INSTANCE *, int, const lcb_RESPN1QL *resp)
                 uint16_t status;
                 lcb_resphttp_http_status(http, &status);
                 fprintf(stderr, "---> Inner HTTP request failed with library code %s and HTTP status %d\n",
-                    lcb_strerror_short(lcb_resphttp_status(http)), status);
+                        lcb_strerror_short(lcb_resphttp_status(http)), status);
             }
         }
         if (row) {
@@ -1554,11 +1496,10 @@ static void n1qlCallback(lcb_INSTANCE *, int, const lcb_RESPN1QL *resp)
 }
 }
 
-void
-N1qlHandler::run()
+void N1qlHandler::run()
 {
     Handler::run();
-    const string& qstr = getRequiredArg();
+    const string &qstr = getRequiredArg();
     lcb_STATUS rc;
 
     lcb_CMDN1QL *cmd;
@@ -1569,7 +1510,7 @@ N1qlHandler::run()
         throw LcbError(rc);
     }
 
-    const vector<string>& vv_args = o_args.const_result();
+    const vector< string > &vv_args = o_args.const_result();
     for (size_t ii = 0; ii < vv_args.size(); ii++) {
         string key, value;
         splitKvParam(vv_args[ii], key, value);
@@ -1579,7 +1520,7 @@ N1qlHandler::run()
         }
     }
 
-    const vector<string>& vv_opts = o_opts.const_result();
+    const vector< string > &vv_opts = o_opts.const_result();
     for (size_t ii = 0; ii < vv_opts.size(); ii++) {
         string key, value;
         splitKvParam(vv_opts[ii], key, value);
@@ -1608,25 +1549,22 @@ N1qlHandler::run()
     lcb_wait(instance);
 }
 
-void
-HttpReceiver::install(lcb_INSTANCE * instance)
+void HttpReceiver::install(lcb_INSTANCE *instance)
 {
-    lcb_install_callback3(instance, LCB_CALLBACK_HTTP,
-        (lcb_RESPCALLBACK)http_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 }
 
-void
-HttpReceiver::maybeInvokeStatus(const lcb_RESPHTTP *resp)
+void HttpReceiver::maybeInvokeStatus(const lcb_RESPHTTP *resp)
 {
     if (statusInvoked) {
         return;
     }
 
     statusInvoked = true;
-    const char * const *hdr;
+    const char *const *hdr;
     lcb_resphttp_headers(resp, &hdr);
     if (hdr) {
-        for (const char * const *cur = hdr; *cur; cur += 2) {
+        for (const char *const *cur = hdr; *cur; cur += 2) {
             string key = cur[0];
             string value = cur[1];
             headers[key] = value;
@@ -1637,14 +1575,13 @@ HttpReceiver::maybeInvokeStatus(const lcb_RESPHTTP *resp)
     handleStatus(lcb_resphttp_status(resp), status);
 }
 
-void
-HttpBaseHandler::run()
+void HttpBaseHandler::run()
 {
     Handler::run();
     install(instance);
     lcb_CMDHTTP *cmd;
     string uri = getURI();
-    const string& body = getBody();
+    const string &body = getBody();
 
     lcb_cmdhttp_create(&cmd, isAdmin() ? LCB_HTTP_TYPE_MANAGEMENT : LCB_HTTP_TYPE_VIEW);
     lcb_cmdhttp_method(cmd, getMethod());
@@ -1669,8 +1606,7 @@ HttpBaseHandler::run()
     lcb_wait(instance);
 }
 
-lcb_HTTP_METHOD
-HttpBaseHandler::getMethod()
+lcb_HTTP_METHOD HttpBaseHandler::getMethod()
 {
     string smeth = o_method.result();
     if (smeth == "GET") {
@@ -1686,8 +1622,7 @@ HttpBaseHandler::getMethod()
     }
 }
 
-const string&
-HttpBaseHandler::getBody()
+const string &HttpBaseHandler::getBody()
 {
     if (!body_cached.empty()) {
         return body_cached;
@@ -1699,44 +1634,40 @@ HttpBaseHandler::getBody()
 
     char buf[4096];
     size_t nr;
-    while ( (nr = fread(buf, 1, sizeof buf, stdin)) != 0) {
+    while ((nr = fread(buf, 1, sizeof buf, stdin)) != 0) {
         body_cached.append(buf, nr);
     }
     return body_cached;
 }
 
-void
-HttpBaseHandler::handleStatus(lcb_STATUS err, int code)
+void HttpBaseHandler::handleStatus(lcb_STATUS err, int code)
 {
     if (err != LCB_SUCCESS) {
         fprintf(stderr, "ERROR: %s ", lcb_strerror_short(err));
     }
     fprintf(stderr, "%d\n", code);
-    map<string,string>::const_iterator ii = headers.begin();
+    map< string, string >::const_iterator ii = headers.begin();
     for (; ii != headers.end(); ii++) {
         fprintf(stderr, "  %s: %s\n", ii->first.c_str(), ii->second.c_str());
     }
 }
 
-string
-AdminHandler::getURI()
+string AdminHandler::getURI()
 {
     return getRequiredArg();
 }
 
-void
-AdminHandler::run()
+void AdminHandler::run()
 {
     fprintf(stderr, "Requesting %s\n", getURI().c_str());
     HttpBaseHandler::run();
     printf("%s\n", resbuf.c_str());
 }
 
-void
-BucketCreateHandler::run()
+void BucketCreateHandler::run()
 {
-    const string& name = getRequiredArg();
-    const string& btype = o_btype.const_result();
+    const string &name = getRequiredArg();
+    const string &btype = o_btype.const_result();
     stringstream ss;
 
     if (btype == "couchbase" || btype == "membase") {
@@ -1765,8 +1696,7 @@ BucketCreateHandler::run()
     AdminHandler::run();
 }
 
-void
-RbacHandler::run()
+void RbacHandler::run()
 {
     fprintf(stderr, "Requesting %s\n", getURI().c_str());
     HttpBaseHandler::run();
@@ -1777,8 +1707,7 @@ RbacHandler::run()
     }
 }
 
-void
-RoleListHandler::format()
+void RoleListHandler::format()
 {
     Json::Value json;
     if (!Json::Reader().parse(resbuf, json)) {
@@ -1786,7 +1715,7 @@ RoleListHandler::format()
         printf("%s\n", resbuf.c_str());
     }
 
-    std::map<string, string> roles;
+    std::map< string, string > roles;
     size_t max_width = 0;
     for (Json::Value::iterator i = json.begin(); i != json.end(); i++) {
         Json::Value role = *i;
@@ -1796,13 +1725,12 @@ RoleListHandler::format()
             max_width = role_id.size();
         }
     }
-    for (map<string, string>::iterator i = roles.begin(); i != roles.end(); i++) {
+    for (map< string, string >::iterator i = roles.begin(); i != roles.end(); i++) {
         std::cout << std::left << std::setw(max_width) << i->first << i->second << std::endl;
     }
 }
 
-void
-UserListHandler::format()
+void UserListHandler::format()
 {
     Json::Value json;
     if (!Json::Reader().parse(resbuf, json)) {
@@ -1810,7 +1738,7 @@ UserListHandler::format()
         printf("%s\n", resbuf.c_str());
     }
 
-    map<string, map<string, string> > users;
+    map< string, map< string, string > > users;
     size_t max_width = 0;
     for (Json::Value::iterator i = json.begin(); i != json.end(); i++) {
         Json::Value user = *i;
@@ -1837,21 +1765,20 @@ UserListHandler::format()
     if (!users["local"].empty()) {
         std::cout << "Local users:" << std::endl;
         int j = 1;
-        for (map<string, string>::iterator i = users["local"].begin(); i != users["local"].end(); i++, j++) {
+        for (map< string, string >::iterator i = users["local"].begin(); i != users["local"].end(); i++, j++) {
             std::cout << j << ". " << std::left << std::setw(max_width) << i->first << i->second << std::endl;
         }
     }
     if (!users["external"].empty()) {
         std::cout << "External users:" << std::endl;
         int j = 1;
-        for (map<string, string>::iterator i = users["external"].begin(); i != users["external"].end(); i++, j++) {
+        for (map< string, string >::iterator i = users["external"].begin(); i != users["external"].end(); i++, j++) {
             std::cout << j << ". " << std::left << std::setw(max_width) << i->first << i->second << std::endl;
         }
     }
 }
 
-void
-UserUpsertHandler::run()
+void UserUpsertHandler::run()
 {
     stringstream ss;
 
@@ -1863,7 +1790,7 @@ UserUpsertHandler::run()
     if (!o_roles.passed()) {
         throw BadArg("At least one role has to be specified");
     }
-    std::vector<std::string> roles = o_roles.result();
+    std::vector< std::string > roles = o_roles.result();
     std::string roles_param;
     for (size_t ii = 0; ii < roles.size(); ii++) {
         if (roles_param.empty()) {
@@ -1887,11 +1814,13 @@ UserUpsertHandler::run()
 struct HostEnt {
     string protostr;
     string hostname;
-    HostEnt(const std::string& host, const char *proto) {
+    HostEnt(const std::string &host, const char *proto)
+    {
         protostr = proto;
         hostname = host;
     }
-    HostEnt(const std::string& host, const char* proto, int port) {
+    HostEnt(const std::string &host, const char *proto, int port)
+    {
         protostr = proto;
         hostname = host;
         stringstream ss;
@@ -1901,10 +1830,9 @@ struct HostEnt {
     }
 };
 
-void
-ConnstrHandler::run()
+void ConnstrHandler::run()
 {
-    const string& connstr_s = getRequiredArg();
+    const string &connstr_s = getRequiredArg();
     lcb_STATUS err;
     const char *errmsg;
     lcb::Connspec spec;
@@ -1937,11 +1865,11 @@ ConnstrHandler::run()
     if (bsStr.empty()) {
         bsStr = "CCCP,HTTP";
     } else {
-        bsStr.erase(bsStr.size()-1, 1);
+        bsStr.erase(bsStr.size() - 1, 1);
     }
     printf("%s\n", bsStr.c_str());
     printf("Hosts:\n");
-    vector<HostEnt> hosts;
+    vector< HostEnt > hosts;
 
     for (size_t ii = 0; ii < spec.hosts().size(); ++ii) {
         const lcb::Spechost *dh = &spec.hosts()[ii];
@@ -1969,7 +1897,7 @@ ConnstrHandler::run()
         }
     }
     for (size_t ii = 0; ii < hosts.size(); ii++) {
-        HostEnt& ent = hosts[ii];
+        HostEnt &ent = hosts[ii];
         string protostr = "[" + ent.protostr + "]";
         printf("  %-20s%s\n", protostr.c_str(), ent.hostname.c_str());
     }
@@ -1981,8 +1909,7 @@ ConnstrHandler::run()
     }
 }
 
-void
-WriteConfigHandler::run()
+void WriteConfigHandler::run()
 {
     lcb_create_st cropts;
     params.fillCropts(cropts);
@@ -1994,55 +1921,55 @@ WriteConfigHandler::run()
     params.writeConfig(outname);
 }
 
-static map<string,Handler*> handlers;
-static map<string,Handler*> handlers_s;
-static const char* optionsOrder[] = {
-        "help",
-        "cat",
-        "create",
-        "touch",
-        "observe",
-        "observe-seqno",
-        "incr",
-        "decr",
-        "hash",
-        "lock",
-        "unlock",
-        "cp",
-        "rm",
-        "stats",
-        "version",
-        "verbosity",
-        "view",
-        "query",
-        "admin",
-        "bucket-create",
-        "bucket-delete",
-        "bucket-flush",
-        "role-list",
-        "user-list",
-        "user-upsert",
-        "user-delete",
-        "connstr",
-        "write-config",
-        "strerror",
-        "ping",
-        "watch",
-        "keygen",
-        "collection-manifest",
-        "collection-id",
-        NULL
-};
+static map< string, Handler * > handlers;
+static map< string, Handler * > handlers_s;
+static const char *optionsOrder[] = {"help",
+                                     "cat",
+                                     "create",
+                                     "touch",
+                                     "observe",
+                                     "observe-seqno",
+                                     "incr",
+                                     "decr",
+                                     "hash",
+                                     "lock",
+                                     "unlock",
+                                     "cp",
+                                     "rm",
+                                     "stats",
+                                     "version",
+                                     "verbosity",
+                                     "view",
+                                     "query",
+                                     "admin",
+                                     "bucket-create",
+                                     "bucket-delete",
+                                     "bucket-flush",
+                                     "role-list",
+                                     "user-list",
+                                     "user-upsert",
+                                     "user-delete",
+                                     "connstr",
+                                     "write-config",
+                                     "strerror",
+                                     "ping",
+                                     "watch",
+                                     "keygen",
+                                     "collection-manifest",
+                                     "collection-id",
+                                     NULL};
 
-class HelpHandler : public Handler {
-public:
+class HelpHandler : public Handler
+{
+  public:
     HelpHandler() : Handler("help") {}
     HANDLER_DESCRIPTION("Show help")
-protected:
-    void run() {
+  protected:
+    void run()
+    {
         fprintf(stderr, "Usage: cbc <command> [options]\n");
         fprintf(stderr, "command may be:\n");
-        for (const char ** cur = optionsOrder; *cur; cur++) {
+        for (const char **cur = optionsOrder; *cur; cur++) {
             const Handler *handler = handlers[*cur];
             fprintf(stderr, "   %-20s", *cur);
             fprintf(stderr, " %s\n", handler->description());
@@ -2050,14 +1977,16 @@ protected:
     }
 };
 
-class StrErrorHandler : public Handler {
-public:
+class StrErrorHandler : public Handler
+{
+  public:
     StrErrorHandler() : Handler("strerror") {}
     HANDLER_DESCRIPTION("Decode library error code")
     HANDLER_USAGE("HEX OR DECIMAL CODE")
-protected:
-    void handleOptions() { }
-    void run() {
+  protected:
+    void handleOptions() {}
+    void run()
+    {
         std::string nn = getRequiredArg();
         // Try to parse it as a hexadecimal number
         unsigned errcode;
@@ -2069,24 +1998,23 @@ protected:
             }
         }
 
-        #define X(cname, code, cat, desc) \
-        if (code == errcode) { \
-            fprintf(stderr, "%s\n", #cname); \
-            fprintf(stderr, "  Type: 0x%x\n", cat); \
-            fprintf(stderr, "  Description: %s\n", desc); \
-            return; \
-        } \
+#define X(cname, code, cat, desc)                                                                                      \
+    if (code == errcode) {                                                                                             \
+        fprintf(stderr, "%s\n", #cname);                                                                               \
+        fprintf(stderr, "  Type: 0x%x\n", cat);                                                                        \
+        fprintf(stderr, "  Description: %s\n", desc);                                                                  \
+        return;                                                                                                        \
+    }
 
         LCB_XERR(X)
-        #undef X
+#undef X
 
         fprintf(stderr, "-- Error code not found in header. Trying runtime..\n");
         fprintf(stderr, "%s\n", lcb_strerror_long((lcb_STATUS)errcode));
     }
 };
 
-static void
-setupHandlers()
+static void setupHandlers()
 {
     handlers_s["get"] = new GetHandler();
     handlers_s["create"] = new SetHandler();
@@ -2124,7 +2052,7 @@ setupHandlers()
     handlers_s["collection-manifest"] = new CollectionGetManifestHandler();
     handlers_s["collection-id"] = new CollectionGetCIDHandler();
 
-    map<string,Handler*>::iterator ii;
+    map< string, Handler * >::iterator ii;
     for (ii = handlers_s.begin(); ii != handlers_s.end(); ++ii) {
         handlers[ii->first] = ii->second;
     }
@@ -2138,8 +2066,7 @@ setupHandlers()
 #define HAVE_BASENAME
 #endif
 
-static void
-parseCommandname(string& cmdname, int&, char**& argv)
+static void parseCommandname(string &cmdname, int &, char **&argv)
 {
 #ifdef HAVE_BASENAME
     cmdname = basename(argv[0]);
@@ -2151,12 +2078,11 @@ parseCommandname(string& cmdname, int&, char**& argv)
         return;
     }
 
-    if ((dashpos = cmdname.find('-')) != string::npos &&
-            cmdname.find("cbc") != string::npos &&
-            dashpos+1 < cmdname.size()) {
+    if ((dashpos = cmdname.find('-')) != string::npos && cmdname.find("cbc") != string::npos &&
+        dashpos + 1 < cmdname.size()) {
 
         // Get the actual command name
-        cmdname = cmdname.substr(dashpos+1);
+        cmdname = cmdname.substr(dashpos + 1);
         return;
     }
 #else
@@ -2165,11 +2091,10 @@ parseCommandname(string& cmdname, int&, char**& argv)
     cmdname.clear();
 }
 
-static void
-wrapExternalBinary(int argc, char **argv, const std::string& name)
+static void wrapExternalBinary(int argc, char **argv, const std::string &name)
 {
 #ifdef _POSIX_VERSION
-    vector<char *> args;
+    vector< char * > args;
     string exePath(argv[0]);
     size_t cbc_pos = exePath.find("cbc");
 
@@ -2179,14 +2104,15 @@ wrapExternalBinary(int argc, char **argv, const std::string& name)
     }
 
     exePath.replace(cbc_pos, 3, name);
-    args.push_back((char*)exePath.c_str());
+    args.push_back((char *)exePath.c_str());
 
     // { "cbc", "name" }
-    argv += 2; argc -= 2;
+    argv += 2;
+    argc -= 2;
     for (int ii = 0; ii < argc; ii++) {
         args.push_back(argv[ii]);
     }
-    args.push_back((char*)NULL);
+    args.push_back((char *)NULL);
     execvp(exePath.c_str(), &args[0]);
     fprintf(stderr, "Failed to execute execute %s (%s): %s\n", name.c_str(), exePath.c_str(), strerror(errno));
 #else
@@ -2197,7 +2123,7 @@ wrapExternalBinary(int argc, char **argv, const std::string& name)
 
 static void cleanupHandlers()
 {
-    map<string,Handler*>::iterator iter = handlers_s.begin();
+    map< string, Handler * >::iterator iter = handlers_s.begin();
     for (; iter != handlers_s.end(); iter++) {
         delete iter->second;
     }
@@ -2230,7 +2156,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Must provide an option name\n");
             try {
                 HelpHandler().execute(argc, argv);
-            } catch (std::exception& exc) {
+            } catch (std::exception &exc) {
                 std::cerr << exc.what() << std::endl;
             }
             exit(EXIT_FAILURE);
@@ -2251,7 +2177,7 @@ int main(int argc, char *argv[])
     try {
         handler->execute(argc, argv);
 
-    } catch (std::exception& err) {
+    } catch (std::exception &err) {
         fprintf(stderr, "%s\n", err.what());
         exit(EXIT_FAILURE);
     }

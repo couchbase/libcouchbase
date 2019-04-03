@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -50,8 +50,7 @@ TEST_F(ConfigCacheUnitTest, testConfigCache)
     ASSERT_EQ(LCB_SUCCESS, err);
 
     int is_loaded;
-    err = lcb_cntl(instance, LCB_CNTL_GET,
-                   LCB_CNTL_CONFIG_CACHE_LOADED, &is_loaded);
+    err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_CONFIG_CACHE_LOADED, &is_loaded);
 
     ASSERT_EQ(err, LCB_SUCCESS);
     ASSERT_EQ(is_loaded, 0);
@@ -78,8 +77,7 @@ TEST_F(ConfigCacheUnitTest, testConfigCache)
     err = lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, err);
 
-    err = lcb_cntl(instance, LCB_CNTL_GET,
-                   LCB_CNTL_CONFIG_CACHE_LOADED, &is_loaded);
+    err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_CONFIG_CACHE_LOADED, &is_loaded);
     ASSERT_NE(0, is_loaded);
     ASSERT_EQ(1, bsCalled);
 

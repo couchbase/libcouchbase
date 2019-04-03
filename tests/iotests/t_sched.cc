@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2016 Couchbase, Inc.
+ *     Copyright 2016-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -24,8 +24,7 @@ class SchedUnitTests : public MockUnitTest
 {
 };
 
-static bool
-hasPendingOps(lcb_INSTANCE *instance)
+static bool hasPendingOps(lcb_INSTANCE *instance)
 {
     for (size_t ii = 0; ii < LCBT_NSERVERS(instance); ++ii) {
         if (instance->get_server(ii)->has_pending()) {
@@ -35,9 +34,9 @@ hasPendingOps(lcb_INSTANCE *instance)
     return false;
 }
 
-static void
-opCallback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb) {
-    size_t *counter = reinterpret_cast<size_t*>(rb->cookie);
+static void opCallback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
+{
+    size_t *counter = reinterpret_cast< size_t * >(rb->cookie);
     *counter += 1;
 }
 

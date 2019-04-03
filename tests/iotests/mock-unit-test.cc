@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -22,17 +22,18 @@
 #include <lcbio/iotable.h>
 #include "bucketconfig/bc_http.h"
 
-#define LOGARGS(instance, lvl) \
-    instance->settings, "tests-MUT", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOGARGS(instance, lvl) instance->settings, "tests-MUT", LCB_LOG_##lvl, __FILE__, __LINE__
 
 /**
  * Keep these around in case we do something useful here in the future
  */
-void MockUnitTest::SetUp() {
+void MockUnitTest::SetUp()
+{
     MockEnvironment::Reset();
 }
 
-void checkConnectCommon(lcb_INSTANCE *instance) {
+void checkConnectCommon(lcb_INSTANCE *instance)
+{
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
@@ -56,9 +57,7 @@ void MockUnitTest::createConnection(HandleWrap &handle)
     createConnection(handle, &instance);
 }
 
-lcb_STATUS
-MockUnitTest::tryCreateConnection(HandleWrap& hw,
-    lcb_INSTANCE **instance, lcb_create_st& crparams)
+lcb_STATUS MockUnitTest::tryCreateConnection(HandleWrap &hw, lcb_INSTANCE **instance, lcb_create_st &crparams)
 {
     MockEnvironment::getInstance()->createConnection(hw, instance, crparams);
     EXPECT_EQ(LCB_SUCCESS, lcb_connect(*instance));

@@ -17,11 +17,13 @@
 
 #include "mctest.h"
 
-class McAlloc : public ::testing::Test {
-protected:
+class McAlloc : public ::testing::Test
+{
+  protected:
     mc_CMDQUEUE cQueue;
 
-    void setupPipeline(mc_PIPELINE *pipeline) {
+    void setupPipeline(mc_PIPELINE *pipeline)
+    {
         mcreq_queue_init(&cQueue);
         mcreq_pipeline_init(pipeline);
         pipeline->parent = &cQueue;
@@ -52,7 +54,6 @@ TEST_F(McAlloc, testPacketFreeAlloc)
     // other resources have been released
     copied = mcreq_renew_packet(packet);
 
-
     mcreq_wipe_packet(&pipeline, packet);
     mcreq_release_packet(&pipeline, packet);
     mcreq_pipeline_cleanup(&pipeline);
@@ -68,7 +69,8 @@ struct dummy_datum {
     int refcount;
 };
 extern "C" {
-static void datum_free(mc_EPKTDATUM *epd) {
+static void datum_free(mc_EPKTDATUM *epd)
+{
     dummy_datum *dd = (dummy_datum *)epd;
     dd->refcount--;
 }
@@ -89,16 +91,16 @@ TEST_F(McAlloc, testExdataAlloc)
     dd.base.key = "Dummy";
     dd.base.dtorfn = datum_free;
     dd.refcount = 1;
-    mcreq_epkt_insert((mc_EXPACKET*)copy1, &dd.base);
+    mcreq_epkt_insert((mc_EXPACKET *)copy1, &dd.base);
     // Find it back
-    mc_EPKTDATUM *epd = mcreq_epkt_find((mc_EXPACKET*)copy1, "Dummy");
+    mc_EPKTDATUM *epd = mcreq_epkt_find((mc_EXPACKET *)copy1, "Dummy");
     ASSERT_FALSE(epd == NULL);
     ASSERT_TRUE(epd == &dd.base);
 
     copy2 = mcreq_renew_packet(copy1);
-    epd = mcreq_epkt_find((mc_EXPACKET*)copy1, "Dummy");
+    epd = mcreq_epkt_find((mc_EXPACKET *)copy1, "Dummy");
     ASSERT_TRUE(epd == NULL);
-    epd = mcreq_epkt_find((mc_EXPACKET*)copy2, "Dummy");
+    epd = mcreq_epkt_find((mc_EXPACKET *)copy2, "Dummy");
     ASSERT_FALSE(epd == NULL);
 
     mcreq_wipe_packet(&pipeline, packet);
@@ -111,7 +113,6 @@ TEST_F(McAlloc, testExdataAlloc)
     mcreq_pipeline_cleanup(&pipeline);
 }
 
-
 TEST_F(McAlloc, testKeyAlloc)
 {
     CQWrap q;
@@ -123,7 +124,7 @@ TEST_F(McAlloc, testKeyAlloc)
     memset(&cmd, 0, sizeof(cmd));
     memset(&hdr, 0, sizeof(hdr));
 
-    cmd.key.contig.bytes = const_cast<char *>("Hello");
+    cmd.key.contig.bytes = const_cast< char * >("Hello");
     cmd.key.contig.nbytes = 5;
 
     lcb_STATUS ret;
@@ -169,11 +170,10 @@ TEST_F(McAlloc, testValueAlloc)
     const char *key = "Hello";
     const char *value = "World";
 
-
     lcb_STATUS ret;
-    cmd.key.contig.bytes = const_cast<char *>(key);
+    cmd.key.contig.bytes = const_cast< char * >(key);
     cmd.key.contig.nbytes = 5;
-    vreq.u_buf.contig.bytes = const_cast<char *>(value);
+    vreq.u_buf.contig.bytes = const_cast< char * >(value);
     vreq.u_buf.contig.nbytes = 5;
 
     ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, 0, &packet, &pipeline, 0);
@@ -193,10 +193,9 @@ TEST_F(McAlloc, testValueAlloc)
     vreq.vtype = LCB_KV_CONTIG;
     ret = mcreq_reserve_value(pipeline, packet, &vreq);
     ASSERT_EQ(SPAN_BUFFER(&packet->u_value.single), value);
-    ASSERT_EQ(MCREQ_F_HASVALUE|MCREQ_F_VALUE_NOCOPY, packet->flags);
+    ASSERT_EQ(MCREQ_F_HASVALUE | MCREQ_F_VALUE_NOCOPY, packet->flags);
     mcreq_wipe_packet(pipeline, packet);
     mcreq_release_packet(pipeline, packet);
-
 
     nb_IOV iov[2];
     iov[0].iov_base = (void *)value;
@@ -211,8 +210,7 @@ TEST_F(McAlloc, testValueAlloc)
     ASSERT_EQ(LCB_SUCCESS, ret);
     ret = mcreq_reserve_value(pipeline, packet, &vreq);
     ASSERT_EQ(LCB_SUCCESS, ret);
-    ASSERT_EQ(MCREQ_F_HASVALUE|MCREQ_F_VALUE_IOV|MCREQ_F_VALUE_NOCOPY,
-              packet->flags);
+    ASSERT_EQ(MCREQ_F_HASVALUE | MCREQ_F_VALUE_IOV | MCREQ_F_VALUE_NOCOPY, packet->flags);
     ASSERT_NE(&iov[0], (nb_IOV *)packet->u_value.multi.iov);
     ASSERT_EQ(2, packet->u_value.multi.niov);
     ASSERT_EQ(5, packet->u_value.multi.total_length);
@@ -242,14 +240,13 @@ TEST_F(McAlloc, testValueAlloc)
 
 struct ExtraCookie : mc_REQDATAEX {
     int remaining;
-    ExtraCookie(const mc_REQDATAPROCS& procs_)
-        : mc_REQDATAEX(NULL, procs_, 0), remaining(0) {
-    }
+    ExtraCookie(const mc_REQDATAPROCS &procs_) : mc_REQDATAEX(NULL, procs_, 0), remaining(0) {}
 };
 
 extern "C" {
-static void pkt_dtor(mc_PACKET *pkt) {
-    ExtraCookie *ec = static_cast<ExtraCookie*>(pkt->u_rdata.exdata);
+static void pkt_dtor(mc_PACKET *pkt)
+{
+    ExtraCookie *ec = static_cast< ExtraCookie * >(pkt->u_rdata.exdata);
     ec->remaining--;
 }
 }
@@ -258,7 +255,7 @@ TEST_F(McAlloc, testRdataExDtor)
 {
     CQWrap q;
     lcb_CMDBASE basecmd;
-    const static mc_REQDATAPROCS procs = { NULL, pkt_dtor };
+    const static mc_REQDATAPROCS procs = {NULL, pkt_dtor};
     protocol_binary_request_header hdr;
 
     memset(&hdr, 0, sizeof hdr);

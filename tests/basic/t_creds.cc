@@ -26,7 +26,8 @@ class CredsTest : public ::testing::Test
 {
 };
 
-static lcb_INSTANCE *create(const char *connstr = NULL) {
+static lcb_INSTANCE *create(const char *connstr = NULL)
+{
     lcb_create_st crst;
     memset(&crst, 0, sizeof crst);
     crst.version = 3;
@@ -41,7 +42,7 @@ TEST_F(CredsTest, testLegacyCreds)
 {
     lcb_INSTANCE *instance;
     ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, NULL));
-    lcb::Authenticator& auth = *instance->settings->auth;
+    lcb::Authenticator &auth = *instance->settings->auth;
     ASSERT_TRUE(auth.username().empty());
     ASSERT_EQ(LCBAUTH_MODE_CLASSIC, auth.mode());
 
@@ -51,7 +52,7 @@ TEST_F(CredsTest, testLegacyCreds)
     ASSERT_EQ("default", auth.username_for(NULL, NULL, "default"));
 
     // Try to add another user/password:
-    lcb_BUCKETCRED creds = { "user2", "pass2" };
+    lcb_BUCKETCRED creds = {"user2", "pass2"};
     ASSERT_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_BUCKET_CRED, creds));
     ASSERT_EQ(2, auth.buckets().size());
     ASSERT_EQ("pass2", auth.buckets().find("user2")->second);
@@ -63,9 +64,10 @@ TEST_F(CredsTest, testLegacyCreds)
     lcb_destroy(instance);
 }
 
-TEST_F(CredsTest, testRbacCreds) {
+TEST_F(CredsTest, testRbacCreds)
+{
     lcb_INSTANCE *instance = create("couchbase://localhost/default?username=mark");
-    lcb::Authenticator& auth = *instance->settings->auth;
+    lcb::Authenticator &auth = *instance->settings->auth;
     ASSERT_EQ("mark", auth.username());
     ASSERT_EQ(LCBAUTH_MODE_RBAC, auth.mode());
     ASSERT_TRUE(auth.buckets().empty());
@@ -78,7 +80,7 @@ TEST_F(CredsTest, testRbacCreds) {
     ASSERT_EQ(LCB_OPTIONS_CONFLICT, auth.add("users", "secret", LCBAUTH_F_BUCKET));
 
     // Try using "old-style" auth. It should fail:
-    ASSERT_EQ(LCB_OPTIONS_CONFLICT, auth.add("users", "secret", LCBAUTH_F_BUCKET|LCBAUTH_F_CLUSTER));
+    ASSERT_EQ(LCB_OPTIONS_CONFLICT, auth.add("users", "secret", LCBAUTH_F_BUCKET | LCBAUTH_F_CLUSTER));
     // Username/password should remain unchanged:
     ASSERT_EQ("mark", auth.username());
     ASSERT_EQ("", auth.password());

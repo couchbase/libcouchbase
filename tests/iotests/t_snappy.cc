@@ -235,7 +235,6 @@ TEST_F(SnappyUnitTest, testIOV)
     lcb_cmdget_destroy(gcmd);
 }
 
-
 TEST_F(SnappyUnitTest, testSettings)
 {
 
@@ -318,7 +317,7 @@ TEST_F(SnappyUnitTest, testSettings)
     ASSERT_STREQ(compressed.c_str(), cookie.value.c_str());
     lcb_cmdget_destroy(gcmd);
 
-    lcb_cntl_string(instance, "compression_min_size", "40"); /* less than size of the value */
+    lcb_cntl_string(instance, "compression_min_size", "40");   /* less than size of the value */
     lcb_cntl_string(instance, "compression_min_ratio", "0.1"); /* expect to reduce size in 10 times */
     value = "A big black bug bit a big black bear, made the big black bear bleed blood";
     compressed = "A big black bug bit a big black bear, made the big black bear bleed blood";

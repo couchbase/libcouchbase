@@ -18,7 +18,9 @@
 #include "mctest.h"
 #include "mc/mcreq-flush-inl.h"
 
-class McContext : public ::testing::Test {};
+class McContext : public ::testing::Test
+{
+};
 
 struct CtxCookie {
     int ncalled;
@@ -106,7 +108,6 @@ TEST_F(McContext, testFailedContext)
         if (!cq.scheds[pl->index]) {
             continue;
         }
-
 
         ASSERT_TRUE(SLLIST_IS_EMPTY(&pl->requests));
         ASSERT_TRUE(SLLIST_IS_EMPTY(&pl->ctxqueued));

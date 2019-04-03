@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2018 Couchbase, Inc.
+ *     Copyright 2018-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ static lcb_STATUS osp_generate_iv(struct lcbcrypto_PROVIDER *provider, uint8_t *
 }
 
 static lcb_STATUS osp_sign(struct lcbcrypto_PROVIDER *provider, const lcbcrypto_SIGV *inputs, size_t inputs_num,
-                            uint8_t **sig, size_t *sig_len)
+                           uint8_t **sig, size_t *sig_len)
 {
     const EVP_MD *md;
     uint8_t out[EVP_MAX_MD_SIZE];
@@ -110,7 +110,7 @@ static lcb_STATUS osp_sign(struct lcbcrypto_PROVIDER *provider, const lcbcrypto_
 }
 
 static lcb_STATUS osp_verify_signature(struct lcbcrypto_PROVIDER *provider, const lcbcrypto_SIGV *inputs,
-                                        size_t inputs_num, uint8_t *sig, size_t sig_len)
+                                       size_t inputs_num, uint8_t *sig, size_t sig_len)
 {
     const EVP_MD *md;
     uint8_t actual[EVP_MAX_MD_SIZE];
@@ -162,7 +162,7 @@ static lcb_STATUS osp_verify_signature(struct lcbcrypto_PROVIDER *provider, cons
 }
 
 static lcb_STATUS osp_encrypt(struct lcbcrypto_PROVIDER *provider, const uint8_t *input, size_t input_len,
-                               const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len)
+                              const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len)
 {
     EVP_CIPHER_CTX *ctx;
     const EVP_CIPHER *cipher;
@@ -206,7 +206,7 @@ static lcb_STATUS osp_encrypt(struct lcbcrypto_PROVIDER *provider, const uint8_t
 }
 
 static lcb_STATUS osp_decrypt(struct lcbcrypto_PROVIDER *provider, const uint8_t *input, size_t input_len,
-                               const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len)
+                              const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len)
 {
     EVP_CIPHER_CTX *ctx;
     const EVP_CIPHER *cipher;

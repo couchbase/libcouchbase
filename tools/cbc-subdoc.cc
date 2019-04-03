@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2017 Couchbase, Inc.
+ *     Copyright 2017-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-#define LCB_NO_DEPR_CXX_CTORS
 
 #include "config.h"
 #include <sys/types.h>
@@ -103,28 +101,22 @@ static void do_or_die(lcb_STATUS rc, std::string msg = "")
     }
 }
 
-static lcb_INSTANCE * instance = NULL;
+static lcb_INSTANCE *instance = NULL;
 static Histogram hg;
 
 class Configuration
 {
   public:
-    Configuration()
-    {
-    }
+    Configuration() {}
 
-    ~Configuration()
-    {
-    }
+    ~Configuration() {}
 
     void addToParser(Parser &parser)
     {
         m_params.addToParser(parser);
     }
 
-    void processOptions()
-    {
-    }
+    void processOptions() {}
 
     void fillCropts(lcb_create_st &opts)
     {
@@ -226,9 +218,7 @@ class Handler
         parser.default_settings.help_noexit = 1;
     }
 
-    virtual ~Handler()
-    {
-    }
+    virtual ~Handler() {}
     virtual const char *description() const
     {
         return NULL;
@@ -244,8 +234,8 @@ class Handler
         parser.default_settings.shortdesc = description();
         addOptions();
         if (parser.parse(argc, argv, true)) {
-	  run();
-	}
+            run();
+        }
     }
 
   protected:
@@ -268,9 +258,7 @@ class Handler
         return getLoneArg(true);
     }
 
-    virtual void addOptions()
-    {
-    }
+    virtual void addOptions() {}
 
     virtual void run() = 0;
 
@@ -355,7 +343,7 @@ class LookupHandler : public Handler
                 total += 1; /* for fulldoc get */
             }
             lcb_subdocops_create(&specs, total);
-            for (std::vector<std::string>::const_iterator it = xattrs.begin(); it != xattrs.end(); ++it) {
+            for (std::vector< std::string >::const_iterator it = xattrs.begin(); it != xattrs.end(); ++it) {
                 uint32_t flags = LCB_SUBDOCOPS_F_XATTRPATH;
                 if (o_deleted.passed()) {
                     flags |= LCB_SUBDOCOPS_F_XATTR_DELETED_OK;
@@ -374,7 +362,7 @@ class LookupHandler : public Handler
                         break;
                 }
             }
-            for (std::vector<std::string>::const_iterator it = paths.begin(); it != paths.end(); ++it) {
+            for (std::vector< std::string >::const_iterator it = paths.begin(); it != paths.end(); ++it) {
                 switch (m_opcode) {
                     case SUBDOC_GET:
                         lcb_subdocops_get(specs, idx++, 0, it->c_str(), it->size());
@@ -459,10 +447,10 @@ class RemoveHandler : public Handler
             size_t idx = 0, total = xattrs.size() + paths.size();
 
             lcb_subdocops_create(&specs, total);
-            for (std::vector<std::string>::const_iterator it = xattrs.begin(); it != xattrs.end(); ++it) {
+            for (std::vector< std::string >::const_iterator it = xattrs.begin(); it != xattrs.end(); ++it) {
                 lcb_subdocops_remove(specs, idx++, LCB_SUBDOCOPS_F_XATTRPATH, it->c_str(), it->size());
             }
-            for (std::vector<std::string>::const_iterator it = xattrs.begin(); it != xattrs.end(); ++it) {
+            for (std::vector< std::string >::const_iterator it = xattrs.begin(); it != xattrs.end(); ++it) {
                 lcb_subdocops_remove(specs, idx++, 0, it->c_str(), it->size());
             }
             if (paths.empty()) {
@@ -534,10 +522,10 @@ class UpsertHandler : public Handler
         lcb_subdocops_create(&specs, total);
 
         if (o_xattrs.passed()) {
-            for (std::vector< std::pair<std::string, std::string> >::const_iterator it = xattrs.begin(); it != xattrs.end(); ++it) {
+            for (std::vector< std::pair< std::string, std::string > >::const_iterator it = xattrs.begin();
+                 it != xattrs.end(); ++it) {
                 lcb_subdocops_dict_upsert(specs, idx++, LCB_SUBDOCOPS_F_XATTRPATH | LCB_SUBDOCOPS_F_MKINTERMEDIATES,
-                        it->first.c_str(), it->first.size(),
-                        it->second.c_str(), it->second.size());
+                                          it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
             }
         } else {
             // currently it is not possible to upsert document without XATTRs
@@ -545,7 +533,7 @@ class UpsertHandler : public Handler
             std::string ver = "\"" LCB_CLIENT_ID "\"";
             std::string path = "_cbc.version";
             lcb_subdocops_dict_upsert(specs, idx++, LCB_SUBDOCOPS_F_XATTRPATH | LCB_SUBDOCOPS_F_MKINTERMEDIATES,
-                    path.c_str(), path.size(), ver.c_str(), ver.size());
+                                      path.c_str(), path.size(), ver.c_str(), ver.size());
         }
         lcb_subdocops_fulldoc_upsert(specs, idx++, 0, value.c_str(), value.size());
 
@@ -582,7 +570,8 @@ class MutationHandler : public Handler
   public:
     HANDLER_USAGE("[OPTIONS...] KEY...")
 
-    MutationHandler(const char *name, SubdocOperation opcode, const char *description_, bool enable_intermediates = true)
+    MutationHandler(const char *name, SubdocOperation opcode, const char *description_,
+                    bool enable_intermediates = true)
         : Handler(name), m_opcode(opcode), m_description(description_), o_paths("path"), o_xattrs("xattr"),
           o_expiry("expiry"), o_intermediates("intermediates"), o_upsert("upsert"),
           m_enable_intermediates(enable_intermediates)
@@ -634,70 +623,87 @@ class MutationHandler : public Handler
             size_t idx = 0, total = xattrs.size() + paths.size();
             lcb_SUBDOCOPS *specs;
             lcb_subdocops_create(&specs, total);
-            for (std::vector< std::pair<std::string, std::string> >::const_iterator it = xattrs.begin(); it != xattrs.end(); ++it) {
+            for (std::vector< std::pair< std::string, std::string > >::const_iterator it = xattrs.begin();
+                 it != xattrs.end(); ++it) {
                 uint32_t flags = LCB_SUBDOCOPS_F_XATTRPATH;
                 if (o_intermediates.passed()) {
                     flags |= LCB_SUBDOCOPS_F_MKINTERMEDIATES;
                 }
                 switch (m_opcode) {
                     case SUBDOC_DICT_UPSERT:
-                        lcb_subdocops_dict_upsert(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_dict_upsert(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                  it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_DICT_ADD:
-                        lcb_subdocops_dict_add(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_dict_add(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                               it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_REPLACE:
-                        lcb_subdocops_replace(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_replace(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                              it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_ARRAY_ADD_FIRST:
-                        lcb_subdocops_array_add_first(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_array_add_first(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                      it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_ARRAY_ADD_LAST:
-                        lcb_subdocops_array_add_last(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_array_add_last(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                     it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_ARRAY_ADD_UNIQUE:
-                        lcb_subdocops_array_add_unique(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_array_add_unique(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                       it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_ARRAY_INSERT:
-                        lcb_subdocops_array_insert(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_array_insert(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                   it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_COUNTER:
-                        lcb_subdocops_counter(specs, idx++, flags, it->first.c_str(), it->first.size(), stoll(it->second));
+                        lcb_subdocops_counter(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                              stoll(it->second));
                         break;
                     default:
                         break;
                 }
-
             }
-            for (std::vector< std::pair<std::string, std::string> >::const_iterator it = paths.begin(); it != paths.end(); ++it) {
+            for (std::vector< std::pair< std::string, std::string > >::const_iterator it = paths.begin();
+                 it != paths.end(); ++it) {
                 uint32_t flags = 0;
                 if (o_intermediates.passed()) {
                     flags |= LCB_SUBDOCOPS_F_MKINTERMEDIATES;
                 }
                 switch (m_opcode) {
                     case SUBDOC_DICT_UPSERT:
-                        lcb_subdocops_dict_upsert(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_dict_upsert(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                  it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_DICT_ADD:
-                        lcb_subdocops_dict_add(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_dict_add(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                               it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_REPLACE:
-                        lcb_subdocops_replace(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_replace(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                              it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_ARRAY_ADD_FIRST:
-                        lcb_subdocops_array_add_first(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_array_add_first(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                      it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_ARRAY_ADD_LAST:
-                        lcb_subdocops_array_add_last(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_array_add_last(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                     it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_ARRAY_ADD_UNIQUE:
-                        lcb_subdocops_array_add_unique(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_array_add_unique(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                       it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_ARRAY_INSERT:
-                        lcb_subdocops_array_insert(specs, idx++, flags, it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                        lcb_subdocops_array_insert(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                   it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_COUNTER:
-                        lcb_subdocops_counter(specs, idx++, flags, it->first.c_str(), it->first.size(), stoll(it->second));
+                        lcb_subdocops_counter(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                              stoll(it->second));
                         break;
                     default:
                         break;
@@ -746,9 +752,7 @@ class HelpHandler : public Handler
 {
   public:
     HANDLER_DESCRIPTION("Show help")
-    HelpHandler() : Handler("help")
-    {
-    }
+    HelpHandler() : Handler("help") {}
 
   protected:
     void run()
@@ -825,10 +829,9 @@ static void setupHandlers()
         "array-insert", SUBDOC_ARRAY_INSERT,
         "Add the value at the given array index. Path must include index, e.g. `my.list[4]`");
     handlers["counter"] = new subdoc::MutationHandler(
-        "counter", SUBDOC_COUNTER,
-        "Increment or decrement an existing numeric path. The value must be 64-bit integer");
-    handlers["size"] = new subdoc::LookupHandler("size", SUBDOC_GET_COUNT,
-                                                 "Count the number of elements in an array or dictionary");
+        "counter", SUBDOC_COUNTER, "Increment or decrement an existing numeric path. The value must be 64-bit integer");
+    handlers["size"] =
+        new subdoc::LookupHandler("size", SUBDOC_GET_COUNT, "Count the number of elements in an array or dictionary");
     handlers["get-count"] = handlers["size"];
 }
 

@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2018 Couchbase, Inc.
+ *     Copyright 2018-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -415,7 +415,7 @@ void lcbtrace_span_add_tag_bool(lcbtrace_SPAN *span, const char *name, int value
  */
 #define LCB_CMD_SET_TRACESPAN(cmd, span)                                                                               \
     do {                                                                                                               \
-        (cmd)->pspan = span;                                                                                            \
+        (cmd)->pspan = span;                                                                                           \
     } while (0);
 
 /**

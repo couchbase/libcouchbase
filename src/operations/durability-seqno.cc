@@ -1,5 +1,5 @@
 /*
- *     Copyright 2015 Couchbase, Inc.
+ *     Copyright 2015-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -21,36 +21,35 @@
 
 using namespace lcb::durability;
 
-namespace {
-class SeqnoDurset : public Durset {
-public:
-    SeqnoDurset(lcb_INSTANCE *instance_, const lcb_durability_opts_t *options)
-        : Durset(instance_, options) {
-    }
+namespace
+{
+class SeqnoDurset : public Durset
+{
+  public:
+    SeqnoDurset(lcb_INSTANCE *instance_, const lcb_durability_opts_t *options) : Durset(instance_, options) {}
 
     // Override
     lcb_STATUS poll_impl();
 
     // Override
-    lcb_STATUS after_add(Item& item, const lcb_CMDENDURE *cmd);
+    lcb_STATUS after_add(Item &item, const lcb_CMDENDURE *cmd);
 
     void update(const lcb_RESPOBSEQNO *resp);
 };
-}
+} // namespace
 
-Durset *
-Durset::createSeqnoDurset(lcb_INSTANCE *instance, const lcb_durability_opts_t *options) {
+Durset *Durset::createSeqnoDurset(lcb_INSTANCE *instance, const lcb_durability_opts_t *options)
+{
     return new SeqnoDurset(instance, options);
 }
 
 #define ENT_SEQNO(ent) (ent)->reqseqno
 
-static void
-seqno_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
+static void seqno_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
 {
-    const lcb_RESPOBSEQNO *resp = (const lcb_RESPOBSEQNO*)rb;
+    const lcb_RESPOBSEQNO *resp = (const lcb_RESPOBSEQNO *)rb;
     int flags = 0;
-    Item *ent = static_cast<Item*>(reinterpret_cast<CallbackCookie*>(resp->cookie));
+    Item *ent = static_cast< Item * >(reinterpret_cast< CallbackCookie * >(resp->cookie));
 
     /* Now, process the response */
     if (resp->rc != LCB_SUCCESS) {
@@ -82,7 +81,7 @@ seqno_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
 
     ent->update(flags, resp->server_index);
 
-    GT_TALLY:
+GT_TALLY:
     if (!--ent->parent->waiting) {
         /* avoid ssertion (wait==0)! */
         ent->parent->waiting = 1;
@@ -90,17 +89,16 @@ seqno_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
     }
 }
 
-lcb_STATUS
-SeqnoDurset::poll_impl()
+lcb_STATUS SeqnoDurset::poll_impl()
 {
     lcb_STATUS ret_err = LCB_EINTERNAL; /* This should never be returned */
     bool has_ops = false;
 
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < entries.size(); ii++) {
-        Item& ent = entries[ii];
+        Item &ent = entries[ii];
         lcb_U16 servers[4];
-        lcb_CMDOBSEQNO cmd = { 0 };
+        lcb_CMDOBSEQNO cmd = {0};
 
         if (ent.done) {
             continue;
@@ -137,8 +135,7 @@ SeqnoDurset::poll_impl()
     }
 }
 
-lcb_STATUS
-SeqnoDurset::after_add(Item &item, const lcb_CMDENDURE *cmd)
+lcb_STATUS SeqnoDurset::after_add(Item &item, const lcb_CMDENDURE *cmd)
 {
     const lcb_MUTATION_TOKEN *stok = NULL;
 

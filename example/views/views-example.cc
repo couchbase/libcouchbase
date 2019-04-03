@@ -42,8 +42,7 @@ static void viewCallback(lcb_INSTANCE *, int, const lcb_RESPVIEW *rv)
     size_t nkey, ndocid;
     lcb_respview_key(rv, &key, &nkey);
     lcb_respview_doc_id(rv, &docid, &ndocid);
-    printf("Got row callback from LCB: RC=0x%X, DOCID=%.*s. KEY=%.*s\n",
-        rc, (int)ndocid, docid, (int)nkey, key);
+    printf("Got row callback from LCB: RC=0x%X, DOCID=%.*s. KEY=%.*s\n", rc, (int)ndocid, docid, (int)nkey, key);
 
     const lcb_RESPGET *doc = NULL;
     lcb_respview_document(rv, &doc);

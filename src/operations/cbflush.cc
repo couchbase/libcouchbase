@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010-2012 Couchbase, Inc.
+ *     Copyright 2010-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -18,14 +18,13 @@
 #include "internal.h"
 #include <http/http.h>
 
-static void
-flush_cb(lcb_INSTANCE *instance, int, const lcb_RESPBASE *rb)
+static void flush_cb(lcb_INSTANCE *instance, int, const lcb_RESPBASE *rb)
 {
     const lcb_RESPHTTP *resp = (const lcb_RESPHTTP *)rb;
     lcb_RESPCALLBACK callback = lcb_find_callback(instance, LCB_CALLBACK_CBFLUSH);
 
     const lcb_RESPCBFLUSH *iresp = (const lcb_RESPCBFLUSH *)rb;
-    lcb_RESPCBFLUSH fresp = { 0 };
+    lcb_RESPCBFLUSH fresp = {0};
     fresp = *iresp;
     fresp.rflags |= LCB_RESP_F_FINAL;
     if (resp->rc == LCB_SUCCESS) {
@@ -34,13 +33,12 @@ flush_cb(lcb_INSTANCE *instance, int, const lcb_RESPBASE *rb)
         }
     }
     if (callback) {
-        callback(instance, LCB_CALLBACK_CBFLUSH, (lcb_RESPBASE*)&fresp);
+        callback(instance, LCB_CALLBACK_CBFLUSH, (lcb_RESPBASE *)&fresp);
     }
 }
 
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_cbflush3(lcb_INSTANCE *instance, void *cookie, const lcb_CMDCBFLUSH *)
+lcb_STATUS lcb_cbflush3(lcb_INSTANCE *instance, void *cookie, const lcb_CMDCBFLUSH *)
 {
     lcb_HTTP_HANDLE *htr;
     lcb_STATUS rc;

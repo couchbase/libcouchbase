@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2014 Couchbase, Inc.
+ *     Copyright 2014-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -34,13 +34,12 @@
 /** Convert nanoseconds to microseconds */
 #define LCB_NS2US(s) ((s) / 1000)
 
-#define LCB_MS2US(s) ((s) * 1000)
+#define LCB_MS2US(s) ((s)*1000)
 
 /** Convert microseconds to nanoseconds */
 #define LCB_US2NS(s) (((hrtime_t)s) * 1000)
 /** Convert milliseconds to nanoseconds */
 #define LCB_MS2NS(s) (((hrtime_t)s) * 1000000)
-
 
 #define LCB_DEFAULT_TIMEOUT LCB_MS2US(2500)
 
@@ -100,7 +99,7 @@
 #define LCBTRACE_DEFAULT_ORPHANED_QUEUE_SIZE 128
 #define LCBTRACE_DEFAULT_THRESHOLD_QUEUE_FLUSH_INTERVAL LCB_MS2US(10000)
 #define LCBTRACE_DEFAULT_THRESHOLD_QUEUE_SIZE 128
-#define LCBTRACE_DEFAULT_THRESHOLD_KV  LCB_MS2US(500)
+#define LCBTRACE_DEFAULT_THRESHOLD_KV LCB_MS2US(500)
 #define LCBTRACE_DEFAULT_THRESHOLD_N1QL LCB_MS2US(1000)
 #define LCBTRACE_DEFAULT_THRESHOLD_VIEW LCB_MS2US(1000)
 #define LCBTRACE_DEFAULT_THRESHOLD_FTS LCB_MS2US(1000)
@@ -201,7 +200,7 @@ typedef struct lcb_settings_st {
     char *certpath;
     char *keypath;
     lcb_AUTHENTICATOR *auth;
-    struct rdb_ALLOCATOR* (*allocator_factory)(void);
+    struct rdb_ALLOCATOR *(*allocator_factory)(void);
     struct lcbio_SSLCTX *ssl_ctx;
     struct lcb_logprocs_st *logger;
     void (*dtorcb)(const void *);
@@ -225,12 +224,10 @@ LCB_INTERNAL_API
 void lcb_default_settings(lcb_settings *settings);
 
 LCB_INTERNAL_API
-lcb_settings *
-lcb_settings_new(void);
+lcb_settings *lcb_settings_new(void);
 
 LCB_INTERNAL_API
-void
-lcb_settings_unref(lcb_settings *);
+void lcb_settings_unref(lcb_settings *);
 
 #define lcb_settings_ref(settings) ((void)(settings)->refcount++)
 #define lcb_settings_ref2(settings) ((settings)->refcount++, settings)
@@ -239,24 +236,17 @@ lcb_settings_unref(lcb_settings *);
  * Metric functionality. Defined in metrics.h, but retains a global-like
  * setting similar to lcb_settings
  */
-void
-lcb_metrics_dumpio(const lcb_IOMETRICS *metrics, FILE *fp);
+void lcb_metrics_dumpio(const lcb_IOMETRICS *metrics, FILE *fp);
 
-void
-lcb_metrics_dumpserver(const lcb_SERVERMETRICS *metrics, FILE *fp);
+void lcb_metrics_dumpserver(const lcb_SERVERMETRICS *metrics, FILE *fp);
 
-lcb_METRICS *
-lcb_metrics_new(void);
+lcb_METRICS *lcb_metrics_new(void);
 
-void
-lcb_metrics_destroy(lcb_METRICS *metrics);
+void lcb_metrics_destroy(lcb_METRICS *metrics);
 
-lcb_SERVERMETRICS *
-lcb_metrics_getserver(lcb_METRICS *metrics,
-    const char *host, const char *port, int create);
+lcb_SERVERMETRICS *lcb_metrics_getserver(lcb_METRICS *metrics, const char *host, const char *port, int create);
 
-void
-lcb_metrics_reset_pipeline_gauges(lcb_SERVERMETRICS *metrics);
+void lcb_metrics_reset_pipeline_gauges(lcb_SERVERMETRICS *metrics);
 
 #ifdef __cplusplus
 }

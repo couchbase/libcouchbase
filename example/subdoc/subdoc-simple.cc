@@ -14,15 +14,13 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#define LCB_NO_DEPR_CXX_CTORS
 #undef NDEBUG
 
 #include <libcouchbase/couchbase.h>
 #include <assert.h>
 #include <string.h>
 
-static void
-get_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPGET *resp)
+static void get_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPGET *resp)
 {
     fprintf(stderr, "Got callback for %s.. ", lcb_strcbtype(cbtype));
 
@@ -38,8 +36,7 @@ get_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPGET *resp)
     fprintf(stderr, "Value %.*s\n", (int)nvalue, value);
 }
 
-static void
-store_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSTORE *resp)
+static void store_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSTORE *resp)
 {
     fprintf(stderr, "Got callback for %s.. ", lcb_strcbtype(cbtype));
 
@@ -52,8 +49,7 @@ store_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSTORE *resp)
     fprintf(stderr, "OK\n");
 }
 
-static void
-subdoc_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSUBDOC *resp)
+static void subdoc_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSUBDOC *resp)
 {
     lcb_STATUS rc = lcb_respsubdoc_status(resp);
 
@@ -75,8 +71,7 @@ subdoc_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSUBDOC *resp)
 }
 
 // Function to issue an lcb_get3() (and print the state of the document)
-static void
-demoKey(lcb_INSTANCE *instance, const char *key)
+static void demoKey(lcb_INSTANCE *instance, const char *key)
 {
     printf("Retrieving '%s'\n", key);
     printf("====\n");
@@ -94,7 +89,7 @@ demoKey(lcb_INSTANCE *instance, const char *key)
 #define DEFAULT_CONNSTR "couchbase://localhost"
 int main(int argc, char **argv)
 {
-    lcb_create_st crst = { 0 };
+    lcb_create_st crst = {0};
     crst.version = 3;
     if (argc > 1) {
         crst.v.v3.connstr = argv[1];
@@ -160,7 +155,6 @@ int main(int argc, char **argv)
     lcb_subdocops_destroy(ops);
     assert(rc == LCB_SUCCESS);
     lcb_wait(instance);
-
 
     /**
      * Set a dictionary/object field

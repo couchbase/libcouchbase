@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -92,7 +92,8 @@ void MockEnvironment::hiccupNodes(int msecs, int offset)
     getResponse();
 }
 
-void MockEnvironment::regenVbCoords(std::string bucket) {
+void MockEnvironment::regenVbCoords(std::string bucket)
+{
     MockBucketCommand bCmd(MockCommand::REGEN_VBCOORDS, 0, bucket);
     MockResponse r;
     sendCommand(bCmd);
@@ -100,7 +101,7 @@ void MockEnvironment::regenVbCoords(std::string bucket) {
     EXPECT_TRUE(r.isOk());
 }
 
-std::vector<int> MockEnvironment::getMcPorts(std::string bucket)
+std::vector< int > MockEnvironment::getMcPorts(std::string bucket)
 {
     MockCommand cmd(MockCommand::GET_MCPORTS);
     if (!bucket.empty()) {
@@ -111,9 +112,9 @@ std::vector<int> MockEnvironment::getMcPorts(std::string bucket)
     MockResponse resp;
     getResponse(resp);
     EXPECT_TRUE(resp.isOk());
-    const Json::Value& payload = resp.constResp()["payload"];
+    const Json::Value &payload = resp.constResp()["payload"];
 
-    std::vector<int> ret;
+    std::vector< int > ret;
 
     for (int ii = 0; ii < (int)payload.size(); ii++) {
         ret.push_back(payload[ii].asInt());
@@ -121,12 +122,12 @@ std::vector<int> MockEnvironment::getMcPorts(std::string bucket)
     return ret;
 }
 
-void MockEnvironment::setSaslMechs(std::vector<std::string>& mechanisms, std::string bucket,
-                                   const std::vector<int>* nodes)
+void MockEnvironment::setSaslMechs(std::vector< std::string > &mechanisms, std::string bucket,
+                                   const std::vector< int > *nodes)
 {
     MockCommand cmd(MockCommand::SET_SASL_MECHANISMS);
     Json::Value mechs(Json::arrayValue);
-    for (std::vector<std::string>::const_iterator ii = mechanisms.begin(); ii != mechanisms.end(); ii++) {
+    for (std::vector< std::string >::const_iterator ii = mechanisms.begin(); ii != mechanisms.end(); ii++) {
         mechs.append(*ii);
     }
     cmd.set("mechs", mechs);
@@ -136,10 +137,10 @@ void MockEnvironment::setSaslMechs(std::vector<std::string>& mechanisms, std::st
     }
 
     if (nodes != NULL) {
-        const std::vector<int>& v = *nodes;
+        const std::vector< int > &v = *nodes;
         Json::Value array(Json::arrayValue);
 
-        for (std::vector<int>::const_iterator ii = v.begin(); ii != v.end(); ii++) {
+        for (std::vector< int >::const_iterator ii = v.begin(); ii != v.end(); ii++) {
             array.append(*ii);
         }
 
@@ -150,8 +151,7 @@ void MockEnvironment::setSaslMechs(std::vector<std::string>& mechanisms, std::st
     getResponse();
 }
 
-void MockEnvironment::setCCCP(bool enabled, std::string bucket,
-                              const std::vector<int>* nodes)
+void MockEnvironment::setCCCP(bool enabled, std::string bucket, const std::vector< int > *nodes)
 {
     MockCommand cmd(MockCommand::SET_CCCP);
     cmd.set("enabled", enabled);
@@ -161,10 +161,10 @@ void MockEnvironment::setCCCP(bool enabled, std::string bucket,
     }
 
     if (nodes != NULL) {
-        const std::vector<int>& v = *nodes;
+        const std::vector< int > &v = *nodes;
         Json::Value array(Json::arrayValue);
 
-        for (std::vector<int>::const_iterator ii = v.begin(); ii != v.end(); ii++) {
+        for (std::vector< int >::const_iterator ii = v.begin(); ii != v.end(); ii++) {
             array.append(*ii);
         }
 
@@ -175,8 +175,7 @@ void MockEnvironment::setCCCP(bool enabled, std::string bucket,
     getResponse();
 }
 
-void MockEnvironment::setEnhancedErrors(bool enabled, std::string bucket,
-                                        const std::vector<int>* nodes)
+void MockEnvironment::setEnhancedErrors(bool enabled, std::string bucket, const std::vector< int > *nodes)
 {
     MockCommand cmd(MockCommand::SET_ENHANCED_ERRORS);
     cmd.set("enabled", enabled);
@@ -186,10 +185,10 @@ void MockEnvironment::setEnhancedErrors(bool enabled, std::string bucket,
     }
 
     if (nodes != NULL) {
-        const std::vector<int>& v = *nodes;
+        const std::vector< int > &v = *nodes;
         Json::Value array(Json::arrayValue);
 
-        for (std::vector<int>::const_iterator ii = v.begin(); ii != v.end(); ii++) {
+        for (std::vector< int >::const_iterator ii = v.begin(); ii != v.end(); ii++) {
             array.append(*ii);
         }
 
@@ -200,8 +199,7 @@ void MockEnvironment::setEnhancedErrors(bool enabled, std::string bucket,
     getResponse();
 }
 
-void MockEnvironment::setCompression(std::string mode, std::string bucket,
-                                     const std::vector<int>* nodes)
+void MockEnvironment::setCompression(std::string mode, std::string bucket, const std::vector< int > *nodes)
 {
     MockCommand cmd(MockCommand::SET_COMPRESSION);
     cmd.set("mode", mode);
@@ -211,10 +209,10 @@ void MockEnvironment::setCompression(std::string mode, std::string bucket,
     }
 
     if (nodes != NULL) {
-        const std::vector<int>& v = *nodes;
+        const std::vector< int > &v = *nodes;
         Json::Value array(Json::arrayValue);
 
-        for (std::vector<int>::const_iterator ii = v.begin(); ii != v.end(); ii++) {
+        for (std::vector< int >::const_iterator ii = v.begin(); ii != v.end(); ii++) {
             array.append(*ii);
         }
 
@@ -242,7 +240,7 @@ void MockEnvironment::sendCommand(MockCommand &cmd)
     assert(nw == s.size());
 }
 
-void MockEnvironment::getResponse(MockResponse& ret)
+void MockEnvironment::getResponse(MockResponse &ret)
 {
     std::string rbuf;
     do {
@@ -275,9 +273,7 @@ void MockEnvironment::postCreate(lcb_INSTANCE *instance)
     ASSERT_EQ(LCB_SUCCESS, err);
 }
 
-void
-MockEnvironment::createConnection(HandleWrap &handle,
-    lcb_INSTANCE **instance, const lcb_create_st &user_options)
+void MockEnvironment::createConnection(HandleWrap &handle, lcb_INSTANCE **instance, const lcb_create_st &user_options)
 {
     lcb_io_opt_t io;
     lcb_create_st options;
@@ -332,8 +328,7 @@ static void statsCallback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_R
         return;
     }
 
-    if (resp->nkey != sizeof(STAT_VERSION) - 1 ||
-        memcmp(resp->key, STAT_VERSION, sizeof(STAT_VERSION) - 1) != 0) {
+    if (resp->nkey != sizeof(STAT_VERSION) - 1 || memcmp(resp->key, STAT_VERSION, sizeof(STAT_VERSION) - 1) != 0) {
         return;
     }
     MockEnvironment::ServerVersion version = MockEnvironment::VERSION_UNKNOWN;
@@ -376,8 +371,7 @@ static void statsCallback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_R
 
 void MockEnvironment::bootstrapRealCluster()
 {
-    serverParams = ServerParams(mock->http, mock->bucket,
-                                mock->username, mock->password);
+    serverParams = ServerParams(mock->http, mock->bucket, mock->username, mock->password);
 
     lcb_INSTANCE *tmphandle;
     lcb_STATUS err;
@@ -412,7 +406,8 @@ void MockEnvironment::bootstrapRealCluster()
 }
 
 extern "C" {
-static void mock_flush_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *resp) {
+static void mock_flush_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *resp)
+{
     ASSERT_EQ(LCB_SUCCESS, resp->rc);
 }
 }
@@ -427,7 +422,7 @@ void MockEnvironment::clearAndReset()
         respawnNode(ii, bucketName);
     }
 
-    std::vector<int> mcPorts = getMcPorts(bucketName);
+    std::vector< int > mcPorts = getMcPorts(bucketName);
     serverParams.setMcPorts(mcPorts);
     setCCCP(true, bucketName);
 
@@ -437,10 +432,7 @@ void MockEnvironment::clearAndReset()
 
     if (!innerClient) {
         lcb_create_st crParams;
-        lcb_config_transport_t transports[] = {
-                LCB_CONFIG_TRANSPORT_CCCP,
-                LCB_CONFIG_TRANSPORT_LIST_END
-        };
+        lcb_config_transport_t transports[] = {LCB_CONFIG_TRANSPORT_CCCP, LCB_CONFIG_TRANSPORT_LIST_END};
         memset(&crParams, 0, sizeof(crParams));
         // Use default I/O here..
         serverParams.makeConnectParams(crParams, NULL);
@@ -457,7 +449,7 @@ void MockEnvironment::clearAndReset()
         lcb_install_callback3(innerClient, LCB_CALLBACK_CBFLUSH, mock_flush_callback);
     }
 
-    lcb_CMDCBFLUSH fcmd = { 0 };
+    lcb_CMDCBFLUSH fcmd = {0};
     lcb_STATUS err;
 
     err = lcb_cbflush3(innerClient, NULL, &fcmd);
@@ -490,10 +482,7 @@ void MockEnvironment::SetUp()
             bucketName = "default";
         }
     }
-    serverParams = ServerParams(http,
-                                bucketName.c_str(),
-                                userName.c_str(),
-                                NULL);
+    serverParams = ServerParams(http, bucketName.c_str(), userName.c_str(), NULL);
 
     // Mock 0.6
     featureRegistry.insert("observe");
@@ -504,10 +493,7 @@ void MockEnvironment::SetUp()
     clearAndReset();
 }
 
-void MockEnvironment::TearDown()
-{
-
-}
+void MockEnvironment::TearDown() {}
 
 MockEnvironment::~MockEnvironment()
 {
@@ -545,9 +531,7 @@ MockCommand::MockCommand(Code code)
     payload = &(command["payload"] = Json::Value(Json::objectValue));
 }
 
-MockCommand::~MockCommand()
-{
-}
+MockCommand::~MockCommand() {}
 
 std::string MockCommand::encode()
 {
@@ -575,9 +559,8 @@ void MockMutationCommand::finalizePayload()
 
     if (!replicaList.empty()) {
         Json::Value arr(Json::arrayValue);
-        Json::Value& arrval = (*payload)["OnReplicas"] = Json::Value(Json::arrayValue);
-        for (std::vector<int>::iterator ii = replicaList.begin();
-                ii != replicaList.end(); ii++) {
+        Json::Value &arrval = (*payload)["OnReplicas"] = Json::Value(Json::arrayValue);
+        for (std::vector< int >::iterator ii = replicaList.begin(); ii != replicaList.end(); ii++) {
             arrval.append(*ii);
         }
     } else {
@@ -589,7 +572,7 @@ void MockMutationCommand::finalizePayload()
             fprintf(stderr, "Detected incompatible > 31 bit integer\n");
             abort();
         }
-        set("CAS", static_cast<Json::UInt64>(cas));
+        set("CAS", static_cast< Json::UInt64 >(cas));
     }
 
     if (!value.empty()) {
@@ -610,11 +593,9 @@ void MockResponse::assign(const std::string &resp)
     assert(rv);
 }
 
-MockResponse::~MockResponse()
-{
-}
+MockResponse::~MockResponse() {}
 
-std::ostream& operator<<(std::ostream& os, const MockResponse& resp)
+std::ostream &operator<<(std::ostream &os, const MockResponse &resp)
 {
     os << Json::FastWriter().write(resp.jresp) << std::endl;
     return os;
@@ -622,7 +603,7 @@ std::ostream& operator<<(std::ostream& os, const MockResponse& resp)
 
 bool MockResponse::isOk()
 {
-    const Json::Value& status = static_cast<const Json::Value&>(jresp)["status"];
+    const Json::Value &status = static_cast< const Json::Value & >(jresp)["status"];
     if (!status.isString()) {
         return false;
     }

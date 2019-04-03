@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -24,18 +24,18 @@ class GetUnitTest : public MockUnitTest
 };
 
 extern "C" {
-    static void testGetMissGetCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
-    {
-        int *counter;
-        lcb_respget_cookie(resp, (void **)&counter);
-        EXPECT_EQ(LCB_KEY_ENOENT, lcb_respget_status(resp));
-        const char *key;
-        size_t nkey;
-        lcb_respget_key(resp, &key, &nkey);
-        std::string val(key, nkey);
-        EXPECT_TRUE(val == "testGetMiss1" || val == "testGetMiss2");
-        ++(*counter);
-    }
+static void testGetMissGetCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
+{
+    int *counter;
+    lcb_respget_cookie(resp, (void **)&counter);
+    EXPECT_EQ(LCB_KEY_ENOENT, lcb_respget_status(resp));
+    const char *key;
+    size_t nkey;
+    lcb_respget_key(resp, &key, &nkey);
+    std::string val(key, nkey);
+    EXPECT_TRUE(val == "testGetMiss1" || val == "testGetMiss2");
+    ++(*counter);
+}
 }
 
 /**
@@ -80,13 +80,13 @@ TEST_F(GetUnitTest, testGetMiss)
 }
 
 extern "C" {
-    static void testGetHitGetCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
-    {
-        int *counter;
-        lcb_respget_cookie(resp, (void **)&counter);
-        EXPECT_EQ(LCB_SUCCESS, lcb_respget_status(resp));
-        ++(*counter);
-    }
+static void testGetHitGetCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
+{
+    int *counter;
+    lcb_respget_cookie(resp, (void **)&counter);
+    EXPECT_EQ(LCB_SUCCESS, lcb_respget_status(resp));
+    ++(*counter);
+}
 }
 
 /**
@@ -127,13 +127,13 @@ TEST_F(GetUnitTest, testGetHit)
 }
 
 extern "C" {
-    static void testTouchMissCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPTOUCH *resp)
-    {
-        int *counter;
-        lcb_resptouch_cookie(resp, (void **)&counter);
-        EXPECT_EQ(LCB_KEY_ENOENT, lcb_resptouch_status(resp));
-        ++(*counter);
-    }
+static void testTouchMissCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPTOUCH *resp)
+{
+    int *counter;
+    lcb_resptouch_cookie(resp, (void **)&counter);
+    EXPECT_EQ(LCB_KEY_ENOENT, lcb_resptouch_status(resp));
+    ++(*counter);
+}
 }
 
 /**
@@ -164,13 +164,13 @@ TEST_F(GetUnitTest, testTouchMiss)
 }
 
 extern "C" {
-    static void testTouchHitCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPTOUCH *resp)
-    {
-        int *counter;
-        lcb_resptouch_cookie(resp, (void **)&counter);
-        EXPECT_EQ(LCB_SUCCESS, lcb_resptouch_status(resp));
-        ++(*counter);
-    }
+static void testTouchHitCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPTOUCH *resp)
+{
+    int *counter;
+    lcb_resptouch_cookie(resp, (void **)&counter);
+    EXPECT_EQ(LCB_SUCCESS, lcb_resptouch_status(resp));
+    ++(*counter);
+}
 }
 
 /**
@@ -201,47 +201,47 @@ TEST_F(GetUnitTest, testTouchHit)
 }
 
 extern "C" {
-    static void flags_store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
-    {
-        int *counter;
-        lcb_respstore_cookie(resp, (void **)&counter);
-        ASSERT_EQ(LCB_SUCCESS, lcb_respstore_status(resp));
+static void flags_store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
+{
+    int *counter;
+    lcb_respstore_cookie(resp, (void **)&counter);
+    ASSERT_EQ(LCB_SUCCESS, lcb_respstore_status(resp));
 
-        const char *key;
-        size_t nkey;
-        lcb_respstore_key(resp, &key, &nkey);
-        ASSERT_EQ(5, nkey);
-        ASSERT_EQ(0, memcmp(key, "flags", 5));
+    const char *key;
+    size_t nkey;
+    lcb_respstore_key(resp, &key, &nkey);
+    ASSERT_EQ(5, nkey);
+    ASSERT_EQ(0, memcmp(key, "flags", 5));
 
-        lcb_STORE_OPERATION op;
-        lcb_respstore_operation(resp, &op);
-        ASSERT_EQ(LCB_STORE_SET, op);
-        ++(*counter);
-    }
+    lcb_STORE_OPERATION op;
+    lcb_respstore_operation(resp, &op);
+    ASSERT_EQ(LCB_STORE_SET, op);
+    ++(*counter);
+}
 
-    static void flags_get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
-    {
-        int *counter;
-        lcb_respget_cookie(resp, (void **)&counter);
-        EXPECT_EQ(LCB_SUCCESS, lcb_respget_status(resp));
+static void flags_get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
+{
+    int *counter;
+    lcb_respget_cookie(resp, (void **)&counter);
+    EXPECT_EQ(LCB_SUCCESS, lcb_respget_status(resp));
 
-        const char *key;
-        size_t nkey;
-        lcb_respget_key(resp, &key, &nkey);
-        ASSERT_EQ(5, nkey);
-        ASSERT_EQ(0, memcmp(key, "flags", 5));
+    const char *key;
+    size_t nkey;
+    lcb_respget_key(resp, &key, &nkey);
+    ASSERT_EQ(5, nkey);
+    ASSERT_EQ(0, memcmp(key, "flags", 5));
 
-        const char *value;
-        size_t nvalue;
-        lcb_respget_value(resp, &value, &nvalue);
-        ASSERT_EQ(1, nvalue);
-        ASSERT_EQ(0, memcmp(value, "x", 1));
+    const char *value;
+    size_t nvalue;
+    lcb_respget_value(resp, &value, &nvalue);
+    ASSERT_EQ(1, nvalue);
+    ASSERT_EQ(0, memcmp(value, "x", 1));
 
-        uint32_t flags;
-        lcb_respget_flags(resp, &flags);
-        ASSERT_EQ(0xdeadbeef, flags);
-        ++(*counter);
-    }
+    uint32_t flags;
+    lcb_respget_flags(resp, &flags);
+    ASSERT_EQ(0xdeadbeef, flags);
+    ++(*counter);
+}
 }
 
 TEST_F(GetUnitTest, testFlags)
@@ -287,8 +287,7 @@ struct RGetCookie {
 };
 
 extern "C" {
-static void
-rget_callback(lcb_INSTANCE *instance, int, const lcb_RESPGETREPLICA *resp)
+static void rget_callback(lcb_INSTANCE *instance, int, const lcb_RESPGETREPLICA *resp)
 {
     RGetCookie *rck;
     lcb_respgetreplica_cookie(resp, (void **)&rck);
@@ -309,9 +308,8 @@ rget_callback(lcb_INSTANCE *instance, int, const lcb_RESPGETREPLICA *resp)
         lcb_respgetreplica_cas(resp, &cas);
         ASSERT_EQ(rck->cas, cas);
     }
-
 }
-static void rget_noop_callback(lcb_INSTANCE *,int,const lcb_RESPGETREPLICA*) { }
+static void rget_noop_callback(lcb_INSTANCE *, int, const lcb_RESPGETREPLICA *) {}
 }
 
 TEST_F(GetUnitTest, testGetReplica)
@@ -319,7 +317,7 @@ TEST_F(GetUnitTest, testGetReplica)
     SKIP_UNLESS_MOCK();
     MockEnvironment *mock = MockEnvironment::getInstance();
     HandleWrap hw;
-    lcb_INSTANCE * instance;
+    lcb_INSTANCE *instance;
     createConnection(hw, &instance);
     std::string key("a_key_GETREPLICA");
     std::string val("a_value");
@@ -404,12 +402,11 @@ TEST_F(GetUnitTest, testGetReplica)
     // Test with the "First" mode. Ensure that only the _last_ replica
     // contains the item
     mcCmd.onMaster = false;
-    mcCmd.replicaCount = 0 ;
+    mcCmd.replicaCount = 0;
     mcCmd.replicaList.clear();
-    mcCmd.replicaList.push_back(nreplicas-1);
+    mcCmd.replicaList.push_back(nreplicas - 1);
     mcCmd.cas = 42;
     rck.cas = mcCmd.cas;
-
 
     // Set the timeout to something higher, since we have more than one packet
     // to send.
@@ -445,7 +442,7 @@ TEST_F(GetUnitTest, testGetReplica)
         int vbid = lcbvb_k2vb(vbc, key.c_str(), key.size());
         int oldix;
 
-        lcbvb_VBUCKET* vb = &vbc->vbuckets[vbid];
+        lcbvb_VBUCKET *vb = &vbc->vbuckets[vbid];
         oldix = vb->servers[2];
         vb->servers[2] = -1;
 

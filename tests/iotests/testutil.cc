@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012-2013 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -24,39 +24,37 @@
  * Helper functions
  */
 extern "C" {
-    static void storeKvoCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
-    {
-        KVOperation *kvo;
-        lcb_respstore_cookie(resp, (void **)&kvo);
-        kvo->cbCommon(lcb_respstore_status(resp));
-        kvo->result.assign(resp);
-        lcb_STORE_OPERATION op;
-        lcb_respstore_operation(resp, &op);
-        ASSERT_EQ(LCB_STORE_SET, op);
-    }
-
-    static void getKvoCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
-    {
-        KVOperation *kvo;
-        lcb_respget_cookie(resp, (void **)&kvo);
-        kvo->cbCommon(lcb_respget_status(resp));
-        kvo->result.assign(resp);
-    }
-
-    static void removeKvoCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPREMOVE *resp)
-    {
-        KVOperation *kvo;
-        lcb_respremove_cookie(resp, (void **)&kvo);
-        kvo->cbCommon(lcb_respremove_status(resp));
-        kvo->result.assign(resp);
-    }
+static void storeKvoCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
+{
+    KVOperation *kvo;
+    lcb_respstore_cookie(resp, (void **)&kvo);
+    kvo->cbCommon(lcb_respstore_status(resp));
+    kvo->result.assign(resp);
+    lcb_STORE_OPERATION op;
+    lcb_respstore_operation(resp, &op);
+    ASSERT_EQ(LCB_STORE_SET, op);
 }
 
-void KVOperation::handleInstanceError(lcb_INSTANCE *instance, lcb_STATUS err,
-                                      const char *)
+static void getKvoCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
 {
-    KVOperation *kvo = reinterpret_cast<KVOperation *>(
-            const_cast<void*>(lcb_get_cookie(instance)));
+    KVOperation *kvo;
+    lcb_respget_cookie(resp, (void **)&kvo);
+    kvo->cbCommon(lcb_respget_status(resp));
+    kvo->result.assign(resp);
+}
+
+static void removeKvoCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPREMOVE *resp)
+{
+    KVOperation *kvo;
+    lcb_respremove_cookie(resp, (void **)&kvo);
+    kvo->cbCommon(lcb_respremove_status(resp));
+    kvo->result.assign(resp);
+}
+}
+
+void KVOperation::handleInstanceError(lcb_INSTANCE *instance, lcb_STATUS err, const char *)
+{
+    KVOperation *kvo = reinterpret_cast< KVOperation * >(const_cast< void * >(lcb_get_cookie(instance)));
     kvo->assertOk(err);
     kvo->globalErrors.insert(err);
 }
@@ -125,7 +123,6 @@ void KVOperation::remove(lcb_INSTANCE *instance)
     leave(instance);
 
     ASSERT_EQ(1, callCount);
-
 }
 
 void KVOperation::get(lcb_INSTANCE *instance)
@@ -174,11 +171,11 @@ void getKey(lcb_INSTANCE *instance, const std::string &key, Item &item)
     item = kvo.result;
 }
 
-void genDistKeys(lcbvb_CONFIG *vbc, std::vector<std::string> &out)
+void genDistKeys(lcbvb_CONFIG *vbc, std::vector< std::string > &out)
 {
-    char buf[1024] = { '\0' };
+    char buf[1024] = {'\0'};
     int servers_max = lcbvb_get_nservers(vbc);
-    std::map<int, bool> found_servers;
+    std::map< int, bool > found_servers;
     EXPECT_TRUE(servers_max > 0);
 
     for (int cur_num = 0; found_servers.size() != servers_max; cur_num++) {
@@ -196,8 +193,7 @@ void genDistKeys(lcbvb_CONFIG *vbc, std::vector<std::string> &out)
     EXPECT_EQ(servers_max, out.size());
 }
 
-void genStoreCommands(const std::vector<std::string> &keys,
-                      std::vector<lcb_CMDSTORE*> &cmds)
+void genStoreCommands(const std::vector< std::string > &keys, std::vector< lcb_CMDSTORE * > &cmds)
 {
     for (unsigned int ii = 0; ii < keys.size(); ii++) {
         lcb_CMDSTORE *cmd;
@@ -226,16 +222,15 @@ void doDummyOp(lcb_INSTANCE *instance)
  * @param item the item to print
  * @return the stream
  */
-std::ostream &operator<< (std::ostream &out, const Item &item)
+std::ostream &operator<<(std::ostream &out, const Item &item)
 {
     using namespace std;
     out << "Key: " << item.key << endl;
     if (item.val.length()) {
-        out <<  "Value: " << item.val << endl;
+        out << "Value: " << item.val << endl;
     }
 
-    out << ios::hex << "CAS: 0x" << item.cas << endl
-        << "Flags: 0x" << item.flags << endl;
+    out << ios::hex << "CAS: 0x" << item.cas << endl << "Flags: 0x" << item.flags << endl;
 
     if (item.err != LCB_SUCCESS) {
         out << "Error: " << item.err << endl;

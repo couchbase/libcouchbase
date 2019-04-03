@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2017-2018 Couchbase, Inc.
+ *     Copyright 2017-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -24,7 +24,10 @@
  */
 
 #ifdef __cplusplus
-namespace lcb { class Authenticator; }
+namespace lcb
+{
+class Authenticator;
+}
 typedef lcb::Authenticator lcb_AUTHENTICATOR;
 extern "C" {
 #else /* C only! */
@@ -137,22 +140,21 @@ typedef struct lcb_AUTHENTICATOR_Cdummy lcb_AUTHENTICATOR;
  * @endcode
  */
 LIBCOUCHBASE_API
-lcb_AUTHENTICATOR *
-lcbauth_new(void);
+lcb_AUTHENTICATOR *lcbauth_new(void);
 
 /**
  * Flags to use when adding a new set of credentials to lcbauth_add_pass
  */
 typedef enum {
     /** User/Password is administrative; for cluster */
-    LCBAUTH_F_CLUSTER = 1<<1,
+    LCBAUTH_F_CLUSTER = 1 << 1,
 
     /**
      * User is bucket name. Password is bucket password. This flag is only
      * used for legacy authentication. Using it with RBAC authentication will
      * return an error
      */
-    LCBAUTH_F_BUCKET = 1<<2
+    LCBAUTH_F_BUCKET = 1 << 2
 } lcbauth_ADDPASSFLAGS;
 
 /**
@@ -177,8 +179,7 @@ typedef enum {
  * supported.
  */
 LIBCOUCHBASE_API
-lcb_STATUS
-lcbauth_add_pass(lcb_AUTHENTICATOR *auth, const char *user, const char *pass, int flags);
+lcb_STATUS lcbauth_add_pass(lcb_AUTHENTICATOR *auth, const char *user, const char *pass, int flags);
 
 /**
  * @volatile
@@ -191,8 +192,7 @@ lcbauth_add_pass(lcb_AUTHENTICATOR *auth, const char *user, const char *pass, in
  * so is theoretically possible, it is not supported or tested.
  */
 LIBCOUCHBASE_API
-void
-lcbauth_ref(lcb_AUTHENTICATOR *auth);
+void lcbauth_ref(lcb_AUTHENTICATOR *auth);
 
 /**
  * @uncommitted
@@ -203,8 +203,7 @@ lcbauth_ref(lcb_AUTHENTICATOR *auth);
  * @param auth
  */
 LIBCOUCHBASE_API
-void
-lcbauth_unref(lcb_AUTHENTICATOR *auth);
+void lcbauth_unref(lcb_AUTHENTICATOR *auth);
 
 /**
  * @uncommitted
@@ -218,8 +217,7 @@ lcbauth_unref(lcb_AUTHENTICATOR *auth);
  * for use with a new client.
  */
 LIBCOUCHBASE_API
-lcb_AUTHENTICATOR *
-lcbauth_clone(const lcb_AUTHENTICATOR *src);
+lcb_AUTHENTICATOR *lcbauth_clone(const lcb_AUTHENTICATOR *src);
 
 /**
  * @private
@@ -246,7 +244,7 @@ typedef const char *(*lcb_AUTHCALLBACK)(void *cookie, const char *host, const ch
  */
 LIBCOUCHBASE_API
 lcb_STATUS lcbauth_set_callbacks(lcb_AUTHENTICATOR *auth, void *cookie, lcb_AUTHCALLBACK usercb,
-                                  lcb_AUTHCALLBACK passcb);
+                                 lcb_AUTHCALLBACK passcb);
 
 typedef enum {
     /**
@@ -286,8 +284,7 @@ typedef enum {
  * change the mode after credentials have been added
  */
 LIBCOUCHBASE_API
-lcb_STATUS
-lcbauth_set_mode(lcb_AUTHENTICATOR *src, lcbauth_MODE mode);
+lcb_STATUS lcbauth_set_mode(lcb_AUTHENTICATOR *src, lcbauth_MODE mode);
 
 /** @} */
 

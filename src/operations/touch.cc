@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010-2018 Couchbase, Inc.
+ *     Copyright 2010-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -77,7 +77,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_mutation_token(const lcb_RESPTOUCH *re
     return LCB_SUCCESS;
 }
 
-
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdtouch_create(lcb_CMDTOUCH **cmd)
 {
     *cmd = (lcb_CMDTOUCH *)calloc(1, sizeof(lcb_CMDTOUCH));
@@ -107,7 +106,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdtouch_parent_span(lcb_CMDTOUCH *cmd, lcbtrace
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdtouch_collection(lcb_CMDTOUCH *cmd, const char *scope, size_t scope_len, const char *collection, size_t collection_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdtouch_collection(lcb_CMDTOUCH *cmd, const char *scope, size_t scope_len,
+                                                    const char *collection, size_t collection_len)
 {
     cmd->scope = scope;
     cmd->nscope = scope_len;
@@ -149,7 +149,7 @@ static lcb_STATUS touch_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie,
 {
     const lcb_CMDTOUCH *cmd = (const lcb_CMDTOUCH *)arg;
     if (cid > 0) {
-        lcb_CMDTOUCH *mut = const_cast<lcb_CMDTOUCH *>(cmd);
+        lcb_CMDTOUCH *mut = const_cast< lcb_CMDTOUCH * >(cmd);
         mut->cid = cid;
     }
 
@@ -208,7 +208,7 @@ lcb_STATUS lcb_touch(lcb_INSTANCE *instance, void *cookie, const lcb_CMDTOUCH *c
         return err;
     }
 
-    return collcache_exec(cmd->scope, cmd->nscope, cmd->collection, cmd->ncollection,
-            instance, cookie, touch_impl, (lcb_COLLCACHE_ARG_CLONE)lcb_cmdtouch_clone,
-            (lcb_COLLCACHE_ARG_DTOR)lcb_cmdtouch_destroy, cmd);
+    return collcache_exec(cmd->scope, cmd->nscope, cmd->collection, cmd->ncollection, instance, cookie, touch_impl,
+                          (lcb_COLLCACHE_ARG_CLONE)lcb_cmdtouch_clone, (lcb_COLLCACHE_ARG_DTOR)lcb_cmdtouch_destroy,
+                          cmd);
 }

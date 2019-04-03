@@ -31,7 +31,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_result_status(const lcb_RESPSUBDOC *r
     return resp->res[index].status;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_result_value(const lcb_RESPSUBDOC *resp, size_t index, const char **value, size_t *value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_result_value(const lcb_RESPSUBDOC *resp, size_t index, const char **value,
+                                                        size_t *value_len)
 {
     if (index >= resp->nres) {
         return LCB_OPTIONS_CONFLICT;
@@ -137,7 +138,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_cas(lcb_CMDSUBDOC *cmd, uint64_t cas)
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_get(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *path, size_t path_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_get(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *path,
+                                              size_t path_len)
 {
     operations->specs[index].sdcmd = LCB_SDCMD_GET;
     operations->specs[index].options = flags;
@@ -145,7 +147,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_get(lcb_SUBDOCOPS *operations, size_t 
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_exists(lcb_SUBDOCOPS *operations,  size_t index, uint32_t flags, const char *path, size_t path_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_exists(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                 const char *path, size_t path_len)
 {
     operations->specs[index].sdcmd = LCB_SDCMD_EXISTS;
     operations->specs[index].options = flags;
@@ -153,7 +156,9 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_exists(lcb_SUBDOCOPS *operations,  siz
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_replace(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *path, size_t path_len, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_replace(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                  const char *path, size_t path_len, const char *value,
+                                                  size_t value_len)
 {
     operations->specs[index].sdcmd = LCB_SDCMD_REPLACE;
     operations->specs[index].options = flags;
@@ -162,7 +167,9 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_replace(lcb_SUBDOCOPS *operations, siz
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_dict_add(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *path, size_t path_len, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_dict_add(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                   const char *path, size_t path_len, const char *value,
+                                                   size_t value_len)
 {
     operations->specs[index].sdcmd = LCB_SDCMD_DICT_ADD;
     operations->specs[index].options = flags;
@@ -171,7 +178,9 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_dict_add(lcb_SUBDOCOPS *operations, si
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_dict_upsert(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *path, size_t path_len, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_dict_upsert(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                      const char *path, size_t path_len, const char *value,
+                                                      size_t value_len)
 {
     operations->specs[index].sdcmd = LCB_SDCMD_DICT_UPSERT;
     operations->specs[index].options = flags;
@@ -180,7 +189,9 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_dict_upsert(lcb_SUBDOCOPS *operations,
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_array_add_first(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *path, size_t path_len, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_array_add_first(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                          const char *path, size_t path_len, const char *value,
+                                                          size_t value_len)
 {
     operations->specs[index].sdcmd = LCB_SDCMD_ARRAY_ADD_FIRST;
     operations->specs[index].options = flags;
@@ -189,7 +200,9 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_array_add_first(lcb_SUBDOCOPS *operati
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_array_add_last(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *path, size_t path_len, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_array_add_last(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                         const char *path, size_t path_len, const char *value,
+                                                         size_t value_len)
 {
     operations->specs[index].sdcmd = LCB_SDCMD_ARRAY_ADD_LAST;
     operations->specs[index].options = flags;
@@ -198,7 +211,9 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_array_add_last(lcb_SUBDOCOPS *operatio
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_array_add_unique(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *path, size_t path_len, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_array_add_unique(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                           const char *path, size_t path_len, const char *value,
+                                                           size_t value_len)
 {
     operations->specs[index].sdcmd = LCB_SDCMD_ARRAY_ADD_UNIQUE;
     operations->specs[index].options = flags;
@@ -207,7 +222,9 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_array_add_unique(lcb_SUBDOCOPS *operat
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_array_insert(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *path, size_t path_len, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_array_insert(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                       const char *path, size_t path_len, const char *value,
+                                                       size_t value_len)
 {
     operations->specs[index].sdcmd = LCB_SDCMD_ARRAY_INSERT;
     operations->specs[index].options = flags;
@@ -216,7 +233,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_array_insert(lcb_SUBDOCOPS *operations
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_counter(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *path, size_t path_len, int64_t delta)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_counter(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                  const char *path, size_t path_len, int64_t delta)
 {
     operations->specs[index].sdcmd = LCB_SDCMD_COUNTER;
     operations->specs[index].options = flags;
@@ -227,7 +245,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_counter(lcb_SUBDOCOPS *operations, siz
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_remove(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *path, size_t path_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_remove(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                 const char *path, size_t path_len)
 {
     operations->specs[index].sdcmd = LCB_SDCMD_REMOVE;
     operations->specs[index].options = flags;
@@ -235,7 +254,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_remove(lcb_SUBDOCOPS *operations, size
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_get_count(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *path, size_t path_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_get_count(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                    const char *path, size_t path_len)
 {
     operations->specs[index].sdcmd = LCB_SDCMD_GET_COUNT;
     operations->specs[index].options = flags;
@@ -250,7 +270,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_fulldoc_get(lcb_SUBDOCOPS *operations,
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_fulldoc_add(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_fulldoc_add(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                      const char *value, size_t value_len)
 {
     operations->options |= LCB_CMDSUBDOC_F_INSERT_DOC;
     operations->specs[index].sdcmd = LCB_SDCMD_SET_FULLDOC;
@@ -259,7 +280,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_fulldoc_add(lcb_SUBDOCOPS *operations,
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_fulldoc_upsert(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_fulldoc_upsert(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                         const char *value, size_t value_len)
 {
     operations->options |= LCB_CMDSUBDOC_F_UPSERT_DOC;
     operations->specs[index].sdcmd = LCB_SDCMD_SET_FULLDOC;
@@ -268,7 +290,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_fulldoc_upsert(lcb_SUBDOCOPS *operatio
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_fulldoc_replace(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocops_fulldoc_replace(lcb_SUBDOCOPS *operations, size_t index, uint32_t flags,
+                                                          const char *value, size_t value_len)
 {
     operations->options &= ~(LCB_CMDSUBDOC_F_INSERT_DOC | LCB_CMDSUBDOC_F_UPSERT_DOC);
     operations->specs[index].sdcmd = LCB_SDCMD_SET_FULLDOC;
@@ -299,7 +322,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_clone(const lcb_CMDSUBDOC *cmd, lcb_CM
         memcpy((void *)ret->specs, cmd->specs, sizeof(lcb_SDSPEC) * ret->nspecs);
         size_t ii;
         for (ii = 0; ii < cmd->nspecs; ii++) {
-            lcb_SDSPEC *spec =  (lcb_SDSPEC *)&ret->specs[ii];
+            lcb_SDSPEC *spec = (lcb_SDSPEC *)&ret->specs[ii];
             size_t npath = spec->path.contig.nbytes;
             if (npath) {
                 void *path = calloc(npath, sizeof(char));
@@ -339,14 +362,14 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_destroy(lcb_CMDSUBDOC *cmd)
     return LCB_SUCCESS;
 }
 
-
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_parent_span(lcb_CMDSUBDOC *cmd, lcbtrace_SPAN *span)
 {
     cmd->pspan = span;
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_collection(lcb_CMDSUBDOC *cmd, const char *scope, size_t scope_len, const char *collection, size_t collection_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_collection(lcb_CMDSUBDOC *cmd, const char *scope, size_t scope_len,
+                                                     const char *collection, size_t collection_len)
 {
     cmd->scope = scope;
     cmd->nscope = scope_len;
@@ -381,7 +404,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_durability(lcb_CMDSUBDOC *cmd, lcb_DUR
     return LCB_SUCCESS;
 }
 
-
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_create_if_missing(lcb_CMDSUBDOC *cmd, int flag)
 {
     if (flag) {
@@ -392,8 +414,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_create_if_missing(lcb_CMDSUBDOC *cmd, 
     return LCB_SUCCESS;
 }
 
-static lcb_size_t
-get_value_size(mc_PACKET *packet)
+static lcb_size_t get_value_size(mc_PACKET *packet)
 {
     if (packet->flags & MCREQ_F_HASVALUE) {
         if (packet->flags & MCREQ_F_VALUE_IOV) {
@@ -406,15 +427,16 @@ get_value_size(mc_PACKET *packet)
     }
 }
 
-namespace SubdocCmdTraits {
+namespace SubdocCmdTraits
+{
 enum Options {
-    EMPTY_PATH = 1<<0,
-    ALLOW_EXPIRY = 1<<1,
-    HAS_VALUE = 1<<2,
-    ALLOW_MKDIRP = 1<<3,
-    IS_LOOKUP = 1<<4,
+    EMPTY_PATH = 1 << 0,
+    ALLOW_EXPIRY = 1 << 1,
+    HAS_VALUE = 1 << 2,
+    ALLOW_MKDIRP = 1 << 3,
+    IS_LOOKUP = 1 << 4,
     // Must encapsulate in 'multi' spec
-    NO_STANDALONE = 1<<5
+    NO_STANDALONE = 1 << 5
 };
 
 struct Traits {
@@ -425,15 +447,18 @@ struct Traits {
     const unsigned is_lookup;
     const uint8_t opcode;
 
-    inline bool valid() const {
+    inline bool valid() const
+    {
         return opcode != PROTOCOL_BINARY_CMD_INVALID;
     }
 
-    inline unsigned mode() const {
+    inline unsigned mode() const
+    {
         return is_lookup ? LCB_SDMULTI_MODE_LOOKUP : LCB_SDMULTI_MODE_MUTATE;
     }
 
-    inline bool chk_allow_empty_path(uint32_t options) const {
+    inline bool chk_allow_empty_path(uint32_t options) const
+    {
         if (allow_empty_path) {
             return true;
         }
@@ -444,122 +469,102 @@ struct Traits {
         return (options & LCB_SUBDOCOPS_F_XATTRPATH) != 0;
     }
 
-    inline Traits(uint8_t op, unsigned options) :
-        allow_empty_path(options & EMPTY_PATH),
-        allow_expiry(options & ALLOW_EXPIRY),
-        has_value(options & HAS_VALUE),
-        allow_mkdir_p(options & ALLOW_MKDIRP),
-        is_lookup(options & IS_LOOKUP),
-        opcode(op) {}
+    inline Traits(uint8_t op, unsigned options)
+        : allow_empty_path(options & EMPTY_PATH), allow_expiry(options & ALLOW_EXPIRY), has_value(options & HAS_VALUE),
+          allow_mkdir_p(options & ALLOW_MKDIRP), is_lookup(options & IS_LOOKUP), opcode(op)
+    {
+    }
 };
 
-static const Traits
-Get(PROTOCOL_BINARY_CMD_SUBDOC_GET, IS_LOOKUP);
+static const Traits Get(PROTOCOL_BINARY_CMD_SUBDOC_GET, IS_LOOKUP);
 
-static const Traits
-Exists(PROTOCOL_BINARY_CMD_SUBDOC_EXISTS, IS_LOOKUP);
+static const Traits Exists(PROTOCOL_BINARY_CMD_SUBDOC_EXISTS, IS_LOOKUP);
 
-static const Traits
-GetCount(PROTOCOL_BINARY_CMD_SUBDOC_GET_COUNT, IS_LOOKUP|EMPTY_PATH);
+static const Traits GetCount(PROTOCOL_BINARY_CMD_SUBDOC_GET_COUNT, IS_LOOKUP | EMPTY_PATH);
 
-static const Traits
-DictAdd(PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD, ALLOW_EXPIRY|HAS_VALUE);
+static const Traits DictAdd(PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD, ALLOW_EXPIRY | HAS_VALUE);
 
-static const Traits
-DictUpsert(PROTOCOL_BINARY_CMD_SUBDOC_DICT_UPSERT,
-    ALLOW_EXPIRY|HAS_VALUE|ALLOW_MKDIRP);
+static const Traits DictUpsert(PROTOCOL_BINARY_CMD_SUBDOC_DICT_UPSERT, ALLOW_EXPIRY | HAS_VALUE | ALLOW_MKDIRP);
 
-static const Traits
-Remove(PROTOCOL_BINARY_CMD_SUBDOC_DELETE, ALLOW_EXPIRY);
+static const Traits Remove(PROTOCOL_BINARY_CMD_SUBDOC_DELETE, ALLOW_EXPIRY);
 
-static const Traits
-ArrayInsert(PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_INSERT,
-    ALLOW_EXPIRY|HAS_VALUE);
+static const Traits ArrayInsert(PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_INSERT, ALLOW_EXPIRY | HAS_VALUE);
 
-static const Traits
-Replace(PROTOCOL_BINARY_CMD_SUBDOC_REPLACE, ALLOW_EXPIRY|HAS_VALUE);
+static const Traits Replace(PROTOCOL_BINARY_CMD_SUBDOC_REPLACE, ALLOW_EXPIRY | HAS_VALUE);
 
-static const Traits
-ArrayAddFirst(PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_FIRST,
-    ALLOW_EXPIRY|HAS_VALUE|EMPTY_PATH|ALLOW_MKDIRP);
+static const Traits ArrayAddFirst(PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_FIRST,
+                                  ALLOW_EXPIRY | HAS_VALUE | EMPTY_PATH | ALLOW_MKDIRP);
 
-static const Traits
-ArrayAddLast(PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_LAST,
-    ALLOW_EXPIRY|HAS_VALUE|EMPTY_PATH|ALLOW_MKDIRP);
+static const Traits ArrayAddLast(PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_LAST,
+                                 ALLOW_EXPIRY | HAS_VALUE | EMPTY_PATH | ALLOW_MKDIRP);
 
-static const Traits
-ArrayAddUnique(PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_ADD_UNIQUE,
-    ALLOW_EXPIRY|HAS_VALUE|EMPTY_PATH|ALLOW_MKDIRP);
+static const Traits ArrayAddUnique(PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_ADD_UNIQUE,
+                                   ALLOW_EXPIRY | HAS_VALUE | EMPTY_PATH | ALLOW_MKDIRP);
 
-static const Traits
-Counter(PROTOCOL_BINARY_CMD_SUBDOC_COUNTER, ALLOW_EXPIRY|HAS_VALUE|ALLOW_MKDIRP);
+static const Traits Counter(PROTOCOL_BINARY_CMD_SUBDOC_COUNTER, ALLOW_EXPIRY | HAS_VALUE | ALLOW_MKDIRP);
 
-static const Traits
-GetDoc(PROTOCOL_BINARY_CMD_GET, IS_LOOKUP|EMPTY_PATH|NO_STANDALONE);
+static const Traits GetDoc(PROTOCOL_BINARY_CMD_GET, IS_LOOKUP | EMPTY_PATH | NO_STANDALONE);
 
-static const Traits
-SetDoc(PROTOCOL_BINARY_CMD_SET, EMPTY_PATH|NO_STANDALONE);
+static const Traits SetDoc(PROTOCOL_BINARY_CMD_SET, EMPTY_PATH | NO_STANDALONE);
 
-static const Traits
-DeleteDoc(PROTOCOL_BINARY_CMD_DELETE, EMPTY_PATH|NO_STANDALONE);
+static const Traits DeleteDoc(PROTOCOL_BINARY_CMD_DELETE, EMPTY_PATH | NO_STANDALONE);
 
-static const Traits
-Invalid(PROTOCOL_BINARY_CMD_INVALID, 0);
+static const Traits Invalid(PROTOCOL_BINARY_CMD_INVALID, 0);
 
-const Traits&
-find(unsigned mode)
+const Traits &find(unsigned mode)
 {
     switch (mode) {
-    case LCB_SDCMD_REPLACE:
-        return Replace;
-    case LCB_SDCMD_DICT_ADD:
-        return DictAdd;
-    case LCB_SDCMD_DICT_UPSERT:
-        return DictUpsert;
-    case LCB_SDCMD_ARRAY_ADD_FIRST:
-        return ArrayAddFirst;
-    case LCB_SDCMD_ARRAY_ADD_LAST:
-        return ArrayAddLast;
-    case LCB_SDCMD_ARRAY_ADD_UNIQUE:
-        return ArrayAddUnique;
-    case LCB_SDCMD_ARRAY_INSERT:
-        return ArrayInsert;
-    case LCB_SDCMD_GET:
-        return Get;
-    case LCB_SDCMD_EXISTS:
-        return Exists;
-    case LCB_SDCMD_GET_COUNT:
-        return GetCount;
-    case LCB_SDCMD_REMOVE:
-        return Remove;
-    case LCB_SDCMD_COUNTER:
-        return Counter;
-    case LCB_SDCMD_GET_FULLDOC:
-        return GetDoc;
-    case LCB_SDCMD_SET_FULLDOC:
-        return SetDoc;
-    case LCB_SDCMD_REMOVE_FULLDOC:
-        return DeleteDoc;
-    default:
-        return Invalid;
+        case LCB_SDCMD_REPLACE:
+            return Replace;
+        case LCB_SDCMD_DICT_ADD:
+            return DictAdd;
+        case LCB_SDCMD_DICT_UPSERT:
+            return DictUpsert;
+        case LCB_SDCMD_ARRAY_ADD_FIRST:
+            return ArrayAddFirst;
+        case LCB_SDCMD_ARRAY_ADD_LAST:
+            return ArrayAddLast;
+        case LCB_SDCMD_ARRAY_ADD_UNIQUE:
+            return ArrayAddUnique;
+        case LCB_SDCMD_ARRAY_INSERT:
+            return ArrayInsert;
+        case LCB_SDCMD_GET:
+            return Get;
+        case LCB_SDCMD_EXISTS:
+            return Exists;
+        case LCB_SDCMD_GET_COUNT:
+            return GetCount;
+        case LCB_SDCMD_REMOVE:
+            return Remove;
+        case LCB_SDCMD_COUNTER:
+            return Counter;
+        case LCB_SDCMD_GET_FULLDOC:
+            return GetDoc;
+        case LCB_SDCMD_SET_FULLDOC:
+            return SetDoc;
+        case LCB_SDCMD_REMOVE_FULLDOC:
+            return DeleteDoc;
+        default:
+            return Invalid;
     }
 }
-}
+} // namespace SubdocCmdTraits
 
-namespace SubdocPathFlags {
+namespace SubdocPathFlags
+{
 static const uint8_t MKDIR_P = 0x01;
 static const uint8_t XATTR = 0x04;
 static const uint8_t EXPAND_MACROS = 0x010;
-}
+} // namespace SubdocPathFlags
 
-namespace SubdocDocFlags {
+namespace SubdocDocFlags
+{
 static const uint8_t MKDOC = 0x01;
 static const uint8_t ADDDOC = 0x02;
 static const uint8_t ACCESS_DELETED = 0x04;
-}
+} // namespace SubdocDocFlags
 
-static size_t
-get_valbuf_size(const lcb_VALBUF& vb)
+static size_t get_valbuf_size(const lcb_VALBUF &vb)
 {
     if (vb.vtype == LCB_KV_COPY || vb.vtype == LCB_KV_CONTIG) {
         return vb.u_buf.contig.nbytes;
@@ -576,8 +581,8 @@ get_valbuf_size(const lcb_VALBUF& vb)
     }
 }
 
-static uint8_t
-make_path_flags(const uint32_t user) {
+static uint8_t make_path_flags(const uint32_t user)
+{
     uint8_t flags = 0;
     if (user & LCB_SUBDOCOPS_F_MKINTERMEDIATES) {
         flags |= SubdocPathFlags::MKDIR_P;
@@ -591,8 +596,8 @@ make_path_flags(const uint32_t user) {
     return flags;
 }
 
-static uint8_t
-make_doc_flags(const uint32_t user) {
+static uint8_t make_doc_flags(const uint32_t user)
+{
     uint8_t flags = 0;
     if (user & LCB_CMDSUBDOC_F_INSERT_DOC) {
         flags |= SubdocDocFlags::ADDDOC;
@@ -607,36 +612,38 @@ make_doc_flags(const uint32_t user) {
 }
 
 struct MultiBuilder {
-    static unsigned infer_mode(const lcb_CMDSUBDOC *cmd) {
+    static unsigned infer_mode(const lcb_CMDSUBDOC *cmd)
+    {
         if (cmd->nspecs == 0) {
             return 0;
         }
-        const SubdocCmdTraits::Traits& trait = SubdocCmdTraits::find(cmd->specs[0].sdcmd);
+        const SubdocCmdTraits::Traits &trait = SubdocCmdTraits::find(cmd->specs[0].sdcmd);
         if (!trait.valid()) {
             return 0;
         }
         return trait.mode();
     }
 
-    MultiBuilder(const lcb_CMDSUBDOC *cmd_)
-    : cmd(cmd_), payload_size(0) {
+    MultiBuilder(const lcb_CMDSUBDOC *cmd_) : cmd(cmd_), payload_size(0)
+    {
         mode = infer_mode(cmd_);
         size_t ebufsz = is_lookup() ? cmd->nspecs * 4 : cmd->nspecs * 8;
         extra_body = new char[ebufsz];
         bodysz = 0;
     }
 
-    ~MultiBuilder() {
+    ~MultiBuilder()
+    {
         if (extra_body != NULL) {
             delete[] extra_body;
         }
     }
 
-    inline MultiBuilder(const MultiBuilder&);
+    inline MultiBuilder(const MultiBuilder &);
 
     // IOVs which are fed into lcb_VALBUF for subsequent use
     const lcb_CMDSUBDOC *cmd;
-    std::vector<lcb_IOV> iovs;
+    std::vector< lcb_IOV > iovs;
     char *extra_body;
     size_t bodysz;
 
@@ -645,53 +652,61 @@ struct MultiBuilder {
 
     unsigned mode;
 
-    bool is_lookup() const {
+    bool is_lookup() const
+    {
         return mode == LCB_SDMULTI_MODE_LOOKUP;
     }
 
-    bool is_mutate() const {
+    bool is_mutate() const
+    {
         return mode == LCB_SDMULTI_MODE_MUTATE;
     }
 
-    void maybe_setmode(const SubdocCmdTraits::Traits& t) {
+    void maybe_setmode(const SubdocCmdTraits::Traits &t)
+    {
         if (mode == 0) {
             mode = t.mode();
         }
     }
 
-    template <typename T> void add_field(T itm, size_t len) {
-        const char *b = reinterpret_cast<const char *>(&itm);
+    template < typename T > void add_field(T itm, size_t len)
+    {
+        const char *b = reinterpret_cast< const char * >(&itm);
         memcpy(extra_body + bodysz, b, len);
         bodysz += len;
     }
 
-    const char *extra_mark() const {
+    const char *extra_mark() const
+    {
         return extra_body + bodysz;
     }
 
-    void add_extras_iov(const char *last_begin) {
+    void add_extras_iov(const char *last_begin)
+    {
         const char *p_end = extra_mark();
         add_iov(last_begin, p_end - last_begin);
     }
 
-    void add_iov(const void *b, size_t n) {
+    void add_iov(const void *b, size_t n)
+    {
         if (!n) {
             return;
         }
 
         lcb_IOV iov;
-        iov.iov_base = const_cast<void*>(b);
+        iov.iov_base = const_cast< void * >(b);
         iov.iov_len = n;
         iovs.push_back(iov);
         payload_size += n;
     }
 
-    void add_iov(const lcb_VALBUF& vb) {
+    void add_iov(const lcb_VALBUF &vb)
+    {
         if (vb.vtype == LCB_KV_CONTIG || vb.vtype == LCB_KV_COPY) {
             add_iov(vb.u_buf.contig.bytes, vb.u_buf.contig.nbytes);
         } else {
             for (size_t ii = 0; ii < vb.u_buf.contig.nbytes; ++ii) {
-                const lcb_IOV& iov = vb.u_buf.multi.iov[ii];
+                const lcb_IOV &iov = vb.u_buf.multi.iov[ii];
                 if (!iov.iov_len) {
                     continue; // Skip it
                 }
@@ -704,10 +719,9 @@ struct MultiBuilder {
     inline lcb_STATUS add_spec(const lcb_SDSPEC *);
 };
 
-lcb_STATUS
-MultiBuilder::add_spec(const lcb_SDSPEC *spec)
+lcb_STATUS MultiBuilder::add_spec(const lcb_SDSPEC *spec)
 {
-    const SubdocCmdTraits::Traits& trait = SubdocCmdTraits::find(spec->sdcmd);
+    const SubdocCmdTraits::Traits &trait = SubdocCmdTraits::find(spec->sdcmd);
     if (!trait.valid()) {
         return LCB_UNKNOWN_SDCMD;
     }
@@ -723,19 +737,19 @@ MultiBuilder::add_spec(const lcb_SDSPEC *spec)
     // flags
     add_field(make_path_flags(spec->options), 1);
 
-    uint16_t npath = static_cast<uint16_t>(spec->path.contig.nbytes);
+    uint16_t npath = static_cast< uint16_t >(spec->path.contig.nbytes);
     if (!npath && !trait.chk_allow_empty_path(spec->options)) {
         return LCB_EMPTY_PATH;
     }
 
     // Path length
-    add_field(static_cast<uint16_t>(htons(npath)), 2);
+    add_field(static_cast< uint16_t >(htons(npath)), 2);
 
     uint32_t vsize = 0;
     if (is_mutate()) {
         // Mutation needs an additional 'value' spec.
         vsize = get_valbuf_size(spec->value);
-        add_field(static_cast<uint32_t>(htonl(vsize)), 4);
+        add_field(static_cast< uint32_t >(htonl(vsize)), 4);
     }
 
     // Finalize the header..
@@ -749,13 +763,11 @@ MultiBuilder::add_spec(const lcb_SDSPEC *spec)
     return LCB_SUCCESS;
 }
 
-
-static lcb_STATUS
-sd3_single(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC *cmd)
+static lcb_STATUS sd3_single(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC *cmd)
 {
     // Find the trait
     const lcb_SDSPEC *spec = cmd->specs;
-    const SubdocCmdTraits::Traits& traits = SubdocCmdTraits::find(spec->sdcmd);
+    const SubdocCmdTraits::Traits &traits = SubdocCmdTraits::find(spec->sdcmd);
     lcb_STATUS rc;
 
     // Any error here is implicitly related to the only spec
@@ -777,8 +789,7 @@ sd3_single(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC *cmd)
     if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
         return LCB_EMPTY_KEY;
     }
-    if (LCB_KEYBUF_IS_EMPTY(&spec->path) &&
-            !traits.chk_allow_empty_path(spec->options)) {
+    if (LCB_KEYBUF_IS_EMPTY(&spec->path) && !traits.chk_allow_empty_path(spec->options)) {
         return LCB_EMPTY_PATH;
     }
 
@@ -791,7 +802,7 @@ sd3_single(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC *cmd)
     fbuf->iov = tmpiov;
     fbuf->niov = 1;
     fbuf->total_length = 0;
-    tmpiov[0].iov_base = const_cast<void*>(spec->path.contig.bytes);
+    tmpiov[0].iov_base = const_cast< void * >(spec->path.contig.bytes);
     tmpiov[0].iov_len = spec->path.contig.nbytes;
 
     if (traits.has_value) {
@@ -835,9 +846,8 @@ sd3_single(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC *cmd)
             return LCB_NOT_SUPPORTED;
         }
     }
-    rc = mcreq_basic_packet(&instance->cmdq,
-        (const lcb_CMDBASE*)cmd,
-        &hdr, extlen, ffextlen, &packet, &pipeline, MCREQ_BASICPACKET_F_FALLBACKOK);
+    rc = mcreq_basic_packet(&instance->cmdq, (const lcb_CMDBASE *)cmd, &hdr, extlen, ffextlen, &packet, &pipeline,
+                            MCREQ_BASICPACKET_F_FALLBACKOK);
 
     if (rc != LCB_SUCCESS) {
         return rc;
@@ -859,8 +869,7 @@ sd3_single(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC *cmd)
     hdr.request.opaque = packet->opaque;
     hdr.request.opcode = traits.opcode;
     hdr.request.cas = lcb_htonll(cmd->cas);
-    hdr.request.bodylen = htonl(hdr.request.extlen + ffextlen +
-        ntohs(hdr.request.keylen) + get_value_size(packet));
+    hdr.request.bodylen = htonl(hdr.request.extlen + ffextlen + ntohs(hdr.request.keylen) + get_value_size(packet));
 
     memcpy(SPAN_BUFFER(&packet->kh_span), hdr.bytes, sizeof hdr.bytes);
     if (cmd->dur_level && new_durability_supported) {
@@ -910,18 +919,18 @@ static lcb_STATUS subdoc_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
 {
     const lcb_CMDSUBDOC *cmd = (const lcb_CMDSUBDOC *)arg;
     if (cid > 0) {
-        lcb_CMDSUBDOC *mut = const_cast<lcb_CMDSUBDOC *>(cmd);
+        lcb_CMDSUBDOC *mut = const_cast< lcb_CMDSUBDOC * >(cmd);
         mut->cid = cid;
     }
 
     if (cmd->nspecs == 1) {
         switch (cmd->specs[0].sdcmd) {
-        case LCB_SDCMD_GET_FULLDOC:
-        case LCB_SDCMD_SET_FULLDOC:
-        case LCB_SDCMD_REMOVE_FULLDOC:
-            break;
-        default:
-            return sd3_single(instance, cookie, cmd);
+            case LCB_SDCMD_GET_FULLDOC:
+            case LCB_SDCMD_SET_FULLDOC:
+            case LCB_SDCMD_REMOVE_FULLDOC:
+                break;
+            default:
+                return sd3_single(instance, cookie, cmd);
         }
     }
 
@@ -955,7 +964,7 @@ static lcb_STATUS subdoc_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
         extlen += 4;
     }
     if (docflags) {
-        extlen ++;
+        extlen++;
     }
 
     protocol_binary_request_header hdr;
@@ -976,15 +985,14 @@ static lcb_STATUS subdoc_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
         *cmd->error_index = -1;
     }
 
-    rc = mcreq_basic_packet(
-        &instance->cmdq, reinterpret_cast<const lcb_CMDBASE*>(cmd),
-        &hdr, extlen, ffextlen, &pkt, &pl, MCREQ_BASICPACKET_F_FALLBACKOK);
+    rc = mcreq_basic_packet(&instance->cmdq, reinterpret_cast< const lcb_CMDBASE * >(cmd), &hdr, extlen, ffextlen, &pkt,
+                            &pl, MCREQ_BASICPACKET_F_FALLBACKOK);
 
     if (rc != LCB_SUCCESS) {
         return rc;
     }
 
-    lcb_VALBUF vb = { LCB_KV_IOVCOPY };
+    lcb_VALBUF vb = {LCB_KV_IOVCOPY};
     vb.u_buf.multi.iov = &ctx.iovs[0];
     vb.u_buf.multi.niov = ctx.iovs.size();
     vb.u_buf.multi.total_length = ctx.payload_size;
@@ -1006,8 +1014,7 @@ static lcb_STATUS subdoc_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
     hdr.request.extlen = pkt->extlen;
     hdr.request.opaque = pkt->opaque;
     hdr.request.cas = lcb_htonll(cmd->cas);
-    hdr.request.bodylen = htonl(hdr.request.extlen + ffextlen +
-        ntohs(hdr.request.keylen) + ctx.payload_size);
+    hdr.request.bodylen = htonl(hdr.request.extlen + ffextlen + ntohs(hdr.request.keylen) + ctx.payload_size);
     memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof(hdr.bytes));
     if (cmd->dur_level && new_durability_supported) {
         uint8_t meta = (1 << 4) | 3;
@@ -1022,7 +1029,7 @@ static lcb_STATUS subdoc_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
         memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE + ffextlen, &expiry, 4);
     }
     if (docflags) {
-        memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE + ffextlen + (extlen -1), &docflags, 1);
+        memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE + ffextlen + (extlen - 1), &docflags, 1);
     }
 
     MCREQ_PKT_RDATA(pkt)->cookie = cookie;
@@ -1032,8 +1039,7 @@ static lcb_STATUS subdoc_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
 }
 
 LIBCOUCHBASE_API
-lcb_STATUS
-lcb_subdoc(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC *cmd)
+lcb_STATUS lcb_subdoc(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC *cmd)
 {
     lcb_STATUS err;
 
@@ -1042,7 +1048,7 @@ lcb_subdoc(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC *cmd)
         return err;
     }
 
-    return collcache_exec(cmd->scope, cmd->nscope, cmd->collection, cmd->ncollection,
-            instance, cookie, subdoc_impl, (lcb_COLLCACHE_ARG_CLONE)lcb_cmdsubdoc_clone,
-            (lcb_COLLCACHE_ARG_DTOR)lcb_cmdsubdoc_destroy, cmd);
+    return collcache_exec(cmd->scope, cmd->nscope, cmd->collection, cmd->ncollection, instance, cookie, subdoc_impl,
+                          (lcb_COLLCACHE_ARG_CLONE)lcb_cmdsubdoc_clone, (lcb_COLLCACHE_ARG_DTOR)lcb_cmdsubdoc_destroy,
+                          cmd);
 }

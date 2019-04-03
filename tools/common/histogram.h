@@ -21,21 +21,31 @@
 #include <libcouchbase/utils.h>
 #include <stdio.h>
 
-namespace cbc {
+namespace cbc
+{
 
-class Histogram {
-public:
-    Histogram() { hg = NULL; output = NULL; }
+class Histogram
+{
+  public:
+    Histogram()
+    {
+        hg = NULL;
+        output = NULL;
+    }
     void install(lcb_INSTANCE *, FILE *out = stderr);
     void installStandalone(FILE *out = stderr);
     void record(lcb_U64 duration);
     void write();
-    FILE *getOutput() const { return output; }
-private:
+    FILE *getOutput() const
+    {
+        return output;
+    }
+
+  private:
     lcb_HISTOGRAM *hg;
     FILE *output;
 };
 
-}
+} // namespace cbc
 
 #endif

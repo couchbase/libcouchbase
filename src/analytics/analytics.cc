@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2018 Couchbase, Inc.
+ *     Copyright 2018-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -56,7 +56,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_ingest_dataconverter_param_cookie(lcb_INGEST_PAR
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_ingest_dataconverter_param_row(lcb_INGEST_PARAM *param, const char **row, size_t *row_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_ingest_dataconverter_param_row(lcb_INGEST_PARAM *param, const char **row,
+                                                               size_t *row_len)
 {
     *row = param->row;
     *row_len = param->row_len;
@@ -69,7 +70,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_ingest_dataconverter_param_method(lcb_INGEST_PAR
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_ingest_dataconverter_param_set_id(lcb_INGEST_PARAM *param, const char *id, size_t id_len, void (*id_dtor)(const char *))
+LIBCOUCHBASE_API lcb_STATUS lcb_ingest_dataconverter_param_set_id(lcb_INGEST_PARAM *param, const char *id,
+                                                                  size_t id_len, void (*id_dtor)(const char *))
 {
     param->id = id;
     param->id_len = id_len;
@@ -77,7 +79,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_ingest_dataconverter_param_set_id(lcb_INGEST_PAR
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_ingest_dataconverter_param_set_out(lcb_INGEST_PARAM *param, const char *out, size_t out_len, void (*out_dtor)(const char *))
+LIBCOUCHBASE_API lcb_STATUS lcb_ingest_dataconverter_param_set_out(lcb_INGEST_PARAM *param, const char *out,
+                                                                   size_t out_len, void (*out_dtor)(const char *))
 {
     param->out_dtor = out_dtor;
     param->out_len = out_len;
@@ -88,7 +91,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_ingest_dataconverter_param_set_out(lcb_INGEST_PA
 static lcb_INGEST_STATUS default_data_converter(lcb_INSTANCE *, lcb_INGEST_PARAM *param)
 {
     param->id_dtor = (void (*)(const char *))free;
-    char *buf = static_cast<char *>(calloc(34, sizeof(char)));
+    char *buf = static_cast< char * >(calloc(34, sizeof(char)));
     param->id_len = snprintf(buf, 34, "%016" PRIx64 "-%016" PRIx64, lcb_next_rand64(), lcb_next_rand64());
     param->id = buf;
     return LCB_INGEST_STATUS_OK;
@@ -143,7 +146,7 @@ struct lcb_INGEST_OPTIONS_ {
     bool ignore_errors;
     lcb_INGEST_DATACONVERTER_CALLBACK data_converter;
 
-    lcb_INGEST_OPTIONS_ ()
+    lcb_INGEST_OPTIONS_()
         : method(LCB_INGEST_METHOD_NONE), exptime(0), ignore_errors(false), data_converter(default_data_converter)
     {
     }
@@ -225,7 +228,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_query(lcb_CMDANALYTICS *cmd, const 
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_option(lcb_CMDANALYTICS *cmd, const char *name, size_t name_len, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_option(lcb_CMDANALYTICS *cmd, const char *name, size_t name_len,
+                                                    const char *value, size_t value_len)
 {
     fix_strlen(value, value_len);
     fix_strlen(name, name_len);
@@ -237,19 +241,22 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_option(lcb_CMDANALYTICS *cmd, const
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_statement(lcb_CMDANALYTICS *cmd, const char *statement, size_t statement_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_statement(lcb_CMDANALYTICS *cmd, const char *statement,
+                                                       size_t statement_len)
 {
     fix_strlen(statement, statement_len);
     cmd->root["statement"] = std::string(statement, statement_len);
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_named_param(lcb_CMDANALYTICS *cmd, const char *name, size_t name_len, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_named_param(lcb_CMDANALYTICS *cmd, const char *name, size_t name_len,
+                                                         const char *value, size_t value_len)
 {
     return lcb_cmdanalytics_option(cmd, name, name_len, value, value_len);
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_positional_param(lcb_CMDANALYTICS *cmd, const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_positional_param(lcb_CMDANALYTICS *cmd, const char *value,
+                                                              size_t value_len)
 {
     fix_strlen(value, value_len);
     Json::Value jval;
@@ -306,7 +313,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_ingest_options_ignore_error(lcb_INGEST_OPTIONS *
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_ingest_options_data_converter(lcb_INGEST_OPTIONS *options, lcb_INGEST_DATACONVERTER_CALLBACK callback)
+LIBCOUCHBASE_API lcb_STATUS lcb_ingest_options_data_converter(lcb_INGEST_OPTIONS *options,
+                                                              lcb_INGEST_DATACONVERTER_CALLBACK callback)
 {
     options->data_converter = callback;
     return LCB_SUCCESS;
@@ -320,7 +328,8 @@ struct lcb_DEFERRED_HANDLE_ {
     lcb_DEFERRED_HANDLE_(std::string status_, std::string handle_) : status(status_), handle(handle_) {}
 };
 
-LIBCOUCHBASE_API lcb_STATUS lcb_respanalytics_deferred_handle_extract(const lcb_RESPANALYTICS *resp, lcb_DEFERRED_HANDLE **handle)
+LIBCOUCHBASE_API lcb_STATUS lcb_respanalytics_deferred_handle_extract(const lcb_RESPANALYTICS *resp,
+                                                                      lcb_DEFERRED_HANDLE **handle)
 {
     if (resp == NULL || resp->rc != LCB_SUCCESS || ((resp->rflags & (LCB_RESP_F_FINAL | LCB_RESP_F_EXTDATA)) == 0) ||
         resp->nrow == 0 || resp->row == NULL) {
@@ -351,7 +360,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_deferred_handle_destroy(lcb_DEFERRED_HANDLE *han
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_deferred_handle_status(lcb_DEFERRED_HANDLE *handle, const char **status, size_t *status_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_deferred_handle_status(lcb_DEFERRED_HANDLE *handle, const char **status,
+                                                       size_t *status_len)
 {
     if (handle == NULL) {
         return LCB_EINVAL;

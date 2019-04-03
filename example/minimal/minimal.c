@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012-2013 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -32,16 +32,13 @@
 #include <inttypes.h>
 #endif
 
-static void
-die(lcb_INSTANCE *instance, const char *msg, lcb_STATUS err)
+static void die(lcb_INSTANCE *instance, const char *msg, lcb_STATUS err)
 {
-    fprintf(stderr, "%s. Received code 0x%X (%s)\n",
-        msg, err, lcb_strerror(instance, err));
+    fprintf(stderr, "%s. Received code 0x%X (%s)\n", msg, err, lcb_strerror(instance, err));
     exit(EXIT_FAILURE);
 }
 
-static void
-store_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPSTORE *resp)
+static void store_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPSTORE *resp)
 {
     lcb_STATUS rc = lcb_respstore_status(resp);
     fprintf(stderr, "=== %s ===\n", lcb_strcbtype(cbtype));
@@ -52,15 +49,13 @@ store_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPSTORE *resp)
         lcb_respstore_key(resp, &key, &nkey);
         fprintf(stderr, "KEY: %.*s\n", (int)nkey, key);
         lcb_respstore_cas(resp, &cas);
-        fprintf(stderr, "CAS: 0x%"PRIx64"\n", cas);
+        fprintf(stderr, "CAS: 0x%" PRIx64 "\n", cas);
     } else {
         die(instance, lcb_strcbtype(cbtype), rc);
     }
 }
 
-
-static void
-get_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPGET *resp)
+static void get_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPGET *resp)
 {
     lcb_STATUS rc = lcb_respget_status(resp);
     fprintf(stderr, "=== %s ===\n", lcb_strcbtype(cbtype));
@@ -72,7 +67,7 @@ get_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPGET *resp)
         lcb_respget_key(resp, &key, &nkey);
         fprintf(stderr, "KEY: %.*s\n", (int)nkey, key);
         lcb_respget_cas(resp, &cas);
-        fprintf(stderr, "CAS: 0x%"PRIx64"\n", cas);
+        fprintf(stderr, "CAS: 0x%" PRIx64 "\n", cas);
         lcb_respget_value(resp, &value, &nvalue);
         lcb_respget_flags(resp, &flags);
         fprintf(stderr, "VALUE: %.*s\n", (int)nvalue, value);
@@ -86,7 +81,7 @@ int main(int argc, char *argv[])
 {
     lcb_STATUS err;
     lcb_INSTANCE *instance;
-    struct lcb_create_st create_options = { 0 };
+    struct lcb_create_st create_options = {0};
     lcb_CMDSTORE *scmd;
     lcb_CMDGET *gcmd;
 

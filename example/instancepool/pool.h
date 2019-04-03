@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2013 Couchbase, Inc.
+ *     Copyright 2013-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -23,16 +23,18 @@
 #include <queue>
 #include <vector>
 
-namespace lcb {
+namespace lcb
+{
 
-class Pool {
-public:
+class Pool
+{
+  public:
     /**
      * Create a new pool to use across threads
      * @param options The options used to initialize the instance
      * @param items How many items should be in the pool
      */
-    Pool(const lcb_create_st& options, size_t items = 10);
+    Pool(const lcb_create_st &options, size_t items = 10);
     virtual ~Pool();
 
     /**Get an instance from the pool. You should call #push() when you are
@@ -48,21 +50,21 @@ public:
     // pool has been constructed
     lcb_STATUS connect();
 
-protected:
+  protected:
     /**Function called after the instance is created. You may
      * customize the instance here with e.g. lcb_set_cookie()
      * @param instance the newly created instance */
     virtual void initialize(lcb_INSTANCE *instance) = 0;
 
-private:
+  private:
     pthread_mutex_t mutex;
     pthread_cond_t cond;
-    std::queue<lcb_INSTANCE *> instances;
+    std::queue< lcb_INSTANCE * > instances;
 
     // List of all instances
-    std::vector<lcb_INSTANCE *> all_instances;
+    std::vector< lcb_INSTANCE * > all_instances;
     size_t initial_size;
 };
-} // namespace
+} // namespace lcb
 
 #endif

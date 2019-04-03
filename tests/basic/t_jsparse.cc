@@ -22,37 +22,44 @@
 #include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
 #include "t_jsparse.h"
 
-class JsonParseTest : public ::testing::Test {
+class JsonParseTest : public ::testing::Test
+{
 };
 
 using namespace lcb::jsparse;
 
-static std::string iov2s(const lcb_IOV& iov) {
-    return std::string(reinterpret_cast<const char*>(iov.iov_base), iov.iov_len);
+static std::string iov2s(const lcb_IOV &iov)
+{
+    return std::string(reinterpret_cast< const char * >(iov.iov_base), iov.iov_len);
 }
 
 struct Context : Parser::Actions {
     lcb_STATUS rc;
     bool received_done;
     std::string meta;
-    std::vector<std::string> rows;
-    Context() {
+    std::vector< std::string > rows;
+    Context()
+    {
         reset();
     }
-    void reset() {
+    void reset()
+    {
         rc = LCB_SUCCESS;
         received_done = false;
         meta.clear();
         rows.clear();
     }
-    void JSPARSE_on_row(const Row& row) {
+    void JSPARSE_on_row(const Row &row)
+    {
         rows.push_back(iov2s(row.row));
     }
-    void JSPARSE_on_complete(const std::string& s) {
+    void JSPARSE_on_complete(const std::string &s)
+    {
         meta.assign(s);
         received_done = true;
     }
-    void JSPARSE_on_error(const std::string&) {
+    void JSPARSE_on_error(const std::string &)
+    {
         rc = LCB_PROTOCOL_ERROR;
         received_done = true;
     }
@@ -92,12 +99,14 @@ TEST_F(JsonParseTest, testFTS)
     ASSERT_TRUE(validateBadParse(JSON_fts_bad2, sizeof(JSON_fts_bad2), Parser::MODE_FTS));
 }
 
-TEST_F(JsonParseTest, testN1QL) {
+TEST_F(JsonParseTest, testN1QL)
+{
     ASSERT_TRUE(validateJsonRows(JSON_n1ql_nonempty, sizeof(JSON_n1ql_nonempty), Parser::MODE_N1QL));
     ASSERT_TRUE(validateJsonRows(JSON_n1ql_empty, sizeof(JSON_n1ql_empty), Parser::MODE_N1QL));
     ASSERT_TRUE(validateBadParse(JSON_n1ql_bad, sizeof(JSON_n1ql_bad), Parser::MODE_N1QL));
 }
 
-TEST_F(JsonParseTest, testAnalyticsDeferred) {
+TEST_F(JsonParseTest, testAnalyticsDeferred)
+{
     ASSERT_TRUE(validateJsonRows(JSON_ad_nonempty, sizeof(JSON_ad_nonempty), Parser::MODE_ANALYTICS_DEFERRED));
 }

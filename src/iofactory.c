@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2011-2012 Couchbase, Inc.
+ *     Copyright 2011-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -22,11 +22,10 @@
 #include <libcouchbase/plugins/io/bsdio-inl.c>
 
 #ifdef LCB_EMBED_PLUGIN_LIBEVENT
-LIBCOUCHBASE_API lcb_STATUS lcb_create_libevent_io_opts(int, lcb_io_opt_t*,void*);
+LIBCOUCHBASE_API lcb_STATUS lcb_create_libevent_io_opts(int, lcb_io_opt_t *, void *);
 #endif
 
 typedef lcb_STATUS (*create_func_t)(int version, lcb_io_opt_t *io, void *cookie);
-
 
 #ifdef _WIN32
 LIBCOUCHBASE_API
@@ -35,7 +34,6 @@ lcb_STATUS lcb_iocp_new_iops(int, lcb_io_opt_t *, void *);
 #else
 #define DEFAULT_IOPS LCB_IO_OPS_LIBEVENT
 #endif
-
 
 typedef struct {
     /** The "base" name of the plugin */
@@ -58,47 +56,54 @@ typedef struct {
     char s_symbol[256];
 } plugin_info;
 
-
 #ifdef __APPLE__
-#define PLUGIN_SO(NAME) "libcouchbase_"NAME".dylib"
+#define PLUGIN_SO(NAME) "libcouchbase_" NAME ".dylib"
 #elif defined(_WIN32)
 /** Trailing period intentional. See docs for LoadLibrary */
 #if (_DEBUG && _MSC_VER)
-    #define PLUGIN_SO(NAME) "libcouchbase_"NAME"_d.dll."
+#define PLUGIN_SO(NAME) "libcouchbase_" NAME "_d.dll."
 #else
-    #define PLUGIN_SO(NAME) "libcouchbase_"NAME".dll."
+#define PLUGIN_SO(NAME) "libcouchbase_" NAME ".dll."
 #endif /* _DEBUG */
 #else
-#define PLUGIN_SO(NAME) "libcouchbase_"NAME".so"
+#define PLUGIN_SO(NAME) "libcouchbase_" NAME ".so"
 #endif
 
-#define PLUGIN_SYMBOL(NAME) "lcb_create_"NAME"_io_opts"
+#define PLUGIN_SYMBOL(NAME) "lcb_create_" NAME "_io_opts"
 
-#define BUILTIN_CORE(name, type, create) \
-        { name, type, NULL, NULL, create, { 0 }, { 0 } }
+#define BUILTIN_CORE(name, type, create)                                                                               \
+    {                                                                                                                  \
+        name, type, NULL, NULL, create, {0},                                                                           \
+        {                                                                                                              \
+            0                                                                                                          \
+        }                                                                                                              \
+    }
 
-#define BUILTIN_DL(name, type) \
-        { name, type, PLUGIN_SO(name), PLUGIN_SYMBOL(name), NULL, { 0 }, { 0 } }
+#define BUILTIN_DL(name, type)                                                                                         \
+    {                                                                                                                  \
+        name, type, PLUGIN_SO(name), PLUGIN_SYMBOL(name), NULL, {0},                                                   \
+        {                                                                                                              \
+            0                                                                                                          \
+        }                                                                                                              \
+    }
 
-static plugin_info builtin_plugins[] = {
-    BUILTIN_CORE("select", LCB_IO_OPS_SELECT, lcb_create_select_io_opts),
-    BUILTIN_CORE("winsock", LCB_IO_OPS_WINSOCK, lcb_create_select_io_opts),
+static plugin_info builtin_plugins[] = {BUILTIN_CORE("select", LCB_IO_OPS_SELECT, lcb_create_select_io_opts),
+                                        BUILTIN_CORE("winsock", LCB_IO_OPS_WINSOCK, lcb_create_select_io_opts),
 
 #ifdef _WIN32
-    BUILTIN_CORE("iocp", LCB_IO_OPS_WINIOCP, lcb_iocp_new_iops),
+                                        BUILTIN_CORE("iocp", LCB_IO_OPS_WINIOCP, lcb_iocp_new_iops),
 #endif
 
 #ifdef LCB_EMBED_PLUGIN_LIBEVENT
-    BUILTIN_CORE("libevent", LCB_IO_OPS_LIBEVENT, lcb_create_libevent_io_opts),
+                                        BUILTIN_CORE("libevent", LCB_IO_OPS_LIBEVENT, lcb_create_libevent_io_opts),
 #else
-    BUILTIN_DL("libevent", LCB_IO_OPS_LIBEVENT),
+                                        BUILTIN_DL("libevent", LCB_IO_OPS_LIBEVENT),
 #endif
 
-    BUILTIN_DL("libev", LCB_IO_OPS_LIBEV),
-    BUILTIN_DL("libuv", LCB_IO_OPS_LIBUV),
+                                        BUILTIN_DL("libev", LCB_IO_OPS_LIBEV),
+                                        BUILTIN_DL("libuv", LCB_IO_OPS_LIBUV),
 
-    { NULL, LCB_IO_OPS_INVALID, NULL, NULL, NULL, { 0 }, { 0 } }
-};
+                                        {NULL, LCB_IO_OPS_INVALID, NULL, NULL, NULL, {0}, {0}}};
 
 /**
  * Checks the environment for plugin information.
@@ -113,8 +118,8 @@ static int get_env_plugin_info(plugin_info *info)
     plugin_info *cur = NULL;
     memset(info, 0, sizeof(*info));
 
-    if (!lcb_getenv_nonempty_multi(info->s_soname, sizeof(info->s_soname),
-        "LIBCOUCHBASE_EVENT_PLUGIN_NAME", "LCB_IOPS_NAME", NULL)) {
+    if (!lcb_getenv_nonempty_multi(info->s_soname, sizeof(info->s_soname), "LIBCOUCHBASE_EVENT_PLUGIN_NAME",
+                                   "LCB_IOPS_NAME", NULL)) {
         return 0;
     }
 
@@ -129,8 +134,8 @@ static int get_env_plugin_info(plugin_info *info)
         }
     }
 
-    if (!lcb_getenv_nonempty_multi(info->s_symbol, sizeof(info->s_symbol),
-        "LIBCOUCHBASE_EVENT_PLUGIN_SYMBOL", "LCB_IOPS_SYMBOL", NULL)) {
+    if (!lcb_getenv_nonempty_multi(info->s_symbol, sizeof(info->s_symbol), "LIBCOUCHBASE_EVENT_PLUGIN_SYMBOL",
+                                   "LCB_IOPS_SYMBOL", NULL)) {
         return -1;
     }
 
@@ -155,24 +160,23 @@ static plugin_info *find_plugin_info(lcb_io_ops_type_t iotype)
     return NULL;
 }
 
-static void options_from_info(struct lcb_create_io_ops_st *opts,
-                              const plugin_info *info)
+static void options_from_info(struct lcb_create_io_ops_st *opts, const plugin_info *info)
 {
     void *cookie;
 
     switch (opts->version) {
-    case 0:
-        cookie = opts->v.v0.cookie;
-        break;
-    case 1:
-        cookie = opts->v.v1.cookie;
-        break;
-    case 2:
-        cookie = opts->v.v2.cookie;
-        break;
-    default:
-        lcb_assert("unknown options version" && 0);
-        cookie = NULL;
+        case 0:
+            cookie = opts->v.v0.cookie;
+            break;
+        case 1:
+            cookie = opts->v.v1.cookie;
+            break;
+        case 2:
+            cookie = opts->v.v2.cookie;
+            break;
+        default:
+            lcb_assert("unknown options version" && 0);
+            cookie = NULL;
     }
 
     if (info->create) {
@@ -188,8 +192,7 @@ static void options_from_info(struct lcb_create_io_ops_st *opts,
     opts->v.v1.cookie = cookie;
 }
 
-static lcb_STATUS create_v2(lcb_io_opt_t *io,
-                             const struct lcb_create_io_ops_st *options);
+static lcb_STATUS create_v2(lcb_io_opt_t *io, const struct lcb_create_io_ops_st *options);
 
 struct plugin_st {
     void *dlhandle;
@@ -200,17 +203,12 @@ struct plugin_st {
 };
 
 #ifndef _WIN32
-static lcb_STATUS get_create_func(const char *image,
-                                   const char *symbol,
-                                   struct plugin_st *plugin,
-                                   int do_warn)
+static lcb_STATUS get_create_func(const char *image, const char *symbol, struct plugin_st *plugin, int do_warn)
 {
     void *dlhandle = dlopen(image, RTLD_NOW | RTLD_LOCAL);
     if (dlhandle == NULL) {
         if (do_warn) {
-            fprintf(stderr,
-                    "[libcouchbase] dlopen of %s failed with '%s'\n",
-                    image, dlerror());
+            fprintf(stderr, "[libcouchbase] dlopen of %s failed with '%s'\n", image, dlerror());
         }
         return LCB_DLOPEN_FAILED;
     }
@@ -221,9 +219,7 @@ static lcb_STATUS get_create_func(const char *image,
 
     if (plugin->func.voidptr == NULL) {
         if (do_warn) {
-            fprintf(stderr,
-                    "[libcouchbase] dlsym (%s) -> (%s) failed: %s\n",
-                    image, symbol, dlerror());
+            fprintf(stderr, "[libcouchbase] dlsym (%s) -> (%s) failed: %s\n", image, symbol, dlerror());
         }
         dlclose(dlhandle);
         dlhandle = NULL;
@@ -240,10 +236,7 @@ static void close_dlhandle(void *handle)
     dlclose(handle);
 }
 #else
-static lcb_STATUS get_create_func(const char *image,
-                                   const char *symbol,
-                                   struct plugin_st *plugin,
-                                   int do_warn)
+static lcb_STATUS get_create_func(const char *image, const char *symbol, struct plugin_st *plugin, int do_warn)
 {
     HMODULE hLibrary = LoadLibrary(image);
     FARPROC hFunction;
@@ -252,8 +245,7 @@ static lcb_STATUS get_create_func(const char *image,
 
     if (!hLibrary) {
         if (do_warn) {
-            fprintf(stderr, "LoadLibrary of %s failed with code %d\n",
-                    image, (int)GetLastError());
+            fprintf(stderr, "LoadLibrary of %s failed with code %d\n", image, (int)GetLastError());
         }
         return LCB_DLOPEN_FAILED;
     }
@@ -261,8 +253,7 @@ static lcb_STATUS get_create_func(const char *image,
     hFunction = GetProcAddress(hLibrary, symbol);
     if (!hFunction) {
         if (do_warn) {
-            fprintf(stderr, "GetProcAddress (%s) -> (%s) failed with code %d\n",
-                    image, symbol, (int)GetLastError());
+            fprintf(stderr, "GetProcAddress (%s) -> (%s) failed with code %d\n", image, symbol, (int)GetLastError());
         }
         FreeLibrary(hLibrary);
         return LCB_DLSYM_FAILED;
@@ -280,8 +271,7 @@ static void close_dlhandle(void *handle)
 #endif
 
 static int want_dl_debug = 0; /* global variable */
-static lcb_STATUS create_v1(lcb_io_opt_t *io,
-                             const struct lcb_create_io_ops_st *options);
+static lcb_STATUS create_v1(lcb_io_opt_t *io, const struct lcb_create_io_ops_st *options);
 
 LIBCOUCHBASE_API
 lcb_STATUS lcb_destroy_io_ops(lcb_io_opt_t io)
@@ -303,10 +293,8 @@ lcb_STATUS lcb_destroy_io_ops(lcb_io_opt_t io)
  * Note, the 'pi' is just a context variable to ensure the pointers copied
  * to the options are valid. It is *not* meant to be inspected.
  */
-static lcb_STATUS generate_options(plugin_info *pi,
-                                    const struct lcb_create_io_ops_st *user,
-                                    struct lcb_create_io_ops_st *ours,
-                                    lcb_io_ops_type_t *type)
+static lcb_STATUS generate_options(plugin_info *pi, const struct lcb_create_io_ops_st *user,
+                                   struct lcb_create_io_ops_st *ours, lcb_io_ops_type_t *type)
 {
     if (user) {
         memcpy(ours, user, sizeof(*user));
@@ -358,8 +346,7 @@ static lcb_STATUS generate_options(plugin_info *pi,
                 int want_debug;
                 lcb_STATUS ret;
 
-                if (lcb_getenv_boolean_multi("LIBCOUCHBASE_DLOPEN_DEBUG",
-                    "LCB_DLOPEN_DEBUG", NULL)) {
+                if (lcb_getenv_boolean_multi("LIBCOUCHBASE_DLOPEN_DEBUG", "LCB_DLOPEN_DEBUG", NULL)) {
                     want_debug = 1;
                 } else {
                     want_debug = want_dl_debug;
@@ -392,8 +379,7 @@ static lcb_STATUS generate_options(plugin_info *pi,
 }
 
 LIBCOUCHBASE_API
-lcb_STATUS lcb_create_io_ops(lcb_io_opt_t *io,
-                              const struct lcb_create_io_ops_st *io_opts)
+lcb_STATUS lcb_create_io_ops(lcb_io_opt_t *io, const struct lcb_create_io_ops_st *io_opts)
 {
 
     struct lcb_create_io_ops_st options;
@@ -443,21 +429,18 @@ lcb_STATUS lcb_create_io_ops(lcb_io_opt_t *io,
     return LCB_SUCCESS;
 }
 
-static lcb_STATUS create_v1(lcb_io_opt_t *io,
-                             const struct lcb_create_io_ops_st *options)
+static lcb_STATUS create_v1(lcb_io_opt_t *io, const struct lcb_create_io_ops_st *options)
 {
     struct plugin_st plugin;
     int want_debug;
     lcb_STATUS ret;
 
-    if (lcb_getenv_boolean_multi("LIBCOUCHBASE_DLOPEN_DEBUG",
-        "LCB_DLOPEN_DEBUG", NULL)) {
+    if (lcb_getenv_boolean_multi("LIBCOUCHBASE_DLOPEN_DEBUG", "LCB_DLOPEN_DEBUG", NULL)) {
         want_debug = 1;
     } else {
         want_debug = want_dl_debug;
     }
-    ret = get_create_func(options->v.v1.sofile,
-                          options->v.v1.symbol, &plugin, want_debug);
+    ret = get_create_func(options->v.v1.sofile, options->v.v1.symbol, &plugin, want_debug);
     if (ret != LCB_SUCCESS) {
         /* try to look up the symbol in the current image */
         lcb_STATUS ret2 = get_create_func(NULL, options->v.v1.symbol, &plugin, want_debug);
@@ -494,8 +477,7 @@ static lcb_STATUS create_v1(lcb_io_opt_t *io,
     return LCB_SUCCESS;
 }
 
-static lcb_STATUS create_v2(lcb_io_opt_t *io,
-                             const struct lcb_create_io_ops_st *options)
+static lcb_STATUS create_v2(lcb_io_opt_t *io, const struct lcb_create_io_ops_st *options)
 {
     lcb_STATUS ret;
 
@@ -514,62 +496,55 @@ static lcb_STATUS create_v2(lcb_io_opt_t *io,
     return LCB_SUCCESS;
 }
 
-lcb_STATUS lcb_iops_cntl_handler(int mode,
-                                  lcb_INSTANCE *instance, int cmd, void *arg)
+lcb_STATUS lcb_iops_cntl_handler(int mode, lcb_INSTANCE *instance, int cmd, void *arg)
 {
     (void)instance;
 
     switch (cmd) {
-    case LCB_CNTL_IOPS_DEFAULT_TYPES: {
-        struct lcb_create_io_ops_st options;
-        struct lcb_cntl_iops_info_st *info = arg;
-        lcb_STATUS err;
-        plugin_info pi;
+        case LCB_CNTL_IOPS_DEFAULT_TYPES: {
+            struct lcb_create_io_ops_st options;
+            struct lcb_cntl_iops_info_st *info = arg;
+            lcb_STATUS err;
+            plugin_info pi;
 
-        memset(&options, 0, sizeof(options));
-        if (mode != LCB_CNTL_GET) {
-            return LCB_NOT_SUPPORTED;
+            memset(&options, 0, sizeof(options));
+            if (mode != LCB_CNTL_GET) {
+                return LCB_NOT_SUPPORTED;
+            }
+
+            if (info->version != 0) {
+                return LCB_EINVAL;
+            }
+
+            info->v.v0.os_default = DEFAULT_IOPS;
+
+            err = generate_options(&pi, info->v.v0.options, &options, &info->v.v0.effective);
+
+            if (err != LCB_SUCCESS) {
+                return LCB_ERROR;
+            }
+
+            return LCB_SUCCESS;
         }
 
-        if (info->version != 0) {
+        case LCB_CNTL_IOPS_DLOPEN_DEBUG: {
+            int *usr = arg;
+            if (mode == LCB_CNTL_SET) {
+                want_dl_debug = *usr;
+            } else {
+                *usr = want_dl_debug;
+            }
+            return LCB_SUCCESS;
+        }
+
+        default:
             return LCB_EINVAL;
-        }
-
-        info->v.v0.os_default = DEFAULT_IOPS;
-
-        err = generate_options(&pi,
-                               info->v.v0.options,
-                               &options,
-                               &info->v.v0.effective);
-
-        if (err != LCB_SUCCESS) {
-            return LCB_ERROR;
-        }
-
-        return LCB_SUCCESS;
     }
-
-    case LCB_CNTL_IOPS_DLOPEN_DEBUG: {
-        int *usr = arg;
-        if (mode == LCB_CNTL_SET) {
-            want_dl_debug = *usr;
-        } else {
-            *usr = want_dl_debug;
-        }
-        return LCB_SUCCESS;
-    }
-
-    default:
-        return LCB_EINVAL;
-
-    }
-
 }
 
 /* In-library wrapper version */
 LIBCOUCHBASE_API
-void
-lcb_iops_wire_bsd_impl2(lcb_bsd_procs *procs, int version)
+void lcb_iops_wire_bsd_impl2(lcb_bsd_procs *procs, int version)
 {
     wire_lcb_bsd_impl2(procs, version);
 }

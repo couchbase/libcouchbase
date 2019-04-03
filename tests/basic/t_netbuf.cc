@@ -10,7 +10,6 @@
 #endif
 #include "netbuf/netbuf.h"
 
-
 #define BIG_BUF_SIZE 5000
 #define SMALL_BUF_SIZE 50
 
@@ -63,7 +62,6 @@ TEST_F(NetbufTest, testBasic)
     netbuf_init(&mgr, NULL);
     clean_check(&mgr);
     netbuf_init(&mgr, NULL);
-
 
     for (ii = 0; ii < n_bigspans; ii++) {
         int filler = 'a' + ii;

@@ -20,9 +20,11 @@
 #include "internal.h"
 #include <map>
 
-class ErrmapUnitTest : public MockUnitTest {
-protected:
-    virtual void createErrmapConnection(HandleWrap& hw, lcb_INSTANCE **instance) {
+class ErrmapUnitTest : public MockUnitTest
+{
+  protected:
+    virtual void createErrmapConnection(HandleWrap &hw, lcb_INSTANCE **instance)
+    {
         MockEnvironment::getInstance()->createConnection(hw, instance);
         ASSERT_EQ(LCB_SUCCESS, lcb_cntl_string(*instance, "enable_errmap", "true"));
         ASSERT_EQ(LCB_SUCCESS, lcb_connect(*instance));
@@ -32,7 +34,8 @@ protected:
 
     void checkRetryVerify(uint16_t errcode);
 
-    void TearDown() {
+    void TearDown()
+    {
         if (!MockEnvironment::getInstance()->isRealCluster()) {
             MockOpFailClearCommand clearCmd(MockEnvironment::getInstance()->getNumNodes());
             doMockTxn(clearCmd);
@@ -45,16 +48,17 @@ struct ResultCookie {
     lcb_STATUS rc;
     bool called;
 
-    void reset() {
+    void reset()
+    {
         rc = LCB_SUCCESS;
         called = false;
     }
-    ResultCookie() : rc(LCB_SUCCESS), called(false) {
-    }
+    ResultCookie() : rc(LCB_SUCCESS), called(false) {}
 };
 
 extern "C" {
-static void opcb(lcb_INSTANCE *,int,const lcb_RESPSTORE* resp) {
+static void opcb(lcb_INSTANCE *, int, const lcb_RESPSTORE *resp)
+{
     ResultCookie *cookie;
     lcb_respstore_cookie(resp, (void **)&cookie);
     cookie->called = true;
@@ -62,7 +66,8 @@ static void opcb(lcb_INSTANCE *,int,const lcb_RESPSTORE* resp) {
 }
 }
 
-TEST_F(ErrmapUnitTest, hasRecognizedErrors) {
+TEST_F(ErrmapUnitTest, hasRecognizedErrors)
+{
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -71,13 +76,14 @@ TEST_F(ErrmapUnitTest, hasRecognizedErrors) {
 
     // Test the actual error map..
     using namespace lcb;
-    const errmap::ErrorMap& em = *instance->settings->errmap;
-    const errmap::Error& err = em.getError(PROTOCOL_BINARY_RESPONSE_KEY_ENOENT);
+    const errmap::ErrorMap &em = *instance->settings->errmap;
+    const errmap::Error &err = em.getError(PROTOCOL_BINARY_RESPONSE_KEY_ENOENT);
     ASSERT_TRUE(err.isValid());
     ASSERT_TRUE(err.hasAttribute(errmap::CONSTRAINT_FAILURE));
 }
 
-TEST_F(ErrmapUnitTest, closesOnUnrecognizedError) {
+TEST_F(ErrmapUnitTest, closesOnUnrecognizedError)
+{
     // For now, EINTERNAL is an error code we don't know!
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
@@ -126,7 +132,8 @@ TEST_F(ErrmapUnitTest, closesOnUnrecognizedError) {
     lcb_cmdstore_destroy(scmd);
 }
 
-void ErrmapUnitTest::checkRetryVerify(uint16_t errcode) {
+void ErrmapUnitTest::checkRetryVerify(uint16_t errcode)
+{
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createErrmapConnection(hw, &instance);
@@ -174,7 +181,8 @@ void ErrmapUnitTest::checkRetryVerify(uint16_t errcode) {
     verifyCmd.set("errcode", errcode);
 #ifdef __APPLE__
     // FIXME: on Jenkins OSX actual expected time does not match actual and mock raises exception like following:
-    // VerificationException: Not enough/too many retries. Last TS=1498594892704. Last expected=1498594892728. Diff=24. MaxDiff=20
+    // VerificationException: Not enough/too many retries. Last TS=1498594892704. Last expected=1498594892728. Diff=24.
+    // MaxDiff=20
     verifyCmd.set("fuzz_ms", 35);
 #else
     verifyCmd.set("fuzz_ms", 20);
@@ -187,17 +195,20 @@ static const uint16_t ERRCODE_CONSTANT = 0x7ff0;
 static const uint16_t ERRCODE_LINEAR = 0x7ff1;
 static const uint16_t ERRCODE_EXPONENTIAL = 0x7ff2;
 
-TEST_F(ErrmapUnitTest, retrySpecConstant) {
+TEST_F(ErrmapUnitTest, retrySpecConstant)
+{
     SKIP_UNLESS_MOCK();
     checkRetryVerify(ERRCODE_CONSTANT);
 }
 
-TEST_F(ErrmapUnitTest, retrySpecLinear) {
+TEST_F(ErrmapUnitTest, retrySpecLinear)
+{
     SKIP_UNLESS_MOCK();
     checkRetryVerify(ERRCODE_LINEAR);
 }
 
-TEST_F(ErrmapUnitTest, retrySpecExponential) {
+TEST_F(ErrmapUnitTest, retrySpecExponential)
+{
     SKIP_UNLESS_MOCK();
     checkRetryVerify(ERRCODE_EXPONENTIAL);
 }

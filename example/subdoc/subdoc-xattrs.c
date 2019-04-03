@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2017 Couchbase, Inc.
+ *     Copyright 2017-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -148,22 +148,22 @@ int main()
         {
             char *path = "discounts.jsmith123";
             char *val = "20";
-            lcb_subdocops_dict_upsert(specs, 0, LCB_SUBDOCOPS_F_MKINTERMEDIATES | LCB_SUBDOCOPS_F_XATTRPATH,
-                    path, strlen(path), val, strlen(val));
+            lcb_subdocops_dict_upsert(specs, 0, LCB_SUBDOCOPS_F_MKINTERMEDIATES | LCB_SUBDOCOPS_F_XATTRPATH, path,
+                                      strlen(path), val, strlen(val));
         }
         {
             char *path = "discounts.pjones356";
             char *val = "30";
-            lcb_subdocops_dict_upsert(specs, 1, LCB_SUBDOCOPS_F_MKINTERMEDIATES | LCB_SUBDOCOPS_F_XATTRPATH,
-                    path, strlen(path), val, strlen(val));
+            lcb_subdocops_dict_upsert(specs, 1, LCB_SUBDOCOPS_F_MKINTERMEDIATES | LCB_SUBDOCOPS_F_XATTRPATH, path,
+                                      strlen(path), val, strlen(val));
         }
         // The following lines, "insert" and "remove", simply demonstrate insertion and
         // removal of the same path and value
         {
             char *path = "discounts.jbrown789";
             char *val = "25";
-            lcb_subdocops_dict_add(specs, 2, LCB_SUBDOCOPS_F_MKINTERMEDIATES | LCB_SUBDOCOPS_F_XATTRPATH,
-                    path, strlen(path), val, strlen(val));
+            lcb_subdocops_dict_add(specs, 2, LCB_SUBDOCOPS_F_MKINTERMEDIATES | LCB_SUBDOCOPS_F_XATTRPATH, path,
+                                   strlen(path), val, strlen(val));
         }
         {
             char *path = "discounts.jbrown789";
@@ -189,14 +189,14 @@ int main()
         {
             char *path = "discounts.jsmith123";
             char *val = "15";
-            lcb_subdocops_dict_upsert(specs, 0, LCB_SUBDOCOPS_F_MKINTERMEDIATES | LCB_SUBDOCOPS_F_XATTRPATH,
-                    path, strlen(path), val, strlen(val));
+            lcb_subdocops_dict_upsert(specs, 0, LCB_SUBDOCOPS_F_MKINTERMEDIATES | LCB_SUBDOCOPS_F_XATTRPATH, path,
+                                      strlen(path), val, strlen(val));
         }
         {
             char *path = "discounts.pjones356";
             char *val = "10";
-            lcb_subdocops_dict_upsert(specs, 1, LCB_SUBDOCOPS_F_MKINTERMEDIATES | LCB_SUBDOCOPS_F_XATTRPATH,
-                    path, strlen(path), val, strlen(val));
+            lcb_subdocops_dict_upsert(specs, 1, LCB_SUBDOCOPS_F_MKINTERMEDIATES | LCB_SUBDOCOPS_F_XATTRPATH, path,
+                                      strlen(path), val, strlen(val));
         }
 
         char *key = "hotel_10142";

@@ -23,8 +23,7 @@
 #include <string>
 #include <vector>
 
-static void
-get_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPGET *resp)
+static void get_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPGET *resp)
 {
     fprintf(stderr, "Got callback for %s.. ", lcb_strcbtype(cbtype));
 
@@ -40,8 +39,7 @@ get_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPGET *resp)
     fprintf(stderr, "Value %.*s\n", (int)nvalue, value);
 }
 
-static void
-store_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSTORE *resp)
+static void store_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSTORE *resp)
 {
     fprintf(stderr, "Got callback for %s.. ", lcb_strcbtype(cbtype));
 
@@ -53,7 +51,6 @@ store_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSTORE *resp)
 
     fprintf(stderr, "OK\n");
 }
-
 
 static void subdoc_callback(lcb_INSTANCE *, int type, const lcb_RESPSUBDOC *resp)
 {
@@ -78,8 +75,9 @@ static void subdoc_callback(lcb_INSTANCE *, int type, const lcb_RESPSUBDOC *resp
 // cluster_run mode
 #define DEFAULT_CONNSTR "couchbase://localhost"
 
-int main(int argc, char **argv) {
-    lcb_create_st crst = { 0 };
+int main(int argc, char **argv)
+{
+    lcb_create_st crst = {0};
     crst.version = 3;
     if (argc > 1) {
         crst.v.v3.connstr = argv[1];
@@ -129,8 +127,8 @@ int main(int argc, char **argv) {
     std::string bufs[10];
     // Add some mutations
     for (int ii = 0; ii < 5; ii++) {
-        std::string& path = bufs[ii * 2];
-        std::string& val = bufs[(ii * 2) + 1];
+        std::string &path = bufs[ii * 2];
+        std::string &val = bufs[(ii * 2) + 1];
         char pbuf[24], vbuf[24];
 
         sprintf(pbuf, "pth%d", ii);
@@ -153,7 +151,7 @@ int main(int argc, char **argv) {
     lcb_subdocops_create(&specs, 5);
     for (int ii = 0; ii < 5; ii++) {
         char pbuf[24];
-        std::string& path = bufs[ii];
+        std::string &path = bufs[ii];
         sprintf(pbuf, "pth%d", ii);
         path = pbuf;
 

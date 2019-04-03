@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2018 Couchbase, Inc.
+ *     Copyright 2018-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -320,8 +320,7 @@ static void view_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPVIEW
     size_t nkey, ndocid;
     lcb_respview_key(rv, &key, &nkey);
     lcb_respview_doc_id(rv, &docid, &ndocid);
-    printf("Got row callback from LCB: RC=0x%X, DOCID=%.*s. KEY=%.*s\n",
-        rc, (int)ndocid, docid, (int)nkey, key);
+    printf("Got row callback from LCB: RC=0x%X, DOCID=%.*s. KEY=%.*s\n", rc, (int)ndocid, docid, (int)nkey, key);
 
     const lcb_RESPGET *doc = NULL;
     lcb_respview_document(rv, &doc);

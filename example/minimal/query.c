@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2018 Couchbase, Inc.
+ *     Copyright 2018-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -71,8 +71,8 @@ static void row_callback(lcb_INSTANCE *instance, int type, const lcb_RESPN1QL *r
 
     lcb_respn1ql_row(resp, &row, &nrow);
     ln2space(row, nrow);
-    fprintf(stderr, "[\x1b[%dmQUERY\x1b[0m] %s, (%d) %.*s\n", err2color(rc), lcb_strerror_short(rc),
-            (int)nrow, (int)nrow, row);
+    fprintf(stderr, "[\x1b[%dmQUERY\x1b[0m] %s, (%d) %.*s\n", err2color(rc), lcb_strerror_short(rc), (int)nrow,
+            (int)nrow, row);
     if (lcb_respn1ql_is_final(resp)) {
         fprintf(stderr, "\n");
     }
@@ -96,8 +96,8 @@ static void store_callback(lcb_INSTANCE *instance, int type, const lcb_RESPSTORE
     const char *key;
     size_t nkey;
     lcb_respstore_key(resp, &key, &nkey);
-    fprintf(stderr, "[\x1b[%dm%-5s\x1b[0m] %s, key=%.*s\n", err2color(rc), lcb_strcbtype(type),
-            lcb_strerror_short(rc), (int)nkey, key);
+    fprintf(stderr, "[\x1b[%dm%-5s\x1b[0m] %s, key=%.*s\n", err2color(rc), lcb_strcbtype(type), lcb_strerror_short(rc),
+            (int)nkey, key);
 }
 
 static void get_callback(lcb_INSTANCE *instance, int type, const lcb_RESPGET *resp)
@@ -108,8 +108,8 @@ static void get_callback(lcb_INSTANCE *instance, int type, const lcb_RESPGET *re
 
     rc = lcb_respget_status(resp);
     lcb_respget_key(resp, &key, &nkey);
-    fprintf(stderr, "[\x1b[%dm%-5s\x1b[0m] %s, key=%.*s\n", err2color(rc), lcb_strcbtype(type),
-            lcb_strerror_short(rc), (int)nkey, key);
+    fprintf(stderr, "[\x1b[%dm%-5s\x1b[0m] %s, key=%.*s\n", err2color(rc), lcb_strcbtype(type), lcb_strerror_short(rc),
+            (int)nkey, key);
 }
 
 static int running = 1;

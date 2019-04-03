@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2017 Couchbase, Inc.
+ *     Copyright 2017-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ void http_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPHTTP *resp)
     uint16_t status;
     lcb_resphttp_http_status(resp, &status);
     printf("HTTP status: %d\n", status);
-    const char * const *headers;
+    const char *const *headers;
     lcb_resphttp_headers(resp, &headers);
     if (headers) {
         for (const char *const *cur = headers; *cur; cur += 2) {

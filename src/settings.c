@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2014 Couchbase, Inc.
+ *     Copyright 2014-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -71,18 +71,17 @@ void lcb_default_settings(lcb_settings *settings)
     settings->tracer_orphaned_queue_size = LCBTRACE_DEFAULT_ORPHANED_QUEUE_SIZE;
     settings->tracer_threshold_queue_flush_interval = LCBTRACE_DEFAULT_THRESHOLD_QUEUE_FLUSH_INTERVAL;
     settings->tracer_threshold_queue_size = LCBTRACE_DEFAULT_THRESHOLD_QUEUE_SIZE;
-    settings->tracer_threshold[LCBTRACE_THRESHOLD_KV] =  LCBTRACE_DEFAULT_THRESHOLD_KV;
-    settings->tracer_threshold[LCBTRACE_THRESHOLD_N1QL] =  LCBTRACE_DEFAULT_THRESHOLD_N1QL;
-    settings->tracer_threshold[LCBTRACE_THRESHOLD_VIEW] =  LCBTRACE_DEFAULT_THRESHOLD_VIEW;
-    settings->tracer_threshold[LCBTRACE_THRESHOLD_FTS] =  LCBTRACE_DEFAULT_THRESHOLD_FTS;
-    settings->tracer_threshold[LCBTRACE_THRESHOLD_ANALYTICS] =  LCBTRACE_DEFAULT_THRESHOLD_ANALYTICS;
+    settings->tracer_threshold[LCBTRACE_THRESHOLD_KV] = LCBTRACE_DEFAULT_THRESHOLD_KV;
+    settings->tracer_threshold[LCBTRACE_THRESHOLD_N1QL] = LCBTRACE_DEFAULT_THRESHOLD_N1QL;
+    settings->tracer_threshold[LCBTRACE_THRESHOLD_VIEW] = LCBTRACE_DEFAULT_THRESHOLD_VIEW;
+    settings->tracer_threshold[LCBTRACE_THRESHOLD_FTS] = LCBTRACE_DEFAULT_THRESHOLD_FTS;
+    settings->tracer_threshold[LCBTRACE_THRESHOLD_ANALYTICS] = LCBTRACE_DEFAULT_THRESHOLD_ANALYTICS;
     settings->wait_for_config = 0;
     settings->enable_durable_write = 0;
 }
 
 LCB_INTERNAL_API
-lcb_settings *
-lcb_settings_new(void)
+lcb_settings *lcb_settings_new(void)
 {
     lcb_settings *settings = calloc(1, sizeof(*settings));
     lcb_default_settings(settings);
@@ -93,8 +92,7 @@ lcb_settings_new(void)
 }
 
 LCB_INTERNAL_API
-void
-lcb_settings_unref(lcb_settings *settings)
+void lcb_settings_unref(lcb_settings *settings)
 {
     if (--settings->refcount) {
         return;

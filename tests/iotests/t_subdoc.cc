@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2015 Couchbase, Inc.
+ *     Copyright 2015-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -19,35 +19,40 @@
 #include "iotests.h"
 #include <string>
 
-namespace std {
-inline ostream& operator<<(ostream& os, const lcb_STATUS& rc) {
+namespace std
+{
+inline ostream &operator<<(ostream &os, const lcb_STATUS &rc)
+{
     os << "LcbError <0x";
-    os << std::hex << static_cast<unsigned>(rc);
+    os << std::hex << static_cast< unsigned >(rc);
     os << " (";
     os << lcb_strerror(NULL, rc);
     os << ")>";
     return os;
 }
-}
+} // namespace std
 
-class SubdocUnitTest : public MockUnitTest {
-public:
-    SubdocUnitTest() {
+class SubdocUnitTest : public MockUnitTest
+{
+  public:
+    SubdocUnitTest()
+    {
         key = "subdocItem";
         value = "{"
-                    "\"dictkey\":\"dictval\","
-                    "\"array\":["
-                        "1,2,3,4,[10,20,30,[100,200,300]]"
-                        "]"
+                "\"dictkey\":\"dictval\","
+                "\"array\":["
+                "1,2,3,4,[10,20,30,[100,200,300]]"
+                "]"
                 "}";
 
         nonJsonKey = "nonJsonItem";
     }
-protected:
+
+  protected:
     std::string key;
     std::string value;
     std::string nonJsonKey;
-    bool createSubdocConnection(HandleWrap& hw, lcb_INSTANCE ** instance);
+    bool createSubdocConnection(HandleWrap &hw, lcb_INSTANCE **instance);
 };
 
 struct Result {
@@ -56,22 +61,26 @@ struct Result {
     std::string value;
     int index;
 
-    Result() {
+    Result()
+    {
         clear();
     }
 
-    Result(const lcb_RESPSUBDOC *resp, size_t idx) {
+    Result(const lcb_RESPSUBDOC *resp, size_t idx)
+    {
         assign(resp, idx);
     }
 
-    void clear() {
+    void clear()
+    {
         rc = LCB_ERROR;
         cas = 0;
         index = -1;
         value.clear();
     }
 
-    void assign(const lcb_RESPSUBDOC *resp, size_t idx) {
+    void assign(const lcb_RESPSUBDOC *resp, size_t idx)
+    {
         rc = lcb_respsubdoc_result_status(resp, idx);
         index = idx;
         const char *p;
@@ -84,13 +93,14 @@ struct Result {
 };
 
 struct MultiResult {
-    std::vector<Result> results;
+    std::vector< Result > results;
     uint64_t cas;
     lcb_STATUS rc;
     unsigned cbtype;
     bool is_single;
 
-    void clear() {
+    void clear()
+    {
         cas = 0;
         results.clear();
         cbtype = 0;
@@ -98,11 +108,13 @@ struct MultiResult {
         is_single = false;
     }
 
-    size_t size() const {
+    size_t size() const
+    {
         return results.size();
     }
 
-    const Result& operator[](size_t ix) const {
+    const Result &operator[](size_t ix) const
+    {
         if (cbtype == LCB_CALLBACK_SDMUTATE) {
             for (size_t ii = 0; ii < results.size(); ++ii) {
                 if (results[ix].index == ix) {
@@ -116,16 +128,18 @@ struct MultiResult {
         return results[ix];
     }
 
-    const std::string& single_value() const {
+    const std::string &single_value() const
+    {
         return results[0].value;
     }
 
-    MultiResult() { clear(); }
+    MultiResult()
+    {
+        clear();
+    }
 };
 
-static
-::testing::AssertionResult
-verifySingleOk(const char *, const MultiResult& mr, const char *value = NULL)
+static ::testing::AssertionResult verifySingleOk(const char *, const MultiResult &mr, const char *value = NULL)
 {
     using namespace ::testing;
     if (mr.rc != LCB_SUCCESS) {
@@ -150,8 +164,7 @@ verifySingleOk(const char *, const MultiResult& mr, const char *value = NULL)
     }
     if (value != NULL) {
         if (value != mr.single_value()) {
-            return AssertionFailure() <<
-                    "Expected match: '" << value << "' Got '" << mr.single_value() << "'";
+            return AssertionFailure() << "Expected match: '" << value << "' Got '" << mr.single_value() << "'";
         }
     } else if (!mr.single_value().empty()) {
         return AssertionFailure() << "Expected empty value. Got " << mr.single_value();
@@ -160,22 +173,16 @@ verifySingleOk(const char *, const MultiResult& mr, const char *value = NULL)
     return AssertionSuccess();
 }
 
-static
-::testing::AssertionResult
-verifySingleOk(const char *, const char *, const MultiResult& mr, const char *value)
+static ::testing::AssertionResult verifySingleOk(const char *, const char *, const MultiResult &mr, const char *value)
 {
     return verifySingleOk(NULL, mr, value);
 }
 
-static
-::testing::AssertionResult
-verifySingleError(const char *, const char *, const MultiResult& mr, lcb_STATUS exp)
+static ::testing::AssertionResult verifySingleError(const char *, const char *, const MultiResult &mr, lcb_STATUS exp)
 {
     using namespace ::testing;
     if (mr.rc != LCB_SUBDOC_MULTI_FAILURE) {
-        return AssertionFailure() <<
-                "Top-level error code is not MULTI_FAILURE. Got" <<
-                mr.rc;
+        return AssertionFailure() << "Top-level error code is not MULTI_FAILURE. Got" << mr.rc;
     }
     if (mr.size() != 1) {
         return AssertionFailure() << "Expected single result. Got " << mr.size();
@@ -191,8 +198,7 @@ verifySingleError(const char *, const char *, const MultiResult& mr, lcb_STATUS 
 #define ASSERT_SD_ERR(res, err) ASSERT_PRED_FORMAT2(verifySingleError, res, err)
 
 extern "C" {
-static void
-subdocCallback(lcb_INSTANCE *, int cbtype, const lcb_RESPSUBDOC *resp)
+static void subdocCallback(lcb_INSTANCE *, int cbtype, const lcb_RESPSUBDOC *resp)
 {
     MultiResult *mr;
     lcb_respsubdoc_cookie(resp, (void **)&mr);
@@ -207,8 +213,7 @@ subdocCallback(lcb_INSTANCE *, int cbtype, const lcb_RESPSUBDOC *resp)
 }
 }
 
-bool
-SubdocUnitTest::createSubdocConnection(HandleWrap& hw, lcb_INSTANCE **instance)
+bool SubdocUnitTest::createSubdocConnection(HandleWrap &hw, lcb_INSTANCE **instance)
 {
     createConnection(hw, instance);
     lcb_install_callback3(*instance, LCB_CALLBACK_SDMUTATE, (lcb_RESPCALLBACK)subdocCallback);
@@ -242,17 +247,17 @@ SubdocUnitTest::createSubdocConnection(HandleWrap& hw, lcb_INSTANCE **instance)
     return true;
 }
 
-#define CREATE_SUBDOC_CONNECTION(hw, instance) \
-    do { \
-        if (!createSubdocConnection(hw, instance)) { \
-            fprintf(stderr, "Subdoc not supported on cluster!\n"); \
-            return; \
-        } \
+#define CREATE_SUBDOC_CONNECTION(hw, instance)                                                                         \
+    do {                                                                                                               \
+        if (!createSubdocConnection(hw, instance)) {                                                                   \
+            fprintf(stderr, "Subdoc not supported on cluster!\n");                                                     \
+            return;                                                                                                    \
+        }                                                                                                              \
     } while (0);
 
-template <typename T> lcb_STATUS
-schedwait(lcb_INSTANCE *instance, MultiResult *res, const T *cmd,
-    lcb_STATUS (*fn)(lcb_INSTANCE *, void *, const T*))
+template < typename T >
+lcb_STATUS schedwait(lcb_INSTANCE *instance, MultiResult *res, const T *cmd,
+                     lcb_STATUS (*fn)(lcb_INSTANCE *, void *, const T *))
 {
     res->clear();
     lcb_STATUS rc = fn(instance, res, cmd);
@@ -262,9 +267,9 @@ schedwait(lcb_INSTANCE *instance, MultiResult *res, const T *cmd,
     return rc;
 }
 
-static ::testing::AssertionResult
-verifyPathValue(const char *, const char *, const char *, const char *,
-    lcb_INSTANCE *instance, const std::string& docid, const char *path, const char *exp)
+static ::testing::AssertionResult verifyPathValue(const char *, const char *, const char *, const char *,
+                                                  lcb_INSTANCE *instance, const std::string &docid, const char *path,
+                                                  const char *exp)
 {
     using namespace ::testing;
     MultiResult mr;
@@ -284,8 +289,7 @@ verifyPathValue(const char *, const char *, const char *, const char *,
     return verifySingleOk(NULL, NULL, mr, exp);
 }
 
-#define ASSERT_PATHVAL_EQ(exp, instance, docid, path) \
-        ASSERT_PRED_FORMAT4(verifyPathValue, instance, docid, path, exp)
+#define ASSERT_PATHVAL_EQ(exp, instance, docid, path) ASSERT_PRED_FORMAT4(verifyPathValue, instance, docid, path, exp)
 
 TEST_F(SubdocUnitTest, testSdGetExists)
 {
@@ -398,7 +402,6 @@ TEST_F(SubdocUnitTest, testSdStore)
     lcb_cmdsubdoc_operations(cmd, spec);
     lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
 
-
     MultiResult res;
 
     // Insert
@@ -470,7 +473,8 @@ TEST_F(SubdocUnitTest, testSdStore)
     ASSERT_PATHVAL_EQ("true", instance, key, "array[1]");
 }
 
-TEST_F(SubdocUnitTest, testMkdoc) {
+TEST_F(SubdocUnitTest, testMkdoc)
+{
     SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_50);
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -666,7 +670,7 @@ TEST_F(SubdocUnitTest, testMultiLookup)
 
     ASSERT_EQ(LCB_SUBDOC_MULTI_FAILURE, mr.rc);
     ASSERT_EQ(4, mr.results.size());
-//    ASSERT_NE(0, mr.cas);
+    //    ASSERT_NE(0, mr.cas);
 
     ASSERT_EQ("\"dictval\"", mr.results[0].value);
     ASSERT_EQ(LCB_SUCCESS, mr.results[0].rc);
@@ -768,7 +772,8 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     lcb_cmdsubdoc_destroy(mcmd);
 }
 
-TEST_F(SubdocUnitTest, testGetCount) {
+TEST_F(SubdocUnitTest, testGetCount)
+{
     SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_50);
     HandleWrap hw;
     lcb_INSTANCE *instance;

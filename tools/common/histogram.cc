@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012-2013 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -20,8 +20,7 @@
 using namespace cbc;
 using std::string;
 
-void
-Histogram::install(lcb_INSTANCE *inst, FILE *out)
+void Histogram::install(lcb_INSTANCE *inst, FILE *out)
 {
     lcb_STATUS rc;
     output = out;
@@ -32,8 +31,7 @@ Histogram::install(lcb_INSTANCE *inst, FILE *out)
     (void)rc;
 }
 
-void
-Histogram::installStandalone(FILE *out)
+void Histogram::installStandalone(FILE *out)
 {
     if (hg != NULL) {
         return;
@@ -42,8 +40,7 @@ Histogram::installStandalone(FILE *out)
     output = out;
 }
 
-void
-Histogram::write()
+void Histogram::write()
 {
     if (hg == NULL) {
         return;
@@ -51,8 +48,7 @@ Histogram::write()
     lcb_histogram_print(hg, output);
 }
 
-void
-Histogram::record(lcb_U64 duration)
+void Histogram::record(lcb_U64 duration)
 {
     if (hg == NULL) {
         return;

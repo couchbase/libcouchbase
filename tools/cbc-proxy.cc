@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2017 Couchbase, Inc.
+ *     Copyright 2017-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-#define LCB_NO_DEPR_CXX_CTORS
 
 #include "config.h"
 #include <sys/types.h>
@@ -75,9 +73,7 @@ class Configuration
         o_port.abbrev('p').description("Port for proxy").setDefault(11211);
     }
 
-    ~Configuration()
-    {
-    }
+    ~Configuration() {}
 
     void addToParser(Parser &parser)
     {
@@ -86,9 +82,7 @@ class Configuration
         parser.addOption(o_port);
     }
 
-    void processOptions()
-    {
-    }
+    void processOptions() {}
 
     void fillCropts(lcb_create_st &opts)
     {
@@ -168,10 +162,11 @@ static void dump_bytes(const struct client *cl, const char *msg, const void *ptr
     size_t remainder = len % width;
     std::stringstream ss;
 
-    ss << msg << ", " << len << " bytes\n"
-                                "             +-------------------------------------------------+\n"
-                                "             |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |\n"
-                                "    +--------+-------------------------------------------------+----------------+";
+    ss << msg << ", " << len
+       << " bytes\n"
+          "             +-------------------------------------------------+\n"
+          "             |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |\n"
+          "    +--------+-------------------------------------------------+----------------+";
 
     unsigned int row = 0;
     while (row < full_rows) {
@@ -250,7 +245,7 @@ static void pktfwd_callback(lcb_INSTANCE *, const void *cookie, lcb_STATUS err, 
 
 extern "C" {
 #define DEFINE_ROW_CALLBACK(cbname, resptype)                                                                          \
-    static void cbname(lcb_INSTANCE *, int, const resptype *resp)                                                               \
+    static void cbname(lcb_INSTANCE *, int, const resptype *resp)                                                      \
     {                                                                                                                  \
         char key[100] = {0};                                                                                           \
         size_t nkey;                                                                                                   \
@@ -330,14 +325,14 @@ static void conn_readcb(struct bufferevent *bev, void *cookie)
         lcb_STATUS rc;
         if (memcmp(key, "n1ql ", 5) == 0) {
             lcb_CMDN1QL *cmd;
-	    lcb_cmdn1ql_create(&cmd);
+            lcb_cmdn1ql_create(&cmd);
 
-	    rc = lcb_cmdn1ql_statement(cmd, key + 5, keylen - 5);
+            rc = lcb_cmdn1ql_statement(cmd, key + 5, keylen - 5);
             if (rc != LCB_SUCCESS) {
                 lcb_log(LOGARGS(INFO), CL_LOGFMT "failed to set query for N1QL", CL_LOGID(cl));
                 goto FWD;
             }
-	    lcb_cmdn1ql_callback(cmd, n1ql_callback);
+            lcb_cmdn1ql_callback(cmd, n1ql_callback);
             cl->cnt = 0;
             rc = lcb_n1ql(instance, cl, cmd);
             lcb_cmdn1ql_destroy(cmd);
@@ -348,11 +343,11 @@ static void conn_readcb(struct bufferevent *bev, void *cookie)
             goto DONE;
         } else if (memcmp(key, "fts ", 4) == 0) {
             lcb_CMDFTS *cmd;
-	    lcb_cmdfts_create(&cmd);
-	    lcb_cmdfts_query(cmd, key + 4, keylen - 4);
-	    lcb_cmdfts_callback(cmd, fts_callback);
+            lcb_cmdfts_create(&cmd);
+            lcb_cmdfts_query(cmd, key + 4, keylen - 4);
+            lcb_cmdfts_callback(cmd, fts_callback);
             rc = lcb_fts(instance, cl, cmd);
-	    lcb_cmdfts_destroy(cmd);
+            lcb_cmdfts_destroy(cmd);
             cl->cnt = 0;
             if (rc != LCB_SUCCESS) {
                 lcb_log(LOGARGS(INFO), CL_LOGFMT "failed to schedule FTS command", CL_LOGID(cl));

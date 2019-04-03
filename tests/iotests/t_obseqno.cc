@@ -19,7 +19,8 @@
 #include <libcouchbase/utils.h>
 
 using namespace std;
-class ObseqnoTest : public MockUnitTest {
+class ObseqnoTest : public MockUnitTest
+{
 };
 
 extern "C" {
@@ -32,8 +33,7 @@ static void storeCb_getstok(lcb_INSTANCE *, int cbtype, const lcb_RESPSTORE *res
 }
 }
 
-static void
-storeGetStok(lcb_INSTANCE *instance, const string& k, const string& v, lcb_MUTATION_TOKEN *res)
+static void storeGetStok(lcb_INSTANCE *instance, const string &k, const string &v, lcb_MUTATION_TOKEN *res)
 {
     lcb_RESPCALLBACK oldcb = lcb_get_callback3(instance, LCB_CALLBACK_STORE);
     lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)storeCb_getstok);
@@ -52,7 +52,8 @@ storeGetStok(lcb_INSTANCE *instance, const string& k, const string& v, lcb_MUTAT
     lcb_install_callback3(instance, LCB_CALLBACK_STORE, oldcb);
 }
 
-TEST_F(ObseqnoTest, testFetchImplicit) {
+TEST_F(ObseqnoTest, testFetchImplicit)
+{
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -64,7 +65,7 @@ TEST_F(ObseqnoTest, testFetchImplicit) {
     rc = lcb_cntl_string(instance, "dur_mutation_tokens", "true");
     ASSERT_EQ(LCB_SUCCESS, rc);
 
-    lcb_MUTATION_TOKEN st_fetched = { 0 };
+    lcb_MUTATION_TOKEN st_fetched = {0};
     storeGetStok(instance, key, value, &st_fetched);
     ASSERT_TRUE(st_fetched.uuid_ != 0);
 
@@ -78,16 +79,16 @@ TEST_F(ObseqnoTest, testFetchImplicit) {
 }
 
 extern "C" {
-static void
-obseqCallback(lcb_INSTANCE *, int, const lcb_RESPOBSEQNO *rb) {
+static void obseqCallback(lcb_INSTANCE *, int, const lcb_RESPOBSEQNO *rb)
+{
     lcb_RESPOBSEQNO *pp = (lcb_RESPOBSEQNO *)rb->cookie;
     *pp = *rb;
 }
 }
 
-static void
-doObserveSeqno(lcb_INSTANCE *instance, lcb_MUTATION_TOKEN *ss, int server, lcb_RESPOBSEQNO& resp) {
-    lcb_CMDOBSEQNO cmd = { 0 };
+static void doObserveSeqno(lcb_INSTANCE *instance, lcb_MUTATION_TOKEN *ss, int server, lcb_RESPOBSEQNO &resp)
+{
+    lcb_CMDOBSEQNO cmd = {0};
     cmd.vbid = ss->vbid_;
     cmd.uuid = ss->uuid_;
     cmd.server_index = server;
@@ -108,7 +109,8 @@ doObserveSeqno(lcb_INSTANCE *instance, lcb_MUTATION_TOKEN *ss, int server, lcb_R
     lcb_install_callback3(instance, LCB_CALLBACK_OBSEQNO, oldcb);
 }
 
-TEST_F(ObseqnoTest, testObserve) {
+TEST_F(ObseqnoTest, testObserve)
+{
     SKIP_UNLESS_MOCK();
 
     HandleWrap hw;
@@ -118,7 +120,7 @@ TEST_F(ObseqnoTest, testObserve) {
 
     lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBCONFIG, &vbc);
 
-    lcb_MUTATION_TOKEN st_fetched = { 0 };
+    lcb_MUTATION_TOKEN st_fetched = {0};
     const char *key = "testObserve";
     const char *value = "value";
 
@@ -128,20 +130,21 @@ TEST_F(ObseqnoTest, testObserve) {
     ASSERT_NE(0, st_fetched.uuid_);
     ASSERT_NE(0, st_fetched.seqno_);
 
-    for (size_t ii = 0; ii < lcbvb_get_nreplicas(vbc)+1; ii++) {
+    for (size_t ii = 0; ii < lcbvb_get_nreplicas(vbc) + 1; ii++) {
         int ix = lcbvb_vbserver(vbc, st_fetched.vbid_, ii);
-        lcb_RESPOBSEQNO resp = { 0 };
+        lcb_RESPOBSEQNO resp = {0};
         doObserveSeqno(instance, &st_fetched, ix, resp);
         ASSERT_EQ(LCB_SUCCESS, resp.rc);
         ASSERT_EQ(st_fetched.uuid_, resp.cur_uuid);
         ASSERT_EQ(0, resp.old_uuid);
-//        printf("SEQ_MEM: %lu. SEQ_DISK: %lu\n", resp.mem_seqno, resp.persisted_seqno);
+        //        printf("SEQ_MEM: %lu. SEQ_DISK: %lu\n", resp.mem_seqno, resp.persisted_seqno);
         ASSERT_GT(resp.mem_seqno, 0);
         ASSERT_EQ(resp.mem_seqno, resp.persisted_seqno);
     }
 }
 
-TEST_F(ObseqnoTest, testFailoverFormat) {
+TEST_F(ObseqnoTest, testFailoverFormat)
+{
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -152,7 +155,7 @@ TEST_F(ObseqnoTest, testFailoverFormat) {
     const char *key = "testObserve";
     const char *value = "value";
 
-    lcb_MUTATION_TOKEN st_fetched = { 0 };
+    lcb_MUTATION_TOKEN st_fetched = {0};
     storeGetStok(instance, key, value, &st_fetched);
 
     MockEnvironment *env = MockEnvironment::getInstance();
@@ -162,13 +165,12 @@ TEST_F(ObseqnoTest, testFailoverFormat) {
     lcb_RESPOBSEQNO rr;
     doObserveSeqno(instance, &st_fetched, lcbvb_vbmaster(vbc, st_fetched.vbid_), rr);
     ASSERT_EQ(LCB_SUCCESS, rr.rc);
-//    printf("Old UUID: %llu\n", rr.old_uuid);
-//    printf("Cur UUID: %llu\n", rr.cur_uuid);
+    //    printf("Old UUID: %llu\n", rr.old_uuid);
+    //    printf("Cur UUID: %llu\n", rr.cur_uuid);
     ASSERT_GT(rr.old_uuid, 0);
     ASSERT_EQ(rr.old_uuid, st_fetched.uuid_);
     ASSERT_NE(rr.old_uuid, rr.cur_uuid);
     ASSERT_EQ(rr.old_seqno, st_fetched.seqno_);
-
 }
 
 // TODO: We should add more tests here, but in order to do this, we must

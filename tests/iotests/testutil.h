@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012-2013 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -21,7 +21,8 @@
 #include <libcouchbase/vbucket.h>
 #include <string.h>
 struct Item {
-    void assign(const lcb_RESPGET *resp) {
+    void assign(const lcb_RESPGET *resp)
+    {
         err = lcb_respget_status(resp);
 
         const char *p;
@@ -36,7 +37,8 @@ struct Item {
         lcb_respget_datatype(resp, &datatype);
     }
 
-    void assign(const lcb_RESPSTORE *resp) {
+    void assign(const lcb_RESPSTORE *resp)
+    {
         err = lcb_respstore_status(resp);
 
         const char *p;
@@ -47,7 +49,8 @@ struct Item {
         lcb_respstore_cas(resp, &cas);
     }
 
-    void assign(const lcb_RESPREMOVE *resp) {
+    void assign(const lcb_RESPREMOVE *resp)
+    {
         err = lcb_respremove_status(resp);
 
         const char *p;
@@ -61,14 +64,15 @@ struct Item {
     /**
      * Extract the key and CAS from a response.
      */
-    template <typename T>
-    void assignKC(const T *resp) {
+    template < typename T > void assignKC(const T *resp)
+    {
         key.assign((const char *)resp->key, resp->nkey);
         cas = resp->cas;
         err = resp->rc;
     }
 
-    Item() {
+    Item()
+    {
         key.clear();
         val.clear();
 
@@ -79,9 +83,8 @@ struct Item {
         exp = 0;
     }
 
-    Item(const std::string &key,
-         const std::string &value = "",
-         lcb_cas_t cas = 0) {
+    Item(const std::string &key, const std::string &value = "", lcb_cas_t cas = 0)
+    {
 
         this->key = key;
         this->val = value;
@@ -92,13 +95,13 @@ struct Item {
         exp = 0;
     }
 
-    friend std::ostream &operator<< (std::ostream &out,
-                                     const Item &item);
+    friend std::ostream &operator<<(std::ostream &out, const Item &item);
 
     /**
      * Dump the string representation of the item to standard output
      */
-    void dump() {
+    void dump()
+    {
         std::cout << *this;
     }
 
@@ -122,20 +125,22 @@ struct KVOperation {
     unsigned callCount;
 
     /** Acceptable errors during callback */
-    std::set<lcb_STATUS> allowableErrors;
+    std::set< lcb_STATUS > allowableErrors;
 
     /** Errors received from error handler */
-    std::set<lcb_STATUS> globalErrors;
+    std::set< lcb_STATUS > globalErrors;
 
     void assertOk(lcb_STATUS err);
 
-    KVOperation(const Item *request) {
+    KVOperation(const Item *request)
+    {
         this->request = request;
         this->ignoreErrors = false;
         callCount = 0;
     }
 
-    void clear() {
+    void clear()
+    {
         result = Item();
         callCount = 0;
         allowableErrors.clear();
@@ -146,7 +151,8 @@ struct KVOperation {
     void get(lcb_INSTANCE *instance);
     void remove(lcb_INSTANCE *instance);
 
-    void cbCommon(lcb_STATUS error) {
+    void cbCommon(lcb_STATUS error)
+    {
         callCount++;
         if (error != LCB_SUCCESS) {
             globalErrors.insert(error);
@@ -157,7 +163,7 @@ struct KVOperation {
     static void handleInstanceError(lcb_INSTANCE *, lcb_STATUS, const char *);
     bool ignoreErrors;
 
-private:
+  private:
     void enter(lcb_INSTANCE *);
     void leave(lcb_INSTANCE *);
     const void *oldCookie;
@@ -176,9 +182,8 @@ void getKey(lcb_INSTANCE *instance, const std::string &key, Item &item);
 /**
  * Generate keys which will trigger all the servers in the map.
  */
-void genDistKeys(lcbvb_CONFIG* vbc, std::vector<std::string> &out);
-void genStoreCommands(const std::vector<std::string> &keys,
-                      std::vector<lcb_CMDSTORE *> &cmds);
+void genDistKeys(lcbvb_CONFIG *vbc, std::vector< std::string > &out);
+void genStoreCommands(const std::vector< std::string > &keys, std::vector< lcb_CMDSTORE * > &cmds);
 /**
  * This doesn't _actually_ attempt to make sense of an operation. It simply
  * will try to keep the event loop alive.

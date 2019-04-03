@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 3; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2018 Couchbase, Inc.
+ *     Copyright 2018-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -39,11 +39,12 @@ typedef enum {
     LCB_LOG_MAX
 } lcb_LOG_SEVERITY;
 
-
-typedef void (*lcb_LOGGER_CALLBACK)(lcb_LOGGER *logger, unsigned int iid, const char *subsys, lcb_LOG_SEVERITY severity, const char *srcfile, int srcline, const char *fmt, va_list ap);
-typedef void (*lcb_AUTHENTICATOR_CALLBACK)(lcb_AUTHENTICATOR *auth, const char *host, const char *port, const char *bucket, char **username, size_t *username_len, char **password, size_t *password_len);
-typedef void (*lcb_RESPONSE_CALLBACK) (lcb_INSTANCE instance, lcb_CALLBACK_TYPE type, const lcb_RESPBASE* resp);
-
+typedef void (*lcb_LOGGER_CALLBACK)(lcb_LOGGER *logger, unsigned int iid, const char *subsys, lcb_LOG_SEVERITY severity,
+                                    const char *srcfile, int srcline, const char *fmt, va_list ap);
+typedef void (*lcb_AUTHENTICATOR_CALLBACK)(lcb_AUTHENTICATOR *auth, const char *host, const char *port,
+                                           const char *bucket, char **username, size_t *username_len, char **password,
+                                           size_t *password_len);
+typedef void (*lcb_RESPONSE_CALLBACK)(lcb_INSTANCE instance, lcb_CALLBACK_TYPE type, const lcb_RESPBASE *resp);
 
 LIBCOUCHBASE_API lcb_STATUS lcb_logger_create(lcb_LOGGER **logger);
 LIBCOUCHBASE_API lcb_STATUS lcb_logger_destroy(lcb_LOGGER *logger);
@@ -53,8 +54,10 @@ LIBCOUCHBASE_API lcb_STATUS lcb_logger_level(lcb_LOGGER *logger, lcb_LOG_SEVERIT
 LIBCOUCHBASE_API lcb_STATUS lcb_ioopts_create(lcb_IOOPTS **ioopts);
 LIBCOUCHBASE_API lcb_STATUS lcb_ioopts_destroy(lcb_IOOPTS *ioopts);
 
-LIBCOUCHBASE_API lcb_STATUS lcb_authenticator_create(lcb_AUTHENTICATOR **auth, const char *username, size_t username_len, const char *password, size_t password_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_authenticator_new_dynamic(lcb_AUTHENTICATOR **auth, lcb_AUTHENTICATOR_CALLBACK callback);
+LIBCOUCHBASE_API lcb_STATUS lcb_authenticator_create(lcb_AUTHENTICATOR **auth, const char *username,
+                                                     size_t username_len, const char *password, size_t password_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_authenticator_new_dynamic(lcb_AUTHENTICATOR **auth,
+                                                          lcb_AUTHENTICATOR_CALLBACK callback);
 LIBCOUCHBASE_API lcb_STATUS lcb_authenticator_destroy(lcb_AUTHENTICATOR *auth);
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdcreate_create(lcb_CMDCREATE **options);

@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2014 Couchbase, Inc.
+ *     Copyright 2014-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -28,12 +28,11 @@
 extern "C" {
 #endif
 
-
 /** @brief Flags indicating the storage policy for a buffer */
 typedef enum {
     LCB_KV_COPY = 0, /**< The buffer should be copied */
-    LCB_KV_CONTIG, /**< The buffer is contiguous and should not be copied */
-    LCB_KV_IOV, /**< The buffer is not contiguous and should not be copied */
+    LCB_KV_CONTIG,   /**< The buffer is contiguous and should not be copied */
+    LCB_KV_IOV,      /**< The buffer is not contiguous and should not be copied */
     /**Indicates that the precomputed vBucket ID should be used */
     LCB_KV_VBID,
 
@@ -81,11 +80,12 @@ typedef struct lcb_KEYBUF {
  * @param k the key to copy
  * @param nk the size of the key
  */
-#define LCB_KREQ_SIMPLE(req, k, nk) do { \
-    (req)->type = LCB_KV_COPY; \
-    (req)->contig.bytes = k; \
-    (req)->contig.nbytes = nk; \
-} while (0);
+#define LCB_KREQ_SIMPLE(req, k, nk)                                                                                    \
+    do {                                                                                                               \
+        (req)->type = LCB_KV_COPY;                                                                                     \
+        (req)->contig.bytes = k;                                                                                       \
+        (req)->contig.nbytes = nk;                                                                                     \
+    } while (0);
 
 /**
  * Structure for an IOV buffer to be supplied as a buffer. This is currently

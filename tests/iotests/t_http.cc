@@ -27,10 +27,8 @@ class HttpUnitTest : public MockUnitTest
 
 class HttpCmdContext
 {
-public:
-    HttpCmdContext() :
-        received(false), dumpIfEmpty(false), dumpIfError(false), cbCount(0)
-    { }
+  public:
+    HttpCmdContext() : received(false), dumpIfEmpty(false), dumpIfError(false), cbCount(0) {}
 
     bool received;
     bool dumpIfEmpty;
@@ -42,28 +40,26 @@ public:
     std::string body;
 };
 
-static const char *view_common =
-    "{ "
-    " \"id\" : \"_design/" DESIGN_DOC_NAME "\","
-    " \"language\" : \"javascript\","
-    " \"views\" : { "
-    " \"" VIEW_NAME "\" : {"
-    "\"map\":"
-    " \"function(doc) { "
-    "if (doc.testid == 'lcb') { emit(doc.id) } "
-    " } \" "
-    " } "
-    "}"
-    "}";
+static const char *view_common = "{ "
+                                 " \"id\" : \"_design/" DESIGN_DOC_NAME "\","
+                                 " \"language\" : \"javascript\","
+                                 " \"views\" : { "
+                                 " \"" VIEW_NAME "\" : {"
+                                 "\"map\":"
+                                 " \"function(doc) { "
+                                 "if (doc.testid == 'lcb') { emit(doc.id) } "
+                                 " } \" "
+                                 " } "
+                                 "}"
+                                 "}";
 static const char *content_type = "application/json";
-
 
 static void dumpResponse(const lcb_RESPHTTP *resp)
 {
-    const char * const *headers;
+    const char *const *headers;
     lcb_resphttp_headers(resp, &headers);
     if (headers) {
-        for (const char * const *cur = headers; *cur; cur += 2) {
+        for (const char *const *cur = headers; *cur; cur += 2) {
             std::cout << cur[0] << ": " << cur[1] << std::endl;
         }
     }
@@ -82,34 +78,33 @@ static void dumpResponse(const lcb_RESPHTTP *resp)
     std::cout << "Path: " << std::endl;
     std::cout.write(path, npath);
     std::cout << std::endl;
-
 }
 
 extern "C" {
-    static void httpSimpleCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPHTTP *resp)
-    {
-        HttpCmdContext *htctx;
-        lcb_resphttp_cookie(resp, (void **)&htctx);
-        lcb_STATUS rc = lcb_resphttp_status(resp);
-        htctx->err = rc;
-        lcb_resphttp_http_status(resp, &htctx->status);
-        htctx->received = true;
-        htctx->cbCount++;
+static void httpSimpleCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPHTTP *resp)
+{
+    HttpCmdContext *htctx;
+    lcb_resphttp_cookie(resp, (void **)&htctx);
+    lcb_STATUS rc = lcb_resphttp_status(resp);
+    htctx->err = rc;
+    lcb_resphttp_http_status(resp, &htctx->status);
+    htctx->received = true;
+    htctx->cbCount++;
 
-        const char *body;
-        size_t nbody;
-        lcb_resphttp_body(resp, &body, &nbody);
-        if (body) {
-            htctx->body.assign(body, nbody);
-        }
-
-        if ((nbody == 0 && htctx->dumpIfEmpty) || (rc != LCB_SUCCESS && htctx->dumpIfError)) {
-            std::cout << "Count: " << htctx->cbCount << std::endl
-                      << "Code: " << rc << std::endl
-                      << "nBytes: " << nbody << std::endl;
-            dumpResponse(resp);
-        }
+    const char *body;
+    size_t nbody;
+    lcb_resphttp_body(resp, &body, &nbody);
+    if (body) {
+        htctx->body.assign(body, nbody);
     }
+
+    if ((nbody == 0 && htctx->dumpIfEmpty) || (rc != LCB_SUCCESS && htctx->dumpIfError)) {
+        std::cout << "Count: " << htctx->cbCount << std::endl
+                  << "Code: " << rc << std::endl
+                  << "nBytes: " << nbody << std::endl;
+        dumpResponse(resp);
+    }
+}
 }
 
 /**
@@ -190,8 +185,7 @@ TEST_F(HttpUnitTest, testGet)
     unsigned ii;
     const char *pcur;
 
-    for (ii = 0, pcur = ctx.body.c_str();
-            ii < ctx.body.size() && isspace(*pcur); ii++, pcur++) {
+    for (ii = 0, pcur = ctx.body.c_str(); ii < ctx.body.size() && isspace(*pcur); ii++, pcur++) {
         /* no body */
     }
 
@@ -202,13 +196,11 @@ TEST_F(HttpUnitTest, testGet)
     ASSERT_NE(ctx.body.size(), ii);
     ASSERT_EQ(*pcur, '{');
 
-    for (pcur = ctx.body.c_str() + ctx.body.size() - 1;
-            ii >= 0 && isspace(*pcur); ii--, pcur--) {
+    for (pcur = ctx.body.c_str() + ctx.body.size() - 1; ii >= 0 && isspace(*pcur); ii--, pcur--) {
         /* no body */
     }
     ASSERT_GE(ii, 0U);
     ASSERT_EQ('}', *pcur);
-
 }
 
 /**
@@ -250,14 +242,15 @@ TEST_F(HttpUnitTest, testRefused)
 
 struct HtResult {
     std::string body;
-    std::map<std::string,std::string> headers;
+    std::map< std::string, std::string > headers;
 
     bool gotComplete;
     bool gotChunked;
     lcb_STATUS rc;
     uint16_t http_status;
 
-    void reset() {
+    void reset()
+    {
         body.clear();
         gotComplete = false;
         gotChunked = false;
@@ -285,9 +278,9 @@ static void http_callback(lcb_INSTANCE *, int, const lcb_RESPHTTP *resp)
 
     if (lcb_resphttp_is_final(resp)) {
         me->gotComplete = true;
-        const char * const * cur = NULL;
+        const char *const *cur = NULL;
         lcb_resphttp_headers(resp, &cur);
-        for (; *cur; cur+=2) {
+        for (; *cur; cur += 2) {
             me->headers[cur[0]] = cur[1];
         }
     } else {
@@ -296,8 +289,7 @@ static void http_callback(lcb_INSTANCE *, int, const lcb_RESPHTTP *resp)
 }
 }
 
-static void
-makeAdminReq(lcb_CMDHTTP **cmd, std::string& bkbuf)
+static void makeAdminReq(lcb_CMDHTTP **cmd, std::string &bkbuf)
 {
     bkbuf.assign("/pools/default/buckets/default");
 
@@ -372,7 +364,6 @@ TEST_F(HttpUnitTest, testAdminApi)
     lcb_cmdhttp_destroy(cmd);
 }
 
-
 extern "C" {
 static void doubleCancel_callback(lcb_INSTANCE *instance, int, const lcb_RESPHTTP *resp)
 {
@@ -403,7 +394,6 @@ TEST_F(HttpUnitTest, testDoubleCancel)
     lcb_wait(instance);
     // No crashes or errors here means we've done OK
 }
-
 
 extern "C" {
 static void cancelVerify_callback(lcb_INSTANCE *instance, int, const lcb_RESPHTTP *resp)
@@ -441,7 +431,7 @@ TEST_F(HttpUnitTest, testCancelWorks)
 }
 
 extern "C" {
-static void noInvoke_callback(lcb_INSTANCE *, int, const lcb_RESPBASE*)
+static void noInvoke_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *)
 {
     EXPECT_FALSE(true) << "This callback should not be invoked!";
 }
@@ -458,7 +448,7 @@ TEST_F(HttpUnitTest, testDestroyWithActiveRequest)
     std::string ss;
     makeAdminReq(&cmd, ss);
 
-    lcb_install_callback3(instance,LCB_CALLBACK_HTTP, noInvoke_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_HTTP, noInvoke_callback);
     lcb_sched_enter(instance);
     ASSERT_EQ(LCB_SUCCESS, lcb_http(instance, NULL, cmd));
     lcb_cmdhttp_destroy(cmd);

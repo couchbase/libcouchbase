@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2017 Couchbase, Inc.
+ *     Copyright 2017-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -28,32 +28,34 @@
 #define CBC_CONFIG_FILENAME ".cbcrc"
 #define CBC_WIN32_APPDIR "Couchbase CBC Utility"
 
-namespace cbc {
+namespace cbc
+{
 
-#define X_OPTIONS(X) \
-    X(String, host, "host", 'h') \
-    X(String, bucket, "bucket", 'b') \
-    X(String, passwd, "password", 'P') \
-    X(String, user, "username", 'u') \
-    X(String, transport, "bootstrap-protocol", 'C') \
-    X(String, configcache, "config-cache", 'Z') \
-    X(String, saslmech, "force-sasl-mech", 'S') \
-    X(String, connstr, "spec", 'U') \
-    X(String, ssl, "ssl", '\0') \
-    X(String, truststorepath, "truststorepath", '\0') \
-    X(String, certpath, "certpath", '\0') \
-    X(String, keypath, "keypath", '\0') \
-    X(UInt, timeout, "timeout", '\0') \
-    X(Bool, timings, "timings", 'T') \
-    X(Bool, verbose, "verbose", 'v') \
-    X(Bool, dump, "dump", '\0') \
-    X(Bool, compress, "compress", 'y') \
+#define X_OPTIONS(X)                                                                                                   \
+    X(String, host, "host", 'h')                                                                                       \
+    X(String, bucket, "bucket", 'b')                                                                                   \
+    X(String, passwd, "password", 'P')                                                                                 \
+    X(String, user, "username", 'u')                                                                                   \
+    X(String, transport, "bootstrap-protocol", 'C')                                                                    \
+    X(String, configcache, "config-cache", 'Z')                                                                        \
+    X(String, saslmech, "force-sasl-mech", 'S')                                                                        \
+    X(String, connstr, "spec", 'U')                                                                                    \
+    X(String, ssl, "ssl", '\0')                                                                                        \
+    X(String, truststorepath, "truststorepath", '\0')                                                                  \
+    X(String, certpath, "certpath", '\0')                                                                              \
+    X(String, keypath, "keypath", '\0')                                                                                \
+    X(UInt, timeout, "timeout", '\0')                                                                                  \
+    X(Bool, timings, "timings", 'T')                                                                                   \
+    X(Bool, verbose, "verbose", 'v')                                                                                   \
+    X(Bool, dump, "dump", '\0')                                                                                        \
+    X(Bool, compress, "compress", 'y')                                                                                 \
     X(List, cparams, "cparam", 'D')
 
-
-class LcbError : public std::runtime_error {
-private:
-    static std::string format_err(lcb_STATUS err, std::string msg) {
+class LcbError : public std::runtime_error
+{
+  private:
+    static std::string format_err(lcb_STATUS err, std::string msg)
+    {
         std::stringstream ss;
         if (!msg.empty()) {
             ss << msg << ". ";
@@ -62,35 +64,47 @@ private:
         return ss.str();
     }
 
-public:
+  public:
     lcb_STATUS rc;
     LcbError(lcb_STATUS code, std::string msg = "") : std::runtime_error(format_err(code, msg)) {}
 };
 
-class BadArg : public std::runtime_error {
-public:
+class BadArg : public std::runtime_error
+{
+  public:
     BadArg(std::string w) : std::runtime_error(w) {}
 };
 
-class ConnParams {
-public:
+class ConnParams
+{
+  public:
     ConnParams();
-    void fillCropts(lcb_create_st&);
-    void addToParser(cliopts::Parser& parser);
+    void fillCropts(lcb_create_st &);
+    void addToParser(cliopts::Parser &parser);
     lcb_STATUS doCtls(lcb_INSTANCE *instance);
-    bool useTimings() { return o_timings.result(); }
-    int numTimings() { return o_timings.numSpecified(); }
-    cliopts::BoolOption& getTimings() { return o_timings; }
+    bool useTimings()
+    {
+        return o_timings.result();
+    }
+    int numTimings()
+    {
+        return o_timings.numSpecified();
+    }
+    cliopts::BoolOption &getTimings()
+    {
+        return o_timings;
+    }
     void setAdminMode();
-    bool shouldDump() { return o_dump.result(); }
-    void writeConfig(const std::string& dest = getConfigfileName());
+    bool shouldDump()
+    {
+        return o_dump.result();
+    }
+    void writeConfig(const std::string &dest = getConfigfileName());
     static std::string getUserHome();
     static std::string getConfigfileName();
 
-private:
-
-#define X(tp, varname, longdesc, shortdesc) \
-    cliopts::tp##Option o_##varname;
+  private:
+#define X(tp, varname, longdesc, shortdesc) cliopts::tp##Option o_##varname;
 
     X_OPTIONS(X)
 #undef X
@@ -100,6 +114,6 @@ private:
     bool loadFileDefaults();
 };
 
-}
+} // namespace cbc
 
 #endif

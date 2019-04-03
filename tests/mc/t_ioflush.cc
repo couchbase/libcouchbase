@@ -20,8 +20,8 @@
 #include <vector>
 #include <map>
 
-using std::vector;
 using std::map;
+using std::vector;
 
 /**
  * Note that this file doesn't actually do any I/O, but simulates I/O patterns
@@ -32,8 +32,9 @@ using std::map;
 
 struct Context {
     int ncalled;
-    map<void *, int> children;
-    Context() {
+    map< void *, int > children;
+    Context()
+    {
         ncalled = 0;
     }
 };
@@ -41,14 +42,15 @@ struct Context {
 struct IOCookie {
     Context *parent;
     mc_PACKET *pkt;
-    IOCookie(Context *p) {
+    IOCookie(Context *p)
+    {
         parent = p;
         pkt = NULL;
     }
 };
 
 extern "C" {
-static void failcb(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS, void*)
+static void failcb(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS, void *)
 {
     IOCookie *ioc = (IOCookie *)MCREQ_PKT_COOKIE(pkt);
     ioc->parent->children[ioc]++;
@@ -57,7 +59,9 @@ static void failcb(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS, void*)
 }
 }
 
-class McIOFlush : public ::testing::Test {};
+class McIOFlush : public ::testing::Test
+{
+};
 
 struct FlushInfo {
     mc_PIPELINE *pipeline;
@@ -69,7 +73,7 @@ struct FlushInfo {
 // at the end and the beginning.
 TEST_F(McIOFlush, testIOCPFlush)
 {
-    vector<FlushInfo> flushes;
+    vector< FlushInfo > flushes;
     CQWrap cq;
     const int count = 20;
     Context ctx;
@@ -106,13 +110,13 @@ TEST_F(McIOFlush, testIOCPFlush)
 
     ASSERT_EQ(count, flushes.size());
     for (unsigned ii = 0; ii < count; ii++) {
-        FlushInfo& fi = flushes[ii];
+        FlushInfo &fi = flushes[ii];
         ASSERT_NE(0, fi.pkt->flags & MCREQ_F_INVOKED);
         mcreq_flush_done(flushes[ii].pipeline, flushes[ii].size, flushes[ii].size);
     }
 
     ASSERT_EQ(count, ctx.ncalled);
-    map<void*,int>::iterator iter = ctx.children.begin();
+    map< void *, int >::iterator iter = ctx.children.begin();
     for (; iter != ctx.children.end(); ++iter) {
         ASSERT_EQ(1, iter->second);
     }

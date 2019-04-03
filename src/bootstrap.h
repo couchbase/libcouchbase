@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2014 Couchbase, Inc.
+ *     Copyright 2014-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -30,7 +30,8 @@
 #include "bucketconfig/clconfig.h"
 #include <lcbio/timer-cxx.h>
 
-namespace lcb {
+namespace lcb
+{
 /**
  * Structure containing the bootstrap state for the instance.
  *
@@ -40,19 +41,23 @@ namespace lcb {
  * lcb_bootstrap_common()) as well as unsolicited updates such as
  * HTTP streaming configurations or Not-My-Vbucket "Carrier" updates.
  */
-class Bootstrap : lcb::clconfig::Listener {
-public:
+class Bootstrap : lcb::clconfig::Listener
+{
+  public:
     Bootstrap(lcb_INSTANCE *);
     ~Bootstrap();
     lcb_STATUS bootstrap(unsigned options);
 
-    hrtime_t get_last_refresh() const {
+    hrtime_t get_last_refresh() const
+    {
         return last_refresh;
     }
-    void reset_last_refresh() {
+    void reset_last_refresh()
+    {
         last_refresh = 0;
     }
-    size_t get_errcounter() const {
+    size_t get_errcounter() const
+    {
         return errcounter;
     }
 
@@ -61,11 +66,11 @@ public:
      */
     void check_bgpoll();
 
-private:
+  private:
     // Override
-    void clconfig_lsn(lcb::clconfig::EventType e, lcb::clconfig::ConfigInfo* i);
+    void clconfig_lsn(lcb::clconfig::EventType e, lcb::clconfig::ConfigInfo *i);
 
-    inline void config_callback(lcb::clconfig::EventType, lcb::clconfig::ConfigInfo*);
+    inline void config_callback(lcb::clconfig::EventType, lcb::clconfig::ConfigInfo *);
     inline void initial_error(lcb_STATUS, const char *);
     void timer_dispatch();
     void bgpoll();
@@ -76,10 +81,10 @@ private:
      * updates as an asynchronous event (to allow safe updates and avoid
      * reentrancy issues)
      */
-    lcb::io::Timer<Bootstrap, &Bootstrap::timer_dispatch> tm;
+    lcb::io::Timer< Bootstrap, &Bootstrap::timer_dispatch > tm;
 
     /**Timer used for periodic polling of config */
-    lcb::io::Timer<Bootstrap, &Bootstrap::bgpoll> tmpoll;
+    lcb::io::Timer< Bootstrap, &Bootstrap::bgpoll > tmpoll;
 
     /**
      * Timestamp indicating the most recent configuration activity. This
@@ -139,8 +144,7 @@ enum BootstrapOptions {
     BS_REFRESH_INCRERR = 0x08
 };
 
-void
-lcb_bootstrap_destroy(lcb_INSTANCE *instance);
+void lcb_bootstrap_destroy(lcb_INSTANCE *instance);
 
 /**@}*/
 

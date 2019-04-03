@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2018 Couchbase, Inc.
+ *     Copyright 2018-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -21,27 +21,25 @@
 #include <libcouchbase/utils.h>
 
 #ifdef __cplusplus
-extern "C"{
+extern "C" {
 #endif
 
+#define RESET_CMD_BASE(__me)                                                                                           \
+    (__me)->cmdflags = 0;                                                                                              \
+    (__me)->exptime = 0;                                                                                               \
+    (__me)->cas = 0;                                                                                                   \
+    (__me)->cid = 0;                                                                                                   \
+    (__me)->key.type = LCB_KV_COPY;                                                                                    \
+    (__me)->key.contig.bytes = NULL;                                                                                   \
+    (__me)->key.contig.nbytes = 0;                                                                                     \
+    (__me)->timeout = 0;                                                                                               \
+    (__me)->pspan = NULL
 
-#define RESET_CMD_BASE(__me) \
-        (__me)->cmdflags = 0; \
-        (__me)->exptime = 0; \
-        (__me)->cas = 0; \
-        (__me)->cid = 0; \
-        (__me)->key.type = LCB_KV_COPY; \
-        (__me)->key.contig.bytes = NULL; \
-        (__me)->key.contig.nbytes = 0; \
-        (__me)->timeout = 0; \
-        (__me)->pspan = NULL
-
-
-#define LCB_CMD_DURABILITY \
-    /** \
-     * @uncommitted
-     * The level of durability required. Supported on Couchbase Server 6.5+
-     */ \
+#define LCB_CMD_DURABILITY                                                                                             \
+    /**                                                                                                                \
+     * @uncommitted                                                                                                    \
+     * The level of durability required. Supported on Couchbase Server 6.5+                                            \
+     */                                                                                                                \
     lcb_DURABILITY_LEVEL dur_level
 
 /**@brief Common ABI header for all commands. _Any_ command may be safely
@@ -64,10 +62,9 @@ struct lcb_CMDBASE_ {
  * to the server. By default only the bucket's credentials (i.e. bucket SASL
  * password) are passed.
  */
-#define LCB_CMD_F_MULTIAUTH (1<<1)
+#define LCB_CMD_F_MULTIAUTH (1 << 1)
 
-#define LCB_CMD_F_CLONE (1<<2)
-
+#define LCB_CMD_F_CLONE (1 << 2)
 
 /**@}*/
 
@@ -93,11 +90,12 @@ struct lcb_RESPBASE_ {
  * The buffer needs to remain valid only until the command is passed to the
  * lcb_store3() function.
  */
-#define LCB_CMD_SET_VALUE(scmd, valbuf, vallen) do { \
-    (scmd)->value.vtype = LCB_KV_COPY; \
-    (scmd)->value.u_buf.contig.bytes = valbuf; \
-    (scmd)->value.u_buf.contig.nbytes = vallen; \
-} while (0);
+#define LCB_CMD_SET_VALUE(scmd, valbuf, vallen)                                                                        \
+    do {                                                                                                               \
+        (scmd)->value.vtype = LCB_KV_COPY;                                                                             \
+        (scmd)->value.u_buf.contig.bytes = valbuf;                                                                     \
+        (scmd)->value.u_buf.contig.nbytes = vallen;                                                                    \
+    } while (0);
 
 /**
  * @committed
@@ -115,20 +113,20 @@ struct lcb_RESPBASE_ {
  * scheduling function is called, the buffer contents are copied into the
  * library's internal buffers.
  */
-#define LCB_CMD_SET_VALUEIOV(scmd, iovs, niovs) do { \
-    (scmd)->value.vtype = LCB_KV_IOVCOPY; \
-    (scmd)->value.u_buf.multi.iov = iovs; \
-    (scmd)->value.u_buf.multi.niov = niovs; \
-} while (0);
-
+#define LCB_CMD_SET_VALUEIOV(scmd, iovs, niovs)                                                                        \
+    do {                                                                                                               \
+        (scmd)->value.vtype = LCB_KV_IOVCOPY;                                                                          \
+        (scmd)->value.u_buf.multi.iov = iovs;                                                                          \
+        (scmd)->value.u_buf.multi.niov = niovs;                                                                        \
+    } while (0);
 
 /**
  * If this bit is set in lcb_CMDGET::cmdflags then the expiry time is cleared if
  * lcb_CMDGET::exptime is 0. This allows get-and-touch with an expiry of 0.
  */
-#define LCB_CMDGET_F_CLEAREXP (1<<16)
+#define LCB_CMDGET_F_CLEAREXP (1 << 16)
 
-struct lcb_CMDGET_{
+struct lcb_CMDGET_ {
     LCB_CMD_BASE;
     /**If set to true, the `exptime` field inside `options` will take to mean
      * the time the lock should be held. While the lock is held, other operations
@@ -145,19 +143,19 @@ struct lcb_CMDGET_{
 struct lcb_RESPGET_ {
     LCB_RESP_BASE
     const void *value; /**< Value buffer for the item */
-    lcb_SIZE nvalue; /**< Length of value */
-    void* bufh;
+    lcb_SIZE nvalue;   /**< Length of value */
+    void *bufh;
     lcb_datatype_t datatype; /**< @internal */
-    lcb_U32 itmflags; /**< User-defined flags for the item */
+    lcb_U32 itmflags;        /**< User-defined flags for the item */
 };
 
 struct lcb_RESPGETREPLICA_ {
     LCB_RESP_BASE
     const void *value; /**< Value buffer for the item */
-    lcb_SIZE nvalue; /**< Length of value */
-    void* bufh;
+    lcb_SIZE nvalue;   /**< Length of value */
+    void *bufh;
     lcb_datatype_t datatype; /**< @internal */
-    lcb_U32 itmflags; /**< User-defined flags for the item */
+    lcb_U32 itmflags;        /**< User-defined flags for the item */
 };
 
 /**@brief Select get-replica mode
@@ -219,11 +217,7 @@ struct lcb_CMDGETREPLICA_ {
     int index;
 };
 
-typedef enum {
-    LCB_DURABILITY_NONE = 0,
-    LCB_DURABILITY_POLL = 1,
-    LCB_DURABILITY_SYNC = 2
-} lcb_DURABILITY_MODE;
+typedef enum { LCB_DURABILITY_NONE = 0, LCB_DURABILITY_POLL = 1, LCB_DURABILITY_SYNC = 2 } lcb_DURABILITY_MODE;
 
 /**@brief
  *
@@ -303,7 +297,6 @@ struct lcb_RESPSTORE_ {
     int store_ok;
 };
 
-
 /**@brief
  * Command for removing an item from the server
  * @note The lcb_CMDREMOVE::exptime field here does nothing.
@@ -332,7 +325,6 @@ struct lcb_RESPREMOVE_ {
     LCB_RESP_BASE
 };
 
-
 /**
  * @brief Command structure for a touch request
  * @note The lcb_CMDTOUCH::cas field is ignored. The item's modification time
@@ -343,15 +335,13 @@ struct lcb_RESPREMOVE_ {
 struct lcb_CMDTOUCH_ {
     LCB_CMD_BASE;
     LCB_CMD_DURABILITY;
-} ;
-
+};
 
 /**@brief Response structure for a touch request
  * @note the lcb_RESPTOUCH::cas field contains the current CAS of the item*/
 struct lcb_RESPTOUCH_ {
     LCB_RESP_BASE
 };
-
 
 /**@brief Command for lcb_unlock3()
  * @attention lcb_CMDBASE::cas must be specified, or the operation will fail on
@@ -391,7 +381,7 @@ struct lcb_CMDCOUNTER_ {
     int create;
 
     LCB_CMD_DURABILITY;
-} ;
+};
 
 /**
  * @brief Response structure for counter operations
@@ -401,7 +391,7 @@ struct lcb_RESPCOUNTER_ {
     LCB_RESP_BASE
     /** Contains the _current_ value after the operation was performed */
     lcb_U64 value;
-} ;
+};
 
 /**
  * Command flag for HTTP to indicate that the callback is to be invoked
@@ -484,7 +474,7 @@ struct lcb_RESPHTTP_ {
 
     /**List of key-value headers. This field itself may be `NULL`. The list
      * is terminated by a `NULL` pointer to indicate no more headers. */
-    const char * const * headers;
+    const char *const *headers;
 
     /**If @ref LCB_CMDHTTP_F_STREAM is true, contains the current chunk
      * of response content. Otherwise, contains the entire response body.*/
@@ -493,7 +483,7 @@ struct lcb_RESPHTTP_ {
     lcb_SIZE nbody;
     /**@internal*/
     lcb_HTTP_HANDLE *_htreq;
-} ;
+};
 
 /**
  * Response structure for full-text searches.
@@ -530,7 +520,6 @@ struct lcb_CMDFTS_ {
      */
     lcb_FTS_HANDLE **handle;
 };
-
 
 /**
  * Prepare and cache the query if required. This may be used on frequently
@@ -662,7 +651,7 @@ struct lcb_RESPVIEW_ {
     LCB_RESP_BASE
 
     const char *docid; /**< Document ID (i.e. memcached key) associated with this row */
-    size_t ndocid; /**< Length of document ID */
+    size_t ndocid;     /**< Length of document ID */
 
     /**Emitted value. If `rflags & LCB_RESP_F_FINAL` is true then this will
      * contain the _metadata_ of the view response itself. This includes the
@@ -867,11 +856,12 @@ typedef struct {
  * @param p the path buffer
  * @param n the length of the path buffer
  */
-#define LCB_SDSPEC_SET_PATH(s, p, n) do { \
-    (s)->path.contig.bytes = p; \
-    (s)->path.contig.nbytes = n; \
-    (s)->path.type = LCB_KV_COPY; \
-} while (0);
+#define LCB_SDSPEC_SET_PATH(s, p, n)                                                                                   \
+    do {                                                                                                               \
+        (s)->path.contig.bytes = p;                                                                                    \
+        (s)->path.contig.nbytes = n;                                                                                   \
+        (s)->path.type = LCB_KV_COPY;                                                                                  \
+    } while (0);
 
 /**
  * Set the value for the @ref lcb_SDSPEC structure
@@ -879,14 +869,14 @@ typedef struct {
  * @param v the value buffer
  * @param n the length of the value buffer
  */
-#define LCB_SDSPEC_SET_VALUE(s, v, n) \
-    LCB_CMD_SET_VALUE(s, v, n)
+#define LCB_SDSPEC_SET_VALUE(s, v, n) LCB_CMD_SET_VALUE(s, v, n)
 
-#define LCB_SDSPEC_INIT(spec, cmd_, path_, npath_, val_, nval_) do { \
-    (spec)->sdcmd = cmd_; \
-    LCB_SDSPEC_SET_PATH(spec, path_, npath_); \
-    LCB_CMD_SET_VALUE(spec, val_, nval_); \
-} while (0);
+#define LCB_SDSPEC_INIT(spec, cmd_, path_, npath_, val_, nval_)                                                        \
+    do {                                                                                                               \
+        (spec)->sdcmd = cmd_;                                                                                          \
+        LCB_SDSPEC_SET_PATH(spec, path_, npath_);                                                                      \
+        LCB_CMD_SET_VALUE(spec, val_, nval_);                                                                          \
+    } while (0);
 
 #define LCB_SDMULTI_MODE_INVALID 0
 #define LCB_SDMULTI_MODE_LOOKUP 1
@@ -895,18 +885,18 @@ typedef struct {
  * This command flag should be used if the document is to be created
  * if it does not exist.
  */
-#define LCB_CMDSUBDOC_F_UPSERT_DOC (1<<16)
+#define LCB_CMDSUBDOC_F_UPSERT_DOC (1 << 16)
 
 /**
  * This command flag should be used if the document must be created anew.
  * In this case, it will fail if it already exists
  */
-#define LCB_CMDSUBDOC_F_INSERT_DOC (1<<17)
+#define LCB_CMDSUBDOC_F_INSERT_DOC (1 << 17)
 
 /**
  * Access a potentially deleted document. For internal Couchbase use
  */
-#define LCB_CMDSUBDOC_F_ACCESS_DELETED (1<<18)
+#define LCB_CMDSUBDOC_F_ACCESS_DELETED (1 << 18)
 
 struct lcb_SUBDOCOPS_ {
     uint32_t options;
@@ -1016,12 +1006,9 @@ struct lcb_RESPSUBDOC_ {
 /** Get the vBucket number itself */
 #define LCB_MUTATION_TOKEN_VB(p) ((p)->vbid_)
 /** Whether this mutation token has valid contents */
-#define LCB_MUTATION_TOKEN_ISVALID(p) \
-    (p && !((p)->uuid_ == 0 && (p)->seqno_ == 0 && (p)->vbid_ == 0))
+#define LCB_MUTATION_TOKEN_ISVALID(p) (p && !((p)->uuid_ == 0 && (p)->seqno_ == 0 && (p)->vbid_ == 0))
 
 /**@} (Group: Mutation Tokens) */
-
-
 
 /**
  * Ping data (Key/Value) service. Used in lcb_CMDPING#services
@@ -1073,7 +1060,6 @@ struct lcb_RESPSUBDOC_ {
  */
 #define LCB_PINGOPT_F_JSONPRETTY 0x08
 
-
 /**
  * Structure for PING requests.
  *
@@ -1082,8 +1068,8 @@ struct lcb_RESPSUBDOC_ {
 struct lcb_CMDPING_ {
     LCB_CMD_BASE;
     uint32_t services; /**< bitmap for services to ping */
-    uint32_t options; /**< extra options, e.g. for result representation */
-    const char *id; /**< optional, zero-terminated string to identify the report */
+    uint32_t options;  /**< extra options, e.g. for result representation */
+    const char *id;    /**< optional, zero-terminated string to identify the report */
     size_t nid;
 };
 
@@ -1096,12 +1082,12 @@ struct lcb_CMDPING_ {
 typedef struct {
     lcb_PING_SERVICE type; /**< type of the service */
     /* TODO: rename to "remote" */
-    const char *server; /**< server host:port */
-    lcb_U64 latency; /**< latency in nanoseconds */
-    lcb_STATUS rc; /**< raw return code of the operation */
-    const char *local; /**< server host:port */
-    const char *id; /**< service identifier (unique in scope of lcb_INSTANCE *connection instance) */
-    const char *scope; /**< optional scope name (typically equals to the bucket name) */
+    const char *server;     /**< server host:port */
+    lcb_U64 latency;        /**< latency in nanoseconds */
+    lcb_STATUS rc;          /**< raw return code of the operation */
+    const char *local;      /**< server host:port */
+    const char *id;         /**< service identifier (unique in scope of lcb_INSTANCE *connection instance) */
+    const char *scope;      /**< optional scope name (typically equals to the bucket name) */
     lcb_PING_STATUS status; /**< status of the operation */
 } lcb_PINGSVC;
 
@@ -1113,15 +1099,15 @@ typedef struct {
 struct lcb_RESPPING_ {
     LCB_RESP_BASE
     LCB_RESP_SERVER_FIELDS
-    lcb_SIZE nservices; /**< number of the nodes, replied to ping */
+    lcb_SIZE nservices;    /**< number of the nodes, replied to ping */
     lcb_PINGSVC *services; /**< the nodes, replied to ping, if any */
-    lcb_SIZE njson; /**< length of JSON string (when #LCB_PINGOPT_F_JSON was specified) */
-    const char *json; /**< pointer to JSON string */
+    lcb_SIZE njson;        /**< length of JSON string (when #LCB_PINGOPT_F_JSON was specified) */
+    const char *json;      /**< pointer to JSON string */
 };
 
 struct lcb_CMDDIAG_ {
     LCB_CMD_BASE;
-    int options;  /**< extra options, e.g. for result representation */
+    int options;    /**< extra options, e.g. for result representation */
     const char *id; /**< optional, zero-terminated string to identify the report */
     size_t nid;
 };
@@ -1131,7 +1117,6 @@ struct lcb_RESPDIAG_ {
     lcb_SIZE njson;   /**< length of JSON string (when #LCB_PINGOPT_F_JSON was specified) */
     const char *json; /**< pointer to JSON string */
 };
-
 
 /**
  * Command to fetch collections manifest

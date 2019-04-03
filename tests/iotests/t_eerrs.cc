@@ -19,26 +19,31 @@
 #include "iotests.h"
 #include "internal.h"
 
-class EerrsUnitTest : public MockUnitTest {
-protected:
-    virtual void createEerrConnection(HandleWrap& hw, lcb_INSTANCE **instance) {
+class EerrsUnitTest : public MockUnitTest
+{
+  protected:
+    virtual void createEerrConnection(HandleWrap &hw, lcb_INSTANCE **instance)
+    {
         MockEnvironment::getInstance()->createConnection(hw, instance);
         ASSERT_EQ(LCB_SUCCESS, lcb_connect(*instance));
         lcb_wait(*instance);
         ASSERT_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(*instance));
     }
 
-    void enableEnhancedErrors() {
+    void enableEnhancedErrors()
+    {
         MockEnvironment::getInstance()->setEnhancedErrors(true);
     }
 
-    void disableEnhancedErrors() {
+    void disableEnhancedErrors()
+    {
         MockEnvironment::getInstance()->setEnhancedErrors(false);
     }
 
     void checkRetryVerify(uint16_t errcode);
 
-    void TearDown() {
+    void TearDown()
+    {
         if (!MockEnvironment::getInstance()->isRealCluster()) {
             MockOpFailClearCommand clearCmd(MockEnvironment::getInstance()->getNumNodes());
             doMockTxn(clearCmd);
@@ -53,7 +58,8 @@ struct EerrsCookie {
     char *err_ref;
     char *err_ctx;
 
-    void reset() {
+    void reset()
+    {
         rc = LCB_SUCCESS;
         called = false;
         free(err_ref);
@@ -61,18 +67,19 @@ struct EerrsCookie {
         free(err_ctx);
         err_ctx = NULL;
     }
-    EerrsCookie() : rc(LCB_SUCCESS), called(false), err_ref(NULL), err_ctx(NULL) {
-    }
+    EerrsCookie() : rc(LCB_SUCCESS), called(false), err_ref(NULL), err_ctx(NULL) {}
 
-    ~EerrsCookie() {
+    ~EerrsCookie()
+    {
         free(err_ref);
         free(err_ctx);
     }
 };
 
 extern "C" {
-static void opcb(lcb_INSTANCE *, int cbtype, const lcb_RESPBASE* rb) {
-    EerrsCookie *cookie = reinterpret_cast<EerrsCookie*>(rb->cookie);
+static void opcb(lcb_INSTANCE *, int cbtype, const lcb_RESPBASE *rb)
+{
+    EerrsCookie *cookie = reinterpret_cast< EerrsCookie * >(rb->cookie);
     cookie->called = true;
     cookie->rc = rb->rc;
 
@@ -88,7 +95,8 @@ static void opcb(lcb_INSTANCE *, int cbtype, const lcb_RESPBASE* rb) {
 }
 }
 
-TEST_F(EerrsUnitTest, testInCallbackWhenEnabled) {
+TEST_F(EerrsUnitTest, testInCallbackWhenEnabled)
+{
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -115,8 +123,8 @@ TEST_F(EerrsUnitTest, testInCallbackWhenEnabled) {
     ASSERT_STREQ("Failed to lookup item", cookie.err_ctx);
 }
 
-
-TEST_F(EerrsUnitTest, testInCallbackWhenDisabled) {
+TEST_F(EerrsUnitTest, testInCallbackWhenDisabled)
+{
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
     lcb_INSTANCE *instance;

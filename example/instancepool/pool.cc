@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2013 Couchbase, Inc.
+ *     Copyright 2013-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ using namespace lcb;
 using std::queue;
 using std::vector;
 
-Pool::Pool(const lcb_create_st& options, size_t nitems) : initial_size(0)
+Pool::Pool(const lcb_create_st &options, size_t nitems) : initial_size(0)
 {
     pthread_mutex_init(&mutex, NULL);
     pthread_cond_init(&cond, NULL);
@@ -38,11 +38,10 @@ Pool::Pool(const lcb_create_st& options, size_t nitems) : initial_size(0)
     }
 }
 
-lcb_STATUS
-Pool::connect()
+lcb_STATUS Pool::connect()
 {
-    vector<lcb_INSTANCE *>::const_iterator ii = all_instances.begin();
-    for (;  ii != all_instances.end(); ii++) {
+    vector< lcb_INSTANCE * >::const_iterator ii = all_instances.begin();
+    for (; ii != all_instances.end(); ii++) {
         lcb_STATUS err;
         initialize(*ii);
         if ((err = lcb_connect(*ii)) != LCB_SUCCESS) {
@@ -62,7 +61,7 @@ Pool::~Pool()
     while (instances.size() < initial_size) {
         pthread_cond_wait(&cond, &mutex);
     }
-    vector<lcb_INSTANCE *>::const_iterator ii = all_instances.begin();
+    vector< lcb_INSTANCE * >::const_iterator ii = all_instances.begin();
     for (; ii != all_instances.end(); ii++) {
         lcb_destroy(*ii);
     }
@@ -71,8 +70,7 @@ Pool::~Pool()
     pthread_cond_destroy(&cond);
 }
 
-lcb_INSTANCE *
-Pool::pop()
+lcb_INSTANCE *Pool::pop()
 {
     lcb_INSTANCE *ret = NULL;
 
@@ -92,8 +90,7 @@ Pool::pop()
     return ret;
 }
 
-void
-Pool::push(lcb_INSTANCE *instance)
+void Pool::push(lcb_INSTANCE *instance)
 {
     pthread_mutex_lock(&mutex);
     instances.push(instance);

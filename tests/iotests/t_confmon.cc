@@ -12,7 +12,8 @@ using namespace lcb::clconfig;
 
 class ConfmonTest : public ::testing::Test
 {
-    void SetUp() {
+    void SetUp()
+    {
         MockEnvironment::Reset();
     }
 };
@@ -21,7 +22,8 @@ struct evstop_listener : Listener {
     lcbio_pTABLE io;
     int called;
 
-    void clconfig_lsn(EventType event, ConfigInfo*) {
+    void clconfig_lsn(EventType event, ConfigInfo *)
+    {
         if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
             return;
         }
@@ -29,15 +31,11 @@ struct evstop_listener : Listener {
         IOT_STOP(io);
     }
 
-    evstop_listener() : Listener(), io(NULL), called(0) {
-    }
+    evstop_listener() : Listener(), io(NULL), called(0) {}
 };
 
 extern "C" {
-static void listen_callback1(Listener *lsn, EventType event,
-                             ConfigInfo *info)
-{
-}
+static void listen_callback1(Listener *lsn, EventType event, ConfigInfo *info) {}
 }
 
 TEST_F(ConfmonTest, testBasic)
@@ -46,7 +44,6 @@ TEST_F(ConfmonTest, testBasic)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     MockEnvironment::getInstance()->createConnection(hw, &instance);
-
 
     Confmon *mon = new Confmon(instance->settings, instance->iotable, instance);
     Provider *http = mon->get_provider(CLCONFIG_HTTP);
@@ -74,33 +71,34 @@ TEST_F(ConfmonTest, testBasic)
     delete mon;
 }
 
-
 struct listener2 : Listener {
     int call_count;
     lcbio_pTABLE io;
     Method last_source;
-    std::set<EventType> expected_events;
+    std::set< EventType > expected_events;
 
-    void reset() {
+    void reset()
+    {
         call_count = 0;
         last_source = CLCONFIG_PHONY;
         expected_events.clear();
     }
 
-    listener2() : Listener() {
+    listener2() : Listener()
+    {
         io = NULL;
         reset();
     }
 
-    void clconfig_lsn(EventType event, ConfigInfo *info) {
+    void clconfig_lsn(EventType event, ConfigInfo *info)
+    {
         if (event == CLCONFIG_EVENT_MONITOR_STOPPED) {
             IOT_START(io);
             return;
         }
 
         if (!expected_events.empty()) {
-            if (expected_events.end() ==
-                expected_events.find(event)) {
+            if (expected_events.end() == expected_events.find(event)) {
                 return;
             }
         }
@@ -108,7 +106,6 @@ struct listener2 : Listener {
         call_count++;
         last_source = info->get_origin();
         IOT_STOP(io);
-
     }
 };
 
@@ -188,7 +185,7 @@ TEST_F(ConfmonTest, testBootstrapMethods)
     ASSERT_EQ(LCB_SUCCESS, err);
 
     // Try the various bootstrap times
-    lcb::Bootstrap* bs = instance->bs_state;
+    lcb::Bootstrap *bs = instance->bs_state;
     hrtime_t last = bs->get_last_refresh(), cur = 0;
 
     // Reset it for the time being
@@ -208,7 +205,7 @@ TEST_F(ConfmonTest, testBootstrapMethods)
     instance->confmon->stop();
     ASSERT_FALSE(instance->confmon->is_refreshing());
 
-    instance->bootstrap(lcb::BS_REFRESH_THROTTLE|lcb::BS_REFRESH_INCRERR);
+    instance->bootstrap(lcb::BS_REFRESH_THROTTLE | lcb::BS_REFRESH_INCRERR);
     ASSERT_EQ(last, bs->get_last_refresh());
     ASSERT_EQ(1, bs->get_errcounter());
 

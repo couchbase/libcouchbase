@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2019 Couchbase, Inc.
+ *     Copyright 2019-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -27,8 +27,8 @@ typedef lcb_STATUS (*lcb_COLLCACHE_ARG_CLONE)(const void *src, void **dst);
 typedef lcb_STATUS (*lcb_COLLCACHE_ARG_DTOR)(void *arg);
 
 lcb_STATUS collcache_exec(const char *scope, size_t nscope, const char *collection, size_t ncollection,
-        lcb_INSTANCE *instance, void *cookie, lcb_COLLCACHE_CALLBACK cb,
-        lcb_COLLCACHE_ARG_CLONE clone, lcb_COLLCACHE_ARG_DTOR dtor, const void *arg);
+                          lcb_INSTANCE *instance, void *cookie, lcb_COLLCACHE_CALLBACK cb,
+                          lcb_COLLCACHE_ARG_CLONE clone, lcb_COLLCACHE_ARG_DTOR dtor, const void *arg);
 
 #ifdef __cplusplus
 }
@@ -39,14 +39,16 @@ lcb_STATUS collcache_exec(const char *scope, size_t nscope, const char *collecti
 #include <string>
 
 lcb_STATUS collcache_exec_str(std::string collection, lcb_INSTANCE *instance, void *cookie, lcb_COLLCACHE_CALLBACK cb,
-        lcb_COLLCACHE_ARG_CLONE clone, lcb_COLLCACHE_ARG_DTOR dtor, const void *arg);
+                              lcb_COLLCACHE_ARG_CLONE clone, lcb_COLLCACHE_ARG_DTOR dtor, const void *arg);
 
-namespace lcb {
-class CollectionCache {
-    std::map<std::string, uint32_t> cache_n2i;
-    std::map<uint32_t, std::string> cache_i2n;
+namespace lcb
+{
+class CollectionCache
+{
+    std::map< std::string, uint32_t > cache_n2i;
+    std::map< uint32_t, std::string > cache_i2n;
 
-public:
+  public:
     CollectionCache();
 
     ~CollectionCache();
@@ -59,7 +61,7 @@ public:
 
     void erase(uint32_t cid);
 };
-}
+} // namespace lcb
 typedef lcb::CollectionCache lcb_COLLCACHE;
 #else
 typedef struct lcb_CollectionCache_st lcb_COLLCACHE;

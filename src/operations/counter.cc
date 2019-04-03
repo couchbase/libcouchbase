@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010-2018 Couchbase, Inc.
+ *     Copyright 2010-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -22,7 +22,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_status(const lcb_RESPCOUNTER *resp)
     return resp->rc;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_error_context(const lcb_RESPCOUNTER *resp, const char **ctx, size_t *ctx_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_error_context(const lcb_RESPCOUNTER *resp, const char **ctx,
+                                                          size_t *ctx_len)
 {
     if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
         return LCB_KEY_ENOENT;
@@ -83,7 +84,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_value(const lcb_RESPCOUNTER *resp, u
     return LCB_SUCCESS;
 }
 
-
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdcounter_create(lcb_CMDCOUNTER **cmd)
 {
     *cmd = (lcb_CMDCOUNTER *)calloc(1, sizeof(lcb_CMDCOUNTER));
@@ -113,7 +113,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdcounter_parent_span(lcb_CMDCOUNTER *cmd, lcbt
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdcounter_collection(lcb_CMDCOUNTER *cmd, const char *scope, size_t scope_len, const char *collection, size_t collection_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdcounter_collection(lcb_CMDCOUNTER *cmd, const char *scope, size_t scope_len,
+                                                      const char *collection, size_t collection_len)
 {
     cmd->scope = scope;
     cmd->nscope = scope_len;
@@ -172,7 +173,7 @@ static lcb_STATUS counter_impl(uint32_t cid, lcb_INSTANCE *instance, void *cooki
 {
     const lcb_CMDCOUNTER *cmd = (const lcb_CMDCOUNTER *)arg;
     if (cid > 0) {
-        lcb_CMDCOUNTER *mut = const_cast<lcb_CMDCOUNTER *>(cmd);
+        lcb_CMDCOUNTER *mut = const_cast< lcb_CMDCOUNTER * >(cmd);
         mut->cid = cid;
     }
 
@@ -254,7 +255,7 @@ lcb_STATUS lcb_counter(lcb_INSTANCE *instance, void *cookie, const lcb_CMDCOUNTE
         return err;
     }
 
-    return collcache_exec(cmd->scope, cmd->nscope, cmd->collection, cmd->ncollection,
-            instance, cookie, counter_impl, (lcb_COLLCACHE_ARG_CLONE)lcb_cmdcounter_clone,
-            (lcb_COLLCACHE_ARG_DTOR)lcb_cmdcounter_destroy, cmd);
+    return collcache_exec(cmd->scope, cmd->nscope, cmd->collection, cmd->ncollection, instance, cookie, counter_impl,
+                          (lcb_COLLCACHE_ARG_CLONE)lcb_cmdcounter_clone, (lcb_COLLCACHE_ARG_DTOR)lcb_cmdcounter_destroy,
+                          cmd);
 }
