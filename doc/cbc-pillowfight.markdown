@@ -139,9 +139,6 @@ The following options control workload generation:
   replica nodes must be online. `-1` is special value, which mean to use all
   available replicas.
 
-* `ipv6=allow`:
-  Enable IPv6.
-
 * `--lock`=_TIME_:
   This will retrieve and lock an item before update, making it inaccessible for
   modification until the update completed, or `TIME` has passed.

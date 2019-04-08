@@ -179,10 +179,6 @@ Wait until the item has been persisted to at least \fBNUMNODES\fR nodes\' disk\.
 Wait until the item has been replicated to at least \fBNREPLICAS\fR replica nodes\. The bucket must be configured with at least one replica, and at least \fBNREPLICAS\fR replica nodes must be online\. \fB\-1\fR is special value, which mean to use all available replicas\.
 .
 .TP
-\fBipv6=allow\fR
-Enable IPv6\.
-.
-.TP
 \fB\-\-lock\fR=\fITIME\fR
 This will retrieve and lock an item before update, making it inaccessible for modification until the update completed, or \fBTIME\fR has passed\.
 .
@@ -247,6 +243,9 @@ The following options may be included in the connection string (via the \fB\-U\f
 .
 .IP "\(bu" 4
 \fBkeypath=PATH\fR: The path to the client SSL private key\. This is typically required for SSL client certificate authentication\. The certificate itself have to go first in chain specified by \fBcertpath\fR (only applicable with \fBcouchbases://\fR scheme)
+.
+.IP "\(bu" 4
+\fBipv6=allow\fR: Enable IPv6\.
 .
 .IP "\(bu" 4
 \fBssl=no_verify\fR: Temporarily disable certificate verification for SSL (only applicable with \fBcouchbases://\fR scheme)\. This should only be used for quickly debugging SSL functionality\.
