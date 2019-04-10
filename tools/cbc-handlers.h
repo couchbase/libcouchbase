@@ -33,27 +33,6 @@ namespace cbc
     {                                                                                                                  \
         return s;                                                                                                      \
     }
-#define DURABILITY_GETTER()                                                                                            \
-    lcb_DURABILITY_LEVEL durability()                                                                                  \
-    {                                                                                                                  \
-        if (o_durability.passed()) {                                                                                   \
-            std::string s = o_durability.const_result();                                                               \
-            if (s == "none") {                                                                                         \
-                return LCB_DURABILITYLEVEL_NONE;                                                                       \
-            } else if (s == "majority") {                                                                              \
-                return LCB_DURABILITYLEVEL_MAJORITY;                                                                   \
-            } else if (s == "majority_and_persist_on_master") {                                                        \
-                return LCB_DURABILITYLEVEL_MAJORITY_AND_PERSIST_ON_MASTER;                                             \
-            } else if (s == "persist_to_majority") {                                                                   \
-                return LCB_DURABILITYLEVEL_PERSIST_TO_MAJORITY;                                                        \
-            } else {                                                                                                   \
-                throw BadArg(std::string("Mode must be one of \"majority\", \"majority_and_persist_on_master\", or "   \
-                                         "\"persist_to_majority\". Got ") +                                            \
-                             s);                                                                                       \
-            }                                                                                                          \
-        }                                                                                                              \
-        return LCB_DURABILITYLEVEL_NONE;                                                                               \
-    }
 
 class Handler
 {

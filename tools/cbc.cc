@@ -777,7 +777,7 @@ void SetHandler::storeItem(const string &key, const char *value, size_t nvalue)
     if (o_persist.passed() || o_replicate.passed()) {
         lcb_cmdstore_durability_observe(cmd, o_persist.result(), o_replicate.result());
     } else if (o_durability.passed()) {
-        lcb_cmdstore_durability(cmd, LCB_DURABILITYLEVEL_MAJORITY);
+        lcb_cmdstore_durability(cmd, durability());
     }
     err = lcb_store(instance, NULL, cmd);
     if (err != LCB_SUCCESS) {

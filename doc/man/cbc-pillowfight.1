@@ -167,6 +167,10 @@ The path to the client SSL private key\. This is typically required for SSL clie
 Dump verbose internal state after operations are done\.
 .
 .TP
+\fBd\fR, \fB\-\-durability\fR=\fILEVEL\fR
+Specify durability level for mutation operations\. Known values are: "none", "majority", "majority_and_persist_on_master", "persist_to_majority"\.
+.
+.TP
 \fBp\fR, \fB\-\-persist\-to\fR=\fINUMNODES\fR
 Wait until the item has been persisted to at least \fBNUMNODES\fR nodes\' disk\. If \fBNUMNODES\fR is 1 then wait until only the master node has persisted the item for this key\. You may not specify a number greater than the number of nodes actually in the cluster\. \fB\-1\fR is special value, which mean to use all available nodes\.
 .
