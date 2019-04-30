@@ -227,6 +227,33 @@ class ObserveSeqnoHandler : public Handler
     void run();
 };
 
+class ExistsHandler : public Handler
+{
+  public:
+    HANDLER_DESCRIPTION("Check if keys exist on server")
+    HANDLER_USAGE("KEY [OPTIONS ...]")
+
+    ExistsHandler() : Handler("exists"), o_scope("scope"), o_collection("collection")
+    {
+        o_scope.description("Name of the collection scope").setDefault("_default");
+        o_collection.description("Name of the collection");
+    }
+
+  protected:
+    void run();
+
+    void addOptions()
+    {
+        Handler::addOptions();
+        parser.addOption(o_scope);
+        parser.addOption(o_collection);
+    }
+
+  private:
+    cliopts::StringOption o_scope;
+    cliopts::StringOption o_collection;
+};
+
 class UnlockHandler : public Handler
 {
   public:

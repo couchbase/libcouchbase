@@ -282,6 +282,7 @@ void ConnParams::writeConfig(const string &s)
 
 void ConnParams::fillCropts(lcb_create_st &cropts)
 {
+    memset(&cropts, 0, sizeof(lcb_create_st));
     passwd = o_passwd.result();
     if (passwd == "-") {
         passwd = promptPassword("Bucket password: ");
