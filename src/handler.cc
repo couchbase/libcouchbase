@@ -674,7 +674,6 @@ H_exists(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
         resp.key = ptr;
         ptr += resp.nkey;
         memcpy(&resp.state, ptr, sizeof(uint8_t));
-        fprintf(stderr, "HANDLER: resp: state = 0x%02x\n", (int)resp.state);
         ptr += sizeof(uint8_t);
         uint64_t cas;
         memcpy(&cas, ptr, sizeof(uint64_t));
