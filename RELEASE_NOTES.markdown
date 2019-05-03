@@ -1,5 +1,9 @@
 # Release Notes
 
+## 3.0.0-alpha.3 (2019-05-02)
+
+* Removed debug output.
+
 ## 3.0.0-alpha.2 (2019-05-02)
 
 * CCBC-1030: Derive value of durability timeout from KV operation timeout.
