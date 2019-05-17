@@ -881,8 +881,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respexists_error_context(const lcb_RESPEXISTS *r
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_error_ref(const lcb_RESPEXISTS *resp, const char **ref, size_t *ref_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_cookie(const lcb_RESPEXISTS *resp, void **cookie);
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_cas(const lcb_RESPEXISTS *resp, uint64_t *cas);
-LIBCOUCHBASE_API lcb_STATUS lcb_respexists_datatype(const lcb_RESPEXISTS *resp, uint8_t *datatype);
-LIBCOUCHBASE_API lcb_STATUS lcb_respexists_flags(const lcb_RESPEXISTS *resp, uint32_t *flags);
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_key(const lcb_RESPEXISTS *resp, const char **key, size_t *key_len);
 
 typedef struct lcb_CMDEXISTS_ lcb_CMDEXISTS;
