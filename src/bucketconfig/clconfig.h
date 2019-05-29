@@ -383,6 +383,7 @@ struct Confmon {
     ProviderList active_providers;
 
     lcb_t instance;
+    size_t active_provider_list_id;
 };
 
 /**
