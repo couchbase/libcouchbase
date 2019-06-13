@@ -1035,6 +1035,16 @@ H_config(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
 }
 
 static void
+H_select_bucket(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
+         lcb_STATUS immerr)
+{
+    lcb_RESPBASE dummy = {0};
+    mc_REQDATAEX *exdata = request->u_rdata.exdata;
+    make_error(get_instance(pipeline), &dummy, response, immerr);
+    exdata->procs->handler(pipeline, request, dummy.rc, response);
+}
+
+static void
 record_metrics(mc_PIPELINE *pipeline, mc_PACKET *req, MemcachedResponse *)
 {
     lcb_INSTANCE *instance = get_instance(pipeline);
@@ -1148,6 +1158,9 @@ mcreq_dispatch_response(
 
     case PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG:
         INVOKE_OP(H_config);
+
+    case PROTOCOL_BINARY_CMD_SELECT_BUCKET:
+        INVOKE_OP(H_select_bucket);
 
     case PROTOCOL_BINARY_CMD_COLLECTIONS_GET_MANIFEST:
         INVOKE_OP(H_collections_get_manifest);

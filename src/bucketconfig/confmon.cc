@@ -345,7 +345,11 @@ ConfigInfo::~ConfigInfo()
 
 int ConfigInfo::compare(const ConfigInfo &other)
 {
-    /** First check if both have revisions */
+    /** First check if new config has bucket name */
+    if (vbc->bname == NULL && other.vbc->bname != NULL) {
+        return -1; /* we want to upgrade config after opening bucket */
+    }
+    /** Then check if both have revisions */
     int rev_a, rev_b;
     rev_a = lcbvb_get_revision(this->vbc);
     rev_b = lcbvb_get_revision(other.vbc);

@@ -353,7 +353,7 @@ static int build_server_strings(lcbvb_CONFIG *cfg, lcbvb_SERVER *server)
     }
 
     server->svc.hoststrs[LCBVB_SVCTYPE_DATA] = strdup(server->authority);
-    if (server->viewpath == NULL && server->svc.views) {
+    if (server->viewpath == NULL && server->svc.views && cfg->bname) {
         server->viewpath = malloc(strlen(cfg->bname) + 2);
         sprintf(server->viewpath, "/%s", cfg->bname);
     }
@@ -584,15 +584,25 @@ int lcbvb_load_json_ex(lcbvb_CONFIG *cfg, const char *data, const char *source, 
         goto GT_ERROR;
     }
 
-    if (!get_jstr(cj, "name", &tmp)) {
-        SET_ERRSTR(cfg, "Expected 'name' key");
-        goto GT_ERROR;
+    if (get_jstr(cj, "name", &tmp)) {
+        cfg->bname = strdup(tmp);
     }
-    cfg->bname = strdup(tmp);
 
-    if (!get_jstr(cj, "nodeLocator", &tmp)) {
-        SET_ERRSTR(cfg, "Expected 'nodeLocator' key");
-        goto GT_ERROR;
+    cfg->dtype = LCBVB_DIST_UNKNOWN;
+    if (get_jstr(cj, "nodeLocator", &tmp)) {
+        if (!strcmp(tmp, "ketama")) {
+            cfg->dtype = LCBVB_DIST_KETAMA;
+        } else {
+            cfg->dtype = LCBVB_DIST_VBUCKET;
+        }
+    }
+
+    if (get_jstr(cj, "uuid", &tmp)) {
+        cfg->buuid = strdup(tmp);
+    }
+
+    if (!get_jint(cj, "rev", &cfg->revid)) {
+        cfg->revid = -1;
     }
 
     get_jarray(cj, "nodes", &jnodes);
@@ -607,20 +617,6 @@ int lcbvb_load_json_ex(lcbvb_CONFIG *cfg, const char *data, const char *source, 
     } else if (jnodes == NULL) {
         SET_ERRSTR(cfg, "expected 'nodesExt' or 'nodes' array");
         goto GT_ERROR;
-    }
-
-    if (!strcmp(tmp, "ketama")) {
-        cfg->dtype = LCBVB_DIST_KETAMA;
-    } else {
-        cfg->dtype = LCBVB_DIST_VBUCKET;
-    }
-
-    if (get_jstr(cj, "uuid", &tmp)) {
-        cfg->buuid = strdup(tmp);
-    }
-
-    if (!get_jint(cj, "rev", &cfg->revid)) {
-        cfg->revid = -1;
     }
 
     cfg->caps = 0;
@@ -1349,6 +1345,10 @@ LIBCOUCHBASE_API
 int lcbvb_get_randhost_ex(const lcbvb_CONFIG *cfg, lcbvb_SVCTYPE type, lcbvb_SVCMODE mode, int *used)
 {
     size_t nn, oix = 0;
+
+    if (cfg == NULL) {
+        return -1;
+    }
 
     /*
      * Since not all nodes support all service types, we need to make it a

@@ -71,7 +71,7 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info) {
         }
     }
 
-    if (instance->type == LCB_TYPE_CLUSTER && info->get_origin() == CLCONFIG_CLADMIN) {
+    if (instance->settings->conntype == LCB_TYPE_CLUSTER && info->get_origin() == CLCONFIG_CLADMIN) {
         /* Disable HTTP provider for management operations, and fallback to static */
         if (instance->cur_configinfo == NULL ||
                 instance->cur_configinfo->get_origin() != CLCONFIG_HTTP) {
@@ -79,16 +79,14 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info) {
         }
     }
 
-    if (instance->type != LCB_TYPE_CLUSTER) {
-        lcb_update_vbconfig(instance, info);
-    }
+    lcb_update_vbconfig(instance, info);
 
     if (state < S_BOOTSTRAPPED) {
         state = S_BOOTSTRAPPED;
         lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
 
         lcb_log(LOGARGS(instance, INFO), "Selected network configuration: \"%s\"", LCBT_SETTING(instance, network));
-        if (instance->type == LCB_TYPE_BUCKET) {
+        if (instance->settings->conntype == LCB_TYPE_BUCKET) {
             if (LCBVB_DISTTYPE(LCBT_VBCONFIG(instance)) == LCBVB_DIST_KETAMA &&
                 instance->cur_configinfo->get_origin() != CLCONFIG_MCRAW) {
                 lcb_log(LOGARGS(instance, INFO), "Reverting to HTTP Config for memcached buckets");
@@ -120,6 +118,9 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info) {
                 break;
             case LCBVB_DIST_KETAMA:
                 instance->btype = LCB_BTYPE_MEMCACHED;
+                break;
+            case LCBVB_DIST_UNKNOWN:
+                instance->btype = LCB_BTYPE_UNSPEC;
                 break;
             }
         }
@@ -203,6 +204,12 @@ lcb_STATUS Bootstrap::bootstrap(unsigned options) {
         return LCB_SUCCESS;
     }
 
+    if (options == BS_REFRESH_OPEN_BUCKET) {
+        state = S_INITIAL_PRE;
+        tm.rearm(LCBT_SETTING(parent, config_timeout));
+        lcb_aspend_add(&parent->pendops, LCB_PENDTYPE_COUNTER, NULL);
+    }
+
     if (options & BS_REFRESH_THROTTLE) {
         /* Refresh throttle requested. This is not true if options == ALWAYS */
         hrtime_t next_ts;
@@ -258,7 +265,7 @@ lcb_get_bootstrap_status(lcb_INSTANCE *instance)
     if (instance->last_error != LCB_SUCCESS) {
         return instance->last_error;
     }
-    if (instance->type == LCB_TYPE_CLUSTER) {
+    if (instance->settings->conntype == LCB_TYPE_CLUSTER) {
         if (lcb::clconfig::http_get_conn(instance->confmon) != NULL || instance->confmon->get_config() != NULL) {
             return LCB_SUCCESS;
         }

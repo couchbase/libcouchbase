@@ -425,6 +425,17 @@ LIBCOUCHBASE_API
 lcb_STATUS lcb_connect(lcb_INSTANCE *instance);
 
 /**
+ * Opens bucket.
+ *
+ * @param instance
+ * @param bucket
+ * @param bucket_len
+ * @return
+ */
+LIBCOUCHBASE_API
+lcb_STATUS lcb_open(lcb_INSTANCE *instance, const char *bucket, size_t bucket_len);
+
+/**
  * Bootstrap callback. Invoked once the instance is ready to perform operations
  * @param instance The instance which was bootstrapped
  * @param err The error code received. If this is not LCB_SUCCESS then the

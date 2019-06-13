@@ -489,7 +489,9 @@ bool SessionRequestImpl::update_errmap(const lcb::MemcachedResponse &resp)
 // Returns true if sending the SELECT_BUCKET command, false otherwise.
 bool SessionRequestImpl::maybe_select_bucket()
 {
-
+    if (settings->conntype != LCB_TYPE_BUCKET) {
+        return false;
+    }
     // Only send a SELECT_BUCKET if we have the SELECT_BUCKET bit enabled.
     if (!info->has_feature(PROTOCOL_BINARY_FEATURE_SELECT_BUCKET)) {
         return false;

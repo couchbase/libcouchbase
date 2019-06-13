@@ -123,7 +123,8 @@ typedef struct {
  * This also indicates the type of bucket */
 typedef enum {
     LCBVB_DIST_VBUCKET = 0, /**< vBucket hashing ("couchbase") bucket */
-    LCBVB_DIST_KETAMA = 1   /**< Ketama hashing ("memcached") bucket */
+    LCBVB_DIST_KETAMA = 1,  /**< Ketama hashing ("memcached") bucket */
+    LCBVB_DIST_UNKNOWN = 2  /**< Unknown distribution (cluster config) */
 } lcbvb_DISTMODE;
 
 typedef enum {
@@ -161,6 +162,7 @@ typedef struct lcbvb_CONFIG_st {
     long caps;                  /**< Server capabilities */
 } lcbvb_CONFIG;
 
+#define LCBVB_BUCKET_NAME(cfg) (cfg)->bname
 #define LCBVB_NSERVERS(cfg) (cfg)->nsrv
 #define LCBVB_NDATASERVERS(cfg) (cfg)->ndatasrv
 #define LCBVB_NREPLICAS(cfg) (cfg)->nrepl
