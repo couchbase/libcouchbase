@@ -573,7 +573,7 @@ sdmutate_next(const MemcachedResponse *response, lcb_SDENTRY *ent, size_t *iter)
     #define ADVANCE_BUF(sz) \
         buf += sz; \
         *iter += sz; \
-        assert(buf <= buf_end); \
+        lcb_assert(buf <= buf_end); \
 
     /* Index */
     ent->index = *(lcb_U8*)buf;
@@ -1046,7 +1046,7 @@ dispatch_ufwd_error(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS immerr)
 {
     lcb_PKTFWDRESP resp = { 0 };
     lcb_INSTANCE *instance = static_cast<lcb::Server*>(pipeline)->get_instance();
-    assert(immerr != LCB_SUCCESS);
+    lcb_assert(immerr != LCB_SUCCESS);
     resp.version = 0;
     instance->callbacks.pktfwd(instance, MCREQ_PKT_COOKIE(req), immerr, &resp);
 }

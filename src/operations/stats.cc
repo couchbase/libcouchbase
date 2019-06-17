@@ -246,7 +246,7 @@ static lcb_STATUS pkt_bcast_simple(lcb_INSTANCE *instance, const void *cookie, l
             hdr.request.opcode = PROTOCOL_BINARY_CMD_NOOP;
         } else {
             fprintf(stderr, "pkt_bcast_simple passed unknown type %u\n", type);
-            assert(0);
+            lcb_assert(0);
         }
 
         mcreq_reserve_header(pl, pkt, MCREQ_PKT_BASESIZE);
