@@ -399,7 +399,7 @@ mc_PACKET *mcreq_renew_packet(const mc_PACKET *src)
                 rv =
                     mcreq_inflate_value(SPAN_BUFFER(origspan), origspan->size, &inflated, &n_inflated, (void **)&vdata);
 
-                assert(vdata == inflated);
+                lcb_assert(vdata == inflated);
 
                 if (rv != 0) {
                     /* TODO: log error details when snappy will be enabled */
@@ -440,7 +440,7 @@ int mcreq_epkt_insert(mc_EXPACKET *ep, mc_EPKTDATUM *datum)
     if (!(ep->base.flags & MCREQ_F_DETACHED)) {
         return -1;
     }
-    assert(!sllist_contains(&ep->data, &datum->slnode));
+    lcb_assert(!sllist_contains(&ep->data, &datum->slnode));
     sllist_append(&ep->data, &datum->slnode);
     return 0;
 }
@@ -851,8 +851,8 @@ mc_PACKET *mcreq_pipeline_remove(mc_PIPELINE *pipeline, lcb_uint32_t opaque)
 
 void mcreq_packet_done(mc_PIPELINE *pipeline, mc_PACKET *pkt)
 {
-    assert(pkt->flags & MCREQ_F_FLUSHED);
-    assert(pkt->flags & MCREQ_F_INVOKED);
+    lcb_assert(pkt->flags & MCREQ_F_FLUSHED);
+    lcb_assert(pkt->flags & MCREQ_F_INVOKED);
     if (pkt->flags & MCREQ_UBUF_FLAGS) {
         void *kbuf, *vbuf;
         const void *cookie;
@@ -970,7 +970,7 @@ static void do_fallback_flush(mc_PIPELINE *pipeline)
 void mcreq_set_fallback_handler(mc_CMDQUEUE *cq, mcreq_fallback_cb handler)
 {
     mc_FALLBACKPL *fallback;
-    assert(!cq->fallback);
+    lcb_assert(!cq->fallback);
     fallback = calloc(1, sizeof(mc_FALLBACKPL));
     cq->fallback = (mc_PIPELINE *)fallback;
     mcreq_pipeline_init(cq->fallback);
