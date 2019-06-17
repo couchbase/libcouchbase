@@ -623,7 +623,7 @@ GT_NEXT_PACKET:
             if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
                 completed = true;
             } else if (status == PROTOCOL_BINARY_RESPONSE_EACCESS) {
-                set_error(LCB_AUTH_ERROR, "Provided credentials not allowed for bucket or bucket does not exist",
+                set_error(LCB_BUCKET_ENOENT, "Provided credentials not allowed for bucket or bucket does not exist",
                           &resp);
             } else {
                 lcb_log(LOGARGS(this, ERROR), LOGFMT "Unexpected status 0x%x received for SELECT_BUCKET", LOGID(this),
