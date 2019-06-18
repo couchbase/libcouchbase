@@ -29,10 +29,7 @@
 #include "netbuf.h"
 #include "sllist-inl.h"
 
-#ifndef lcb_assert
-#include <assert.h>
-#define lcb_assert assert
-#endif
+#include <libcouchbase/assert.h>
 
 /******************************************************************************
  ******************************************************************************
@@ -406,7 +403,7 @@ mblock_release_ptr(nb_MBPOOL *pool, char * ptr, nb_SIZE size)
     }
 
     fprintf(stderr, "NETBUF: Requested to release pointer %p which was not allocated\n", (void *)ptr);
-    assert(0);
+    lcb_assert(0);
 }
 
 static int
@@ -593,7 +590,7 @@ netbuf_start_flush(nb_MGR *mgr, nb_IOV *iovs, int niov, int *nused)
     if (sq->last_requested) {
         if (sq->last_offset != sq->last_requested->len) {
             win = sq->last_requested;
-            assert(win->len > sq->last_offset);
+            lcb_assert(win->len > sq->last_offset);
 
             iov->iov_len = win->len - sq->last_offset;
             iov->iov_base = win->base + sq->last_offset;
@@ -658,7 +655,7 @@ netbuf_end_flush(nb_MGR *mgr, unsigned int nflushed)
             break;
         }
     }
-    assert(!nflushed);
+    lcb_assert(!nflushed);
 }
 
 void
