@@ -479,7 +479,7 @@ struct Provider {
     }
 
     virtual void enable(void *) {
-        assert("Must be implemented in subclass if used" && 0);
+        lcb_assert("Must be implemented in subclass if used" && 0);
     }
 
     /** The type of provider */
