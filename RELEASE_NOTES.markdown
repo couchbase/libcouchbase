@@ -1,5 +1,18 @@
 # Release Notes
 
+## 2.10.4 (June 19 2019)
+
+* [CCBC-600](https://issues.couchbase.com/browse/CCBC-600): Use special error when authentication is successful, but the
+  bucket is not found: `LCB_BUCKET_ENOENT`.
+
+* [CCBC-1055](https://issues.couchbase.com/browse/CCBC-1055): Do not include assert.h if NDEBUG defined.  The library
+  will use its own assert implementation.
+
+* [CCBC-866](https://issues.couchbase.com/browse/CCBC-866): Fix invalid memory access during iteration of bootstrap
+  provides.
+
+* More usage examples (analytics, XATTRs)
+
 ## 2.10.3 (December 20 2018)
 
 * [CCBC-1008](https://issues.couchbase.com/browse/CCBC-1008): jsoncpp: use
