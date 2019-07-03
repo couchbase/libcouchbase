@@ -79,6 +79,12 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info) {
         }
     }
 
+    if (instance->cur_configinfo) {
+        if (!(LCBVB_CCAPS(LCBT_VBCONFIG(instance)) & LCBVB_CCAP_N1QL_ENHANCED_PREPARED_STATEMENTS) &&
+            (LCBVB_CCAPS(info->vbc) & LCBVB_CCAP_N1QL_ENHANCED_PREPARED_STATEMENTS)) {
+            lcb_n1qlcache_clear(instance->n1ql_cache);
+        }
+    }
     lcb_update_vbconfig(instance, info);
 
     if (state < S_BOOTSTRAPPED) {

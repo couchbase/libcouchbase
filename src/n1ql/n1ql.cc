@@ -368,14 +368,16 @@ class Plan
      * Assign plan data to this entry
      * @param plan The JSON returned from the PREPARE request
      */
-    void set_plan(const Json::Value &plan)
+    void set_plan(const Json::Value &plan, bool include_encoded_plan)
     {
         // Set the plan as a string
         planstr = "\"prepared\":";
         planstr += Json::FastWriter().write(plan["name"]);
-        planstr += ",";
-        planstr += "\"encoded_plan\":";
-        planstr += Json::FastWriter().write(plan["encoded_plan"]);
+        if (include_encoded_plan) {
+            planstr += ",";
+            planstr += "\"encoded_plan\":";
+            planstr += Json::FastWriter().write(plan["encoded_plan"]);
+        }
     }
 };
 
@@ -399,7 +401,7 @@ struct lcb_N1QLCACHE_st {
      * @param json The prepared statement returned by the server
      * @return the newly added plan.
      */
-    const Plan &add_entry(const std::string &key, const Json::Value &json)
+    const Plan &add_entry(const std::string &key, const Json::Value &json, bool include_encoded_plan = true)
     {
         if (lru.size() == max_size()) {
             // Purge entry from end
@@ -411,7 +413,7 @@ struct lcb_N1QLCACHE_st {
 
         lru.push_front(new Plan(key));
         by_name[key] = lru.begin();
-        lru.front()->set_plan(json);
+        lru.front()->set_plan(json, include_encoded_plan);
         return *lru.front();
     }
 
@@ -651,6 +653,7 @@ bool N1QLREQ::has_retriable_error(const Json::Value &root)
             code = jcode.asUInt();
             switch (code) {
                     /* n1ql */
+                case 4040: /* statement not found */
                 case 4050:
                 case 4070:
                     /* analytics */
@@ -857,10 +860,11 @@ static void prepare_rowcb(lcb_INSTANCE *instance, int, const lcb_RESPN1QL *row)
             return;
         }
 
+        bool eps = LCBVB_CCAPS(LCBT_VBCONFIG(instance)) & LCBVB_CCAP_N1QL_ENHANCED_PREPARED_STATEMENTS;
         // Insert plan into cache
-        lcb_log(LOGARGS(origreq, DEBUG), LOGFMT "Got prepared statement. Inserting into cache and reissuing",
-                LOGID(origreq));
-        const Plan &ent = origreq->cache().add_entry(origreq->statement, prepared);
+        lcb_log(LOGARGS(origreq, DEBUG), LOGFMT "Got %sprepared statement. Inserting into cache and reissuing",
+            LOGID(origreq), eps ? "(enhanced) " : "");
+        const Plan &ent = origreq->cache().add_entry(origreq->statement, prepared, !eps);
 
         // Issue the query with the newly prepared plan
         lcb_STATUS rc = origreq->apply_plan(ent);

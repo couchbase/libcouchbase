@@ -140,6 +140,10 @@ typedef enum {
     LCBVB_CAP_DURABLE_WRITE = 1 << 9
 } lcbvb_BUCKET_CAPABILITIES;
 
+typedef enum {
+    LCBVB_CCAP_N1QL_ENHANCED_PREPARED_STATEMENTS = 1 << 0,
+} lcbvb_CLUSTER_CAPABILITIES;
+
 /**@volatile. ABI/API compatibility not guaranteed between versions.
  * @brief Structure containing the configuration.*/
 typedef struct lcbvb_CONFIG_st {
@@ -159,7 +163,8 @@ typedef struct lcbvb_CONFIG_st {
     lcbvb_VBUCKET *ffvbuckets;  /* fast-forward map */
     lcbvb_CONTINUUM *continuum; /* ketama continuums */
     int *randbuf;               /* Used for random server selection */
-    long caps;                  /**< Server capabilities */
+    uint64_t caps;              /**< Bucket capabilities */
+    uint64_t ccaps;             /**< Cluster capabilities */
 } lcbvb_CONFIG;
 
 #define LCBVB_BUCKET_NAME(cfg) (cfg)->bname
@@ -168,6 +173,7 @@ typedef struct lcbvb_CONFIG_st {
 #define LCBVB_NREPLICAS(cfg) (cfg)->nrepl
 #define LCBVB_DISTTYPE(cfg) (cfg)->dtype
 #define LCBVB_CAPS(cfg) (cfg)->caps
+#define LCBVB_CCAPS(cfg) (cfg)->ccaps
 #define LCBVB_GET_SERVER(conf, ix) ((conf)->servers + ix)
 
 /**

@@ -652,6 +652,24 @@ int lcbvb_load_json_ex(lcbvb_CONFIG *cfg, const char *data, const char *source, 
             }
         }
     }
+    cfg->ccaps = 0;
+    {
+        cJSON *jcaps = NULL;
+        if (get_jobj(cj, "clusterCapabilities", &jcaps)) {
+            cJSON *jn1ql = NULL;
+            if (get_jarray(jcaps, "n1ql", &jn1ql)) {
+                unsigned ncaps = cJSON_GetArraySize(jn1ql);
+                for (ii = 0; ii < ncaps; ii++) {
+                    cJSON *jcap = cJSON_GetArrayItem(jn1ql, ii);
+                    if (jcap || jcap->type == cJSON_String) {
+                        if (strcmp(jcap->valuestring, "enhancedPreparedStatements") == 0) {
+                            cfg->ccaps |= LCBVB_CCAP_N1QL_ENHANCED_PREPARED_STATEMENTS;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     /** Get the number of nodes. This traverses the list. Yuck */
     cfg->nsrv = cJSON_GetArraySize(jnodes);
@@ -963,6 +981,15 @@ char *lcbvb_save_json(lcbvb_CONFIG *cfg)
             cJSON_AddItemToArray(jcaps, cJSON_CreateString("durableWrite"));
         }
         cJSON_AddItemToObject(root, "bucketCapabilities", jcaps);
+    }
+    if (cfg->ccaps != 0) {
+        cJSON *jcaps = cJSON_CreateObject();
+        cJSON *jn1ql = cJSON_CreateArray();
+        if (cfg->ccaps & LCBVB_CCAP_N1QL_ENHANCED_PREPARED_STATEMENTS) {
+            cJSON_AddItemToArray(jn1ql, cJSON_CreateString("enhancedPreparedStatements"));
+        }
+        cJSON_AddItemToObject(jcaps, "n1ql", jn1ql);
+        cJSON_AddItemToObject(root, "clusterCapabilities", jcaps);
     }
 
     ret = cJSON_PrintUnformatted(root);
