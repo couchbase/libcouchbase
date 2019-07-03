@@ -918,7 +918,7 @@ static lcb_STATUS subdoc_validate(lcb_INSTANCE *, const lcb_CMDSUBDOC *cmd)
 static lcb_STATUS subdoc_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie, const void *arg)
 {
     const lcb_CMDSUBDOC *cmd = (const lcb_CMDSUBDOC *)arg;
-    if (cid > 0) {
+    if (LCBT_SETTING(instance, use_collections)) {
         lcb_CMDSUBDOC *mut = const_cast< lcb_CMDSUBDOC * >(cmd);
         mut->cid = cid;
     }

@@ -152,7 +152,7 @@ static lcb_STATUS exists_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
     uint8_t ncid = 0;
     uint8_t ecid[5] = {0}; /* encoded */
 
-    if (cid > 0) {
+    if (LCBT_SETTING(instance, use_collections)) {
         lcb_CMDEXISTS *mut = const_cast< lcb_CMDEXISTS * >(cmd);
         mut->cid = cid;
         ncid = leb128_encode(cid, ecid);

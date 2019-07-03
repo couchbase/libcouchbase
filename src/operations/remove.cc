@@ -148,7 +148,7 @@ static lcb_STATUS remove_validate(lcb_INSTANCE *instance, const lcb_CMDREMOVE *c
 static lcb_STATUS remove_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie, const void *arg)
 {
     const lcb_CMDREMOVE *cmd = (const lcb_CMDREMOVE *)arg;
-    if (cid > 0) {
+    if (LCBT_SETTING(instance, use_collections)) {
         lcb_CMDREMOVE *mut = const_cast< lcb_CMDREMOVE * >(cmd);
         mut->cid = cid;
     }

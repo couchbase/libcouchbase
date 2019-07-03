@@ -744,8 +744,13 @@ H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response
         memcpy(&cas, ptr, sizeof(cas));
         ptr += sizeof(cas);
 
-        resp.key = key;
-        resp.nkey = nkey;
+        int ncid = 0;
+        if (LCBT_SETTING(root, use_collections)) {
+            uint32_t cid = 0;
+            ncid = leb128_decode((uint8_t *)key, nkey, &cid);
+        }
+        resp.key = key + ncid;
+        resp.nkey = nkey - ncid;
         resp.cas = lcb_ntohll(cas);
         resp.status = obs;
         resp.ismaster = pipeline->index == lcbvb_vbmaster(config, vb);

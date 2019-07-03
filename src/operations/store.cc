@@ -411,7 +411,7 @@ static lcb_STATUS store_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie,
 
     int hsize;
     int should_compress = 0;
-    if (cid > 0) {
+    if (LCBT_SETTING(instance, use_collections)) {
         lcb_CMDSTORE *mut = const_cast< lcb_CMDSTORE * >(cmd);
         mut->cid = cid;
     }

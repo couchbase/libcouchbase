@@ -148,7 +148,7 @@ static lcb_STATUS touch_validate(lcb_INSTANCE *instance, const lcb_CMDTOUCH *cmd
 static lcb_STATUS touch_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie, const void *arg)
 {
     const lcb_CMDTOUCH *cmd = (const lcb_CMDTOUCH *)arg;
-    if (cid > 0) {
+    if (LCBT_SETTING(instance, use_collections)) {
         lcb_CMDTOUCH *mut = const_cast< lcb_CMDTOUCH * >(cmd);
         mut->cid = cid;
     }

@@ -80,7 +80,9 @@ void ViewsUnitTest::connectBeerSample(HandleWrap &hw, lcb_INSTANCE **instance, b
     crparamsAdmin.v.v2.user = "Administrator";
     crparamsAdmin.v.v2.passwd = "password";
     crparamsAdmin.v.v2.bucket = NULL;
+    crparamsAdmin.v.v2.transports = transports;
 
+    fprintf(stderr, "-------------------\n");
     rv = tryCreateConnection(hw, instance, crparamsAdmin);
     ASSERT_EQ(LCB_SUCCESS, rv);
 

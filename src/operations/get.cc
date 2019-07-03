@@ -172,7 +172,7 @@ static lcb_STATUS get_validate(lcb_INSTANCE *instance, const lcb_CMDGET *cmd)
 static lcb_STATUS get_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie, const void *arg)
 {
     const lcb_CMDGET *cmd = (const lcb_CMDGET *)arg;
-    if (cid > 0) {
+    if (LCBT_SETTING(instance, use_collections)) {
         lcb_CMDGET *mut = const_cast< lcb_CMDGET * >(cmd);
         mut->cid = cid;
     }
@@ -368,7 +368,7 @@ static lcb_STATUS unlock_validate(lcb_INSTANCE *, const lcb_CMDUNLOCK *cmd)
 static lcb_STATUS unlock_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie, const void *arg)
 {
     const lcb_CMDUNLOCK *cmd = (const lcb_CMDUNLOCK *)arg;
-    if (cid > 0) {
+    if (LCBT_SETTING(instance, use_collections)) {
         lcb_CMDUNLOCK *mut = const_cast< lcb_CMDUNLOCK * >(cmd);
         mut->cid = cid;
     }
@@ -650,7 +650,7 @@ static lcb_STATUS getreplica_validate(lcb_INSTANCE *instance, const lcb_CMDGETRE
 static lcb_STATUS getreplica_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie, const void *arg)
 {
     const lcb_CMDGETREPLICA *cmd = (const lcb_CMDGETREPLICA *)arg;
-    if (cid > 0) {
+    if (LCBT_SETTING(instance, use_collections)) {
         lcb_CMDGETREPLICA *mut = const_cast< lcb_CMDGETREPLICA * >(cmd);
         mut->cid = cid;
     }
