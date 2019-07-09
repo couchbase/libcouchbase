@@ -97,6 +97,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdremove_destroy(lcb_CMDREMOVE *cmd)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdremove_timeout(lcb_CMDREMOVE *cmd, uint32_t timeout)
 {
+    cmd->timeout = timeout;
     return LCB_SUCCESS;
 }
 
@@ -188,6 +189,7 @@ static lcb_STATUS remove_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
 
     pkt->u_rdata.reqdata.cookie = cookie;
     pkt->u_rdata.reqdata.start = gethrtime();
+    pkt->u_rdata.reqdata.deadline = pkt->u_rdata.reqdata.start + LCB_US2NS(cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, operation_timeout));
     memcpy(SPAN_BUFFER(&pkt->kh_span), hdr->bytes, hsize);
     LCBTRACE_KV_START(instance->settings, cmd, LCBTRACE_OP_REMOVE, pkt->opaque, pkt->u_rdata.reqdata.span);
     TRACE_REMOVE_BEGIN(instance, hdr, cmd);

@@ -817,10 +817,15 @@ void mcreq_sched_fail(mc_CMDQUEUE *queue)
 void mcreq_sched_add(mc_PIPELINE *pipeline, mc_PACKET *pkt)
 {
     mc_CMDQUEUE *cq = pipeline->parent;
+    if (MCREQ_PKT_RDATA(pkt)->deadline == 0) {
+        lcb_INSTANCE *instance = (lcb_INSTANCE *)pipeline->parent->cqdata;
+        MCREQ_PKT_RDATA(pkt)->deadline = instance ? LCBT_SETTING(instance, operation_timeout) : LCB_DEFAULT_TIMEOUT;
+    }
     if (!cq->scheds[pipeline->index]) {
         cq->scheds[pipeline->index] = 1;
     }
     sllist_append(&pipeline->ctxqueued, &pkt->slnode);
+    mcreq_rearm_timeout(pipeline);
 }
 
 static mc_PACKET *pipeline_find(mc_PIPELINE *pipeline, lcb_uint32_t opaque, int do_remove)
@@ -885,12 +890,13 @@ void mcreq_reset_timeouts(mc_PIPELINE *pl, lcb_U64 nstime)
     SLLIST_ITERBASIC(&pl->requests, nn)
     {
         mc_PACKET *pkt = SLLIST_ITEM(nn, mc_PACKET, slnode);
+        hrtime_t old_timeout = (MCREQ_PKT_RDATA(pkt)->deadline - MCREQ_PKT_RDATA(pkt)->start);
         MCREQ_PKT_RDATA(pkt)->start = nstime;
+        MCREQ_PKT_RDATA(pkt)->deadline = nstime + old_timeout;
     }
 }
 
-unsigned mcreq_pipeline_timeout(mc_PIPELINE *pl, lcb_STATUS err, mcreq_pktfail_fn failcb, void *cbarg,
-                                hrtime_t oldest_valid, hrtime_t *oldest_start)
+unsigned mcreq_pipeline_timeout(mc_PIPELINE *pl, lcb_STATUS err, mcreq_pktfail_fn failcb, void *cbarg, hrtime_t now)
 {
     sllist_iterator iter;
     unsigned count = 0;
@@ -899,30 +905,19 @@ unsigned mcreq_pipeline_timeout(mc_PIPELINE *pl, lcb_STATUS err, mcreq_pktfail_f
     {
         mc_PACKET *pkt = SLLIST_ITEM(iter.cur, mc_PACKET, slnode);
         mc_REQDATA *rd = MCREQ_PKT_RDATA(pkt);
-
-        /**
-         * oldest_valid contains the LOWEST timestamp we can admit to being
-         * acceptable. If the current command is newer (i.e. has a higher
-         * timestamp) then we break the iteration and return.
-         */
-        if (oldest_valid && rd->start > oldest_valid) {
-            if (oldest_start) {
-                *oldest_start = rd->start;
-            }
-            return count;
+        if (now == 0 || rd->deadline <= now) {
+            sllist_iter_remove(&pl->requests, &iter);
+            failcb(pl, pkt, err, cbarg);
+            mcreq_packet_handled(pl, pkt);
+            count++;
         }
-
-        sllist_iter_remove(&pl->requests, &iter);
-        failcb(pl, pkt, err, cbarg);
-        mcreq_packet_handled(pl, pkt);
-        count++;
     }
     return count;
 }
 
 unsigned mcreq_pipeline_fail(mc_PIPELINE *pl, lcb_STATUS err, mcreq_pktfail_fn failcb, void *arg)
 {
-    return mcreq_pipeline_timeout(pl, err, failcb, arg, 0, NULL);
+    return mcreq_pipeline_timeout(pl, err, failcb, arg, 0);
 }
 
 void mcreq_iterwipe(mc_CMDQUEUE *queue, mc_PIPELINE *src, mcreq_iterwipe_fn callback, void *arg)

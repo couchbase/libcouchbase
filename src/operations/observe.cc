@@ -264,6 +264,7 @@ lcb_STATUS ObserveCtx::MCTX_done(const void *cookie_)
 
         OperationCtx *ctx = new OperationCtx(this, this->num_requests[ii]);
         ctx->start = gethrtime();
+        ctx->deadline = ctx->start + LCB_US2NS(LCBT_SETTING(instance, operation_timeout));
         ctx->cookie = cookie_;
 
         pkt->flags |= MCREQ_F_REQEXT;

@@ -204,6 +204,7 @@ static lcb_STATUS counter_impl(uint32_t cid, lcb_INSTANCE *instance, void *cooki
     rdata = &packet->u_rdata.reqdata;
     rdata->cookie = cookie;
     rdata->start = gethrtime();
+    rdata->deadline = rdata->start + LCB_US2NS(cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, operation_timeout));
     hdr->request.magic = PROTOCOL_BINARY_REQ;
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     hdr->request.cas = 0;

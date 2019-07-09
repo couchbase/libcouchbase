@@ -107,6 +107,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_destroy(lcb_CMDGET *cmd)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_timeout(lcb_CMDGET *cmd, uint32_t timeout)
 {
+    cmd->timeout = timeout;
     return LCB_SUCCESS;
 }
 
@@ -211,6 +212,7 @@ static lcb_STATUS get_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie, c
     rdata = &pkt->u_rdata.reqdata;
     rdata->cookie = cookie;
     rdata->start = gethrtime();
+    rdata->deadline = rdata->start + LCB_US2NS(cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, operation_timeout));
 
     hdr->request.opcode = opcode;
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
@@ -325,6 +327,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdunlock_destroy(lcb_CMDUNLOCK *cmd)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdunlock_timeout(lcb_CMDUNLOCK *cmd, uint32_t timeout)
 {
+    cmd->timeout = timeout;
     return LCB_SUCCESS;
 }
 
@@ -388,6 +391,7 @@ static lcb_STATUS unlock_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
     rd = &pkt->u_rdata.reqdata;
     rd->cookie = cookie;
     rd->start = gethrtime();
+    rd->deadline = rd->start + LCB_US2NS(cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, operation_timeout));
 
     hdr.request.magic = PROTOCOL_BINARY_REQ;
     hdr.request.opcode = PROTOCOL_BINARY_CMD_UNLOCK_KEY;
@@ -527,6 +531,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetreplica_destroy(lcb_CMDGETREPLICA *cmd)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetreplica_timeout(lcb_CMDGETREPLICA *cmd, uint32_t timeout)
 {
+    cmd->timeout = timeout;
     return LCB_SUCCESS;
 }
 
@@ -704,6 +709,7 @@ static lcb_STATUS getreplica_impl(uint32_t cid, lcb_INSTANCE *instance, void *co
 
     /* Initialize the cookie */
     RGetCookie *rck = new RGetCookie(cookie, instance, cmd->strategy, vbid);
+    rck->deadline = rck->start + LCB_US2NS(cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, operation_timeout));
 
     /* Initialize the packet */
     req.request.magic = PROTOCOL_BINARY_REQ;
