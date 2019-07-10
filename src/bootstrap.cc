@@ -101,9 +101,7 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info) {
                 instance->confmon->set_active(CLCONFIG_CCCP, false);
             }
 
-            if (LCBVB_CAPS(LCBT_VBCONFIG(instance)) & LCBVB_CAP_COLLECTIONS) {
-                LCBT_SETTING(parent, use_collections) = 1;
-            } else {
+            if ((LCBVB_CAPS(LCBT_VBCONFIG(instance)) & LCBVB_CAP_COLLECTIONS) == 0) {
                 LCBT_SETTING(parent, use_collections) = 0;
             }
 
