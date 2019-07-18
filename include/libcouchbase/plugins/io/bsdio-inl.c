@@ -288,9 +288,9 @@ cntl_getset_impl(lcb_io_opt_t io, lcb_socket_t sock, int mode, int oslevel,
     #endif
 
     if (mode == LCB_IO_CNTL_GET) {
-        rv = getsockopt(sock, oslevel, osopt, &dummy, optval);
+        rv = getsockopt(sock, oslevel, osopt, &dummy, (socklen_t *)optval);
     } else {
-        rv = setsockopt(sock, oslevel, osopt, optval, optsize);
+        rv = setsockopt(sock, oslevel, osopt, (const char *)optval, (socklen_t)optsize);
     }
     if (rv == 0) {
         return 0;

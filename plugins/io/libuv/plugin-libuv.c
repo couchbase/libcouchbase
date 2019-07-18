@@ -141,7 +141,7 @@ lcb_STATUS lcb_create_libuv_io_opts(int version, lcb_io_opt_t *io, lcbuv_options
     }
 #endif
 
-    ret = calloc(1, sizeof(*ret));
+    ret = (my_iops_t *)calloc(1, sizeof(*ret));
 
     if (!ret) {
         return LCB_CLIENT_ENOMEM;
@@ -214,7 +214,7 @@ static lcb_sockdata_t *create_socket(lcb_io_opt_t iobase, int domain, int type, 
     my_sockdata_t *ret;
     my_iops_t *io = (my_iops_t *)iobase;
 
-    ret = calloc(1, sizeof(*ret));
+    ret = (my_sockdata_t *)calloc(1, sizeof(*ret));
     if (!ret) {
         return NULL;
     }
@@ -342,12 +342,12 @@ static int start_connect(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase, const st
 
 #if UV_VERSION_HEX >= 0x010000
     {
-        uv_os_fd_t fd = INVALID_SOCKET;
+        uv_os_fd_t fd = (uv_os_fd_t)INVALID_SOCKET;
         /* Fetch socket descriptor for internal usage.
          * For example to detect dead sockets. */
         ret = uv_fileno((uv_handle_t *)&sock->tcp, &fd);
         if (ret == 0) {
-            sock->base.socket = fd;
+            sock->base.socket = (lcb_socket_t)fd;
         }
     }
 #endif
@@ -380,7 +380,7 @@ static int start_write2(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase, struct lc
     my_sockdata_t *sd = (my_sockdata_t *)sockbase;
     int ret;
 
-    w = calloc(1, sizeof(*w));
+    w = (my_write_t *)calloc(1, sizeof(*w));
     w->w.data = uarg;
     w->callback = callback;
     w->sock = sd;
@@ -423,7 +423,7 @@ static UVC_ALLOC_CB(alloc_cb)
     UVC_ALLOC_CB_VARS()
 
     my_sockdata_t *sock = PTR_FROM_FIELD(my_sockdata_t, handle, tcp);
-    buf->base = sock->iov.iov_base;
+    buf->base = (char *)sock->iov.iov_base;
     buf->len = sock->iov.iov_len;
 
     (void)suggested_size;
@@ -516,7 +516,7 @@ static UVC_TIMER_CB(timer_cb)
 static void *create_timer(lcb_io_opt_t iobase)
 {
     my_iops_t *io = (my_iops_t *)iobase;
-    my_timer_t *timer = calloc(1, sizeof(*timer));
+    my_timer_t *timer = (my_timer_t *)calloc(1, sizeof(*timer));
     if (!timer) {
         return NULL;
     }
@@ -567,7 +567,7 @@ static void destroy_timer(lcb_io_opt_t io, void *timer_opaque)
 
 static my_uvreq_t *alloc_uvreq(my_sockdata_t *sock, generic_callback_t callback)
 {
-    my_uvreq_t *ret = calloc(1, sizeof(*ret));
+    my_uvreq_t *ret = (my_uvreq_t *)calloc(1, sizeof(*ret));
     if (!ret) {
         sock->base.parent->v.v1.error = ENOMEM;
         return NULL;
