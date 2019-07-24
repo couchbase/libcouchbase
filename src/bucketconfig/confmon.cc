@@ -285,7 +285,7 @@ void Confmon::do_next_provider()
     cur_provider->refresh();
 }
 
-void Confmon::start()
+void Confmon::start(bool refresh)
 {
     lcb_U32 tmonext = 0;
     as_stop.cancel();
@@ -305,6 +305,9 @@ void Confmon::start()
         }
     }
 
+    if (refresh) {
+        cur_provider->refresh();
+    }
     as_start.rearm(tmonext);
 }
 

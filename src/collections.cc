@@ -165,6 +165,9 @@ lcb_STATUS collcache_exec(const char *scope, size_t nscope, const char *collecti
         lcb_INSTANCE *instance, void *cookie, lcb_COLLCACHE_CALLBACK cb,
         lcb_COLLCACHE_ARG_CLONE clone, lcb_COLLCACHE_ARG_DTOR dtor, const void *arg)
 {
+    if (LCBT_SETTING(instance, conntype) != LCB_TYPE_BUCKET) {
+        return LCB_NOT_SUPPORTED;
+    }
     if (!LCBT_SETTING(instance, use_collections)) {
         if (scope != NULL || collection != NULL) {
             return LCB_NOT_SUPPORTED;

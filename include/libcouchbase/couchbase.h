@@ -425,17 +425,6 @@ LIBCOUCHBASE_API
 lcb_STATUS lcb_connect(lcb_INSTANCE *instance);
 
 /**
- * Opens bucket.
- *
- * @param instance
- * @param bucket
- * @param bucket_len
- * @return
- */
-LIBCOUCHBASE_API
-lcb_STATUS lcb_open(lcb_INSTANCE *instance, const char *bucket, size_t bucket_len);
-
-/**
  * Bootstrap callback. Invoked once the instance is ready to perform operations
  * @param instance The instance which was bootstrapped
  * @param err The error code received. If this is not LCB_SUCCESS then the
@@ -600,6 +589,8 @@ typedef enum {
 
 /** Callback type for Analytics (cannot be used for lcb_install_callback3()) */
 #define LCB_CALLBACK_ANALYTICS -4
+
+#define LCB_CALLBACK_OPEN -5
 
 /**
  * @uncommitted
@@ -1047,6 +1038,17 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_durability(lcb_CMDSTORE *cmd, lcb_DURAB
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_durability_observe(lcb_CMDSTORE *cmd, int persist_to, int replicate_to);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_timeout(lcb_CMDSTORE *cmd, uint32_t timeout);
 LIBCOUCHBASE_API lcb_STATUS lcb_store(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSTORE *cmd);
+
+typedef void (*lcb_open_callback)(lcb_INSTANCE *instance, lcb_STATUS err);
+LIBCOUCHBASE_API lcb_open_callback lcb_set_open_callback(lcb_INSTANCE *instance, lcb_open_callback callback);
+
+/**
+ * Opens bucket.
+ *
+ * @param instance
+ * @return
+ */
+LIBCOUCHBASE_API lcb_STATUS lcb_open(lcb_INSTANCE *instance, const char *bucket, size_t bucket_len);
 
 /**@}*/
 
