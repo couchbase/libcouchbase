@@ -141,6 +141,15 @@ struct Request {
         request_headers.push_back(Header(key, value));
     }
 
+    void remove_header(const std::string& key) {
+        std::vector< lcb::http::Header>::iterator it;
+        for (it = request_headers.begin(); it != request_headers.end(); it++) {
+            if (it->key == key) {
+                request_headers.erase(it);
+            }
+        }
+    }
+
     // Helper methods to populate request buffer
     inline void add_to_preamble(const char *);
     inline void add_to_preamble(const std::string&);

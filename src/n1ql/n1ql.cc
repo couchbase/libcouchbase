@@ -339,18 +339,34 @@ N1QLREQ::has_retriable_error(const Json::Value& root)
         const Json::Value& jmsg = cur["msg"];
         const Json::Value& jcode = cur["code"];
         unsigned code = 0;
+        lcb_AUTHENTICATOR * auth = instance->settings->auth;
         if (jcode.isNumeric()) {
             code = jcode.asUInt();
             switch (code) {
                 /* n1ql */
-            case 4050:
-            case 4070:
+            case 4050:  // plan.build_prepared.unrecognized_prepared
+            case 4070:  // plan.build_prepared.decoding
+            case 12009: // datastore.couchbase.DML_error
                 /* analytics */
             case 23000:
             case 23003:
             case 23007:
                 lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d", LOGID(this), code);
                 return true;
+            case 13014: // datastore.couchbase.insufficient_credentials
+                if (auth->mode() == LCBAUTH_MODE_DYNAMIC) {
+                    /* request credentials */
+                    std::string username = auth->username_for(htreq->host.c_str(), htreq->port.c_str(), LCBT_SETTING(instance, bucket));
+                    std::string password = auth->password_for(htreq->host.c_str(), htreq->port.c_str(), LCBT_SETTING(instance, bucket));
+                    char authbuf[256];
+                    std::string upassbuf;
+                    upassbuf.append(username).append(":").append(password);
+                    lcb_base64_encode(upassbuf.c_str(), upassbuf.size(), authbuf, sizeof(authbuf));
+                    htreq->remove_header("Authorization");
+                    htreq->add_header("Authorization", std::string("Basic ") + authbuf);
+                    return true;
+                }
+                break;
             default:
                 break;
             }
