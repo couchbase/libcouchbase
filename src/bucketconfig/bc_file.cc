@@ -231,7 +231,7 @@ static std::string mkcachefile(const char *name, const char *bucket)
     bool is_dir = false;
     if (name != NULL) {
         buffer = std::string(name);
-        if (buffer.back() == '/') {
+        if (buffer.size() > 0 && buffer[buffer.size() - 1] == '/') {
             is_dir = true;
         }
     } else {
