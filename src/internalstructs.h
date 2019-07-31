@@ -1177,6 +1177,7 @@ struct lcb_RESPGETCID_ {
                 free((void *)cmd->key.contig.bytes);                                                                   \
             }                                                                                                          \
         }                                                                                                              \
+        free(cmd);                                                                                                     \
     } while (0)
 
 #define LCB_CMD_CLONE_WITH_VALUE(TYPE, SRC, DST)                                                                       \
