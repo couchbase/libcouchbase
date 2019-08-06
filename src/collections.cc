@@ -101,6 +101,7 @@ static void handle_collcache_proc(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS err,
     if (rc != LCB_SUCCESS) {
         fprintf(stderr, "failed to schedule command\n");
     }
+    delete ctx;
 }
 
 static void handle_collcache_schedfail(mc_PACKET *pkt)
