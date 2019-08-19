@@ -450,7 +450,7 @@ class RemoveHandler : public Handler
             for (std::vector< std::string >::const_iterator it = xattrs.begin(); it != xattrs.end(); ++it) {
                 lcb_subdocops_remove(specs, idx++, LCB_SUBDOCOPS_F_XATTRPATH, it->c_str(), it->size());
             }
-            for (std::vector< std::string >::const_iterator it = xattrs.begin(); it != xattrs.end(); ++it) {
+            for (std::vector< std::string >::const_iterator it = paths.begin(); it != paths.end(); ++it) {
                 lcb_subdocops_remove(specs, idx++, 0, it->c_str(), it->size());
             }
             if (paths.empty()) {
