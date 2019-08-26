@@ -22,7 +22,6 @@
 #include "http/http.h"
 #include "logging.h"
 #include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
-#include <map>
 #include <string>
 #include <list>
 #include "docreq/docreq.h"
@@ -679,6 +678,8 @@ lcb_STATUS ANALYTICSREQ::issue_htreq(const std::string &body)
     lcb_cmdhttp_streaming(htcmd, true);
     lcb_cmdhttp_handle(htcmd, &htreq);
     lcb_cmdhttp_timeout(htcmd, timeout);
+    std::string url("/query/service");
+    lcb_cmdhttp_path(htcmd, url.c_str(), url.size());
 
     lcb_STATUS rc = lcb_http(instance, this, htcmd);
     lcb_cmdhttp_destroy(htcmd);
