@@ -1,0 +1,20 @@
+#
+# use this script with cbc-bench like this
+#
+#  $ cbc-bench -s tools/bench-script.txt
+#
+
+# change defaults
+value-size-max 512
+batch-size 600
+durability-level majority
+
+# create only one worker thread
+create
+
+# start all worker threads that created so far
+# and ask them to execute 1000 operations each (zero for unbounded)
+start --num-items=1000
+
+# wait for the workers
+wait
