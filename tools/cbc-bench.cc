@@ -16,15 +16,11 @@
  */
 
 #include "config.h"
-#include <sys/types.h>
 #include <signal.h>
 #include <iostream>
 #include <map>
-#include <cassert>
 #include <cstdio>
-#include <cerrno>
 #include <stdexcept>
-#include <sstream>
 #include <list>
 #include <thread>
 #include <mutex>
@@ -64,13 +60,22 @@ static Histogram hg;
 class Configuration
 {
   public:
-    Configuration() = default;
+    Configuration() : o_script("script")
+    {
+        o_script.abbrev('s').description("Path to script (by default using STDIN interactively)");
+    }
 
     ~Configuration() = default;
 
     void addToParser(Parser &parser)
     {
         m_params.addToParser(parser);
+        parser.addOption(o_script);
+    }
+
+    std::string &scriptPath()
+    {
+        return o_script.const_result();
     }
 
     void processOptions() {}
@@ -97,6 +102,7 @@ class Configuration
 
   private:
     ConnParams m_params;
+    StringOption o_script;
 };
 
 static Configuration config;
@@ -834,6 +840,15 @@ static void real_main(int argc, char **argv)
     parser.parse(argc, argv);
     config.processOptions();
 
+    FILE *finput = stdin;
+    if (!config.scriptPath().empty()) {
+        finput = fopen(config.scriptPath().c_str(), "r");
+        if (finput == NULL) {
+            perror("unable to open script file");
+            exit(EXIT_FAILURE);
+        }
+    }
+
     setupHandlers();
     std::atexit(cleanup);
     setup_sigint_handler();
@@ -841,6 +856,7 @@ static void real_main(int argc, char **argv)
     linenoiseSetCompletionCallback(command_completion);
     linenoiseSetMultiLine(1);
     linenoiseHistoryLoad(history_path.c_str());
+    linenoiseSetInputStream(finput);
 
     {
         lcb_create_st cropts{};
@@ -848,11 +864,13 @@ static void real_main(int argc, char **argv)
         config.fillCropts(cropts);
         std::cerr << "# connection-string = " << cropts.v.v3.connstr << std::endl;
     }
-    std::cerr << "# value-pool-size = " << value_pool_size << std::endl;
-    std::cerr << "# value-size-max = " << value_size_max << std::endl;
-    std::cerr << "# value-size-min = " << value_size_min << std::endl;
-    std::cerr << "# batch-size = " << batch_size << std::endl;
-    std::cerr << "# durability-level = " << bench::durability_level_to_string(durability_level) << std::endl;
+    if (finput == stdin) {
+        std::cerr << "# value-pool-size = " << value_pool_size << std::endl;
+        std::cerr << "# value-size-max = " << value_size_max << std::endl;
+        std::cerr << "# value-size-min = " << value_size_min << std::endl;
+        std::cerr << "# batch-size = " << batch_size << std::endl;
+        std::cerr << "# durability-level = " << bench::durability_level_to_string(durability_level) << std::endl;
+    }
 
     do {
         char *line = linenoise("bench> ");
@@ -860,9 +878,15 @@ static void real_main(int argc, char **argv)
         if (line == nullptr) {
             break;
         }
-        if (isatty(STDIN_FILENO)) {
+        if (strlen(line) == 0 || line[0] == '#') {
+            /* ignore empty lines and comments */
+            continue;
+        }
+        if (finput == stdin && isatty(fileno(stdin))) {
             linenoiseHistoryAdd(line);
             linenoiseHistorySave(history_path.c_str());
+        } else {
+            std::cerr << "> " << line << std::endl;
         }
         ptr = line;
         bm_COMMAND cmd;
