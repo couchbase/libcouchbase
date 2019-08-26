@@ -225,7 +225,7 @@ class BoundedValueGenerator : public ValueGenerator
 };
 
 class Worker;
-void io_loop(Worker *worker);
+void io_loop(Worker *worker, size_t num_items);
 void generator_loop(Worker *worker);
 
 extern "C" {
@@ -297,10 +297,10 @@ class Worker
         return valgen->next();
     }
 
-    void start()
+    void start(size_t num_items)
     {
         is_running = true;
-        io_thr = new std::thread(io_loop, this);
+        io_thr = new std::thread(io_loop, this, num_items);
         gen_thr = new std::thread(generator_loop, this);
     }
 
@@ -368,18 +368,32 @@ class Worker
 };
 int Worker::next_id = 0;
 
-void io_loop(Worker *worker)
+void io_loop(Worker *worker, size_t num_items)
 {
+    bool has_limit = num_items > 0;
+    size_t items_left = num_items;
     while (worker->is_running) {
+        if (has_limit && items_left == 0) {
+            break;
+        }
         size_t itr = 10;
         while (itr > 0 && worker->is_running) {
             lcb_tick_nowait(worker->instance);
             worker->flush();
             itr--;
+            items_left--;
+            if (has_limit && items_left == 0) {
+                break;
+            }
         }
         lcb_wait(worker->instance);
     }
     lcb_wait(worker->instance);
+    if (has_limit) {
+        worker->is_running = false;
+        std::cout << "# worker " << worker->id << " has been stopped after executing " << num_items << " operations"
+                  << std::endl;
+    }
 }
 
 lcb_DURABILITY_LEVEL durability_level = LCB_DURABILITYLEVEL_NONE;
@@ -584,12 +598,18 @@ class StartHandler : public Handler
     StartHandler() : Handler("start") {}
 
   protected:
-    void execute(bm_COMMAND &) override
+    void execute(bm_COMMAND &cmd) override
     {
+        size_t num_items = 0;
+        std::string opt_msg;
+        if (cmd.options.count("num-items")) {
+            num_items = std::stoull(cmd.options["num-items"]);
+            opt_msg = " (with limit of " + std::to_string(num_items) + " items)";
+        }
         for (auto &wpair : workers) {
             if (!wpair.second->is_running) {
-                wpair.second->start();
-                std::cout << "# worker " << wpair.first << " has been started" << std::endl;
+                wpair.second->start(num_items);
+                std::cout << "# worker " << wpair.first << " has been started" << opt_msg << std::endl;
             }
         }
     }
@@ -910,8 +930,8 @@ static void real_main(int argc, char **argv)
                     cmd.args.emplace_back(tok.t.word.ptr, tok.t.word.len);
                     break;
                 case BM_TOKEN_OPTION:
-                    printf("option: <%.*s>, value: <%.*s>\n", tok.t.option.klen, tok.t.option.key, tok.t.option.vlen,
-                           tok.t.option.val);
+                    cmd.options.emplace(std::string(tok.t.option.key, tok.t.option.klen),
+                                        std::string(tok.t.option.val, tok.t.option.vlen));
                     break;
                 default:
                     break;
