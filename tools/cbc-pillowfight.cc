@@ -1327,14 +1327,14 @@ int main(int argc, char **argv)
             log("Failed to create instance: %s", lcb_strerror_short(error));
             exit(EXIT_FAILURE);
         }
-        lcb_install_callback3(instance, LCB_CALLBACK_STOREDUR, (lcb_RESPCALLBACK)storeCallback);
-        lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)storeCallback);
-        lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)getCallback);
-        lcb_install_callback3(instance, LCB_CALLBACK_SDMUTATE, (lcb_RESPCALLBACK)subdocCallback);
-        lcb_install_callback3(instance, LCB_CALLBACK_SDLOOKUP, (lcb_RESPCALLBACK)subdocCallback);
-        lcb_install_callback3(instance, LCB_CALLBACK_NOOP, (lcb_RESPCALLBACK)noopCallback);
+        lcb_install_callback(instance, LCB_CALLBACK_STOREDUR, (lcb_RESPCALLBACK)storeCallback);
+        lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)storeCallback);
+        lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)getCallback);
+        lcb_install_callback(instance, LCB_CALLBACK_SDMUTATE, (lcb_RESPCALLBACK)subdocCallback);
+        lcb_install_callback(instance, LCB_CALLBACK_SDLOOKUP, (lcb_RESPCALLBACK)subdocCallback);
+        lcb_install_callback(instance, LCB_CALLBACK_NOOP, (lcb_RESPCALLBACK)noopCallback);
 #ifndef WIN32
-        lcb_install_callback3(instance, LCB_CALLBACK_DIAG, (lcb_RESPCALLBACK)diag_callback);
+        lcb_install_callback(instance, LCB_CALLBACK_DIAG, (lcb_RESPCALLBACK)diag_callback);
         {
             int activate = 1;
             lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_METRICS, &activate);

@@ -60,7 +60,7 @@ TEST_F(MutateUnitTest, testSimpleSet)
     HandleWrap hw;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testSimpleSetStoreCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testSimpleSetStoreCallback);
 
     std::string key1("testSimpleStoreKey1"), val1("key1"), key2("testSimpleStoreKey2"), val2("key2");
 
@@ -126,7 +126,7 @@ TEST_F(MutateUnitTest, testStoreZeroLengthValue)
     createConnection(hw, &instance);
 
     lcb_sched_enter(instance);
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testStoreZeroLengthValueCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testStoreZeroLengthValueCallback);
     lcb_CMDSTORE *cmd;
     lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key.data(), key.length());
@@ -167,7 +167,7 @@ TEST_F(MutateUnitTest, testRemove)
 
     std::string key1("testRemoveKey1"), key2("testRemoveKey2");
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_REMOVE, (lcb_RESPCALLBACK)testRemoveCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_REMOVE, (lcb_RESPCALLBACK)testRemoveCallback);
     int numcallbacks = 0;
     storeKey(instance, key1, "foo");
     storeKey(instance, key2, "foo");
@@ -208,7 +208,7 @@ TEST_F(MutateUnitTest, testRemoveMiss)
     HandleWrap hw;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_REMOVE, (lcb_RESPCALLBACK)testRemoveMissCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_REMOVE, (lcb_RESPCALLBACK)testRemoveMissCallback);
     int numcallbacks = 0;
     std::string key1("testRemoveMissKey1"), key2("testRemoveMissKey2");
     removeKey(instance, key1);
@@ -268,7 +268,7 @@ TEST_F(MutateUnitTest, testSimpleAdd)
     HandleWrap hw;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testSimpleAddStoreCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testSimpleAddStoreCallback);
     removeKey(instance, "testSimpleAddKey");
     int numcallbacks = 0;
     std::string key("testSimpleAddKey"), val1("key1"), val2("key2");
@@ -316,7 +316,7 @@ TEST_F(MutateUnitTest, testSimpleAppend)
     HandleWrap hw;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testSimpleAppendStoreCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testSimpleAppendStoreCallback);
     storeKey(instance, key, "foo");
     int numcallbacks = 0;
 
@@ -362,7 +362,7 @@ TEST_F(MutateUnitTest, testAppendNonExistingKey)
     createConnection(hw, &instance);
 
     lcb_sched_enter(instance);
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testAppendNonExistingKeyCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testAppendNonExistingKeyCallback);
     lcb_CMDSTORE *cmd;
     lcb_cmdstore_create(&cmd, LCB_STORE_APPEND);
     lcb_cmdstore_key(cmd, key.data(), key.length());
@@ -406,7 +406,7 @@ TEST_F(MutateUnitTest, testSimplePrepend)
     HandleWrap hw;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testSimplePrependStoreCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testSimplePrependStoreCallback);
     storeKey(instance, key, "foo");
     int numcallbacks = 0;
 
@@ -450,7 +450,7 @@ TEST_F(MutateUnitTest, testPrependNonExistingKey)
     createConnection(hw, &instance);
 
     lcb_sched_enter(instance);
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testPrependNonExistingKeyCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testPrependNonExistingKeyCallback);
     lcb_CMDSTORE *cmd;
     lcb_cmdstore_create(&cmd, LCB_STORE_PREPEND);
     lcb_cmdstore_key(cmd, key.data(), key.length());
@@ -489,8 +489,8 @@ TEST_F(MutateUnitTest, testSimpleReplaceNonexisting)
     HandleWrap hw;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE,
-                                (lcb_RESPCALLBACK)testSimpleReplaceNonexistingStoreCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE,
+                               (lcb_RESPCALLBACK)testSimpleReplaceNonexistingStoreCallback);
     removeKey(instance, key);
     int numcallbacks = 0;
     lcb_CMDSTORE *cmd;
@@ -534,7 +534,7 @@ TEST_F(MutateUnitTest, testSimpleReplace)
     HandleWrap hw;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testSimpleReplaceStoreCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testSimpleReplaceStoreCallback);
     storeKey(instance, key, "foo");
     int numcallbacks = 0;
     lcb_CMDSTORE *cmd;
@@ -578,7 +578,7 @@ TEST_F(MutateUnitTest, testIncorrectCasReplace)
     HandleWrap hw;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testIncorrectCasReplaceStoreCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testIncorrectCasReplaceStoreCallback);
     storeKey(instance, key, "foo");
     Item itm;
     getKey(instance, key, itm);
@@ -624,7 +624,7 @@ TEST_F(MutateUnitTest, testCasReplace)
     HandleWrap hw;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testCasReplaceStoreCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testCasReplaceStoreCallback);
     storeKey(instance, key, "foo");
     Item itm;
     getKey(instance, key, itm);
@@ -659,7 +659,7 @@ TEST_F(MutateUnitTest, testSetDefault)
     lcb_INSTANCE *instance;
     HandleWrap hw;
     createConnection(hw, &instance);
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)storeCb);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)storeCb);
 
     lcb_CMDSTORE *cmd;
     lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);

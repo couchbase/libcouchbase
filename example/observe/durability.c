@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     if ((err = lcb_get_bootstrap_status(instance)) != LCB_SUCCESS) {
         fail2("Couldn't get initial cluster configuration", err);
     }
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
 
     lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key, strlen(key));

@@ -48,7 +48,7 @@ TEST_F(SchedUnitTests, testSched)
     size_t counter;
     createConnection(hw, &instance);
 
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, opCallback);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, opCallback);
 
     // lcb_store
     lcb_CMDSTORE *scmd;

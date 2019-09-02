@@ -127,8 +127,8 @@ static lcb_INSTANCE *connect_as(char *username, char *password)
     rc = lcb_get_bootstrap_status(instance);
     assert(rc == LCB_SUCCESS);
 
-    lcb_install_callback3(instance, LCB_CALLBACK_SDLOOKUP, (lcb_RESPCALLBACK)subdoc_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_SDMUTATE, (lcb_RESPCALLBACK)subdoc_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_SDLOOKUP, (lcb_RESPCALLBACK)subdoc_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_SDMUTATE, (lcb_RESPCALLBACK)subdoc_callback);
 
     return instance;
 }

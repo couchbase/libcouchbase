@@ -191,8 +191,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to establish connection to cluster: %s\n", lcb_strerror(NULL, err));
         exit(EXIT_FAILURE);
     }
-    lcb_install_callback3(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
 
     fprintf(stderr, "key: \"%s\"\n", key);
     fprintf(stderr, "value size: %ld\n", nbytes);

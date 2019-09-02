@@ -78,7 +78,7 @@ class DurabilityOperation
 
     void wait(lcb_INSTANCE *instance)
     {
-        lcb_install_callback3(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)defaultDurabilityCallback);
+        lcb_install_callback(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)defaultDurabilityCallback);
         EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
     }
 
@@ -166,7 +166,7 @@ class DurabilityMultiOperation
             kmap[itm.key] = DurabilityOperation();
         }
 
-        lcb_install_callback3(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)multiDurabilityCallback);
+        lcb_install_callback(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)multiDurabilityCallback);
 
         rc = mctx->done(mctx, this);
         ASSERT_EQ(LCB_SUCCESS, rc);
@@ -660,8 +660,8 @@ TEST_F(DurabilityUnitTest, testObserveSanity)
     instance = handle.getLcb();
     lcb_STATUS err;
 
-    lcb_install_callback3(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)dummyDurabilityCallback);
-    lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPCALLBACK)dummyObserveCallback);
+    lcb_install_callback(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)dummyDurabilityCallback);
+    lcb_install_callback(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPCALLBACK)dummyObserveCallback);
 
     storeKey(instance, "key", "value");
 
@@ -705,7 +705,7 @@ TEST_F(DurabilityUnitTest, testMasterObserve)
     createConnection(handle);
     lcb_INSTANCE *instance = handle.getLcb();
 
-    lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPCALLBACK)dummyObserveCallback);
+    lcb_install_callback(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPCALLBACK)dummyObserveCallback);
 
     struct cb_cookie o_cookie = {1, 0};
     lcb_MULTICMD_CTX *mctx = lcb_observe3_ctxnew(instance);
@@ -757,7 +757,7 @@ TEST_F(DurabilityUnitTest, testDurabilityRelocation)
     createConnection(handle);
     instance = handle.getLcb();
 
-    lcb_install_callback3(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)dummyDurabilityCallback);
+    lcb_install_callback(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)dummyDurabilityCallback);
 
     std::string key = "key";
     lcb_durability_opts_t opts = {0};
@@ -973,7 +973,7 @@ TEST_F(DurabilityUnitTest, testDurStore)
     lcb_INSTANCE *instance;
     lcb_durability_opts_t options = {0};
     createConnection(hw, &instance);
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)durstoreCallback);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)durstoreCallback);
 
     std::string key("durStore");
     std::string value("value");

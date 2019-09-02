@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
     if ((err = lcb_get_bootstrap_status(instance)) != LCB_SUCCESS) {
         fail2("Couldn't get initial cluster configuration", err);
     }
-    lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, observe_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_OBSERVE, observe_callback);
 
     nservers = lcb_get_num_nodes(instance);
     obs_info.nodeinfo = calloc(nservers, sizeof(*obs_info.nodeinfo));

@@ -177,10 +177,10 @@ static void version_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPMC
 } // extern "C"
 static void setupCallbacks(lcb_INSTANCE *instance)
 {
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_TOUCH, (lcb_RESPCALLBACK)touch_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_VERSIONS, (lcb_RESPCALLBACK)version_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_TOUCH, (lcb_RESPCALLBACK)touch_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_VERSIONS, (lcb_RESPCALLBACK)version_callback);
 }
 
 class SmokeTest : public ::testing::Test

@@ -891,8 +891,8 @@ static void real_main(int argc, char **argv)
     }
     setupHandlers();
     std::atexit(cleanup);
-    lcb_install_callback3(instance, LCB_CALLBACK_SDLOOKUP, (lcb_RESPCALLBACK)subdoc_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_SDMUTATE, (lcb_RESPCALLBACK)subdoc_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_SDLOOKUP, (lcb_RESPCALLBACK)subdoc_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_SDMUTATE, (lcb_RESPCALLBACK)subdoc_callback);
 
     linenoiseSetCompletionCallback(command_completion);
     linenoiseSetMultiLine(1);

@@ -63,7 +63,7 @@ int main(int argc, char **argv)
     rc = lcb_get_bootstrap_status(instance);
     assert(rc == LCB_SUCCESS);
 
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_cb);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_cb);
 
     // fill the value so valgrind doesn't warn about unitialized buffers
     for (ii = 0; ii < VALUE_SIZE; ii++) {

@@ -564,7 +564,7 @@ typedef enum {
     LCB_CALLBACK__MAX                      /* Number of callbacks */
 } lcb_CALLBACK_TYPE;
 
-/* The following callback types cannot be set using lcb_install_callback3(),
+/* The following callback types cannot be set using lcb_install_callback(),
  * however, their value is passed along as the second argument of their
  * respective callbacks. This allows you to still use the same callback,
  * differentiating their meaning by the type. */
@@ -641,7 +641,7 @@ typedef void (*lcb_RESPCALLBACK)(lcb_INSTANCE *instance, int cbtype, const lcb_R
  * to set the default callback to `NULL`.
  */
 LIBCOUCHBASE_API
-lcb_RESPCALLBACK lcb_install_callback3(lcb_INSTANCE *instance, int cbtype, lcb_RESPCALLBACK cb);
+lcb_RESPCALLBACK lcb_install_callback(lcb_INSTANCE *instance, int cbtype, lcb_RESPCALLBACK cb);
 
 /**
  * @committed
@@ -656,7 +656,7 @@ lcb_RESPCALLBACK lcb_install_callback3(lcb_INSTANCE *instance, int cbtype, lcb_R
  * @return the installed callback for the type.
  */
 LIBCOUCHBASE_API
-lcb_RESPCALLBACK lcb_get_callback3(lcb_INSTANCE *instance, int cbtype);
+lcb_RESPCALLBACK lcb_get_callback(lcb_INSTANCE *instance, int cbtype);
 
 /**
  * Returns the type of the callback as a string.

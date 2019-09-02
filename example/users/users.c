@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
         die(instance, "Failed bootstrap from cluster", err);
     }
 
-    lcb_install_callback3(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 
     printf("1. Create account 'cbtestuser' with predefined set of roles\n");
     {

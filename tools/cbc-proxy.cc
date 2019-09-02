@@ -480,7 +480,7 @@ static void real_main(int argc, char **argv)
     lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CLIENT_STRING, app_client_string);
     lcb_set_bootstrap_callback(instance, bootstrap_callback);
     lcb_set_pktfwd_callback(instance, pktfwd_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_DIAG, diag_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_DIAG, diag_callback);
 
     good_or_die(lcb_connect(instance), "Failed to connect to cluster");
     if (config.useTimings()) {

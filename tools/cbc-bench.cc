@@ -345,9 +345,9 @@ class Worker
         do_or_die(lcb_connect(instance), "Failed to connect to cluster");
         do_or_die(lcb_wait(instance), "Failed to wait for connection bootstrap");
         do_or_die(lcb_get_bootstrap_status(instance), "Failed to bootstrap");
-        lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
-        lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
-        lcb_install_callback3(instance, LCB_CALLBACK_REMOVE, (lcb_RESPCALLBACK)remove_callback);
+        lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
+        lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
+        lcb_install_callback(instance, LCB_CALLBACK_REMOVE, (lcb_RESPCALLBACK)remove_callback);
         if (config.useTimings()) {
             hg.install(instance, stdout);
         }

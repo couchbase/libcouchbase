@@ -111,8 +111,8 @@ class MultiClusterClient
                 std::cerr << "Failed to create instance: " << lcb_strerror(NULL, err) << std::endl;
                 exit(1);
             }
-            lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
-            lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
+            lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
+            lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
 
             lcb_connect(instance);
             lcb_wait(instance);

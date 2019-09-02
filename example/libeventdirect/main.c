@@ -184,8 +184,8 @@ static lcb_INSTANCE *create_libcouchbase_handle(lcb_io_opt_t ioops, int argc, ch
 
     /* Set up the callbacks */
     lcb_set_bootstrap_callback(instance, bootstrap_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
 
     if ((error = lcb_connect(instance)) != LCB_SUCCESS) {
         fprintf(stderr, "Failed to connect libcouchbase instance: %s\n", lcb_strerror(NULL, error));

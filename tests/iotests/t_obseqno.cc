@@ -35,8 +35,8 @@ static void storeCb_getstok(lcb_INSTANCE *, int cbtype, const lcb_RESPSTORE *res
 
 static void storeGetStok(lcb_INSTANCE *instance, const string &k, const string &v, lcb_MUTATION_TOKEN *res)
 {
-    lcb_RESPCALLBACK oldcb = lcb_get_callback3(instance, LCB_CALLBACK_STORE);
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)storeCb_getstok);
+    lcb_RESPCALLBACK oldcb = lcb_get_callback(instance, LCB_CALLBACK_STORE);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)storeCb_getstok);
     lcb_sched_enter(instance);
 
     lcb_CMDSTORE *cmd;
@@ -49,7 +49,7 @@ static void storeGetStok(lcb_INSTANCE *instance, const string &k, const string &
     lcb_cmdstore_destroy(cmd);
     lcb_sched_leave(instance);
     lcb_wait(instance);
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, oldcb);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, oldcb);
 }
 
 TEST_F(ObseqnoTest, testFetchImplicit)
@@ -102,11 +102,11 @@ static void doObserveSeqno(lcb_INSTANCE *instance, lcb_MUTATION_TOKEN *ss, int s
         return;
     }
 
-    lcb_RESPCALLBACK oldcb = lcb_get_callback3(instance, LCB_CALLBACK_OBSEQNO);
-    lcb_install_callback3(instance, LCB_CALLBACK_OBSEQNO, (lcb_RESPCALLBACK)obseqCallback);
+    lcb_RESPCALLBACK oldcb = lcb_get_callback(instance, LCB_CALLBACK_OBSEQNO);
+    lcb_install_callback(instance, LCB_CALLBACK_OBSEQNO, (lcb_RESPCALLBACK)obseqCallback);
     lcb_sched_leave(instance);
     lcb_wait(instance);
-    lcb_install_callback3(instance, LCB_CALLBACK_OBSEQNO, oldcb);
+    lcb_install_callback(instance, LCB_CALLBACK_OBSEQNO, oldcb);
 }
 
 TEST_F(ObseqnoTest, testObserve)

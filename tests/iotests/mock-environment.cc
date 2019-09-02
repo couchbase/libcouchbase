@@ -383,7 +383,7 @@ void MockEnvironment::bootstrapRealCluster()
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(tmphandle));
     lcb_wait(tmphandle);
 
-    lcb_install_callback3(tmphandle, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)statsCallback);
+    lcb_install_callback(tmphandle, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)statsCallback);
     lcb_CMDSTATS scmd = {0};
     err = lcb_stats3(tmphandle, this, &scmd);
     ASSERT_EQ(LCB_SUCCESS, err);
@@ -446,7 +446,7 @@ void MockEnvironment::clearAndReset()
         err = lcb_connect(innerClient);
         EXPECT_EQ(LCB_SUCCESS, err);
         lcb_wait(innerClient);
-        lcb_install_callback3(innerClient, LCB_CALLBACK_CBFLUSH, mock_flush_callback);
+        lcb_install_callback(innerClient, LCB_CALLBACK_CBFLUSH, mock_flush_callback);
     }
 
     lcb_CMDCBFLUSH fcmd = {0};

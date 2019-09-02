@@ -95,7 +95,7 @@ void ViewsUnitTest::connectBeerSample(HandleWrap &hw, lcb_INSTANCE **instance, b
     lcb_cmdhttp_content_type(htcmd, content_type, strlen(content_type));
     lcb_cmdhttp_method(htcmd, LCB_HTTP_METHOD_POST);
 
-    lcb_install_callback3(*instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)bktCreateCb);
+    lcb_install_callback(*instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)bktCreateCb);
     lcb_sched_enter(*instance);
     rv = lcb_http(*instance, NULL, htcmd);
     lcb_cmdhttp_destroy(htcmd);

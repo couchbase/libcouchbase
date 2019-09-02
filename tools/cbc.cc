@@ -629,8 +629,8 @@ void GetHandler::addOptions()
 void GetHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)getreplica_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)getreplica_callback);
     const vector< string > &keys = parser.getRestArgs();
     std::string replica_mode = o_replica.result();
 
@@ -707,7 +707,7 @@ void TouchHandler::addOptions()
 void TouchHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_TOUCH, (lcb_RESPCALLBACK)touch_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_TOUCH, (lcb_RESPCALLBACK)touch_callback);
     const vector< string > &keys = parser.getRestArgs();
     lcb_STATUS err;
     lcb_sched_enter(instance);
@@ -818,8 +818,8 @@ void SetHandler::storeItem(const string &key, FILE *input)
 void SetHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_STOREDUR, (lcb_RESPCALLBACK)store_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_STOREDUR, (lcb_RESPCALLBACK)store_callback);
     const vector< string > &keys = parser.getRestArgs();
 
     lcb_sched_enter(instance);
@@ -895,7 +895,7 @@ void HashHandler::run()
 void ObserveHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPCALLBACK)observe_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPCALLBACK)observe_callback);
     const vector< string > &keys = parser.getRestArgs();
     lcb_MULTICMD_CTX *mctx = lcb_observe3_ctxnew(instance);
     if (mctx == NULL) {
@@ -926,7 +926,7 @@ void ObserveHandler::run()
 void ObserveSeqnoHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_OBSEQNO, (lcb_RESPCALLBACK)obseqno_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_OBSEQNO, (lcb_RESPCALLBACK)obseqno_callback);
     const vector< string > &infos = parser.getRestArgs();
     lcb_CMDOBSEQNO cmd = {0};
     lcbvb_CONFIG *vbc;
@@ -968,7 +968,7 @@ void ObserveSeqnoHandler::run()
 void ExistsHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_EXISTS, (lcb_RESPCALLBACK)exists_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_EXISTS, (lcb_RESPCALLBACK)exists_callback);
     const vector< string > &args = parser.getRestArgs();
 
     lcb_sched_enter(instance);
@@ -995,7 +995,7 @@ void ExistsHandler::run()
 void UnlockHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlock_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlock_callback);
     const vector< string > &args = parser.getRestArgs();
 
     if (args.size() % 2) {
@@ -1123,7 +1123,7 @@ void RemoveHandler::run()
     Handler::run();
     const vector< string > &keys = parser.getRestArgs();
     lcb_sched_enter(instance);
-    lcb_install_callback3(instance, LCB_CALLBACK_REMOVE, (lcb_RESPCALLBACK)remove_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_REMOVE, (lcb_RESPCALLBACK)remove_callback);
     for (size_t ii = 0; ii < keys.size(); ++ii) {
         const string &key = keys[ii];
         lcb_CMDREMOVE *cmd;
@@ -1142,7 +1142,7 @@ void RemoveHandler::run()
 void StatsHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)stats_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)stats_callback);
     vector< string > keys = parser.getRestArgs();
     if (keys.empty()) {
         keys.push_back("");
@@ -1170,7 +1170,7 @@ void StatsHandler::run()
 void WatchHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)watch_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)watch_callback);
     vector< string > keys = parser.getRestArgs();
     if (keys.empty()) {
         keys.push_back("cmd_total_ops");
@@ -1234,7 +1234,7 @@ void VerbosityHandler::run()
         throw BadArg("Verbosity level must be {detail,debug,info,warning}");
     }
 
-    lcb_install_callback3(instance, LCB_CALLBACK_VERBOSITY, (lcb_RESPCALLBACK)common_server_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_VERBOSITY, (lcb_RESPCALLBACK)common_server_callback);
     lcb_CMDVERBOSITY cmd = {0};
     cmd.level = level;
     lcb_STATUS err;
@@ -1251,7 +1251,7 @@ void McVersionHandler::run()
 {
     Handler::run();
 
-    lcb_install_callback3(instance, LCB_CALLBACK_VERSIONS, (lcb_RESPCALLBACK)common_server_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_VERSIONS, (lcb_RESPCALLBACK)common_server_callback);
     lcb_CMDVERSIONS cmd = {0};
     lcb_STATUS err;
     lcb_sched_enter(instance);
@@ -1282,8 +1282,8 @@ void CollectionGetManifestHandler::run()
 {
     Handler::run();
 
-    lcb_install_callback3(instance, LCB_CALLBACK_COLLECTIONS_GET_MANIFEST,
-                          (lcb_RESPCALLBACK)collection_dump_manifest_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_COLLECTIONS_GET_MANIFEST,
+                         (lcb_RESPCALLBACK)collection_dump_manifest_callback);
 
     lcb_STATUS err;
     lcb_CMDGETMANIFEST *cmd;
@@ -1320,7 +1320,7 @@ void CollectionGetCIDHandler::run()
 {
     Handler::run();
 
-    lcb_install_callback3(instance, LCB_CALLBACK_GETCID, (lcb_RESPCALLBACK)getcid_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_GETCID, (lcb_RESPCALLBACK)getcid_callback);
 
     std::string scope = o_scope.result();
 
@@ -1390,7 +1390,7 @@ void PingHandler::run()
 {
     Handler::run();
 
-    lcb_install_callback3(instance, LCB_CALLBACK_PING, (lcb_RESPCALLBACK)ping_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_PING, (lcb_RESPCALLBACK)ping_callback);
     lcb_STATUS err;
     lcb_CMDPING *cmd;
     lcb_cmdping_create(&cmd);
@@ -1421,7 +1421,7 @@ void BucketFlushHandler::run()
     Handler::run();
     lcb_CMDCBFLUSH cmd = {0};
     lcb_STATUS err;
-    lcb_install_callback3(instance, LCB_CALLBACK_CBFLUSH, (lcb_RESPCALLBACK)cbFlushCb);
+    lcb_install_callback(instance, LCB_CALLBACK_CBFLUSH, (lcb_RESPCALLBACK)cbFlushCb);
     err = lcb_cbflush3(instance, NULL, &cmd);
     if (err != LCB_SUCCESS) {
         throw LcbError(err);
@@ -1435,7 +1435,7 @@ void ArithmeticHandler::run()
     Handler::run();
 
     const vector< string > &keys = parser.getRestArgs();
-    lcb_install_callback3(instance, LCB_CALLBACK_COUNTER, (lcb_RESPCALLBACK)arithmetic_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_COUNTER, (lcb_RESPCALLBACK)arithmetic_callback);
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < keys.size(); ++ii) {
         const string &key = keys[ii];
@@ -1593,7 +1593,7 @@ void N1qlHandler::run()
 
 void HttpReceiver::install(lcb_INSTANCE *instance)
 {
-    lcb_install_callback3(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 }
 
 void HttpReceiver::maybeInvokeStatus(const lcb_RESPHTTP *resp)

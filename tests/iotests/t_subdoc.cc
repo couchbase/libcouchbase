@@ -216,8 +216,8 @@ static void subdocCallback(lcb_INSTANCE *, int cbtype, const lcb_RESPSUBDOC *res
 bool SubdocUnitTest::createSubdocConnection(HandleWrap &hw, lcb_INSTANCE **instance)
 {
     createConnection(hw, instance);
-    lcb_install_callback3(*instance, LCB_CALLBACK_SDMUTATE, (lcb_RESPCALLBACK)subdocCallback);
-    lcb_install_callback3(*instance, LCB_CALLBACK_SDLOOKUP, (lcb_RESPCALLBACK)subdocCallback);
+    lcb_install_callback(*instance, LCB_CALLBACK_SDMUTATE, (lcb_RESPCALLBACK)subdocCallback);
+    lcb_install_callback(*instance, LCB_CALLBACK_SDLOOKUP, (lcb_RESPCALLBACK)subdocCallback);
 
     lcb_SUBDOCSPECS *specs;
     lcb_subdocspecs_create(&specs, 1);

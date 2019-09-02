@@ -50,7 +50,7 @@ class MyPool : public Pool
         // We override the initialize function to set the proper callback we
         // care about
         fprintf(stderr, "Initializing %p\n", instance);
-        lcb_install_callback3(instance, LCB_CALLBACK_GET, get_callback);
+        lcb_install_callback(instance, LCB_CALLBACK_GET, get_callback);
     }
 };
 

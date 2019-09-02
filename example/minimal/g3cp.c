@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 
         {
             lcb_CMDSTORE *cmd;
-            lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
+            lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
             lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
             lcb_cmdstore_key(cmd, "key", strlen("key"));
             lcb_cmdstore_value(cmd, "value", strlen("value"));
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
         }
 
         {
-            lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
+            lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
             lcb_cmdget_create(&gcmd);
             lcb_cmdget_key(gcmd, "key", strlen("key"));
             check(lcb_get(instance, NULL, gcmd), "schedule retrieval operation");

@@ -59,7 +59,7 @@ TEST_F(GetUnitTest, testGetMiss)
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)testGetMissGetCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)testGetMissGetCallback);
     int numcallbacks = 0;
     std::string key1("testGetMiss1"), key2("testGetMiss2");
 
@@ -106,7 +106,7 @@ TEST_F(GetUnitTest, testGetHit)
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)testGetHitGetCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)testGetHitGetCallback);
     int numcallbacks = 0;
     std::string key1("testGetKey1"), key2("testGetKey2");
 
@@ -149,7 +149,7 @@ TEST_F(GetUnitTest, testTouchMiss)
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_TOUCH, (lcb_RESPCALLBACK)testTouchMissCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_TOUCH, (lcb_RESPCALLBACK)testTouchMissCallback);
     removeKey(instance, key);
 
     int numcallbacks = 0;
@@ -186,7 +186,7 @@ TEST_F(GetUnitTest, testTouchHit)
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_TOUCH, (lcb_RESPCALLBACK)testTouchHitCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_TOUCH, (lcb_RESPCALLBACK)testTouchHitCallback);
     storeKey(instance, key, "foo");
 
     int numcallbacks = 0;
@@ -252,8 +252,8 @@ TEST_F(GetUnitTest, testFlags)
 
     createConnection(hw, &instance);
 
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)flags_get_callback);
-    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)flags_store_callback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)flags_get_callback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)flags_store_callback);
 
     int numcallbacks = 0;
 
@@ -325,7 +325,7 @@ TEST_F(GetUnitTest, testGetReplica)
 
     lcb_CMDGETREPLICA *rcmd;
 
-    lcb_install_callback3(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)rget_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)rget_callback);
     RGetCookie rck;
     rck.remaining = 1;
     rck.expectrc = LCB_SUCCESS;
@@ -474,7 +474,7 @@ TEST_F(GetUnitTest, testGetReplica)
     }
 
     // Test rget with a missing key. Fixes a potential bug
-    lcb_install_callback3(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)rget_noop_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)rget_noop_callback);
     removeKey(instance, key);
     lcb_cmdgetreplica_create(&rcmd, LCB_REPLICA_MODE_ANY);
     lcb_cmdgetreplica_key(rcmd, key.c_str(), key.size());
