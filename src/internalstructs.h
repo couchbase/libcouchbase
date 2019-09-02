@@ -908,7 +908,7 @@ typedef struct {
  */
 #define LCB_CMDSUBDOC_F_ACCESS_DELETED (1 << 18)
 
-struct lcb_SUBDOCOPS_ {
+struct lcb_SUBDOCSPECS_ {
     uint32_t options;
 
     lcb_SDSPEC *specs;

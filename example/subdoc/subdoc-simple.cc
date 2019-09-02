@@ -139,7 +139,7 @@ int main(int argc, char **argv)
     lcb_wait(instance);
 
     lcb_CMDSUBDOC *cmd;
-    lcb_SUBDOCOPS *ops;
+    lcb_SUBDOCSPECS *ops;
 
     lcb_cmdsubdoc_create(&cmd);
     lcb_cmdsubdoc_key(cmd, "key", 3);
@@ -148,11 +148,11 @@ int main(int argc, char **argv)
      * Retrieve a single item from a document
      */
     printf("Getting the 'hello' path from the document\n");
-    lcb_subdocops_create(&ops, 1);
-    lcb_subdocops_get(ops, 0, 0, "hello", 5);
+    lcb_subdocspecs_create(&ops, 1);
+    lcb_subdocspecs_get(ops, 0, 0, "hello", 5);
     lcb_cmdsubdoc_operations(cmd, ops);
     rc = lcb_subdoc(instance, NULL, cmd);
-    lcb_subdocops_destroy(ops);
+    lcb_subdocspecs_destroy(ops);
     assert(rc == LCB_SUCCESS);
     lcb_wait(instance);
 
@@ -160,11 +160,11 @@ int main(int argc, char **argv)
      * Set a dictionary/object field
      */
     printf("Adding new 'goodbye' path to document\n");
-    lcb_subdocops_create(&ops, 1);
-    lcb_subdocops_dict_upsert(ops, 0, 0, "goodbye", 7, "\"hello\"", 7);
+    lcb_subdocspecs_create(&ops, 1);
+    lcb_subdocspecs_dict_upsert(ops, 0, 0, "goodbye", 7, "\"hello\"", 7);
     lcb_cmdsubdoc_operations(cmd, ops);
     rc = lcb_subdoc(instance, NULL, cmd);
-    lcb_subdocops_destroy(ops);
+    lcb_subdocspecs_destroy(ops);
     assert(rc == LCB_SUCCESS);
     lcb_wait(instance);
     demoKey(instance, "key");
@@ -174,13 +174,13 @@ int main(int argc, char **argv)
      */
     // Options can also be used
     printf("Appending element to array (array might be missing)\n");
-    lcb_subdocops_create(&ops, 1);
+    lcb_subdocspecs_create(&ops, 1);
     // Create the array if it doesn't exist. This option can be used with
     // other commands as well..
-    lcb_subdocops_array_add_last(ops, 0, LCB_SUBDOCOPS_F_MKINTERMEDIATES, "array", 5, "1", 1);
+    lcb_subdocspecs_array_add_last(ops, 0, LCB_SUBDOCSPECS_F_MKINTERMEDIATES, "array", 5, "1", 1);
     lcb_cmdsubdoc_operations(cmd, ops);
     rc = lcb_subdoc(instance, NULL, cmd);
-    lcb_subdocops_destroy(ops);
+    lcb_subdocspecs_destroy(ops);
     assert(rc == LCB_SUCCESS);
     lcb_wait(instance);
     demoKey(instance, "key");
@@ -189,11 +189,11 @@ int main(int argc, char **argv)
      * Add element to the beginning of an array
      */
     printf("Prepending element to array (array must exist)\n");
-    lcb_subdocops_create(&ops, 1);
-    lcb_subdocops_array_add_first(ops, 0, 0, "array", 5, "1", 1);
+    lcb_subdocspecs_create(&ops, 1);
+    lcb_subdocspecs_array_add_first(ops, 0, 0, "array", 5, "1", 1);
     lcb_cmdsubdoc_operations(cmd, ops);
     rc = lcb_subdoc(instance, NULL, cmd);
-    lcb_subdocops_destroy(ops);
+    lcb_subdocspecs_destroy(ops);
     assert(rc == LCB_SUCCESS);
     lcb_wait(instance);
     demoKey(instance, "key");
@@ -202,11 +202,11 @@ int main(int argc, char **argv)
      * Get the first element back..
      */
     printf("Getting first array element...\n");
-    lcb_subdocops_create(&ops, 1);
-    lcb_subdocops_get(ops, 0, 0, "array[0]", 8);
+    lcb_subdocspecs_create(&ops, 1);
+    lcb_subdocspecs_get(ops, 0, 0, "array[0]", 8);
     lcb_cmdsubdoc_operations(cmd, ops);
     rc = lcb_subdoc(instance, NULL, cmd);
-    lcb_subdocops_destroy(ops);
+    lcb_subdocspecs_destroy(ops);
     assert(rc == LCB_SUCCESS);
     lcb_wait(instance);
 

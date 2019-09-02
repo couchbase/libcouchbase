@@ -121,9 +121,9 @@ int main(int argc, char **argv)
     lcb_cmdstore_destroy(scmd);
     assert(rc == LCB_SUCCESS);
 
-    lcb_SUBDOCOPS *specs;
+    lcb_SUBDOCSPECS *specs;
 
-    lcb_subdocops_create(&specs, 5);
+    lcb_subdocspecs_create(&specs, 5);
     std::string bufs[10];
     // Add some mutations
     for (int ii = 0; ii < 5; ii++) {
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
         path = pbuf;
         val = vbuf;
 
-        lcb_subdocops_dict_upsert(specs, ii, 0, path.c_str(), path.size(), val.c_str(), val.size());
+        lcb_subdocspecs_dict_upsert(specs, ii, 0, path.c_str(), path.size(), val.c_str(), val.size());
     }
 
     lcb_CMDSUBDOC *mcmd;
@@ -144,24 +144,24 @@ int main(int argc, char **argv)
     lcb_cmdsubdoc_key(mcmd, "key", 3);
     lcb_cmdsubdoc_operations(mcmd, specs);
     rc = lcb_subdoc(instance, NULL, mcmd);
-    lcb_subdocops_destroy(specs);
+    lcb_subdocspecs_destroy(specs);
     assert(rc == LCB_SUCCESS);
 
     // Reset the specs
-    lcb_subdocops_create(&specs, 5);
+    lcb_subdocspecs_create(&specs, 5);
     for (int ii = 0; ii < 5; ii++) {
         char pbuf[24];
         std::string &path = bufs[ii];
         sprintf(pbuf, "pth%d", ii);
         path = pbuf;
 
-        lcb_subdocops_get(specs, ii, 0, path.c_str(), path.size());
+        lcb_subdocspecs_get(specs, ii, 0, path.c_str(), path.size());
     }
 
-    lcb_subdocops_get(specs, 5, 0, "dummy", 5);
+    lcb_subdocspecs_get(specs, 5, 0, "dummy", 5);
     lcb_cmdsubdoc_operations(mcmd, specs);
     rc = lcb_subdoc(instance, NULL, mcmd);
-    lcb_subdocops_destroy(specs);
+    lcb_subdocspecs_destroy(specs);
     lcb_cmdsubdoc_destroy(mcmd);
     assert(rc == LCB_SUCCESS);
 

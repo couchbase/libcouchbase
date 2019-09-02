@@ -337,26 +337,26 @@ class LookupHandler : public Handler
 
         lcb_sched_enter(instance);
         for (size_t ii = 0; ii < keys.size(); ++ii) {
-            lcb_SUBDOCOPS *specs;
+            lcb_SUBDOCSPECS *specs;
             size_t idx = 0, total = xattrs.size() + paths.size();
             if (paths.empty() && m_opcode == SUBDOC_GET) {
                 total += 1; /* for fulldoc get */
             }
-            lcb_subdocops_create(&specs, total);
+            lcb_subdocspecs_create(&specs, total);
             for (std::vector< std::string >::const_iterator it = xattrs.begin(); it != xattrs.end(); ++it) {
-                uint32_t flags = LCB_SUBDOCOPS_F_XATTRPATH;
+                uint32_t flags = LCB_SUBDOCSPECS_F_XATTRPATH;
                 if (o_deleted.passed()) {
-                    flags |= LCB_SUBDOCOPS_F_XATTR_DELETED_OK;
+                    flags |= LCB_SUBDOCSPECS_F_XATTR_DELETED_OK;
                 }
                 switch (m_opcode) {
                     case SUBDOC_GET:
-                        lcb_subdocops_get(specs, idx++, flags, it->c_str(), it->size());
+                        lcb_subdocspecs_get(specs, idx++, flags, it->c_str(), it->size());
                         break;
                     case SUBDOC_EXISTS:
-                        lcb_subdocops_exists(specs, idx++, flags, it->c_str(), it->size());
+                        lcb_subdocspecs_exists(specs, idx++, flags, it->c_str(), it->size());
                         break;
                     case SUBDOC_GET_COUNT:
-                        lcb_subdocops_get_count(specs, idx++, flags, it->c_str(), it->size());
+                        lcb_subdocspecs_get_count(specs, idx++, flags, it->c_str(), it->size());
                         break;
                     default:
                         break;
@@ -365,20 +365,20 @@ class LookupHandler : public Handler
             for (std::vector< std::string >::const_iterator it = paths.begin(); it != paths.end(); ++it) {
                 switch (m_opcode) {
                     case SUBDOC_GET:
-                        lcb_subdocops_get(specs, idx++, 0, it->c_str(), it->size());
+                        lcb_subdocspecs_get(specs, idx++, 0, it->c_str(), it->size());
                         break;
                     case SUBDOC_EXISTS:
-                        lcb_subdocops_exists(specs, idx++, 0, it->c_str(), it->size());
+                        lcb_subdocspecs_exists(specs, idx++, 0, it->c_str(), it->size());
                         break;
                     case SUBDOC_GET_COUNT:
-                        lcb_subdocops_get_count(specs, idx++, 0, it->c_str(), it->size());
+                        lcb_subdocspecs_get_count(specs, idx++, 0, it->c_str(), it->size());
                         break;
                     default:
                         break;
                 }
             }
             if (paths.empty() && m_opcode == SUBDOC_GET) {
-                lcb_subdocops_fulldoc_get(specs, idx++, 0);
+                lcb_subdocspecs_fulldoc_get(specs, idx++, 0);
             }
 
             const std::string &key = keys[ii];
@@ -387,7 +387,7 @@ class LookupHandler : public Handler
             lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
             lcb_cmdsubdoc_operations(cmd, specs);
             err = lcb_subdoc(instance, this, cmd);
-            lcb_subdocops_destroy(specs);
+            lcb_subdocspecs_destroy(specs);
             lcb_cmdsubdoc_destroy(cmd);
             if (err != LCB_SUCCESS) {
                 throw LcbError(err, "Failed to schedule " + cmdname + " command");
@@ -443,18 +443,18 @@ class RemoveHandler : public Handler
 
         lcb_sched_enter(instance);
         for (size_t ii = 0; ii < keys.size(); ++ii) {
-            lcb_SUBDOCOPS *specs;
+            lcb_SUBDOCSPECS *specs;
             size_t idx = 0, total = xattrs.size() + paths.size();
 
-            lcb_subdocops_create(&specs, total);
+            lcb_subdocspecs_create(&specs, total);
             for (std::vector< std::string >::const_iterator it = xattrs.begin(); it != xattrs.end(); ++it) {
-                lcb_subdocops_remove(specs, idx++, LCB_SUBDOCOPS_F_XATTRPATH, it->c_str(), it->size());
+                lcb_subdocspecs_remove(specs, idx++, LCB_SUBDOCSPECS_F_XATTRPATH, it->c_str(), it->size());
             }
             for (std::vector< std::string >::const_iterator it = paths.begin(); it != paths.end(); ++it) {
-                lcb_subdocops_remove(specs, idx++, 0, it->c_str(), it->size());
+                lcb_subdocspecs_remove(specs, idx++, 0, it->c_str(), it->size());
             }
             if (paths.empty()) {
-                lcb_subdocops_fulldoc_remove(specs, idx++, 0);
+                lcb_subdocspecs_fulldoc_remove(specs, idx++, 0);
             }
 
             const std::string &key = keys[ii];
@@ -463,7 +463,7 @@ class RemoveHandler : public Handler
             lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
             lcb_cmdsubdoc_operations(cmd, specs);
             err = lcb_subdoc(instance, this, cmd);
-            lcb_subdocops_destroy(specs);
+            lcb_subdocspecs_destroy(specs);
             lcb_cmdsubdoc_destroy(cmd);
             if (err != LCB_SUCCESS) {
                 throw LcbError(err, "Failed to schedule remove command");
@@ -518,8 +518,8 @@ class UpsertHandler : public Handler
         if (xattrs.size() == 0) {
             total += 1;
         }
-        lcb_SUBDOCOPS *specs;
-        lcb_subdocops_create(&specs, total);
+        lcb_SUBDOCSPECS *specs;
+        lcb_subdocspecs_create(&specs, total);
 
         std::string ver = "\"" LCB_CLIENT_ID "\"";
         std::string path = "_cbc.version";
@@ -527,16 +527,17 @@ class UpsertHandler : public Handler
         if (o_xattrs.passed()) {
             for (std::vector< std::pair< std::string, std::string > >::const_iterator it = xattrs.begin();
                  it != xattrs.end(); ++it) {
-                lcb_subdocops_dict_upsert(specs, idx++, LCB_SUBDOCOPS_F_XATTRPATH | LCB_SUBDOCOPS_F_MKINTERMEDIATES,
-                                          it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
+                lcb_subdocspecs_dict_upsert(specs, idx++,
+                                            LCB_SUBDOCSPECS_F_XATTRPATH | LCB_SUBDOCSPECS_F_MKINTERMEDIATES,
+                                            it->first.c_str(), it->first.size(), it->second.c_str(), it->second.size());
             }
         } else {
             // currently it is not possible to upsert document without XATTRs
             // so lets allocate "_cbc" object with some useful stuff
-            lcb_subdocops_dict_upsert(specs, idx++, LCB_SUBDOCOPS_F_XATTRPATH | LCB_SUBDOCOPS_F_MKINTERMEDIATES,
-                                      path.c_str(), path.size(), ver.c_str(), ver.size());
+            lcb_subdocspecs_dict_upsert(specs, idx++, LCB_SUBDOCSPECS_F_XATTRPATH | LCB_SUBDOCSPECS_F_MKINTERMEDIATES,
+                                        path.c_str(), path.size(), ver.c_str(), ver.size());
         }
-        lcb_subdocops_fulldoc_upsert(specs, idx++, 0, value.c_str(), value.size());
+        lcb_subdocspecs_fulldoc_upsert(specs, idx++, 0, value.c_str(), value.size());
 
         lcb_CMDSUBDOC *cmd;
         lcb_cmdsubdoc_create(&cmd);
@@ -548,7 +549,7 @@ class UpsertHandler : public Handler
 
         lcb_sched_enter(instance);
         err = lcb_subdoc(instance, this, cmd);
-        lcb_subdocops_destroy(specs);
+        lcb_subdocspecs_destroy(specs);
         lcb_cmdsubdoc_destroy(cmd);
         if (err != LCB_SUCCESS) {
             throw LcbError(err, "Failed to schedule upsert command");
@@ -622,46 +623,46 @@ class MutationHandler : public Handler
 
         for (size_t ii = 0; ii < keys.size(); ++ii) {
             size_t idx = 0, total = xattrs.size() + paths.size();
-            lcb_SUBDOCOPS *specs;
-            lcb_subdocops_create(&specs, total);
+            lcb_SUBDOCSPECS *specs;
+            lcb_subdocspecs_create(&specs, total);
             for (std::vector< std::pair< std::string, std::string > >::const_iterator it = xattrs.begin();
                  it != xattrs.end(); ++it) {
-                uint32_t flags = LCB_SUBDOCOPS_F_XATTRPATH;
+                uint32_t flags = LCB_SUBDOCSPECS_F_XATTRPATH;
                 if (o_intermediates.passed()) {
-                    flags |= LCB_SUBDOCOPS_F_MKINTERMEDIATES;
+                    flags |= LCB_SUBDOCSPECS_F_MKINTERMEDIATES;
                 }
                 switch (m_opcode) {
                     case SUBDOC_DICT_UPSERT:
-                        lcb_subdocops_dict_upsert(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                                  it->second.c_str(), it->second.size());
+                        lcb_subdocspecs_dict_upsert(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                    it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_DICT_ADD:
-                        lcb_subdocops_dict_add(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                               it->second.c_str(), it->second.size());
+                        lcb_subdocspecs_dict_add(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                 it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_REPLACE:
-                        lcb_subdocops_replace(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                              it->second.c_str(), it->second.size());
+                        lcb_subdocspecs_replace(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_ARRAY_ADD_FIRST:
-                        lcb_subdocops_array_add_first(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                                      it->second.c_str(), it->second.size());
+                        lcb_subdocspecs_array_add_first(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                        it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_ARRAY_ADD_LAST:
-                        lcb_subdocops_array_add_last(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                                     it->second.c_str(), it->second.size());
-                        break;
-                    case SUBDOC_ARRAY_ADD_UNIQUE:
-                        lcb_subdocops_array_add_unique(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                        lcb_subdocspecs_array_add_last(specs, idx++, flags, it->first.c_str(), it->first.size(),
                                                        it->second.c_str(), it->second.size());
                         break;
+                    case SUBDOC_ARRAY_ADD_UNIQUE:
+                        lcb_subdocspecs_array_add_unique(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                         it->second.c_str(), it->second.size());
+                        break;
                     case SUBDOC_ARRAY_INSERT:
-                        lcb_subdocops_array_insert(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                                   it->second.c_str(), it->second.size());
+                        lcb_subdocspecs_array_insert(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                     it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_COUNTER:
-                        lcb_subdocops_counter(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                              atoll(it->second.c_str()));
+                        lcb_subdocspecs_counter(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                atoll(it->second.c_str()));
                         break;
                     default:
                         break;
@@ -671,40 +672,40 @@ class MutationHandler : public Handler
                  it != paths.end(); ++it) {
                 uint32_t flags = 0;
                 if (o_intermediates.passed()) {
-                    flags |= LCB_SUBDOCOPS_F_MKINTERMEDIATES;
+                    flags |= LCB_SUBDOCSPECS_F_MKINTERMEDIATES;
                 }
                 switch (m_opcode) {
                     case SUBDOC_DICT_UPSERT:
-                        lcb_subdocops_dict_upsert(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                                  it->second.c_str(), it->second.size());
+                        lcb_subdocspecs_dict_upsert(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                    it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_DICT_ADD:
-                        lcb_subdocops_dict_add(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                               it->second.c_str(), it->second.size());
+                        lcb_subdocspecs_dict_add(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                 it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_REPLACE:
-                        lcb_subdocops_replace(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                              it->second.c_str(), it->second.size());
+                        lcb_subdocspecs_replace(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_ARRAY_ADD_FIRST:
-                        lcb_subdocops_array_add_first(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                                      it->second.c_str(), it->second.size());
+                        lcb_subdocspecs_array_add_first(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                        it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_ARRAY_ADD_LAST:
-                        lcb_subdocops_array_add_last(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                                     it->second.c_str(), it->second.size());
-                        break;
-                    case SUBDOC_ARRAY_ADD_UNIQUE:
-                        lcb_subdocops_array_add_unique(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                        lcb_subdocspecs_array_add_last(specs, idx++, flags, it->first.c_str(), it->first.size(),
                                                        it->second.c_str(), it->second.size());
                         break;
+                    case SUBDOC_ARRAY_ADD_UNIQUE:
+                        lcb_subdocspecs_array_add_unique(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                         it->second.c_str(), it->second.size());
+                        break;
                     case SUBDOC_ARRAY_INSERT:
-                        lcb_subdocops_array_insert(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                                   it->second.c_str(), it->second.size());
+                        lcb_subdocspecs_array_insert(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                     it->second.c_str(), it->second.size());
                         break;
                     case SUBDOC_COUNTER:
-                        lcb_subdocops_counter(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                              atoll(it->second.c_str()));
+                        lcb_subdocspecs_counter(specs, idx++, flags, it->first.c_str(), it->first.size(),
+                                                atoll(it->second.c_str()));
                         break;
                     default:
                         break;
@@ -722,7 +723,7 @@ class MutationHandler : public Handler
                 lcb_cmdsubdoc_expiration(cmd, o_expiry.result());
             }
             err = lcb_subdoc(instance, this, cmd);
-            lcb_subdocops_destroy(specs);
+            lcb_subdocspecs_destroy(specs);
             lcb_cmdsubdoc_destroy(cmd);
             if (err != LCB_SUCCESS) {
                 throw LcbError(err, "Failed to schedule " + cmdname + " command");

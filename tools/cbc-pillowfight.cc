@@ -863,17 +863,17 @@ class ThreadContext
             }
             case NextOp::SDSTORE:
             case NextOp::SDGET: {
-                lcb_SUBDOCOPS *specs;
+                lcb_SUBDOCSPECS *specs;
                 bool mutate = false;
-                lcb_subdocops_create(&specs, opinfo.m_specs.size());
+                lcb_subdocspecs_create(&specs, opinfo.m_specs.size());
                 for (size_t ii = 0; ii < opinfo.m_specs.size(); ii++) {
                     SubdocSpec &spec = opinfo.m_specs[ii];
                     if (spec.mutate) {
                         mutate = true;
-                        lcb_subdocops_dict_upsert(specs, ii, 0, spec.path.c_str(), spec.path.size(), spec.value.c_str(),
-                                                  spec.value.size());
+                        lcb_subdocspecs_dict_upsert(specs, ii, 0, spec.path.c_str(), spec.path.size(),
+                                                    spec.value.c_str(), spec.value.size());
                     } else {
-                        lcb_subdocops_get(specs, ii, 0, spec.path.c_str(), spec.path.size());
+                        lcb_subdocspecs_get(specs, ii, 0, spec.path.c_str(), spec.path.size());
                     }
                 }
                 lcb_CMDSUBDOC *sdcmd;
@@ -886,7 +886,7 @@ class ThreadContext
                     lcb_cmdsubdoc_durability(sdcmd, config.durabilityLevel);
                 }
                 error = lcb_subdoc(instance, NULL, sdcmd);
-                lcb_subdocops_destroy(specs);
+                lcb_subdocspecs_destroy(specs);
                 lcb_cmdsubdoc_destroy(sdcmd);
                 break;
             }
