@@ -145,7 +145,7 @@ struct lcb_RESPGET_ {
     const void *value; /**< Value buffer for the item */
     lcb_SIZE nvalue;   /**< Length of value */
     void *bufh;
-    lcb_datatype_t datatype; /**< @internal */
+    uint8_t datatype; /**< @internal */
     lcb_U32 itmflags;        /**< User-defined flags for the item */
 };
 
@@ -154,7 +154,7 @@ struct lcb_RESPGETREPLICA_ {
     const void *value; /**< Value buffer for the item */
     lcb_SIZE nvalue;   /**< Length of value */
     void *bufh;
-    lcb_datatype_t datatype; /**< @internal */
+    uint8_t datatype; /**< @internal */
     lcb_U32 itmflags;        /**< User-defined flags for the item */
 };
 

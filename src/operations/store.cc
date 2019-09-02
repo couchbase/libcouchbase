@@ -381,7 +381,7 @@ static lcb_STATUS get_esize_and_opcode(lcb_STORE_OPERATION ucmd, lcb_uint8_t *op
     return LCB_SUCCESS;
 }
 
-static int can_compress(lcb_INSTANCE *instance, const mc_PIPELINE *pipeline, lcb_datatype_t datatype)
+static int can_compress(lcb_INSTANCE *instance, const mc_PIPELINE *pipeline, uint8_t datatype)
 {
     const lcb::Server *server = static_cast< const lcb::Server * >(pipeline);
     int compressopts = LCBT_SETTING(instance, compressopts);
