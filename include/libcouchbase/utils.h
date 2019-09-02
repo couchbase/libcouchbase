@@ -493,7 +493,7 @@ typedef struct {
  * Shows how to use an explicit sequence number as a basis for polling
  * @code{.c}
  * // during instance creation:
- * lcb_cntl_string(instance, "fetch_mutation_tokens", "true");
+ * lcb_cntl_string(instance, "enable_mutation_tokens", "true");
  * lcb_connect(instance);
  * // ...
  * lcb_RESPSTORE *resp = get_store_response();
@@ -510,7 +510,7 @@ typedef struct {
  * library) for durability:
  * @code{.c}
  * // during instance creation
- * lcb_cntl_string(instance, "fetch_mutation_tokens", "true");
+ * lcb_cntl_string(instance, "enable_mutation_tokens", "true");
  * lcb_cntl_string(instance, "dur_mutation_tokens", "true");
  * lcb_connect(instance);
  * // ...

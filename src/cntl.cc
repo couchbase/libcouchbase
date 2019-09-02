@@ -661,6 +661,7 @@ HANDLER(durable_write_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, enable_durable_write));
 }
 
+/* clang-format off */
 static ctl_handler handlers[] = {
     timeout_common,                       /* LCB_CNTL_OP_TIMEOUT */
     timeout_common,                       /* LCB_CNTL_VIEW_TIMEOUT */
@@ -714,7 +715,7 @@ static ctl_handler handlers[] = {
     schedflush_handler,                   /* LCB_CNTL_SCHED_IMPLICIT_FLUSH */
     vbguess_handler,                      /* LCB_CNTL_VBGUESS_PERSIST */
     unsafe_optimize,                      /* LCB_CNTL_UNSAFE_OPTIMIZE */
-    fetch_mutation_tokens_handler,        /* LCB_CNTL_FETCH_MUTATION_TOKENS */
+    fetch_mutation_tokens_handler,        /* LCB_CNTL_ENABLE_MUTATION_TOKENS */
     dur_mutation_tokens_handler,          /* LCB_CNTL_DURABILITY_MUTATION_TOKENS */
     config_cache_handler,                 /* LCB_CNTL_CONFIGCACHE_READONLY */
     nmv_imm_retry_handler,                /* LCB_CNTL_RETRY_NMV_IMM */
@@ -761,6 +762,7 @@ static ctl_handler handlers[] = {
     allow_static_config_handler,          /* LCB_CNTL_ALLOW_STATIC_CONFIG */
     NULL
 };
+/* clang-format on */
 
 /* Union used for conversion to/from string functions */
 typedef union {
@@ -918,7 +920,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"http_poolsize", LCB_CNTL_HTTP_POOLSIZE, convert_SIZE},
     {"vbguess_persist", LCB_CNTL_VBGUESS_PERSIST, convert_intbool},
     {"unsafe_optimize", LCB_CNTL_UNSAFE_OPTIMIZE, convert_intbool},
-    {"fetch_mutation_tokens", LCB_CNTL_FETCH_MUTATION_TOKENS, convert_intbool},
+    {"enable_mutation_tokens", LCB_CNTL_ENABLE_MUTATION_TOKENS, convert_intbool},
     {"dur_mutation_tokens", LCB_CNTL_DURABILITY_MUTATION_TOKENS, convert_intbool},
     {"retry_nmv_imm", LCB_CNTL_RETRY_NMV_IMM, convert_intbool},
     {"tcp_nodelay", LCB_CNTL_TCP_NODELAY, convert_intbool},

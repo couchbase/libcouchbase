@@ -949,7 +949,7 @@ typedef enum {
  *
  * @cntl_arg_both{int (as boolean)}
  */
-#define LCB_CNTL_FETCH_MUTATION_TOKENS 0x34
+#define LCB_CNTL_ENABLE_MUTATION_TOKENS 0x34
 
 /**
  * This setting determines whether the lcb_durability_poll() function will
