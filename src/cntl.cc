@@ -337,9 +337,9 @@ HANDLER(max_redirects) {
 
 HANDLER(logprocs_handler) {
     if (mode == LCB_CNTL_GET) {
-        *(lcb_logprocs**)arg = LCBT_SETTING(instance, logger);
+        *(lcb_LOGGER **)arg = LCBT_SETTING(instance, logger);
     } else if (mode == LCB_CNTL_SET) {
-        LCBT_SETTING(instance, logger) = (lcb_logprocs *)arg;
+        LCBT_SETTING(instance, logger) = (lcb_LOGGER *)arg;
     }
     (void)cmd; return LCB_SUCCESS;
 }
@@ -443,7 +443,7 @@ HANDLER(allocfactory_handler) {
 HANDLER(console_log_handler) {
     lcb_U32 level;
     struct lcb_CONSOLELOGGER *logger;
-    lcb_logprocs *procs;
+    lcb_LOGGER *procs;
 
     level = *(lcb_U32*)arg;
     if (mode != LCB_CNTL_SET) {
@@ -459,16 +459,15 @@ HANDLER(console_log_handler) {
         return LCB_SUCCESS;
     }
 
-    logger = (struct lcb_CONSOLELOGGER* ) lcb_console_logprocs;
+    logger = (struct lcb_CONSOLELOGGER *)lcb_console_logger;
     level = LCB_LOG_ERROR - level;
-    logger->minlevel = level;
+    logger->minlevel = (lcb_LOG_SEVERITY)level;
     LCBT_SETTING(instance, logger) = &logger->base;
     (void)cmd; return LCB_SUCCESS;
 }
 
 HANDLER(console_fp_handler) {
-    struct lcb_CONSOLELOGGER *logger =
-            (struct lcb_CONSOLELOGGER*)lcb_console_logprocs;
+    struct lcb_CONSOLELOGGER *logger = (struct lcb_CONSOLELOGGER *)lcb_console_logger;
     if (mode == LCB_CNTL_GET) {
         *(FILE **)arg = logger->fp;
     } else if (mode == LCB_CNTL_SET) {

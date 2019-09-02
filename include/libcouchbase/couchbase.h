@@ -48,6 +48,7 @@ typedef struct lcb_HTTP_HANDLE_ lcb_HTTP_HANDLE;
 #include <libcouchbase/kvbuf.h>
 #include <libcouchbase/auth.h>
 #include <libcouchbase/tracing.h>
+#include <libcouchbase/logger.h>
 #include <libcouchbase/cntl.h>
 
 #ifdef __cplusplus
@@ -320,7 +321,7 @@ struct lcb_create_st4 {
      */
     const char *passwd;
 
-    lcb_logprocs *logger;     /**< Logger */
+    lcb_LOGGER *logger;       /**< Logger */
     struct lcb_io_opt_st *io; /**< IO Options */
     lcb_type_t type;
 };

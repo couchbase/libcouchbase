@@ -165,7 +165,7 @@ class LCB_CLASS_EXPORT Connspec
     {
         return m_ctlopts;
     }
-    lcb_logprocs *logger() const
+    lcb_LOGGER *logger() const
     {
         return m_logger;
     }
@@ -215,7 +215,7 @@ class LCB_CLASS_EXPORT Connspec
     std::set< int > m_transports;
     unsigned m_flags; /**< Internal flags */
     lcb_ipv6_t m_ipv6;
-    lcb_logprocs *m_logger;
+    lcb_LOGGER *m_logger;
 };
 
 #define LCB_SPECSCHEME_RAW "couchbase+explicit://"
