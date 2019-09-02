@@ -52,7 +52,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->detailed_neterr = 0;
     settings->refresh_on_hterr = 1;
     settings->sched_implicit_flush = 1;
-    settings->fetch_mutation_tokens = 0;
+    settings->fetch_mutation_tokens = 1;
     settings->dur_mutation_tokens = 1;
     settings->nmv_retry_imm = LCB_DEFAULT_NVM_RETRY_IMM;
     settings->tcp_nodelay = LCB_DEFAULT_TCP_NODELAY;
