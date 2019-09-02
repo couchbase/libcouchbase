@@ -19,6 +19,7 @@
 #define LCB_CONNSPEC_H
 
 #include <libcouchbase/couchbase.h>
+#include <libcouchbase/utils.h>
 #include "config.h"
 
 #include <string>

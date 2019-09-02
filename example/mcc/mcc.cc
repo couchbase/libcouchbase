@@ -19,6 +19,7 @@
 #include <list>
 #include <iostream>
 #include <libcouchbase/couchbase.h>
+#include <libcouchbase/utils.h>
 #include <getopt.h>
 #include <cstdlib>
 

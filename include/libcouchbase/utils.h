@@ -29,6 +29,12 @@
 extern "C" {
 #endif
 
+#define LCB_CONFIG_MCD_PORT 11210
+#define LCB_CONFIG_MCD_SSL_PORT 11207
+#define LCB_CONFIG_HTTP_PORT 8091
+#define LCB_CONFIG_HTTP_SSL_PORT 18091
+#define LCB_CONFIG_MCCOMPAT_PORT 11211
+
 /**
  * Set the key for the command.
  * @param cmd A command derived from lcb_CMDBASE
@@ -1301,6 +1307,191 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetcid_timeout(lcb_CMDGETCID *cmd, uint32_t t
 
 LIBCOUCHBASE_API lcb_STATUS lcb_getcid(lcb_INSTANCE *instance, void *cookie, const lcb_CMDGETCID *cmd);
 /** @} */
+
+/**
+ * @ingroup lcb-public-api
+ * @defgroup lcb-cluster-status Cluster Information
+ * @brief These functions return status information about the handle, the current
+ * connection, and the number of nodes found within the cluster.
+ *
+ * @see lcb_cntl() for more functions to retrieve status info
+ *
+ * @addtogroup lcb-cluster-status
+ * @{
+ */
+
+/**@brief
+ * Type of node to retrieve for the lcb_get_node() function
+ */
+typedef enum {
+    /** Get an HTTP configuration (Rest API) node */
+    LCB_NODE_HTCONFIG = 0x01,
+    /** Get a data (memcached) node */
+    LCB_NODE_DATA = 0x02,
+    /** Get a view (CAPI) node */
+    LCB_NODE_VIEWS = 0x04,
+    /** Only return a node which is connected, or a node which is known to be up */
+    LCB_NODE_CONNECTED = 0x08,
+
+    /** Specifying this flag adds additional semantics which instruct the library
+     * to search additional resources to return a host, and finally,
+     * if no host can be found, return the string
+     * constant @ref LCB_GETNODE_UNAVAILABLE. */
+    LCB_NODE_NEVERNULL = 0x10,
+
+    /** Equivalent to `LCB_NODE_HTCONFIG|LCB_NODE_CONNECTED` */
+    LCB_NODE_HTCONFIG_CONNECTED = 0x09,
+
+    /**Equivalent to `LCB_NODE_HTCONFIG|LCB_NODE_NEVERNULL`.
+     * When this is passed, some additional attempts may be made by the library
+     * to return any kind of host, including searching the initial list of hosts
+     * passed to the lcb_create() function. */
+    LCB_NODE_HTCONFIG_ANY = 0x11
+} lcb_GETNODETYPE;
+
+/** String constant returned by lcb_get_node() when the @ref LCB_NODE_NEVERNULL
+ * flag is specified, and no node can be returned */
+#define LCB_GETNODE_UNAVAILABLE "invalid_host:0"
+
+/**
+ * @brief Return a string of `host:port` for a node of the given type.
+ *
+ * @param instance the instance from which to retrieve the node
+ * @param type the type of node to return
+ * @param index the node number if index is out of bounds it will be wrapped
+ * around, thus there is never an invalid value for this parameter
+ *
+ * @return a string in the form of `host:port`. If LCB_NODE_NEVERNULL was specified
+ * as an option in `type` then the string constant LCB_GETNODE_UNAVAILABLE is
+ * returned. Otherwise `NULL` is returned if the type is unrecognized or the
+ * LCB_NODE_CONNECTED option was specified and no connected node could be found
+ * or a memory allocation failed.
+ *
+ * @note The index parameter is _ignored_ if `type` is
+ * LCB_NODE_HTCONFIG|LCB_NODE_CONNECTED as there will always be only a single
+ * HTTP bootstrap node.
+ *
+ * @code{.c}
+ * const char *viewnode = lcb_get_node(instance, LCB_NODE_VIEWS, 0);
+ * // Get the connected REST endpoint:
+ * const char *restnode = lcb_get_node(instance, LCB_NODE_HTCONFIG|LCB_NODE_CONNECTED, 0);
+ * if (!restnode) {
+ *   printf("Instance not connected via HTTP!\n");
+ * }
+ * @endcode
+ *
+ * Iterate over all the data nodes:
+ * @code{.c}
+ * unsigned ii;
+ * for (ii = 0; ii < lcb_get_num_servers(instance); ii++) {
+ *   const char *kvnode = lcb_get_node(instance, LCB_NODE_DATA, ii);
+ *   if (kvnode) {
+ *     printf("KV node %s exists at index %u\n", kvnode, ii);
+ *   } else {
+ *     printf("No node for index %u\n", ii);
+ *   }
+ * }
+ * @endcode
+ *
+ * @committed
+ */
+LIBCOUCHBASE_API
+const char *lcb_get_node(lcb_INSTANCE *instance, lcb_GETNODETYPE type, unsigned index);
+
+/**
+ * @committed
+ *
+ * @brief Get the target server for a given key.
+ *
+ * This is a convenience function wrapping around the vBucket API which allows
+ * you to retrieve the target node (the node which will be contacted) when
+ * performing KV operations involving the key.
+ *
+ * @param instance the instance
+ * @param key the key to use
+ * @param nkey the length of the key
+ * @return a string containing the hostname, or NULL on error.
+ *
+ * Since this is a convenience function, error details are not contained here
+ * in favor of brevity. Use the full vBucket API for more powerful functions.
+ */
+LIBCOUCHBASE_API
+const char *lcb_get_keynode(lcb_INSTANCE *instance, const void *key, size_t nkey);
+
+/**
+ * @brief Get the number of the replicas in the cluster
+ *
+ * @param instance The handle to lcb
+ * @return -1 if the cluster wasn't configured yet, and number of replicas
+ * otherwise. This may be `0` if there are no replicas.
+ * @committed
+ */
+LIBCOUCHBASE_API
+lcb_S32 lcb_get_num_replicas(lcb_INSTANCE *instance);
+
+/**
+ * @brief Get the number of the nodes in the cluster
+ * @param instance The handle to lcb
+ * @return -1 if the cluster wasn't configured yet, and number of nodes otherwise.
+ * @committed
+ */
+LIBCOUCHBASE_API
+lcb_S32 lcb_get_num_nodes(lcb_INSTANCE *instance);
+
+/**
+ * @brief Get a list of nodes in the cluster
+ *
+ * @return a NULL-terminated list of 0-terminated strings consisting of
+ * node hostnames:admin_ports for the entire cluster.
+ * The storage duration of this list is only valid until the
+ * next call to a libcouchbase function and/or when returning control to
+ * libcouchbase' event loop.
+ *
+ * @code{.c}
+ * const char * const * curp = lcb_get_server_list(instance);
+ * for (; *curp; curp++) {
+ *   printf("Have node %s\n", *curp);
+ * }
+ * @endcode
+ * @committed
+ */
+LIBCOUCHBASE_API
+const char *const *lcb_get_server_list(lcb_INSTANCE *instance);
+
+/**@} (Group: Cluster Info) */
+
+/**
+ * Functions to allocate and free memory related to libcouchbase. This is
+ * mainly for use on Windows where it is possible that the DLL and EXE
+ * are using two different CRTs
+ */
+LIBCOUCHBASE_API
+void *lcb_mem_alloc(lcb_SIZE size);
+
+/** Use this to free memory allocated with lcb_mem_alloc */
+LIBCOUCHBASE_API
+void lcb_mem_free(void *ptr);
+
+/**
+ * @internal
+ *
+ * These two functions unconditionally start and stop the event loop. These
+ * should be used _only_ when necessary. Use lcb_wait and lcb_breakout
+ * for safer variants.
+ *
+ * Internally these proxy to the run_event_loop/stop_event_loop calls
+ */
+LCB_INTERNAL_API
+void lcb_run_loop(lcb_INSTANCE *instance);
+
+/** @internal */
+LCB_INTERNAL_API
+void lcb_stop_loop(lcb_INSTANCE *instance);
+
+/** @internal */
+/* This returns the library's idea of time */
+LCB_INTERNAL_API
+lcb_U64 lcb_nstime(void);
 
 #ifdef __cplusplus
 }
