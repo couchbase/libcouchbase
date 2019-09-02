@@ -49,7 +49,7 @@ static void bootstrap_callback(lcb_INSTANCE *instance, lcb_STATUS err)
     printf("successfully bootstrapped\n");
     fflush(stdout);
     /* Since we've got our configuration, let's go ahead and store a value */
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key, nkey);
     lcb_cmdstore_value(cmd, val, nval);
     err = lcb_store(instance, NULL, cmd);

@@ -244,7 +244,7 @@ static void df_get_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb
     lcb_size_t nvalue = strlen(value);
 
     lcb_CMDSTORE *storecmd;
-    lcb_cmdstore_create(&storecmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&storecmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(storecmd, key, nkey);
     lcb_cmdstore_value(storecmd, value, nvalue);
     lcb_cmdstore_cas(storecmd, rv->cas1);
@@ -267,7 +267,7 @@ TEST_F(MockUnitTest, testDoubleFreeError)
     (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)df_store_callback1);
 
     lcb_CMDSTORE *storecmd;
-    lcb_cmdstore_create(&storecmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&storecmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(storecmd, key, nkey);
     lcb_cmdstore_value(storecmd, value, nvalue);
 

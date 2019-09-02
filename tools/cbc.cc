@@ -748,24 +748,24 @@ void SetHandler::addOptions()
 lcb_STORE_OPERATION SetHandler::mode()
 {
     if (o_add.passed()) {
-        return LCB_STORE_ADD;
+        return LCB_STORE_INSERT;
     }
 
     string s = o_mode.const_result();
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
     if (s == "upsert") {
-        return LCB_STORE_SET;
+        return LCB_STORE_UPSERT;
     } else if (s == "replace") {
         return LCB_STORE_REPLACE;
     } else if (s == "insert") {
-        return LCB_STORE_ADD;
+        return LCB_STORE_INSERT;
     } else if (s == "append") {
         return LCB_STORE_APPEND;
     } else if (s == "prepend") {
         return LCB_STORE_PREPEND;
     } else {
         throw BadArg(string("Mode must be one of upsert, insert, replace. Got ") + s);
-        return LCB_STORE_SET;
+        return LCB_STORE_UPSERT;
     }
 }
 

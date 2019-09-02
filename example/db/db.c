@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
 
     {
         lcb_CMDSTORE *cmd;
-        lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+        lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
         lcb_cmdstore_key(cmd, key, nkey);
         lcb_cmdstore_value(cmd, bytes, nbytes);
         err = lcb_store(instance, NULL, cmd);

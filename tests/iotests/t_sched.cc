@@ -52,7 +52,7 @@ TEST_F(SchedUnitTests, testSched)
 
     // lcb_store
     lcb_CMDSTORE *scmd;
-    lcb_cmdstore_create(&scmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(scmd, "key", 3);
     lcb_cmdstore_value(scmd, "val", 3);
 

@@ -113,7 +113,7 @@ int main(int argc, char **argv)
 
     // Store an item
     lcb_CMDSTORE *scmd;
-    lcb_cmdstore_create(&scmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(scmd, "key", 3);
     const char *initval = "{\"hello\":\"world\"}";
     lcb_cmdstore_value(scmd, initval, strlen(initval));

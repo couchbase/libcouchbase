@@ -794,7 +794,7 @@ class ThreadContext
                 opinfo = retryq.front();
                 retryq.pop();
                 lcb_CMDSTORE *scmd;
-                lcb_cmdstore_create(&scmd, LCB_STORE_SET);
+                lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
                 lcb_cmdstore_expiration(scmd, exptime);
                 if (config.writeJson()) {
                     lcb_cmdstore_datatype(scmd, LCB_VALUE_F_JSON);
@@ -835,7 +835,7 @@ class ThreadContext
                     lcb_cmdget_destroy(gcmd);
                 } else {
                     lcb_CMDSTORE *scmd;
-                    lcb_cmdstore_create(&scmd, LCB_STORE_SET);
+                    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
                     lcb_cmdstore_expiration(scmd, exptime);
                     if (config.writeJson()) {
                         lcb_cmdstore_datatype(scmd, LCB_VALUE_F_JSON);
@@ -1079,7 +1079,7 @@ static void getCallback(lcb_INSTANCE *instance, int, const lcb_RESPGET *resp)
             tc->populateIov(seqno, valuefrags);
 
             lcb_CMDSTORE *scmd;
-            lcb_cmdstore_create(&scmd, LCB_STORE_SET);
+            lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
             lcb_cmdstore_expiration(scmd, config.getExptime());
             uint64_t cas;
             lcb_respget_cas(resp, &cas);

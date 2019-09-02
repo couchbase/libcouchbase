@@ -96,7 +96,7 @@ struct rvbuf {
     void reset()
     {
         error = LCB_SUCCESS;
-        operation = LCB_STORE_SET;
+        operation = LCB_STORE_UPSERT;
         cas = 0;
         flags = 0;
         counter = 0;
@@ -239,7 +239,7 @@ void SmokeTest::testSet1()
     string key("foo");
     string value("bar");
 
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key.c_str(), key.size());
     lcb_cmdstore_value(cmd, value.c_str(), value.size());
     EXPECT_EQ(LCB_SUCCESS, lcb_store(session, &rv, cmd));
@@ -247,7 +247,7 @@ void SmokeTest::testSet1()
     rv.incRemaining();
     lcb_wait(session);
     EXPECT_EQ(LCB_SUCCESS, rv.error);
-    EXPECT_EQ(LCB_STORE_SET, rv.operation);
+    EXPECT_EQ(LCB_STORE_UPSERT, rv.operation);
     EXPECT_EQ(key, rv.getKeyString());
 }
 
@@ -258,7 +258,7 @@ void SmokeTest::testSet2()
     lcb_CMDSTORE *cmd;
     string key("foo"), value("bar");
 
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key.c_str(), key.size());
     lcb_cmdstore_value(cmd, value.c_str(), value.size());
 
@@ -279,7 +279,7 @@ void SmokeTest::testGet1()
     string key("foo"), value("bar");
 
     lcb_CMDSTORE *storecmd;
-    lcb_cmdstore_create(&storecmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&storecmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(storecmd, key.c_str(), key.size());
     lcb_cmdstore_value(storecmd, value.c_str(), value.size());
 
@@ -325,7 +325,7 @@ void SmokeTest::testGet2()
         const string &curKey = coll[ii];
 
         lcb_CMDSTORE *cmd;
-        lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+        lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
         lcb_cmdstore_key(cmd, curKey.c_str(), curKey.size());
         lcb_cmdstore_value(cmd, value.c_str(), value.size());
 
@@ -366,7 +366,7 @@ void SmokeTest::testTouch1()
         const string &curKey = coll[ii];
 
         lcb_CMDSTORE *cmd;
-        lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+        lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
         lcb_cmdstore_key(cmd, curKey.c_str(), curKey.size());
         lcb_cmdstore_value(cmd, value.c_str(), value.size());
 
@@ -442,7 +442,7 @@ void SmokeTest::testSpuriousSaslError()
         rvs[i].counter = 999;
 
         lcb_CMDSTORE *cmd;
-        lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+        lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
         lcb_cmdstore_key(cmd, key.c_str(), key.size());
         lcb_cmdstore_value(cmd, key.c_str(), key.size());
         EXPECT_EQ(LCB_SUCCESS, lcb_store(session, rvs + i, cmd));

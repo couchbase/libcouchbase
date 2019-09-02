@@ -215,7 +215,7 @@ static void flags_store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RE
 
     lcb_STORE_OPERATION op;
     lcb_respstore_operation(resp, &op);
-    ASSERT_EQ(LCB_STORE_SET, op);
+    ASSERT_EQ(LCB_STORE_UPSERT, op);
     ++(*counter);
 }
 
@@ -257,7 +257,7 @@ TEST_F(GetUnitTest, testFlags)
     int numcallbacks = 0;
 
     lcb_CMDSTORE *scmd;
-    lcb_cmdstore_create(&scmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(scmd, "flags", 5);
     lcb_cmdstore_value(scmd, "x", 1);
     lcb_cmdstore_flags(scmd, 0xdeadbeef);

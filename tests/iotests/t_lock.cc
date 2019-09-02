@@ -188,7 +188,7 @@ TEST_F(LockUnitTest, testStorageLockContention)
 
     /* now try to set the key, while the lock is still in place */
     lcb_CMDSTORE *scmd;
-    lcb_cmdstore_create(&scmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(scmd, key.c_str(), key.size());
     lcb_cmdstore_value(scmd, newvalue.c_str(), newvalue.size());
     Item s_itm;

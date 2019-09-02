@@ -916,7 +916,7 @@ typedef enum {
      * The default storage mode. This constant was added in version 2.6.2 for
      * the sake of maintaining a default storage mode, eliminating the need
      * for simple storage operations to explicitly define
-     * lcb_CMDSTORE::operation. Behaviorally it is identical to @ref LCB_STORE_SET
+     * lcb_CMDSTORE::operation. Behaviorally it is identical to @ref LCB_STORE_UPSERT
      * in that it will make the server unconditionally store the item, whether
      * it exists or not.
      */
@@ -926,16 +926,13 @@ typedef enum {
      * Will cause the operation to fail if the key already exists in the
      * cluster.
      */
-    LCB_STORE_ADD = 0x01,
+    LCB_STORE_INSERT = 0x01,
 
     /**
      * Will cause the operation to fail _unless_ the key already exists in the
      * cluster.
      */
     LCB_STORE_REPLACE = 0x02,
-
-    /** Unconditionally store the item in the cluster */
-    LCB_STORE_SET = 0x03,
 
     /**
      * Rather than setting the contents of the entire document, take the value

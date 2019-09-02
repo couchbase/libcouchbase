@@ -40,7 +40,7 @@ static void storeGetStok(lcb_INSTANCE *instance, const string &k, const string &
     lcb_sched_enter(instance);
 
     lcb_CMDSTORE *cmd;
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, k.c_str(), k.size());
     lcb_cmdstore_value(cmd, v.c_str(), v.size());
 

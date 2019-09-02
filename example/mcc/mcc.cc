@@ -128,7 +128,7 @@ class MultiClusterClient
     lcb_STATUS store(const std::string &key, const std::string &value)
     {
         lcb_CMDSTORE *scmd;
-        lcb_cmdstore_create(&scmd, LCB_STORE_SET);
+        lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
         lcb_cmdstore_key(scmd, key.c_str(), key.size());
         lcb_cmdstore_value(scmd, value.c_str(), value.size());
         Operation *oper = new Operation(this);

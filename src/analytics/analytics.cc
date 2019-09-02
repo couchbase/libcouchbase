@@ -746,7 +746,7 @@ static lcb_STATUS cb_op_schedule(lcb::docreq::Queue *q, lcb::docreq::DocRequest 
     lcb_STORE_OPERATION op;
     switch (areq->ingest->method) {
         case LCB_INGEST_METHOD_INSERT:
-            op = LCB_STORE_ADD;
+            op = LCB_STORE_INSERT;
             break;
         case LCB_INGEST_METHOD_REPLACE:
             op = LCB_STORE_REPLACE;

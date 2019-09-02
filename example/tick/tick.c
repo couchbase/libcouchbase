@@ -70,7 +70,7 @@ int main(int argc, char **argv)
         value[ii] = '*';
     }
 
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key, strlen(key));
     lcb_cmdstore_value(cmd, value, VALUE_SIZE);
 

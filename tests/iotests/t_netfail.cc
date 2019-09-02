@@ -84,7 +84,7 @@ class NumNodeRetryer : public Retryer
     {
         lcb_RESPCALLBACK oldCb = lcb_install_callback3(instance, LCB_CALLBACK_STORE, nopStoreCb);
         lcb_CMDSTORE *scmd;
-        lcb_cmdstore_create(&scmd, LCB_STORE_SET);
+        lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
         lcb_sched_enter(instance);
 
         size_t nSubmit = 0;
@@ -150,7 +150,7 @@ static void opFromCallback_statsCB(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, co
         snprintf(statkey, nstatkey, "%s-%.*s", server_endpoint, (int)nkey, (const char *)key);
 
         lcb_CMDSTORE *cmd;
-        lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+        lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
         lcb_cmdstore_key(cmd, statkey, nstatkey);
         lcb_cmdstore_value(cmd, (const char *)bytes, nbytes);
         ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, NULL, cmd));
@@ -237,7 +237,7 @@ TEST_F(MockUnitTest, testTimeoutOnlyStale)
     mock->hiccupNodes(1500, 1);
 
     lcb_CMDSTORE *cmd;
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key, strlen(key));
     lcb_cmdstore_value(cmd, value, strlen(value));
 
@@ -286,7 +286,7 @@ TEST_F(MockUnitTest, testTimeoutOnlyStaleWithPerOperationProperty)
     mock->hiccupNodes(1500, 1);
 
     lcb_CMDSTORE *cmd;
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key, strlen(key));
     lcb_cmdstore_value(cmd, value, strlen(value));
     lcb_cmdstore_timeout(cmd, tmoval);
@@ -492,7 +492,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
 
     /* Schedule SET operation */
     lcb_CMDSTORE *storecmd;
-    lcb_cmdstore_create(&storecmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&storecmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(storecmd, key.c_str(), key.size());
     lcb_cmdstore_value(storecmd, val.c_str(), val.size());
 
@@ -712,7 +712,7 @@ TEST_F(MockUnitTest, testDynamicAuth)
 static void doManyItems(lcb_INSTANCE *instance, std::vector< std::string > keys)
 {
     lcb_CMDSTORE *cmd;
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < keys.size(); ii++) {
         lcb_cmdstore_key(cmd, keys[ii].c_str(), keys[ii].size());

@@ -575,7 +575,7 @@ TEST_F(MockUnitTest, testConflictingOptions)
     ASSERT_EQ(LCB_SUCCESS, err);
     lcb_cmdstore_destroy(scmd);
 
-    lcb_cmdstore_create(&scmd, LCB_STORE_ADD);
+    lcb_cmdstore_create(&scmd, LCB_STORE_INSERT);
     lcb_cmdstore_key(scmd, key, nkey);
     lcb_cmdstore_cas(scmd, 0xdeadbeef);
     err = lcb_store(instance, NULL, scmd);
@@ -659,7 +659,7 @@ TEST_F(MockUnitTest, testTickLoop)
 
     lcb_install_callback3(instance, LCB_CALLBACK_STORE, tickOpCb);
     lcb_CMDSTORE *cmd;
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key, strlen(key));
     lcb_cmdstore_value(cmd, value, strlen(value));
 
@@ -750,7 +750,7 @@ TEST_F(MockUnitTest, testAppendE2BIG)
     size_t nvalue1 = 20 * 1024 * 1024;
     void *value1 = calloc(nvalue1, sizeof(char));
     lcb_CMDSTORE *scmd;
-    lcb_cmdstore_create(&scmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(scmd, key, nkey);
     lcb_cmdstore_value(scmd, (const char *)value1, nvalue1);
     err = lcb_store(instance, &res, scmd);

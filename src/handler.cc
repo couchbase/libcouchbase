@@ -817,7 +817,7 @@ H_store(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
         opcode = hdr.request.opcode;
     }
     if (opcode == PROTOCOL_BINARY_CMD_ADD) {
-        w.resp.op = LCB_STORE_ADD;
+        w.resp.op = LCB_STORE_INSERT;
     } else if (opcode == PROTOCOL_BINARY_CMD_REPLACE) {
         w.resp.op = LCB_STORE_REPLACE;
     } else if (opcode == PROTOCOL_BINARY_CMD_APPEND) {
@@ -825,7 +825,7 @@ H_store(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
     } else if (opcode == PROTOCOL_BINARY_CMD_PREPEND) {
         w.resp.op = LCB_STORE_PREPEND;
     } else if (opcode == PROTOCOL_BINARY_CMD_SET) {
-        w.resp.op = LCB_STORE_SET;
+        w.resp.op = LCB_STORE_UPSERT;
     }
     w.resp.rflags |= LCB_RESP_F_EXTDATA | LCB_RESP_F_FINAL;
     handle_mutation_token(root, response, request, &w.mt);

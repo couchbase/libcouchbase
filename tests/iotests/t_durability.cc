@@ -982,7 +982,7 @@ TEST_F(DurabilityUnitTest, testDurStore)
     st_RESULT res = {0};
 
     lcb_CMDSTORE *cmd;
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key.c_str(), key.size());
     lcb_cmdstore_value(cmd, value.c_str(), value.size());
 

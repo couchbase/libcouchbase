@@ -29,7 +29,7 @@ static void testSimpleSetStoreCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const 
     lcb_respstore_cookie(resp, (void **)&counter);
     lcb_STORE_OPERATION op;
     lcb_respstore_operation(resp, &op);
-    ASSERT_EQ(LCB_STORE_SET, op);
+    ASSERT_EQ(LCB_STORE_UPSERT, op);
     EXPECT_EQ(LCB_SUCCESS, lcb_respstore_status(resp));
     const char *key;
     size_t nkey;
@@ -66,7 +66,7 @@ TEST_F(MutateUnitTest, testSimpleSet)
 
     int numcallbacks = 0;
     lcb_CMDSTORE *cmd;
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key1.c_str(), key1.size());
     lcb_cmdstore_value(cmd, val1.c_str(), val1.size());
     EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &numcallbacks, cmd));
@@ -93,7 +93,7 @@ TEST_F(MutateUnitTest, testStoreZeroLengthKey)
 
     lcb_sched_enter(instance);
     lcb_CMDSTORE *cmd;
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, NULL, 0);
     lcb_cmdstore_value(cmd, "bar", 3);
     EXPECT_EQ(LCB_EMPTY_KEY, lcb_store(instance, NULL, cmd));
@@ -108,7 +108,7 @@ static void testStoreZeroLengthValueCallback(lcb_INSTANCE *, int, const lcb_RESP
     lcb_respstore_cookie(resp, (void **)&counter);
     lcb_STORE_OPERATION op;
     lcb_respstore_operation(resp, &op);
-    ASSERT_EQ(LCB_STORE_SET, op);
+    ASSERT_EQ(LCB_STORE_UPSERT, op);
     EXPECT_EQ(LCB_SUCCESS, lcb_respstore_status(resp));
     ++(*counter);
 }
@@ -128,7 +128,7 @@ TEST_F(MutateUnitTest, testStoreZeroLengthValue)
     lcb_sched_enter(instance);
     (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testStoreZeroLengthValueCallback);
     lcb_CMDSTORE *cmd;
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key.data(), key.length());
     lcb_cmdstore_value(cmd, NULL, 0);
     int numcallbacks = 0;
@@ -236,7 +236,7 @@ static void testSimpleAddStoreCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const 
     lcb_respstore_cookie(resp, (void **)&counter);
     lcb_STORE_OPERATION op;
     lcb_respstore_operation(resp, &op);
-    ASSERT_EQ(LCB_STORE_ADD, op);
+    ASSERT_EQ(LCB_STORE_INSERT, op);
 
     const char *key;
     size_t nkey;
@@ -273,7 +273,7 @@ TEST_F(MutateUnitTest, testSimpleAdd)
     int numcallbacks = 0;
     std::string key("testSimpleAddKey"), val1("key1"), val2("key2");
     lcb_CMDSTORE *cmd;
-    lcb_cmdstore_create(&cmd, LCB_STORE_ADD);
+    lcb_cmdstore_create(&cmd, LCB_STORE_INSERT);
     lcb_cmdstore_key(cmd, key.c_str(), key.size());
 
     lcb_cmdstore_value(cmd, val1.c_str(), val1.size());
@@ -662,7 +662,7 @@ TEST_F(MutateUnitTest, testSetDefault)
     lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)storeCb);
 
     lcb_CMDSTORE *cmd;
-    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key.c_str(), key.size());
     lcb_cmdstore_value(cmd, "foo", 3);
     bool cookie = false;
