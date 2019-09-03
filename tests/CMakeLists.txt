@@ -18,6 +18,10 @@ CONFIGURE_FILE(
         ${PROJECT_SOURCE_DIR}/cmake/check_config.h.in
         ${LCB_GENSRCDIR}/check_config.h)
 
+CONFIGURE_FILE(
+        ${PROJECT_SOURCE_DIR}/tests/start_mock.sh.in
+        ${PROJECT_SOURCE_DIR}/tests/start_mock.sh)
+
 # For Windows+GCC we need to link statically
 IF (NOT (WIN32 AND CMAKE_COMPILER_IS_GNUCC))
     SET(gtest_force_shared_crt ON CACHE BOOL "" )
