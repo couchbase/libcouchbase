@@ -64,20 +64,19 @@ int main(int argc, char *argv[])
 {
     lcb_STATUS err;
     lcb_INSTANCE *instance;
-    struct lcb_create_st create_options = {0};
-
-    create_options.version = 3;
+    lcb_CREATEOPTS *options = NULL;
 
     if (argc < 3) {
         fprintf(stderr, "Usage: %s couchbase://host/bucket ADMIN_NAME ADMIN_PASSWORD\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    create_options.v.v3.connstr = argv[1];
-    create_options.v.v3.username = argv[2];
-    create_options.v.v3.passwd = argv[3];
+    lcb_createopts_create(&options, LCB_TYPE_BUCKET);
+    lcb_createopts_connstr(options, argv[1], strlen(argv[1]));
+    lcb_createopts_credentials(options, argv[2], strlen(argv[2]), argv[3], strlen(argv[3]));
 
-    err = lcb_create(&instance, &create_options);
+    err = lcb_create(&instance, options);
+    lcb_createopts_destroy(options);
     if (err != LCB_SUCCESS) {
         die(NULL, "Failed create couchbase handle", err);
     }

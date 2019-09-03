@@ -77,26 +77,31 @@ static void subdoc_callback(lcb_INSTANCE *, int type, const lcb_RESPSUBDOC *resp
 
 int main(int argc, char **argv)
 {
-    lcb_create_st crst = {0};
-    crst.version = 3;
+    lcb_CREATEOPTS *crst = NULL;
+    const char *connstr, *username, *password;
     if (argc > 1) {
-        crst.v.v3.connstr = argv[1];
+        connstr = argv[1];
     } else {
-        crst.v.v3.connstr = DEFAULT_CONNSTR;
+        connstr = DEFAULT_CONNSTR;
     }
     if (argc > 2) {
-        crst.v.v3.username = argv[2];
+        username = argv[2];
     } else {
-        crst.v.v3.username = "Administrator";
+        username = "Administrator";
     }
     if (argc > 3) {
-        crst.v.v3.passwd = argv[3];
+        password = argv[3];
     } else {
-        crst.v.v3.passwd = "password";
+        password = "password";
     }
 
+    lcb_createopts_create(&crst, LCB_TYPE_BUCKET);
+    lcb_createopts_connstr(crst, connstr, strlen(connstr));
+    lcb_createopts_credentials(crst, username, strlen(username), password, strlen(password));
+
     lcb_INSTANCE *instance;
-    lcb_STATUS rc = lcb_create(&instance, &crst);
+    lcb_STATUS rc = lcb_create(&instance, crst);
+    lcb_createopts_destroy(crst);
     assert(rc == LCB_SUCCESS);
 
     rc = lcb_connect(instance);

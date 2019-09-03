@@ -231,12 +231,6 @@ extern "C" {
  * @{
  */
 
-/** @brief Handle types @see lcb_create_st3::type */
-typedef enum {
-    LCB_TYPE_BUCKET = 0x00, /**< Handle for data access (default) */
-    LCB_TYPE_CLUSTER = 0x01 /**< Handle for administrative access */
-} lcb_type_t;
-
 /**
  * @brief Type of the bucket
  *
@@ -249,101 +243,30 @@ typedef enum {
     LCB_BTYPE_MEMCACHED = 0x03  /**< Data not persisted and not replicated */
 } lcb_BTYPE;
 
-#ifndef __LCB_DOXYGEN__
-/* These are definitions for some of the older fields of the `lcb_create_st`
- * structure. They are here for backwards compatibility and should not be
- * used by new code */
 typedef enum {
     LCB_CONFIG_TRANSPORT_LIST_END = 0,
     LCB_CONFIG_TRANSPORT_HTTP = 1,
     LCB_CONFIG_TRANSPORT_CCCP,
     LCB_CONFIG_TRANSPORT_MAX
-} lcb_config_transport_t;
-#define LCB_CREATE_V0_FIELDS                                                                                           \
-    const char *host;                                                                                                  \
-    const char *user;                                                                                                  \
-    const char *passwd;                                                                                                \
-    const char *bucket;                                                                                                \
-    struct lcb_io_opt_st *io;
-#define LCB_CREATE_V1_FIELDS LCB_CREATE_V0_FIELDS lcb_type_t type;
-#define LCB_CREATE_V2_FIELDS                                                                                           \
-    LCB_CREATE_V1_FIELDS const char *mchosts;                                                                          \
-    const lcb_config_transport_t *transports;
-struct lcb_create_st0 {
-    LCB_CREATE_V0_FIELDS
-};
-struct lcb_create_st1 {
-    LCB_CREATE_V1_FIELDS
-};
-struct lcb_create_st2 {
-    LCB_CREATE_V2_FIELDS
-};
-#endif
+} lcb_BOOTSTRAP_TRANSPORT;
 
-/**
- * @brief Inner structure V3 for lcb_create().
- */
-struct lcb_create_st3 {
-    const char *connstr; /**< Connection string */
+/** @brief Handle types @see lcb_create_st3::type */
+typedef enum {
+    LCB_TYPE_BUCKET = 0x00, /**< Handle for data access (default) */
+    LCB_TYPE_CLUSTER = 0x01 /**< Handle for administrative access */
+} lcb_INSTANCE_TYPE;
 
-    /**
-     * Username to use for authentication. This should only be set when
-     * connecting to a server 5.0 or greater.
-     */
-    const char *username;
+typedef struct lcb_CREATEOPTS_ lcb_CREATEOPTS;
 
-    /**
-     * Password for bucket. Can also be password for username on servers >= 5.0
-     */
-    const char *passwd;
-
-    void *_pad_bucket;        /**< @private */
-    struct lcb_io_opt_st *io; /**< IO Options */
-    lcb_type_t type;
-};
-
-/**
- * @brief Inner structure V4 for lcb_create().
- *
- * Same as V3, but allows to supply logger (@see LCB_CNTL_LOGGER).
- */
-struct lcb_create_st4 {
-    const char *connstr; /**< Connection string */
-
-    /**
-     * Username to use for authentication. This should only be set when
-     * connecting to a server 5.0 or greater.
-     */
-    const char *username;
-
-    /**
-     * Password for bucket. Can also be password for username on servers >= 5.0
-     */
-    const char *passwd;
-
-    lcb_LOGGER *logger;       /**< Logger */
-    struct lcb_io_opt_st *io; /**< IO Options */
-    lcb_type_t type;
-};
-
-/**
- * @brief Wrapper structure for lcb_create()
- * @see lcb_create_st3
- */
-struct lcb_create_st {
-    /** Indicates which field in the @ref lcb_CRST_u union should be used. Set this to `3` */
-    int version;
-
-    /**This union contains the set of current and historical options. The
-     * The #v3 field should be used. */
-    union lcb_CRST_u {
-        struct lcb_create_st0 v0;
-        struct lcb_create_st1 v1;
-        struct lcb_create_st2 v2;
-        struct lcb_create_st3 v3; /**< Use this field */
-        struct lcb_create_st4 v4;
-    } v;
-};
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_create(lcb_CREATEOPTS **options, lcb_INSTANCE_TYPE type);
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_destroy(lcb_CREATEOPTS *options);
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_connstr(lcb_CREATEOPTS *options, const char *connstr, size_t connstr_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_bucket(lcb_CREATEOPTS *options, const char *bucket, size_t bucket_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_logger(lcb_CREATEOPTS *options, const lcb_LOGGER *logger);
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_credentials(lcb_CREATEOPTS *options, const char *username,
+                                                       size_t username_len, const char *password, size_t password_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_authenticator(lcb_CREATEOPTS *options, lcb_AUTHENTICATOR *auth);
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_io(lcb_CREATEOPTS *options, struct lcb_io_opt_st *io);
 
 /**
  * @brief Create an instance of lcb.
@@ -389,7 +312,7 @@ struct lcb_create_st {
  * @see lcb_create_st3
  */
 LIBCOUCHBASE_API
-lcb_STATUS lcb_create(lcb_INSTANCE **instance, const struct lcb_create_st *options);
+lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options);
 
 /**
  * @brief Schedule the initial connection

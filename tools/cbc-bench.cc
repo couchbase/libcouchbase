@@ -19,7 +19,6 @@
 #include <signal.h>
 #include <iostream>
 #include <map>
-#include <tuple>
 #include <cstdio>
 #include <stdexcept>
 #include <list>
@@ -32,6 +31,8 @@
 #include <random>
 #include <algorithm>
 #include <iomanip>
+
+#include "internalstructs.h" /* for access to connstr member */
 
 #include "common/options.h"
 #include "common/histogram.h"
@@ -81,7 +82,7 @@ class Configuration
 
     void processOptions() {}
 
-    void fillCropts(lcb_create_st &opts)
+    void fillCropts(lcb_CREATEOPTS *&opts)
     {
         m_params.fillCropts(opts);
     }
@@ -337,10 +338,11 @@ class Worker
     explicit Worker(const std::string &ident = "")
         : is_running(false), instance(nullptr), io_thr(nullptr), gen_thr(nullptr), keygen(nullptr), valgen(nullptr)
     {
-        lcb_create_st cropts{};
+        lcb_CREATEOPTS *cropts = nullptr;
         memset(&cropts, 0, sizeof cropts);
         config.fillCropts(cropts);
-        do_or_die(lcb_create(&instance, &cropts), "Failed to create connection");
+        do_or_die(lcb_create(&instance, cropts), "Failed to create connection");
+        lcb_createopts_destroy(cropts);
         config.doCtls(instance);
         do_or_die(lcb_connect(instance), "Failed to connect to cluster");
         do_or_die(lcb_wait(instance), "Failed to wait for connection bootstrap");
@@ -1065,10 +1067,10 @@ static void real_main(int argc, char **argv)
     linenoiseSetInputStream(finput);
 
     {
-        lcb_create_st cropts{};
-        memset(&cropts, 0, sizeof cropts);
+        lcb_CREATEOPTS *cropts = nullptr;
         config.fillCropts(cropts);
-        std::cerr << "# connection-string = " << cropts.v.v3.connstr << std::endl;
+        std::cerr << "# connection-string = " << cropts->connstr << std::endl;
+        lcb_createopts_destroy(cropts);
     }
     if (finput == stdin) {
         std::cerr << "# value-pool-size = " << value_pool_size << std::endl;

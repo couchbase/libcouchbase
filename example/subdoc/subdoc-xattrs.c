@@ -110,16 +110,17 @@ static void n1qlrow_callback(lcb_INSTANCE *instance, int type, const lcb_RESPN1Q
 
 static lcb_INSTANCE *connect_as(char *username, char *password)
 {
-    struct lcb_create_st crst = {.version = 3};
+    lcb_CREATEOPTS *crst = NULL;
 
-    crst.v.v3.connstr = DEFAULT_CONNSTR;
-    crst.v.v3.username = username;
-    crst.v.v3.passwd = password;
+    lcb_createopts_create(&crst, LCB_TYPE_BUCKET);
+    lcb_createopts_connstr(crst, DEFAULT_CONNSTR, strlen(DEFAULT_CONNSTR));
+    lcb_createopts_credentials(crst, username, strlen(username), password, strlen(password));
 
     lcb_INSTANCE *instance;
     lcb_STATUS rc;
 
-    rc = lcb_create(&instance, &crst);
+    rc = lcb_create(&instance, crst);
+    lcb_createopts_destroy(crst);
     assert(rc == LCB_SUCCESS);
     rc = lcb_connect(instance);
     assert(rc == LCB_SUCCESS);

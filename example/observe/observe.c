@@ -80,26 +80,24 @@ int main(int argc, char *argv[])
     lcb_MULTICMD_CTX *mctx = NULL;
     observe_info obs_info;
     unsigned nservers, ii;
-    struct lcb_create_st create_options = {0};
+    lcb_CREATEOPTS *create_options = NULL;
 
     if (argc < 2) {
         fail("Requires key as argument\n"
              "Usage: observe KEY [CONNSTRING [ PASSWORD [ USERNAME ] ] ]\n");
     }
-    create_options.version = 3;
+    lcb_createopts_create(&create_options, LCB_TYPE_BUCKET);
     if (argc > 2) {
-        create_options.v.v3.connstr = argv[2];
-    }
-    if (argc > 3) {
-        create_options.v.v3.passwd = argv[3];
+        lcb_createopts_connstr(create_options, argv[2], strlen(argv[2]));
     }
     if (argc > 4) {
-        create_options.v.v3.username = argv[4];
+        lcb_createopts_credentials(create_options, argv[4], strlen(argv[4]), argv[3], strlen(argv[3]));
     }
 
-    if ((err = lcb_create(&instance, &create_options)) != LCB_SUCCESS) {
+    if ((err = lcb_create(&instance, create_options)) != LCB_SUCCESS) {
         fail2("cannot create connection instance", err);
     }
+    lcb_createopts_destroy(create_options);
     if ((err = lcb_connect(instance)) != LCB_SUCCESS) {
         fail2("Couldn't schedule connection", err);
     }

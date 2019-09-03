@@ -1315,14 +1315,15 @@ int main(int argc, char **argv)
     }
 #endif
 
-    struct lcb_create_st options;
+    lcb_CREATEOPTS *options = NULL;
     ConnParams &cp = config.params;
     lcb_STATUS error;
 
     for (uint32_t ii = 0; ii < nthreads; ++ii) {
         cp.fillCropts(options);
         lcb_INSTANCE *instance = NULL;
-        error = lcb_create(&instance, &options);
+        error = lcb_create(&instance, options);
+        lcb_createopts_destroy(options);
         if (error != LCB_SUCCESS) {
             log("Failed to create instance: %s", lcb_strerror_short(error));
             exit(EXIT_FAILURE);

@@ -118,7 +118,7 @@ class Configuration
 
     void processOptions() {}
 
-    void fillCropts(lcb_create_st &opts)
+    void fillCropts(lcb_CREATEOPTS *opts)
     {
         m_params.fillCropts(opts);
     }
@@ -874,10 +874,10 @@ static void real_main(int argc, char **argv)
     parser.parse(argc, argv);
     config.processOptions();
 
-    lcb_create_st cropts;
-    memset(&cropts, 0, sizeof cropts);
+    lcb_CREATEOPTS *cropts = NULL;
     config.fillCropts(cropts);
-    do_or_die(lcb_create(&instance, &cropts), "Failed to create connection");
+    do_or_die(lcb_create(&instance, cropts), "Failed to create connection");
+    lcb_createopts_destroy(cropts);
     config.doCtls();
     do_or_die(lcb_connect(instance), "Failed to connect to cluster");
     do_or_die(lcb_wait(instance), "Failed to wait for connection bootstrap");

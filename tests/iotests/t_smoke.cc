@@ -23,7 +23,7 @@ using std::vector;
 
 // This file contains the 'migrated' tests from smoke-test.c
 
-static lcb_config_transport_t transports[] = {LCB_CONFIG_TRANSPORT_HTTP, LCB_CONFIG_TRANSPORT_LIST_END};
+static lcb_BOOTSTRAP_TRANSPORT transports[] = {LCB_CONFIG_TRANSPORT_HTTP, LCB_CONFIG_TRANSPORT_LIST_END};
 struct rvbuf {
     lcb_STATUS error;
     lcb_STORE_OPERATION operation;
@@ -228,7 +228,7 @@ class SmokeTest : public ::testing::Test
     lcb_STATUS testMissingBucket();
 
     // Call to connect instance
-    void connectCommon(const char *password = NULL, lcb_STATUS expected = LCB_SUCCESS);
+    void connectCommon(const char *bucket = NULL, const char *password = NULL, lcb_STATUS expected = LCB_SUCCESS);
 };
 
 void SmokeTest::testSet1()
@@ -411,13 +411,15 @@ lcb_STATUS SmokeTest::testMissingBucket()
 {
     destroySession();
     // create a new session
-    lcb_create_st cropts;
+    lcb_CREATEOPTS *cropts = NULL;
     mock->makeConnectParams(cropts);
-    cropts.v.v2.transports = transports;
-    cropts.v.v2.bucket = "nonexist";
-    cropts.v.v2.user = "nonexist";
+    std::string bucket("nonexist");
+    std::string username("nonexist");
+    lcb_createopts_bucket(cropts, bucket.c_str(), bucket.size());
+    lcb_createopts_credentials(cropts, username.c_str(), username.size(), NULL, 0);
     lcb_STATUS err;
-    err = lcb_create(&session, &cropts);
+    err = lcb_create(&session, cropts);
+    lcb_createopts_destroy(cropts);
     EXPECT_EQ(LCB_SUCCESS, err);
     mock->postCreate(session);
 
@@ -465,16 +467,19 @@ void SmokeTest::testSpuriousSaslError()
     }
 }
 
-void SmokeTest::connectCommon(const char *password, lcb_STATUS expected)
+void SmokeTest::connectCommon(const char *bucket, const char *password, lcb_STATUS expected)
 {
-    lcb_create_st cropts;
+    lcb_CREATEOPTS *cropts = NULL;
     mock->makeConnectParams(cropts, NULL);
 
-    if (password != NULL) {
-        cropts.v.v2.passwd = password;
+    if (bucket) {
+        lcb_createopts_bucket(cropts, bucket, strlen(bucket));
+        if (password) {
+            lcb_createopts_credentials(cropts, bucket, strlen(bucket), password, strlen(password));
+        }
     }
-    cropts.v.v2.transports = transports;
-    lcb_STATUS err = lcb_create(&session, &cropts);
+    lcb_STATUS err = lcb_create(&session, cropts);
+    lcb_createopts_destroy(cropts);
     EXPECT_EQ(LCB_SUCCESS, err);
 
     mock->postCreate(session);
@@ -548,10 +553,10 @@ TEST_F(SmokeTest, testSaslBucket)
 
     testMissingBucket();
 
-    connectCommon("secret");
+    connectCommon("protected", "secret");
     testSpuriousSaslError();
 
     destroySession();
-    connectCommon("incorrect", LCB_AUTH_ERROR);
+    connectCommon("protected", "incorrect", LCB_AUTH_ERROR);
     destroySession();
 }

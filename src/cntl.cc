@@ -120,7 +120,7 @@ HANDLER(get_vbconfig) {
     RETURN_GET_ONLY(lcbvb_CONFIG*, LCBT_VBCONFIG(instance))
 }
 HANDLER(get_htype) {
-    RETURN_GET_ONLY(lcb_type_t, static_cast<lcb_type_t>(instance->settings->conntype))
+    RETURN_GET_ONLY(lcb_INSTANCE_TYPE, static_cast< lcb_INSTANCE_TYPE >(instance->settings->conntype))
 }
 HANDLER(get_iops) {
     RETURN_GET_ONLY(lcb_io_opt_t, instance->iotable->p)
@@ -337,15 +337,15 @@ HANDLER(max_redirects) {
 
 HANDLER(logprocs_handler) {
     if (mode == LCB_CNTL_GET) {
-        *(lcb_LOGGER **)arg = LCBT_SETTING(instance, logger);
+        *(const lcb_LOGGER **)arg = LCBT_SETTING(instance, logger);
     } else if (mode == LCB_CNTL_SET) {
-        LCBT_SETTING(instance, logger) = (lcb_LOGGER *)arg;
+        LCBT_SETTING(instance, logger) = (const lcb_LOGGER *)arg;
     }
     (void)cmd; return LCB_SUCCESS;
 }
 
 HANDLER(config_transport) {
-    lcb_config_transport_t *val = reinterpret_cast<lcb_config_transport_t*>(arg);
+    lcb_BOOTSTRAP_TRANSPORT *val = reinterpret_cast< lcb_BOOTSTRAP_TRANSPORT * >(arg);
     if (mode == LCB_CNTL_SET) { return LCB_ECTL_UNSUPPMODE; }
     if (!instance->cur_configinfo) { return LCB_CLIENT_ETMPFAIL; }
 
@@ -384,13 +384,6 @@ HANDLER(config_nodes) {
     target->configure_nodes(hostlist);
 
     return LCB_SUCCESS;
-}
-
-
-HANDLER(init_providers) {
-    lcb_create_st2 *opts = reinterpret_cast<lcb_create_st2*>(arg);
-    if (mode != LCB_CNTL_SET) { return LCB_ECTL_UNSUPPMODE; }
-    (void)cmd; return lcb_init_providers2(instance, opts);
 }
 
 HANDLER(config_cache_handler) {
@@ -443,7 +436,7 @@ HANDLER(allocfactory_handler) {
 HANDLER(console_log_handler) {
     lcb_U32 level;
     struct lcb_CONSOLELOGGER *logger;
-    lcb_LOGGER *procs;
+    const lcb_LOGGER *procs;
 
     level = *(lcb_U32*)arg;
     if (mode != LCB_CNTL_SET) {
@@ -486,7 +479,8 @@ HANDLER(console_fp_handler) {
 
 HANDLER(reinit_spec_handler) {
     if (mode == LCB_CNTL_GET) { return LCB_ECTL_UNSUPPMODE; }
-    (void)cmd; return lcb_reinit3(instance, reinterpret_cast<const char*>(arg));
+    (void)cmd;
+    return lcb_reinit(instance, reinterpret_cast< const char * >(arg));
 }
 
 HANDLER(client_string_handler) {
@@ -694,7 +688,7 @@ static ctl_handler handlers[] = {
     config_nodes,                         /* LCB_CNTL_CONFIG_HTTP_NODES */
     config_nodes,                         /* LCB_CNTL_CONFIG_CCCP_NODES */
     get_changeset,                        /* LCB_CNTL_CHANGESET */
-    init_providers,                       /* LCB_CNTL_CONFIG_ALL_NODES */
+    NULL,                                 /* LCB_CNTL_CONFIG_ALL_NODES */
     config_cache_handler,                 /* LCB_CNTL_CONFIGCACHE */
     ssl_mode_handler,                     /* LCB_CNTL_SSL_MODE */
     ssl_certpath_handler,                 /* LCB_CNTL_SSL_CERT */

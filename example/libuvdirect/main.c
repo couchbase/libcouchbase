@@ -187,26 +187,18 @@ static lcb_INSTANCE *create_libcouchbase_handle(lcb_io_opt_t ioops, int argc, ch
 {
     lcb_INSTANCE *instance;
     lcb_STATUS error;
-    struct lcb_create_st copts;
+    lcb_CREATEOPTS *options = NULL;
 
-    memset(&copts, 0, sizeof(copts));
-
-    /* If NULL, will default to localhost */
-    copts.version = 3;
-    copts.v.v3.connstr = "couchbase://localhost";
-
+    lcb_createopts_create(&options, LCB_TYPE_BUCKET);
     if (argc > 1) {
-        copts.v.v3.connstr = argv[1];
-    }
-    if (argc > 2) {
-        copts.v.v3.passwd = argv[2];
+        lcb_createopts_connstr(options, argv[1], strlen(argv[1]));
     }
     if (argc > 3) {
-        copts.v.v3.username = argv[3];
+        lcb_createopts_credentials(options, argv[3], strlen(argv[3]), argv[2], strlen(argv[2]));
     }
-    copts.v.v3.io = ioops;
-    error = lcb_create(&instance, &copts);
-
+    lcb_createopts_io(options, ioops);
+    error = lcb_create(&instance, options);
+    lcb_createopts_destroy(options);
     if (error != LCB_SUCCESS) {
         fprintf(stderr, "Failed to create a libcouchbase instance: %s\n", lcb_strerror(NULL, error));
         return NULL;

@@ -205,7 +205,7 @@ typedef struct lcb_settings_st {
     lcb_AUTHENTICATOR *auth;
     struct rdb_ALLOCATOR *(*allocator_factory)(void);
     struct lcbio_SSLCTX *ssl_ctx;
-    lcb_LOGGER *logger;
+    const lcb_LOGGER *logger;
     void (*dtorcb)(const void *);
     void *dtorarg;
     char *client_string;

@@ -24,6 +24,22 @@
 extern "C" {
 #endif
 
+struct lcb_CREATEOPTS_ {
+    lcb_INSTANCE_TYPE type;
+    const char *connstr;
+    size_t connstr_len;
+    struct lcb_io_opt_st *io;
+    const char *username;
+    size_t username_len;
+    const char *password;
+    size_t password_len;
+    const lcb_LOGGER *logger;
+    const lcb_AUTHENTICATOR *auth;
+    /* override bucket in connection string */
+    const char *bucket;
+    size_t bucket_len;
+};
+
 #define RESET_CMD_BASE(__me)                                                                                           \
     (__me)->cmdflags = 0;                                                                                              \
     (__me)->exptime = 0;                                                                                               \

@@ -42,7 +42,7 @@ static void get_callback(lcb_INSTANCE *instance, int, const lcb_RESPBASE *rb)
 class MyPool : public Pool
 {
   public:
-    MyPool(const lcb_create_st &opts, size_t items) : Pool(opts, items) {}
+    MyPool(const lcb_CREATEOPTS *opts, size_t items) : Pool(opts, items) {}
 
   protected:
     void initialize(lcb_INSTANCE *instance)
@@ -82,23 +82,17 @@ static void *pthr_func(void *arg)
 #define NUM_WORKERS 20
 int main(int argc, char *argv[])
 {
-    lcb_create_st options;
+    lcb_CREATEOPTS *options = NULL;
     pthread_t workers[NUM_WORKERS];
     Pool *pool;
     lcb_STATUS err;
 
-    // set up the options to represent your cluster (hostname etc)
-    memset(&options, 0, sizeof options);
-    options.version = 3;
-    options.v.v3.connstr = "couchbase://localhost";
+    lcb_createopts_create(&options, LCB_TYPE_BUCKET);
     if (argc > 1) {
-        options.v.v3.connstr = argv[1];
-    }
-    if (argc > 2) {
-        options.v.v3.passwd = argv[2];
+        lcb_createopts_connstr(options, argv[1], strlen(argv[1]));
     }
     if (argc > 3) {
-        options.v.v3.username = argv[3];
+        lcb_createopts_credentials(options, argv[3], strlen(argv[3]), argv[2], strlen(argv[2]));
     }
 
     pool = new MyPool(options, 5);
@@ -119,5 +113,7 @@ int main(int argc, char *argv[])
     }
 
     delete pool;
+
+    lcb_createopts_destroy(options);
     return 0;
 }

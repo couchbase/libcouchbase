@@ -78,7 +78,7 @@ struct Spechost {
     }
 };
 
-#define LCB_CONNSPEC_F_FILEONLY (1 << 4)
+#define LCB_CONNSPEC_F_FILEONLY (1u << 4u)
 
 class LCB_CLASS_EXPORT Connspec
 {
@@ -90,10 +90,14 @@ class LCB_CLASS_EXPORT Connspec
     {
     }
 
-    lcb_STATUS parse(const char *connstr, const char **errmsg = NULL);
-    lcb_STATUS load(const lcb_create_st &);
+    lcb_STATUS parse(const std::string &connstr, const char **errmsg = NULL)
+    {
+        return parse(connstr.c_str(), connstr.size(), errmsg);
+    }
+    lcb_STATUS parse(const char *connstr, size_t connstr_len, const char **errmsg = NULL);
+    lcb_STATUS load(const lcb_CREATEOPTS &);
 
-    bool has_bsmode(int mode) const
+    bool has_bsmode(lcb_BOOTSTRAP_TRANSPORT mode) const
     {
         return m_transports.find(mode) != m_transports.end();
     }
@@ -165,7 +169,7 @@ class LCB_CLASS_EXPORT Connspec
     {
         return m_ctlopts;
     }
-    lcb_LOGGER *logger() const
+    const lcb_LOGGER *logger() const
     {
         return m_logger;
     }
@@ -215,7 +219,7 @@ class LCB_CLASS_EXPORT Connspec
     std::set< int > m_transports;
     unsigned m_flags; /**< Internal flags */
     lcb_ipv6_t m_ipv6;
-    lcb_LOGGER *m_logger;
+    const lcb_LOGGER *m_logger;
 };
 
 #define LCB_SPECSCHEME_RAW "couchbase+explicit://"

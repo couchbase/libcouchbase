@@ -34,6 +34,7 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 #include <libcouchbase/couchbase.h>
 
 #include "cJSON.h"
@@ -113,27 +114,24 @@ int main(int argc, char *argv[])
 
     my_json_logger wrapper = {0};
 
-    struct lcb_create_st create_options = {0};
-
-    create_options.version = 4;
     if (argc < 2) {
         fprintf(stderr, "Usage: %s couchbase://host/bucket [ password [ username ] ]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    create_options.v.v4.connstr = argv[1];
-    if (argc > 2) {
-        create_options.v.v4.passwd = argv[2];
-    }
+    lcb_CREATEOPTS *options = NULL;
+    lcb_createopts_create(&options, LCB_TYPE_BUCKET);
+    lcb_createopts_connstr(options, argv[1], strlen(argv[1]));
     if (argc > 3) {
-        create_options.v.v4.username = argv[3];
+        lcb_createopts_credentials(options, argv[3], strlen(argv[3]), argv[2], strlen(argv[2]));
     }
     wrapper.min_level = LCB_LOG_DEBUG;
     lcb_logger_create(&wrapper.base, &wrapper);
     lcb_logger_callback(wrapper.base, log_callback);
-    create_options.v.v4.logger = wrapper.base;
+    lcb_createopts_logger(options, wrapper.base);
 
-    err = lcb_create(&instance, &create_options);
+    err = lcb_create(&instance, options);
+    lcb_createopts_destroy(options);
     if (err != LCB_SUCCESS) {
         die(NULL, "Couldn't create couchbase handle", err);
     }

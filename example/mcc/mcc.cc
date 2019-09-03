@@ -101,16 +101,17 @@ class MultiClusterClient
         for (std::list< std::string >::iterator iter = clusters.begin(); iter != clusters.end(); ++iter) {
             std::cout << "Creating instance for cluster " << *iter;
             std::cout.flush();
-            lcb_create_st options = {0};
-            options.version = 3;
-            options.v.v3.connstr = iter->c_str();
-            options.v.v3.io = iops;
+            lcb_CREATEOPTS *options = NULL;
+            lcb_createopts_create(&options, LCB_TYPE_BUCKET);
+            lcb_createopts_connstr(options, iter->c_str(), iter->size());
+            lcb_createopts_io(options, iops);
 
             lcb_INSTANCE *instance;
-            if ((err = lcb_create(&instance, &options)) != LCB_SUCCESS) {
+            if ((err = lcb_create(&instance, options)) != LCB_SUCCESS) {
                 std::cerr << "Failed to create instance: " << lcb_strerror(NULL, err) << std::endl;
                 exit(1);
             }
+            lcb_createopts_destroy(options);
             lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
             lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
 

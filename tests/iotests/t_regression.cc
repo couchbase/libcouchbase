@@ -117,16 +117,19 @@ TEST_F(RegressionUnitTest, CCBC_275)
     SKIP_UNLESS_MOCK();
     lcb_INSTANCE *instance;
     lcb_STATUS err;
-    struct lcb_create_st crOpts;
+    lcb_CREATEOPTS *crOpts = NULL;
     const char *argv[] = {"--buckets", "protected:secret:couchbase", NULL};
     MockEnvironment mock_o(argv, "protected"), *mock = &mock_o;
     struct ccbc_275_info_st info = {0, LCB_SUCCESS};
 
+    std::string user("protected");
+    std::string password("secret");
+    std::string bucket("protected");
     mock->makeConnectParams(crOpts, NULL);
-    crOpts.v.v0.user = "protected";
-    crOpts.v.v0.passwd = "secret";
-    crOpts.v.v0.bucket = "protected";
-    doLcbCreate(&instance, &crOpts, mock);
+    lcb_createopts_credentials(crOpts, user.c_str(), user.size(), password.c_str(), password.size());
+    lcb_createopts_bucket(crOpts, bucket.c_str(), bucket.size());
+    doLcbCreate(&instance, crOpts, mock);
+    lcb_createopts_destroy(crOpts);
 
     err = lcb_connect(instance);
     ASSERT_EQ(LCB_SUCCESS, err);
@@ -298,18 +301,21 @@ TEST_F(MockUnitTest, testDoubleFreeError)
     lcb_cmdget_destroy(getcmd);
 }
 
+#include "internalstructs.h"
+
 TEST_F(MockUnitTest, testBrokenFirstNodeInList)
 {
     SKIP_UNLESS_MOCK();
     MockEnvironment *mock = MockEnvironment::getInstance();
-    lcb_create_st options;
+    lcb_CREATEOPTS *options = NULL;
     mock->makeConnectParams(options, NULL);
-    std::string nodes = options.v.v0.host;
-    nodes = "1.2.3.4:4321;" + nodes;
-    options.v.v0.host = nodes.c_str();
+    std::string nodes(options->connstr, options->connstr_len);
+    nodes.replace(nodes.find("://"), 3, "://1.2.3.4:4321=http;1.2.3.4:7890=mcd;");
+    lcb_createopts_connstr(options, nodes.c_str(), nodes.size());
 
     lcb_INSTANCE *instance;
-    doLcbCreate(&instance, &options, mock);
+    doLcbCreate(&instance, options, mock);
+    lcb_createopts_destroy(options);
     lcb_cntl_setu32(instance, LCB_CNTL_OP_TIMEOUT, LCB_MS2US(200));
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
     lcb_destroy(instance);

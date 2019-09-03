@@ -269,7 +269,7 @@ TEST_F(MockUnitTest, testGetHostInfo)
 {
     lcb_INSTANCE *instance;
     createConnection(&instance);
-    lcb_config_transport_t tx;
+    lcb_BOOTSTRAP_TRANSPORT tx;
     const char *hoststr = lcb_get_node(instance, LCB_NODE_HTCONFIG, 0);
     ASSERT_FALSE(hoststr == NULL);
 
@@ -436,8 +436,8 @@ TEST_F(MockUnitTest, testCtls)
     ctlGetSet< lcb_U32 >(instance, LCB_CNTL_OP_TIMEOUT, UINT_MAX);
     ctlGetSet< lcb_U32 >(instance, LCB_CNTL_VIEW_TIMEOUT, UINT_MAX);
 
-    ASSERT_EQ(LCB_TYPE_BUCKET, ctlGet< lcb_type_t >(instance, LCB_CNTL_HANDLETYPE));
-    ASSERT_FALSE(ctlSet< lcb_type_t >(instance, LCB_CNTL_HANDLETYPE, LCB_TYPE_BUCKET));
+    ASSERT_EQ(LCB_TYPE_BUCKET, ctlGet< lcb_INSTANCE_TYPE >(instance, LCB_CNTL_HANDLETYPE));
+    ASSERT_FALSE(ctlSet< lcb_INSTANCE_TYPE >(instance, LCB_CNTL_HANDLETYPE, LCB_TYPE_BUCKET));
 
     lcbvb_CONFIG *cfg = ctlGet< lcbvb_CONFIG * >(instance, LCB_CNTL_VBCONFIG);
     // Do we have a way to verify this?
@@ -486,7 +486,7 @@ TEST_F(MockUnitTest, testCtls)
     ctlGetSet< lcb_U32 >(instance, LCB_CNTL_CONFDELAY_THRESH, UINT_MAX);
 
     // CONFIG_TRANSPORT. Test that we shouldn't be able to set it
-    ASSERT_FALSE(ctlSet< lcb_config_transport_t >(instance, LCB_CNTL_CONFIG_TRANSPORT, LCB_CONFIG_TRANSPORT_LIST_END));
+    ASSERT_FALSE(ctlSet< lcb_BOOTSTRAP_TRANSPORT >(instance, LCB_CNTL_CONFIG_TRANSPORT, LCB_CONFIG_TRANSPORT_LIST_END));
 
     ctlGetSet< lcb_U32 >(instance, LCB_CNTL_CONFIG_NODE_TIMEOUT, UINT_MAX);
     ctlGetSet< lcb_U32 >(instance, LCB_CNTL_HTCONFIG_IDLE_TIMEOUT, UINT_MAX);

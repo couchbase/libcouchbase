@@ -273,18 +273,17 @@ void MockEnvironment::postCreate(lcb_INSTANCE *instance)
     ASSERT_EQ(LCB_SUCCESS, err);
 }
 
-void MockEnvironment::createConnection(HandleWrap &handle, lcb_INSTANCE **instance, const lcb_create_st &user_options)
+void MockEnvironment::createConnection(HandleWrap &handle, lcb_INSTANCE **instance, const lcb_CREATEOPTS *user_options)
 {
     lcb_io_opt_t io;
-    lcb_create_st options;
-    memcpy(&options, &user_options, sizeof user_options);
+    lcb_CREATEOPTS options = *user_options;
 
     if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
         fprintf(stderr, "Failed to create IO instance\n");
         exit(1);
     }
 
-    options.v.v2.io = io;
+    lcb_createopts_io(&options, io);
     lcb_STATUS err = lcb_create(instance, &options);
     ASSERT_EQ(LCB_SUCCESS, err);
     postCreate(*instance);
@@ -297,9 +296,10 @@ void MockEnvironment::createConnection(HandleWrap &handle, lcb_INSTANCE **instan
 
 void MockEnvironment::createConnection(HandleWrap &handle, lcb_INSTANCE **instance)
 {
-    lcb_create_st options = {};
+    lcb_CREATEOPTS *options = NULL;
     makeConnectParams(options, NULL);
     createConnection(handle, instance, options);
+    lcb_createopts_destroy(options);
 }
 
 void MockEnvironment::createConnection(lcb_INSTANCE **instance)
@@ -375,10 +375,11 @@ void MockEnvironment::bootstrapRealCluster()
 
     lcb_INSTANCE *tmphandle;
     lcb_STATUS err;
-    lcb_create_st options;
+    lcb_CREATEOPTS *options = NULL;
     serverParams.makeConnectParams(options, NULL);
 
-    ASSERT_EQ(LCB_SUCCESS, lcb_create(&tmphandle, &options));
+    ASSERT_EQ(LCB_SUCCESS, lcb_create(&tmphandle, options));
+    lcb_createopts_destroy(options);
     postCreate(tmphandle);
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(tmphandle));
     lcb_wait(tmphandle);
@@ -431,13 +432,11 @@ void MockEnvironment::clearAndReset()
     }
 
     if (!innerClient) {
-        lcb_create_st crParams;
-        lcb_config_transport_t transports[] = {LCB_CONFIG_TRANSPORT_CCCP, LCB_CONFIG_TRANSPORT_LIST_END};
-        memset(&crParams, 0, sizeof(crParams));
+        lcb_CREATEOPTS *crParams = NULL;
         // Use default I/O here..
         serverParams.makeConnectParams(crParams, NULL);
-        crParams.v.v2.transports = transports;
-        lcb_STATUS err = lcb_create(&innerClient, &crParams);
+        lcb_STATUS err = lcb_create(&innerClient, crParams);
+        lcb_createopts_destroy(crParams);
         if (err != LCB_SUCCESS) {
             printf("Error on create: 0x%x\n", err);
         }
@@ -446,6 +445,7 @@ void MockEnvironment::clearAndReset()
         err = lcb_connect(innerClient);
         EXPECT_EQ(LCB_SUCCESS, err);
         lcb_wait(innerClient);
+        EXPECT_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(innerClient));
         lcb_install_callback(innerClient, LCB_CALLBACK_CBFLUSH, mock_flush_callback);
     }
 

@@ -570,10 +570,11 @@ void Handler::addOptions()
 
 void Handler::run()
 {
-    lcb_create_st cropts;
+    lcb_CREATEOPTS *cropts = NULL;
     params.fillCropts(cropts);
     lcb_STATUS err;
-    err = lcb_create(&instance, &cropts);
+    err = lcb_create(&instance, cropts);
+    lcb_createopts_destroy(cropts);
     if (err != LCB_SUCCESS) {
         throw LcbError(err, "Failed to create instance");
     }
@@ -1878,7 +1879,7 @@ void ConnstrHandler::run()
     lcb_STATUS err;
     const char *errmsg;
     lcb::Connspec spec;
-    err = spec.parse(connstr_s.c_str(), &errmsg);
+    err = spec.parse(connstr_s.c_str(), connstr_s.size(), &errmsg);
     if (err != LCB_SUCCESS) {
         throw BadArg(errmsg);
     }
@@ -1953,7 +1954,7 @@ void ConnstrHandler::run()
 
 void WriteConfigHandler::run()
 {
-    lcb_create_st cropts;
+    lcb_CREATEOPTS *cropts = NULL;
     params.fillCropts(cropts);
     string outname = getLoneArg();
     if (outname.empty()) {
@@ -1961,6 +1962,7 @@ void WriteConfigHandler::run()
     }
     // Generate the config
     params.writeConfig(outname);
+    lcb_createopts_destroy(cropts);
 }
 
 static map< string, Handler * > handlers;

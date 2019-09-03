@@ -547,15 +547,18 @@ TEST_F(MockUnitTest, testSaslMechs)
 
     lcb_INSTANCE *instance;
     lcb_STATUS err;
-    struct lcb_create_st crParams;
+    lcb_CREATEOPTS *crParams = NULL;
     MockEnvironment mock_o(argv, "protected"), *protectedEnv = &mock_o;
     protectedEnv->makeConnectParams(crParams, NULL);
     protectedEnv->setCCCP(false);
 
-    crParams.v.v0.user = "protected";
-    crParams.v.v0.passwd = "secret";
-    crParams.v.v0.bucket = "protected";
-    doLcbCreate(&instance, &crParams, protectedEnv);
+    std::string username("protected");
+    std::string password("secret");
+    std::string bucket("protected");
+    lcb_createopts_credentials(crParams, username.c_str(), username.size(), password.c_str(), password.size());
+    lcb_createopts_bucket(crParams, bucket.c_str(), bucket.size());
+    doLcbCreate(&instance, crParams, protectedEnv);
+    lcb_createopts_destroy(crParams);
 
     // Make the socket pool disallow idle connections
     instance->memd_sockpool->get_options().maxidle = 0;
@@ -595,18 +598,20 @@ TEST_F(MockUnitTest, testSaslSHA)
 
     lcb_INSTANCE *instance = NULL;
     lcb_STATUS err;
-    struct lcb_create_st crParams;
+    lcb_CREATEOPTS *crParams = NULL;
     MockEnvironment mock_o(argv, "protected"), *protectedEnv = &mock_o;
-    protectedEnv->makeConnectParams(crParams, NULL);
+    protectedEnv->makeConnectParams(crParams, NULL, LCB_TYPE_CLUSTER);
+    crParams->type = LCB_TYPE_BUCKET;
     protectedEnv->setCCCP(false);
 
-    crParams.v.v2.user = "protected";
-    crParams.v.v2.passwd = "secret";
-    crParams.v.v2.bucket = "protected";
-    crParams.v.v2.mchosts = NULL;
+    std::string username("protected");
+    std::string password("secret");
+    std::string bucket("protected");
+    lcb_createopts_credentials(crParams, username.c_str(), username.size(), password.c_str(), password.size());
+    lcb_createopts_bucket(crParams, bucket.c_str(), bucket.size());
 
     {
-        doLcbCreate(&instance, &crParams, protectedEnv);
+        doLcbCreate(&instance, crParams, protectedEnv);
 
         // Make the socket pool disallow idle connections
         instance->memd_sockpool->get_options().maxidle = 0;
@@ -635,7 +640,7 @@ TEST_F(MockUnitTest, testSaslSHA)
 
     {
         instance = NULL;
-        doLcbCreate(&instance, &crParams, protectedEnv);
+        doLcbCreate(&instance, crParams, protectedEnv);
 
         // Make the socket pool disallow idle connections
         instance->memd_sockpool->get_options().maxidle = 0;
@@ -660,6 +665,8 @@ TEST_F(MockUnitTest, testSaslSHA)
 
         lcb_destroy(instance);
     }
+
+    lcb_createopts_destroy(crParams);
 }
 
 extern "C" {
@@ -683,13 +690,14 @@ TEST_F(MockUnitTest, testDynamicAuth)
 
     lcb_INSTANCE *instance;
     lcb_STATUS err;
-    struct lcb_create_st crParams;
+    lcb_CREATEOPTS *crParams = NULL;
     MockEnvironment mock_o(argv, "protected"), *mock = &mock_o;
     mock->makeConnectParams(crParams, NULL);
     mock->setCCCP(false);
 
-    crParams.v.v0.bucket = "protected";
-    doLcbCreate(&instance, &crParams, mock);
+    std::string bucket("protected");
+    lcb_createopts_bucket(crParams, bucket.c_str(), bucket.size());
+    doLcbCreate(&instance, crParams, mock);
 
     std::map< std::string, std::string > credentials;
     credentials["protected"] = "secret";
@@ -707,6 +715,7 @@ TEST_F(MockUnitTest, testDynamicAuth)
     kvo.store(instance);
     lcb_destroy(instance);
     lcbauth_unref(auth);
+    lcb_createopts_destroy(crParams);
 }
 
 static void doManyItems(lcb_INSTANCE *instance, std::vector< std::string > keys)
@@ -736,12 +745,13 @@ TEST_F(MockUnitTest, DISABLED_testMemcachedFailover)
     SKIP_UNLESS_MOCK();
     const char *argv[] = {"--buckets", "cache::memcache", NULL};
     lcb_INSTANCE *instance;
-    struct lcb_create_st crParams;
+    lcb_CREATEOPTS *crParams = NULL;
     lcb_RESPCALLBACK oldCb;
 
     MockEnvironment mock_o(argv, "cache"), *mock = &mock_o;
     mock->makeConnectParams(crParams, NULL);
-    doLcbCreate(&instance, &crParams, mock);
+    doLcbCreate(&instance, crParams, mock);
+    lcb_createopts_destroy(crParams);
 
     // Check internal setting here
     lcb_connect(instance);
