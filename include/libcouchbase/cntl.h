@@ -849,26 +849,6 @@ typedef enum {
 #define LCB_CNTL_ENABLE_MUTATION_TOKENS 0x34
 
 /**
- * This setting determines whether the lcb_durability_poll() function will
- * transparently attempt to use mutation token functionality (rather than checking
- * the CAS). This option is most useful for older code which does
- * explicitly use mutation tokens but would like to use its benefits when
- * ensuring durability constraints are satisfied.
- *
- * This option is enabled by default. Users may wish to disable this if they
- * are performing durability operations against items stored from different
- * client instances, as this will make use of a client-global state which is
- * derived on a per-vBucket basis. This means that the last mutation performed
- * on a given vBucket for the client will be used, which in some cases may be
- * older or newer than the mutations passed to the lcb_durability_poll()
- * function.
- *
- * @cntl_arg_both{int (as boolean)}
- * @volatile
- */
-#define LCB_CNTL_DURABILITY_MUTATION_TOKENS 0x35
-
-/**
  * This read-only property determines if the mutation token mechanism is supported
  * on the cluster itself. This will only be accurate once a single operation
  * has been performed on the cluster - or in other words, once a connection

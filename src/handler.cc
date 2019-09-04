@@ -297,7 +297,7 @@ handle_mutation_token(lcb_INSTANCE *instance, const MemcachedResponse *mc_resp,
         return; /* No extras */
     }
 
-    if (!instance->dcpinfo && LCBT_SETTING(instance, dur_mutation_tokens)) {
+    if (!instance->dcpinfo) {
         size_t nvb = LCBT_VBCONFIG(instance)->nvb;
         if (nvb) {
             instance->dcpinfo = new lcb_MUTATION_TOKEN[nvb];

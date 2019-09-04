@@ -372,7 +372,7 @@ typedef struct lcb_durability_opts_st {
 
 /**Must specify this flag if using the 'mutation_token' field, as it was added in
  * a later version */
-#define LCB_CMDENDURE_F_MUTATION_TOKEN (1 << 16)
+#define LCB_CMDENDURE_F_MUTATION_TOKEN (1u << 16u)
 
 /**@brief Command structure for endure.
  * If the lcb_CMDENDURE::cas field is specified, the operation will check and

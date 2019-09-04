@@ -18,6 +18,7 @@
 #include "iotests.h"
 #include "internal.h"
 #include <map>
+#include <include/libcouchbase/utils.h>
 
 using namespace std;
 
@@ -82,26 +83,30 @@ class DurabilityOperation
         EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
     }
 
-    void wait(lcb_INSTANCE *instance, const lcb_durability_opts_t *opts, const lcb_CMDENDURE *cmd)
+    void wait(lcb_INSTANCE *instance, const lcb_durability_opts_t *opts, const lcb_CMDENDURE *cmd, lcb_STATUS expected = LCB_SUCCESS)
     {
 
         lcb_STATUS rc;
         lcb_MULTICMD_CTX *mctx = lcb_endure3_ctxnew(instance, opts, &rc);
         EXPECT_FALSE(mctx == NULL);
         rc = mctx->addcmd(mctx, (lcb_CMDBASE *)cmd);
-        EXPECT_EQ(LCB_SUCCESS, rc);
-        rc = mctx->done(mctx, this);
-        EXPECT_EQ(LCB_SUCCESS, rc);
-        wait(instance);
+        EXPECT_EQ(expected, rc);
+        if (rc != LCB_SUCCESS) {
+            mctx->fail(mctx);
+        } else {
+            rc = mctx->done(mctx, this);
+            EXPECT_EQ(LCB_SUCCESS, rc);
+            wait(instance);
+        }
     }
 
-    void run(lcb_INSTANCE *instance, const lcb_durability_opts_t *opts, const Item &itm)
+    void run(lcb_INSTANCE *instance, const lcb_durability_opts_t *opts, const Item &itm, lcb_STATUS expected = LCB_SUCCESS)
     {
         lcb_CMDENDURE cmd = {0};
         ASSERT_FALSE(itm.key.empty());
         LCB_CMD_SET_KEY(&cmd, itm.key.data(), itm.key.length());
         cmd.cas = itm.cas;
-        wait(instance, opts, &cmd);
+        wait(instance, opts, &cmd, expected);
     }
 
     // Really wait(), but named as 'run()' here to make usage more consistent.
@@ -330,6 +335,7 @@ TEST_F(DurabilityUnitTest, testSimpleDurability)
     // Now wait for it to persist
     lcb_durability_opts_t opts;
     memset(&opts, 0, sizeof(opts));
+    opts.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
     opts.v.v0.persist_to = 1;
     opts.v.v0.replicate_to = 0;
 
@@ -387,12 +393,10 @@ TEST_F(DurabilityUnitTest, testNonExist)
 
     defaultOptions(instance, opts);
 
-    // Ensure this only uses the CAS method
     opts.version = 1;
-    opts.v.v0.pollopts = LCB_DURABILITY_MODE_CAS;
+    opts.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
 
-    dop.run(instance, &opts, itm);
-    ASSERT_EQ(LCB_KEY_ENOENT, dop.resp.rc);
+    dop.run(instance, &opts, itm, LCB_DURABILITY_NO_MUTATION_TOKENS);
 }
 
 /**
@@ -423,10 +427,7 @@ TEST_F(DurabilityUnitTest, testDelete)
     storeKey(instance, key, "value");
 
     Item itm = Item(key, "value", 0);
-
     KVOperation kvo = KVOperation(&itm);
-    DurabilityOperation dop;
-
     kvo.remove(instance);
 
     // Ensure the key is actually purged!
@@ -437,6 +438,7 @@ TEST_F(DurabilityUnitTest, testDelete)
 
     defaultOptions(instance, opts);
     opts.v.v0.check_delete = 1;
+    DurabilityOperation dop;
     dop.run(instance, &opts, itm);
     dop.assertCriteriaMatch(opts);
 
@@ -446,20 +448,11 @@ TEST_F(DurabilityUnitTest, testDelete)
 
     opts.v.v0.timeout = SECS_USECS(1);
 
-    // With CAS
     opts.version = 1;
-    opts.v.v0.pollopts = LCB_DURABILITY_MODE_CAS;
+    opts.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
     dop = DurabilityOperation();
     dop.run(instance, &opts, itm);
-    ASSERT_EQ(LCB_ETIMEDOUT, dop.resp.rc);
-
-    // With seqno
-    if (supportsMutationTokens(instance)) {
-        opts.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
-        dop = DurabilityOperation();
-        dop.run(instance, &opts, itm);
-        ASSERT_EQ(LCB_SUCCESS, dop.resp.rc);
-    }
+    ASSERT_EQ(LCB_SUCCESS, dop.resp.rc);
 }
 
 /**
@@ -494,19 +487,12 @@ TEST_F(DurabilityUnitTest, testModified)
     kvo_stale.result.val = kvo_cur.result.val = key;
 
     defaultOptions(instance, opts);
-    DurabilityOperation dop;
 
     opts.version = 1;
-    opts.v.v0.pollopts = LCB_DURABILITY_MODE_CAS;
+    opts.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
+    DurabilityOperation dop;
     dop.run(instance, &opts, kvo_stale.result);
-    ASSERT_EQ(LCB_KEY_EEXISTS, dop.resp.rc);
-
-    if (supportsMutationTokens(instance)) {
-        opts.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
-        dop = DurabilityOperation();
-        dop.run(instance, &opts, kvo_stale.result);
-        ASSERT_EQ(LCB_SUCCESS, dop.resp.rc);
-    }
+    ASSERT_EQ(LCB_SUCCESS, dop.resp.rc);
 }
 
 /**
@@ -548,13 +534,6 @@ TEST_F(DurabilityUnitTest, testQuickTimeout)
  *
  * @pre Store ten keys, and check that they exist all at once
  * @post all ten keys are received in the response, and they're ok
- *
- * @pre Check that ten missing keys exist all at once
- * @post all ten keys are received in the response, and they have an error
- *
- * @pre Check the ten stored and ten missing keys in a single operation
- * @post The ten missing keys are present and have a negative status, the ten
- * stored keys are present and are OK
  */
 TEST_F(DurabilityUnitTest, testMulti)
 {
@@ -563,9 +542,7 @@ TEST_F(DurabilityUnitTest, testMulti)
     const unsigned limit = 10;
 
     vector< Item > items_stored;
-    vector< Item > items_missing;
 
-    lcb_durability_opts_t opts = {0};
     HandleWrap hwrap;
     lcb_INSTANCE *instance;
 
@@ -579,24 +556,20 @@ TEST_F(DurabilityUnitTest, testMulti)
         char buf[64];
         sprintf(buf, "key-stored-%u", ii);
         string key_stored = buf;
-        sprintf(buf, "key-missing-%u", ii);
-        string key_missing = buf;
 
         removeKey(instance, key_stored);
-        removeKey(instance, key_missing);
 
         Item itm_e = Item(key_stored, key_stored, 0);
-        Item itm_m = Item(key_missing, key_missing, 0);
 
         KVOperation kvo(&itm_e);
         kvo.store(instance);
         items_stored.push_back(kvo.result);
-        items_missing.push_back(itm_m);
     }
 
+    lcb_durability_opts_t opts = {0};
     defaultOptions(instance, opts);
     opts.version = 1;
-    opts.v.v0.pollopts = LCB_DURABILITY_MODE_CAS;
+    opts.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
 
     /**
      * Create the command..
@@ -604,20 +577,6 @@ TEST_F(DurabilityUnitTest, testMulti)
     DurabilityMultiOperation dmop = DurabilityMultiOperation();
     dmop.run(instance, &opts, items_stored);
     dmop.assertAllMatch(opts, items_stored, vector< Item >());
-
-    // Store all the missing ones
-    opts.v.v0.timeout = (lcb_uint32_t)SECS_USECS(1.5);
-    dmop = DurabilityMultiOperation();
-    dmop.run(instance, &opts, items_missing);
-    dmop.assertAllMatch(opts, vector< Item >(), items_missing, LCB_KEY_ENOENT);
-
-    // Store them all together
-    opts.v.v0.timeout = 0;
-    vector< Item > combined;
-    combined.insert(combined.end(), items_stored.begin(), items_stored.end());
-    combined.insert(combined.end(), items_missing.begin(), items_missing.end());
-    dmop.run(instance, &opts, combined);
-    dmop.assertAllMatch(opts, items_stored, items_missing);
 }
 
 struct cb_cookie {
@@ -797,32 +756,6 @@ TEST_F(DurabilityUnitTest, testDurabilityRelocation)
     lcb_wait(instance);
     lcbio_timer_destroy(tm);
     ASSERT_EQ(1, cookie.count);
-}
-
-TEST_F(DurabilityUnitTest, testDuplicateCommands)
-{
-    HandleWrap hw;
-    lcb_INSTANCE *instance;
-    createConnection(hw, &instance);
-    std::string key("key");
-    lcb_durability_opts_t options = {0};
-    options.v.v0.replicate_to = 100;
-    options.v.v0.persist_to = 100;
-    options.v.v0.cap_max = 1;
-
-    lcb_STATUS err = LCB_SUCCESS;
-
-    lcb_MULTICMD_CTX *mctx = lcb_endure3_ctxnew(instance, &options, &err);
-    ASSERT_EQ(LCB_SUCCESS, err);
-    ASSERT_NE((lcb_MULTICMD_CTX *)NULL, mctx);
-    for (int ii = 0; ii < 2; ii++) {
-        lcb_CMDENDURE cmd = {0};
-        LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
-        err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
-        ASSERT_EQ(LCB_SUCCESS, err);
-    }
-    err = mctx->done(mctx, NULL);
-    ASSERT_EQ(LCB_DUPLICATE_COMMANDS, err);
 }
 
 TEST_F(DurabilityUnitTest, testMissingSynctoken)

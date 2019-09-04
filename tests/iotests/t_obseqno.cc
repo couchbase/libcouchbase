@@ -62,9 +62,6 @@ TEST_F(ObseqnoTest, testFetchImplicit)
     const char *key = "obseqBasic";
     const char *value = "value";
 
-    rc = lcb_cntl_string(instance, "dur_mutation_tokens", "true");
-    ASSERT_EQ(LCB_SUCCESS, rc);
-
     lcb_MUTATION_TOKEN st_fetched = {0};
     storeGetStok(instance, key, value, &st_fetched);
     ASSERT_TRUE(st_fetched.uuid_ != 0);

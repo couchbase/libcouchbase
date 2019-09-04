@@ -191,9 +191,6 @@ HANDLER(wait_for_config_handler) {
 HANDLER(fetch_mutation_tokens_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, fetch_mutation_tokens))
 }
-HANDLER(dur_mutation_tokens_handler) {
-    RETURN_GET_SET(int, LCBT_SETTING(instance, dur_mutation_tokens))
-}
 HANDLER(nmv_imm_retry_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, nmv_retry_imm));
 }
@@ -709,7 +706,7 @@ static ctl_handler handlers[] = {
     vbguess_handler,                      /* LCB_CNTL_VBGUESS_PERSIST */
     unsafe_optimize,                      /* LCB_CNTL_UNSAFE_OPTIMIZE */
     fetch_mutation_tokens_handler,        /* LCB_CNTL_ENABLE_MUTATION_TOKENS */
-    dur_mutation_tokens_handler,          /* LCB_CNTL_DURABILITY_MUTATION_TOKENS */
+    NULL,                                 /* LCB_CNTL_DURABILITY_MUTATION_TOKENS */
     config_cache_handler,                 /* LCB_CNTL_CONFIGCACHE_READONLY */
     nmv_imm_retry_handler,                /* LCB_CNTL_RETRY_NMV_IMM */
     mutation_tokens_supported_handler,    /* LCB_CNTL_MUTATION_TOKENS_SUPPORTED */
@@ -914,7 +911,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"vbguess_persist", LCB_CNTL_VBGUESS_PERSIST, convert_intbool},
     {"unsafe_optimize", LCB_CNTL_UNSAFE_OPTIMIZE, convert_intbool},
     {"enable_mutation_tokens", LCB_CNTL_ENABLE_MUTATION_TOKENS, convert_intbool},
-    {"dur_mutation_tokens", LCB_CNTL_DURABILITY_MUTATION_TOKENS, convert_intbool},
+    {"", -1, NULL}, /* removed dur_mutation_tokens */
     {"retry_nmv_imm", LCB_CNTL_RETRY_NMV_IMM, convert_intbool},
     {"tcp_nodelay", LCB_CNTL_TCP_NODELAY, convert_intbool},
     {"readj_ts_wait", LCB_CNTL_RESET_TIMEOUT_ON_WAIT, convert_intbool},
