@@ -27,6 +27,10 @@ IF(UNIX)
     CHECK_INCLUDE_FILES(arpa/nameser.h HAVE_ARPA_NAMESER_H)
 ENDIF()
 
+IF (WIN32)
+    CHECK_FUNCTION_EXISTS(_ftime64_s HAVE__FTIME64_S)
+ENDIF()
+
 CONFIGURE_FILE(
     ${PROJECT_SOURCE_DIR}/cmake/config-cmake.h.in
     ${LCB_GENSRCDIR}/config.h)
