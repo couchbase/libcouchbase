@@ -17,14 +17,19 @@
 
 #define NOMINMAX
 #include <map>
-#include <sstream>
 #include <iostream>
 #include <iomanip>
-#include <fstream>
 #include <algorithm>
 #include <limits>
-#include <stddef.h>
-#include <errno.h>
+#include <cstddef>
+#include <cerrno>
+#ifdef _WIN32
+#ifndef sleep
+#define sleep(interval) Sleep((interval)*1000)
+#endif
+#else
+#include <unistd.h>
+#endif
 #include "common/options.h"
 #include "common/histogram.h"
 #include "cbc-handlers.h"
@@ -433,6 +438,9 @@ static void ping_callback(lcb_INSTANCE *, int, const lcb_RESPPING *resp)
         const char *json;
         size_t njson;
         lcb_respping_value(resp, &json, &njson);
+        while (njson > 1 && json[njson - 1] == '\n') {
+            njson--;
+        }
         if (njson) {
             printf("%.*s", (int)njson, json);
         }
@@ -640,7 +648,7 @@ void GetHandler::run()
         lcb_STATUS err;
         if (o_replica.passed()) {
             lcb_REPLICA_MODE mode;
-            if (replica_mode == "first" || replica_mode == "first") {
+            if (replica_mode == "first" || replica_mode == "any") {
                 mode = LCB_REPLICA_MODE_ANY;
             } else if (replica_mode == "all") {
                 mode = LCB_REPLICA_MODE_ALL;
@@ -1209,11 +1217,7 @@ void WatchHandler::run()
             }
         }
         prev = entry;
-#ifdef _WIN32
-        Sleep(interval * 1000);
-#else
         sleep(interval);
-#endif
     }
 }
 
@@ -1396,15 +1400,36 @@ void PingHandler::run()
     lcb_CMDPING *cmd;
     lcb_cmdping_create(&cmd);
     lcb_cmdping_all(cmd);
-    lcb_cmdping_encode_json(cmd, true, true, o_details.passed());
-    lcb_sched_enter(instance);
-    err = lcb_ping(instance, NULL, cmd);
-    lcb_cmdping_destroy(cmd);
-    if (err != LCB_SUCCESS) {
-        throw LcbError(err);
+    lcb_cmdping_encode_json(cmd, true, !o_minify.result(), o_details.passed());
+    int interval = o_interval.result();
+    if (o_count.passed()) {
+        int count = o_count.result();
+        printf("[\n");
+        while (count > 0) {
+            err = lcb_ping(instance, NULL, cmd);
+            if (err != LCB_SUCCESS) {
+                throw LcbError(err);
+            }
+            lcb_wait(instance);
+            count--;
+            if (count > 0) {
+                printf(",\n");
+            }
+            sleep(interval);
+        }
+        printf("\n]\n");
+    } else {
+        while (true) {
+            err = lcb_ping(instance, NULL, cmd);
+            if (err != LCB_SUCCESS) {
+                throw LcbError(err);
+            }
+            lcb_wait(instance);
+            printf("\n");
+            sleep(interval);
+        }
     }
-    lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_cmdping_destroy(cmd);
 }
 
 extern "C" {
