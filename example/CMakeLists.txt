@@ -55,9 +55,6 @@ TARGET_LINK_LIBRARIES(g3cp couchbase)
 ADD_EXECUTABLE(g3cp-async minimal/g3cp-async.c)
 TARGET_LINK_LIBRARIES(g3cp-async couchbase)
 
-ADD_EXECUTABLE(observe observe/observe.c)
-TARGET_LINK_LIBRARIES(observe couchbase)
-
 ADD_EXECUTABLE(durability observe/durability.c)
 TARGET_LINK_LIBRARIES(durability couchbase)
 

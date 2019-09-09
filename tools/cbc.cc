@@ -43,6 +43,7 @@
 #include <openssl/crypto.h>
 #endif
 #include <snappy-stubs-public.h>
+#include "internalstructs.h"
 
 using namespace cbc;
 

@@ -16,7 +16,7 @@
  */
 
 #include "iotests.h"
-#include <libcouchbase/utils.h>
+#include "internalstructs.h"
 
 using namespace std;
 class ObseqnoTest : public MockUnitTest
