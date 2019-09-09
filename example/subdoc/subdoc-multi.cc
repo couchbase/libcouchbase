@@ -147,7 +147,7 @@ int main(int argc, char **argv)
     lcb_CMDSUBDOC *mcmd;
     lcb_cmdsubdoc_create(&mcmd);
     lcb_cmdsubdoc_key(mcmd, "key", 3);
-    lcb_cmdsubdoc_operations(mcmd, specs);
+    lcb_cmdsubdoc_specs(mcmd, specs);
     rc = lcb_subdoc(instance, NULL, mcmd);
     lcb_subdocspecs_destroy(specs);
     assert(rc == LCB_SUCCESS);
@@ -164,7 +164,7 @@ int main(int argc, char **argv)
     }
 
     lcb_subdocspecs_get(specs, 5, 0, "dummy", 5);
-    lcb_cmdsubdoc_operations(mcmd, specs);
+    lcb_cmdsubdoc_specs(mcmd, specs);
     rc = lcb_subdoc(instance, NULL, mcmd);
     lcb_subdocspecs_destroy(specs);
     lcb_cmdsubdoc_destroy(mcmd);

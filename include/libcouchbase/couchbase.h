@@ -2587,16 +2587,16 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_result_value(const lcb_RESPSUBDOC *re
 typedef struct lcb_SUBDOCSPECS_ lcb_SUBDOCSPECS;
 
 /** Create intermediate paths */
-#define LCB_SUBDOCSPECS_F_MKINTERMEDIATES (1u << 16)
+#define LCB_SUBDOCSPECS_F_MKINTERMEDIATES (1u << 16u)
 
 /** Access document XATTR path */
-#define LCB_SUBDOCSPECS_F_XATTRPATH (1 << 18)
+#define LCB_SUBDOCSPECS_F_XATTRPATH (1u << 18u)
 
 /** Access document virtual/materialized path. Implies F_XATTRPATH */
-#define LCB_SUBDOCSPECS_F_XATTR_MACROVALUES (1 << 19)
+#define LCB_SUBDOCSPECS_F_XATTR_MACROVALUES (1u << 19u)
 
 /** Access Xattrs of deleted documents */
-#define LCB_SUBDOCSPECS_F_XATTR_DELETED_OK (1 << 20)
+#define LCB_SUBDOCSPECS_F_XATTR_DELETED_OK (1u << 20u)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_create(lcb_SUBDOCSPECS **operations, size_t capacity);
 LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_destroy(lcb_SUBDOCSPECS *operations);
@@ -2649,7 +2649,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_collection(lcb_CMDSUBDOC *cmd, const c
                                                      const char *collection, size_t collection_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_key(lcb_CMDSUBDOC *cmd, const char *key, size_t key_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_cas(lcb_CMDSUBDOC *cmd, uint64_t cas);
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_operations(lcb_CMDSUBDOC *cmd, const lcb_SUBDOCSPECS *operations);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_specs(lcb_CMDSUBDOC *cmd, const lcb_SUBDOCSPECS *operations);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_expiration(lcb_CMDSUBDOC *cmd, uint32_t expiration);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_durability(lcb_CMDSUBDOC *cmd, lcb_DURABILITY_LEVEL level);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_create_if_missing(lcb_CMDSUBDOC *cmd, int flag);

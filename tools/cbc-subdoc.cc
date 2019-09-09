@@ -385,7 +385,7 @@ class LookupHandler : public Handler
             lcb_CMDSUBDOC *cmd;
             lcb_cmdsubdoc_create(&cmd);
             lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
-            lcb_cmdsubdoc_operations(cmd, specs);
+            lcb_cmdsubdoc_specs(cmd, specs);
             err = lcb_subdoc(instance, this, cmd);
             lcb_subdocspecs_destroy(specs);
             lcb_cmdsubdoc_destroy(cmd);
@@ -461,7 +461,7 @@ class RemoveHandler : public Handler
             lcb_CMDSUBDOC *cmd;
             lcb_cmdsubdoc_create(&cmd);
             lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
-            lcb_cmdsubdoc_operations(cmd, specs);
+            lcb_cmdsubdoc_specs(cmd, specs);
             err = lcb_subdoc(instance, this, cmd);
             lcb_subdocspecs_destroy(specs);
             lcb_cmdsubdoc_destroy(cmd);
@@ -542,7 +542,7 @@ class UpsertHandler : public Handler
         lcb_CMDSUBDOC *cmd;
         lcb_cmdsubdoc_create(&cmd);
         lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
-        lcb_cmdsubdoc_operations(cmd, specs);
+        lcb_cmdsubdoc_specs(cmd, specs);
         if (o_expiry.passed()) {
             lcb_cmdsubdoc_expiration(cmd, o_expiry.result());
         }
@@ -715,7 +715,7 @@ class MutationHandler : public Handler
             lcb_CMDSUBDOC *cmd;
             lcb_cmdsubdoc_create(&cmd);
             lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
-            lcb_cmdsubdoc_operations(cmd, specs);
+            lcb_cmdsubdoc_specs(cmd, specs);
             if (o_upsert.passed()) {
                 lcb_cmdsubdoc_create_if_missing(cmd, true);
             }

@@ -155,7 +155,7 @@ int main(int argc, char **argv)
     printf("Getting the 'hello' path from the document\n");
     lcb_subdocspecs_create(&ops, 1);
     lcb_subdocspecs_get(ops, 0, 0, "hello", 5);
-    lcb_cmdsubdoc_operations(cmd, ops);
+    lcb_cmdsubdoc_specs(cmd, ops);
     rc = lcb_subdoc(instance, NULL, cmd);
     lcb_subdocspecs_destroy(ops);
     assert(rc == LCB_SUCCESS);
@@ -167,7 +167,7 @@ int main(int argc, char **argv)
     printf("Adding new 'goodbye' path to document\n");
     lcb_subdocspecs_create(&ops, 1);
     lcb_subdocspecs_dict_upsert(ops, 0, 0, "goodbye", 7, "\"hello\"", 7);
-    lcb_cmdsubdoc_operations(cmd, ops);
+    lcb_cmdsubdoc_specs(cmd, ops);
     rc = lcb_subdoc(instance, NULL, cmd);
     lcb_subdocspecs_destroy(ops);
     assert(rc == LCB_SUCCESS);
@@ -183,7 +183,7 @@ int main(int argc, char **argv)
     // Create the array if it doesn't exist. This option can be used with
     // other commands as well..
     lcb_subdocspecs_array_add_last(ops, 0, LCB_SUBDOCSPECS_F_MKINTERMEDIATES, "array", 5, "1", 1);
-    lcb_cmdsubdoc_operations(cmd, ops);
+    lcb_cmdsubdoc_specs(cmd, ops);
     rc = lcb_subdoc(instance, NULL, cmd);
     lcb_subdocspecs_destroy(ops);
     assert(rc == LCB_SUCCESS);
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
     printf("Prepending element to array (array must exist)\n");
     lcb_subdocspecs_create(&ops, 1);
     lcb_subdocspecs_array_add_first(ops, 0, 0, "array", 5, "1", 1);
-    lcb_cmdsubdoc_operations(cmd, ops);
+    lcb_cmdsubdoc_specs(cmd, ops);
     rc = lcb_subdoc(instance, NULL, cmd);
     lcb_subdocspecs_destroy(ops);
     assert(rc == LCB_SUCCESS);
@@ -209,7 +209,7 @@ int main(int argc, char **argv)
     printf("Getting first array element...\n");
     lcb_subdocspecs_create(&ops, 1);
     lcb_subdocspecs_get(ops, 0, 0, "array[0]", 8);
-    lcb_cmdsubdoc_operations(cmd, ops);
+    lcb_cmdsubdoc_specs(cmd, ops);
     rc = lcb_subdoc(instance, NULL, cmd);
     lcb_subdocspecs_destroy(ops);
     assert(rc == LCB_SUCCESS);

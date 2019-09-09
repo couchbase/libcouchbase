@@ -226,7 +226,7 @@ bool SubdocUnitTest::createSubdocConnection(HandleWrap &hw, lcb_INSTANCE **insta
     lcb_CMDSUBDOC *cmd;
     lcb_cmdsubdoc_create(&cmd);
     lcb_cmdsubdoc_key(cmd, "key", 3);
-    lcb_cmdsubdoc_operations(cmd, specs);
+    lcb_cmdsubdoc_specs(cmd, specs);
     MultiResult res;
     lcb_STATUS rc = lcb_subdoc(*instance, &res, cmd);
     lcb_subdocspecs_destroy(specs);
@@ -279,7 +279,7 @@ static ::testing::AssertionResult verifyPathValue(const char *, const char *, co
     lcb_CMDSUBDOC *cmd;
     lcb_cmdsubdoc_create(&cmd);
     lcb_cmdsubdoc_key(cmd, docid.c_str(), docid.size());
-    lcb_cmdsubdoc_operations(cmd, specs);
+    lcb_cmdsubdoc_specs(cmd, specs);
     lcb_STATUS rc = schedwait(instance, &mr, cmd, lcb_subdoc);
     lcb_subdocspecs_destroy(specs);
     lcb_cmdsubdoc_destroy(cmd);
@@ -306,7 +306,7 @@ TEST_F(SubdocUnitTest, testSdGetExists)
     MultiResult res;
 
     lcb_subdocspecs_create(&specs, 1);
-    lcb_cmdsubdoc_operations(cmd, specs);
+    lcb_cmdsubdoc_specs(cmd, specs);
 
     lcb_subdocspecs_get(specs, 0, 0, "dictkey", strlen("dictkey"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
@@ -399,7 +399,7 @@ TEST_F(SubdocUnitTest, testSdStore)
 
     lcb_CMDSUBDOC *cmd;
     lcb_cmdsubdoc_create(&cmd);
-    lcb_cmdsubdoc_operations(cmd, spec);
+    lcb_cmdsubdoc_specs(cmd, spec);
     lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
 
     MultiResult res;
@@ -494,7 +494,7 @@ TEST_F(SubdocUnitTest, testMkdoc)
 
     lcb_subdocspecs_create(&spec, 1);
     lcb_subdocspecs_dict_upsert(spec, 0, 0, "pth", 3, "123", 3);
-    lcb_cmdsubdoc_operations(cmd, spec);
+    lcb_cmdsubdoc_specs(cmd, spec);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
     ASSERT_PATHVAL_EQ("123", instance, key, "pth");
     lcb_subdocspecs_destroy(spec);
@@ -503,7 +503,7 @@ TEST_F(SubdocUnitTest, testMkdoc)
     lcb_subdocspecs_create(&spec, 2);
     lcb_subdocspecs_dict_upsert(spec, 0, 0, "pth", 3, "123", 3);
     lcb_subdocspecs_dict_upsert(spec, 1, 0, "pth2", 4, "456", 3);
-    lcb_cmdsubdoc_operations(cmd, spec);
+    lcb_cmdsubdoc_specs(cmd, spec);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
     lcb_subdocspecs_destroy(spec);
 
@@ -529,7 +529,7 @@ TEST_F(SubdocUnitTest, testUnique)
 
     lcb_SUBDOCSPECS *spec;
     lcb_subdocspecs_create(&spec, 1);
-    lcb_cmdsubdoc_operations(cmd, spec);
+    lcb_cmdsubdoc_specs(cmd, spec);
 
     // Test array operations: ADD_UNIQUE
     lcb_subdocspecs_array_add_unique(spec, 0, LCB_SUBDOCSPECS_F_MKINTERMEDIATES, "a", strlen("a"), "1", strlen("1"));
@@ -581,7 +581,7 @@ TEST_F(SubdocUnitTest, testCounter)
     lcb_SUBDOCSPECS *spec;
     lcb_subdocspecs_create(&spec, 1);
 
-    lcb_cmdsubdoc_operations(cmd, spec);
+    lcb_cmdsubdoc_specs(cmd, spec);
 
     lcb_subdocspecs_counter(spec, 0, 0, "counter", strlen("counter"), 42);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
@@ -659,7 +659,7 @@ TEST_F(SubdocUnitTest, testMultiLookup)
 
     lcb_SUBDOCSPECS *specs;
     lcb_subdocspecs_create(&specs, 4);
-    lcb_cmdsubdoc_operations(mcmd, specs);
+    lcb_cmdsubdoc_specs(mcmd, specs);
 
     lcb_subdocspecs_get(specs, 0, 0, "dictkey", strlen("dictkey"));
     lcb_subdocspecs_exists(specs, 1, 0, "array[0]", strlen("array[0]"));
@@ -725,7 +725,7 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     lcb_STATUS rc;
 
     lcb_subdocspecs_create(&specs, 2);
-    lcb_cmdsubdoc_operations(mcmd, specs);
+    lcb_cmdsubdoc_specs(mcmd, specs);
     lcb_subdocspecs_dict_upsert(specs, 0, 0, "newPath", strlen("newPath"), "true", strlen("true"));
     lcb_subdocspecs_counter(specs, 1, 0, "counter", strlen("counter"), 42);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mr, mcmd, lcb_subdoc));
@@ -748,7 +748,7 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     lcb_subdocspecs_destroy(specs);
 
     lcb_subdocspecs_create(&specs, 3);
-    lcb_cmdsubdoc_operations(mcmd, specs);
+    lcb_cmdsubdoc_specs(mcmd, specs);
     lcb_subdocspecs_replace(specs, 0, 0, "newPath", strlen("newPath"), "null", 4);
     lcb_subdocspecs_replace(specs, 1, 0, "nested.nonexist", strlen("nested.nonexist"), "null", 4);
     lcb_subdocspecs_replace(specs, 2, 0, "bad..bad", strlen("bad..path"), "null", 4);
@@ -761,7 +761,7 @@ TEST_F(SubdocUnitTest, testMultiMutations)
 
     /* check if lcb_subdoc3 can detect mutation, and allow setting exptime */
     lcb_subdocspecs_create(&specs, 1);
-    lcb_cmdsubdoc_operations(mcmd, specs);
+    lcb_cmdsubdoc_specs(mcmd, specs);
     lcb_cmdsubdoc_expiration(mcmd, 42);
     lcb_subdocspecs_dict_upsert(specs, 0, 0, "tmpPath", strlen("tmpPath"), "null", 4);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mr, mcmd, lcb_subdoc));
@@ -790,7 +790,7 @@ TEST_F(SubdocUnitTest, testGetCount)
     lcb_SUBDOCSPECS *spec;
     lcb_subdocspecs_create(&spec, 1);
     lcb_subdocspecs_get_count(spec, 0, 0, "", 0);
-    lcb_cmdsubdoc_operations(cmd, spec);
+    lcb_cmdsubdoc_specs(cmd, spec);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mres, cmd, lcb_subdoc));
     ASSERT_SD_VAL(mres, "2");
     lcb_subdocspecs_destroy(spec);
@@ -799,7 +799,7 @@ TEST_F(SubdocUnitTest, testGetCount)
     lcb_subdocspecs_create(&spec, 2);
     lcb_subdocspecs_get_count(spec, 0, 0, "404", 3);
     lcb_subdocspecs_get_count(spec, 1, 0, "array", strlen("array"));
-    lcb_cmdsubdoc_operations(cmd, spec);
+    lcb_cmdsubdoc_specs(cmd, spec);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mres, cmd, lcb_subdoc));
     ASSERT_EQ(LCB_SUBDOC_MULTI_FAILURE, mres.rc);
     ASSERT_EQ(LCB_SUBDOC_PATH_ENOENT, mres.results[0].rc);

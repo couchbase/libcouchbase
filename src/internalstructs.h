@@ -911,18 +911,18 @@ typedef struct {
  * This command flag should be used if the document is to be created
  * if it does not exist.
  */
-#define LCB_CMDSUBDOC_F_UPSERT_DOC (1 << 16)
+#define LCB_CMDSUBDOC_F_UPSERT_DOC (1u << 16u)
 
 /**
  * This command flag should be used if the document must be created anew.
  * In this case, it will fail if it already exists
  */
-#define LCB_CMDSUBDOC_F_INSERT_DOC (1 << 17)
+#define LCB_CMDSUBDOC_F_INSERT_DOC (1u << 17u)
 
 /**
  * Access a potentially deleted document. For internal Couchbase use
  */
-#define LCB_CMDSUBDOC_F_ACCESS_DELETED (1 << 18)
+#define LCB_CMDSUBDOC_F_ACCESS_DELETED (1u << 18u)
 
 struct lcb_SUBDOCSPECS_ {
     uint32_t options;

@@ -97,7 +97,7 @@ static void n1qlrow_callback(lcb_INSTANCE *instance, int type, const lcb_RESPN1Q
         lcb_CMDSUBDOC *cmd;
         lcb_cmdsubdoc_create(&cmd);
         lcb_cmdsubdoc_key(cmd, key, strlen(key));
-        lcb_cmdsubdoc_operations(cmd, specs);
+        lcb_cmdsubdoc_specs(cmd, specs);
         rc = lcb_subdoc(instance, NULL, cmd);
         lcb_subdocspecs_destroy(specs);
         lcb_cmdsubdoc_destroy(cmd);
@@ -176,7 +176,7 @@ int main()
         lcb_CMDSUBDOC *cmd;
         lcb_cmdsubdoc_create(&cmd);
         lcb_cmdsubdoc_key(cmd, key, strlen(key));
-        lcb_cmdsubdoc_operations(cmd, specs);
+        lcb_cmdsubdoc_specs(cmd, specs);
         rc = lcb_subdoc(instance, NULL, cmd);
         lcb_subdocspecs_destroy(specs);
         lcb_cmdsubdoc_destroy(cmd);
@@ -205,7 +205,7 @@ int main()
         lcb_CMDSUBDOC *cmd;
         lcb_cmdsubdoc_create(&cmd);
         lcb_cmdsubdoc_key(cmd, key, strlen(key));
-        lcb_cmdsubdoc_operations(cmd, specs);
+        lcb_cmdsubdoc_specs(cmd, specs);
         rc = lcb_subdoc(instance, NULL, cmd);
         lcb_subdocspecs_destroy(specs);
         lcb_cmdsubdoc_destroy(cmd);
