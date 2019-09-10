@@ -485,6 +485,7 @@ H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request,
     switch (response->opcode()) {
     case PROTOCOL_BINARY_CMD_SUBDOC_GET:
     case PROTOCOL_BINARY_CMD_SUBDOC_EXISTS:
+    case PROTOCOL_BINARY_CMD_SUBDOC_GET_COUNT:
     case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP:
         cbtype = LCB_CALLBACK_SDLOOKUP;
         break;
