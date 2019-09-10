@@ -42,8 +42,8 @@ class Span
         return m_finish - m_start;
     }
 
-    void add_tag(const char *name, int copy, const char *value);
-    void add_tag(const char *name, int copy, const char *value, size_t value_len);
+    void add_tag(const char *name, int copy, const char *value, int copy_value);
+    void add_tag(const char *name, int copy_key, const char *value, size_t value_len, int copy_value);
     void add_tag(const char *name, int copy, uint64_t value);
     void add_tag(const char *name, int copy, double value);
     void add_tag(const char *name, int copy, bool value);

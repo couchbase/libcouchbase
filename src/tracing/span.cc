@@ -33,6 +33,7 @@ typedef struct tag_value {
         struct {
             char *p;
             size_t l;
+            int need_free;
         } s;
         lcb_U64 u64;
         double d;
@@ -357,26 +358,31 @@ void Span::finish(uint64_t now)
     }
 }
 
-void Span::add_tag(const char *name, int copy, const char *value)
+void Span::add_tag(const char *name, int copy_key, const char *value, int copy_value)
 {
     if (name && value) {
-        add_tag(name, copy, value, strlen(value));
+        add_tag(name, copy_key, value, strlen(value), copy_value);
     }
 }
 
-void Span::add_tag(const char *name, int copy, const char *value, size_t value_len)
+void Span::add_tag(const char *name, int copy_key, const char *value, size_t value_len, int copy_value)
 {
     tag_value *val = (tag_value *)calloc(1, sizeof(tag_value));
     val->t = TAGVAL_STRING;
-    val->key.need_free = copy;
-    if (copy) {
+    val->key.need_free = copy_key;
+    if (copy_key) {
         val->key.p = strdup(name);
     } else {
         val->key.p = (char *)name;
     }
-    val->v.s.p = (char *)calloc(value_len, sizeof(char));
+    val->v.s.need_free = copy_value;
     val->v.s.l = value_len;
-    memcpy(val->v.s.p, value, value_len);
+    if (copy_value) {
+        val->v.s.p = (char *)calloc(value_len, sizeof(char));
+        memcpy(val->v.s.p, value, value_len);
+    } else {
+        val->v.s.p = (char *)value;
+    }
     sllist_append(&m_tags, &val->slnode);
 }
 
