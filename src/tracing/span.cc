@@ -323,8 +323,8 @@ Span::Span(lcbtrace_TRACER *tracer, const char *opname, uint64_t start, lcbtrace
     m_span_id = lcb_next_rand64();
     m_orphaned = false;
     memset(&m_tags, 0, sizeof(m_tags));
-    add_tag(LCBTRACE_TAG_DB_TYPE, 0, "couchbase");
-    add_tag(LCBTRACE_TAG_SPAN_KIND, 0, "client");
+    add_tag(LCBTRACE_TAG_DB_TYPE, 0, "couchbase", 0);
+    add_tag(LCBTRACE_TAG_SPAN_KIND, 0, "client", 0);
 
     if (other != NULL && ref == LCBTRACE_REF_CHILD_OF) {
         m_parent = other;
@@ -343,7 +343,7 @@ Span::~Span()
         if (val->key.need_free) {
             free(val->key.p);
         }
-        if (val->t == TAGVAL_STRING) {
+        if (val->t == TAGVAL_STRING && val->v.s.need_free) {
             free(val->v.s.p);
         }
         free(val);

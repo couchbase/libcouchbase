@@ -164,8 +164,7 @@ void lcbtrace_span_set_orphaned(lcbtrace_SPAN *span, int val);
                 snprintf(local_id, sizeof(local_id), "%016" PRIx64 "/%016" PRIx64,                                     \
                          (lcb_U64)server->get_settings()->iid, ctx->sock->id);                                         \
                 lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_LOCAL_ID, local_id);                                      \
-                lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_LOCAL_ADDRESS,                                            \
-                                          lcbio__inet_ntop(&ctx->sock->info->sa_local).c_str());                       \
+                lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_LOCAL_ADDRESS, ctx->sock->info->ep_local);                \
             }                                                                                                          \
         }                                                                                                              \
     } while (0);
