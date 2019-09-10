@@ -129,6 +129,8 @@ LCB_INTERNAL_API
 void lcbtrace_span_set_parent(lcbtrace_SPAN *span, lcbtrace_SPAN *parent);
 LCB_INTERNAL_API
 void lcbtrace_span_set_orphaned(lcbtrace_SPAN *span, int val);
+LIBCOUCHBASE_API
+void lcbtrace_span_add_tag_str_nocopy(lcbtrace_SPAN *span, const char *name, const char *value);
 
 #define LCBTRACE_KV_START(settings, cmd, operation_name, opaque, outspan)                                              \
     if ((settings)->tracer) {                                                                                          \
@@ -164,7 +166,7 @@ void lcbtrace_span_set_orphaned(lcbtrace_SPAN *span, int val);
                 snprintf(local_id, sizeof(local_id), "%016" PRIx64 "/%016" PRIx64,                                     \
                          (lcb_U64)server->get_settings()->iid, ctx->sock->id);                                         \
                 lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_LOCAL_ID, local_id);                                      \
-                lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_LOCAL_ADDRESS, ctx->sock->info->ep_local);                \
+                lcbtrace_span_add_tag_str_nocopy(span, LCBTRACE_TAG_LOCAL_ADDRESS, ctx->sock->info->ep_local);         \
             }                                                                                                          \
         }                                                                                                              \
     } while (0);

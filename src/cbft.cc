@@ -275,8 +275,8 @@ lcb_FTS_HANDLE_::~lcb_FTS_HANDLE_()
         if (htreq) {
             lcbio_CTX *ctx = htreq->ioctx;
             if (ctx) {
-                lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_PEER_ADDRESS, htreq->peer.c_str());
-                lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_LOCAL_ADDRESS, ctx->sock->info->ep_local);
+                lcbtrace_span_add_tag_str_nocopy(span, LCBTRACE_TAG_PEER_ADDRESS, htreq->peer.c_str());
+                lcbtrace_span_add_tag_str_nocopy(span, LCBTRACE_TAG_LOCAL_ADDRESS, ctx->sock->info->ep_local);
             }
         }
         lcbtrace_span_finish(span, LCBTRACE_NOW);
