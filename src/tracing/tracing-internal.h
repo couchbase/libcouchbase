@@ -141,32 +141,30 @@ void lcbtrace_span_set_orphaned(lcbtrace_SPAN *span, int val);
         lcbtrace_span_add_system_tags(outspan, (settings), LCBTRACE_TAG_SERVICE_KV);                                   \
     }
 
-#define LCBTRACE_KV_COMPLETE(pipeline, request, response)                                                              \
-    do {                                                                                                               \
-        lcbtrace_SPAN *span = MCREQ_PKT_RDATA(request)->span;                                                          \
-        if (span) {                                                                                                    \
-            lcbtrace_span_add_tag_uint64(span, LCBTRACE_TAG_PEER_LATENCY, (response)->duration());                     \
-            lcb::Server *server = static_cast< lcb::Server * >(pipeline);                                              \
-            const lcb_host_t *remote = server->curhost;                                                                \
-            if (remote) {                                                                                              \
-                std::string hh;                                                                                        \
-                if (remote->ipv6) {                                                                                    \
-                    hh.append("[").append(remote->host).append("]:").append(remote->port);                             \
-                } else {                                                                                               \
-                    hh.append(remote->host).append(":").append(remote->port);                                          \
-                }                                                                                                      \
-                lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_PEER_ADDRESS, hh.c_str());                                \
-            }                                                                                                          \
-            lcbio_CTX *ctx = server->connctx;                                                                          \
-            if (ctx) {                                                                                                 \
-                char local_id[34] = {};                                                                                \
-                snprintf(local_id, sizeof(local_id), "%016" PRIx64 "/%016" PRIx64,                                     \
-                         (lcb_U64)server->get_settings()->iid, ctx->sock->id);                                         \
-                lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_LOCAL_ID, local_id);                                      \
-                lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_LOCAL_ADDRESS,                                            \
-                                          lcbio__inet_ntop(&ctx->sock->info->sa_local).c_str());                       \
-            }                                                                                                          \
-        }                                                                                                              \
+#define LCBTRACE_KV_COMPLETE(pipeline, request, response)                                                                                  \
+    do {                                                                                                                                   \
+        lcbtrace_SPAN *span = MCREQ_PKT_RDATA(request)->span;                                                                              \
+        if (span) {                                                                                                                        \
+            lcbtrace_span_add_tag_uint64(span, LCBTRACE_TAG_PEER_LATENCY, (response)->duration());                                         \
+            lcb::Server *server = static_cast< lcb::Server * >(pipeline);                                                                  \
+            const lcb_host_t *remote = server->curhost;                                                                                    \
+            if (remote) {                                                                                                                  \
+                std::string hh;                                                                                                            \
+                if (remote->ipv6) {                                                                                                        \
+                    hh.append("[").append(remote->host).append("]:").append(remote->port);                                                 \
+                } else {                                                                                                                   \
+                    hh.append(remote->host).append(":").append(remote->port);                                                              \
+                }                                                                                                                          \
+                lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_PEER_ADDRESS, hh.c_str());                                                    \
+            }                                                                                                                              \
+            lcbio_CTX *ctx = server->connctx;                                                                                              \
+            if (ctx) {                                                                                                                     \
+                char local_id[34] = {};                                                                                                    \
+                snprintf(local_id, sizeof(local_id), "%016" PRIx64 "/%016" PRIx64, (lcb_U64)server->get_settings()->iid, ctx->sock->id);   \
+                lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_LOCAL_ID, local_id);                                                          \
+                lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_LOCAL_ADDRESS, ctx->sock->info->ep_local);                                    \
+            }                                                                                                                              \
+        }                                                                                                                                  \
     } while (0);
 
 #define LCBTRACE_KV_CLOSE(request)                                                                                     \

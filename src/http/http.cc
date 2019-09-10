@@ -352,6 +352,11 @@ Request::assign_url(const char *base, size_t nbase, const char *path, size_t npa
     assign_from_urlfield(UF_HOST, host);
     assign_from_urlfield(UF_PORT, port);
     ipv6 = host.find(':') != std::string::npos;
+    if (ipv6) {
+        peer = "[" + host + "]:" + port;
+    } else {
+        peer = host + ":" + port;
+    }
     return LCB_SUCCESS;
 }
 

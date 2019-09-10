@@ -217,7 +217,7 @@ handle_ping(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t err, const void *
         lcbio_CTX *ctx = server->connctx;
         if (ctx) {
             char id[20] = {0};
-            svc.local = strdup(lcbio__inet_ntop(&ctx->sock->info->sa_local).c_str());
+            svc.local = strdup(ctx->sock->info->ep_local);
             snprintf(id, sizeof(id), "%p", (void *)ctx->sock);
             svc.id = strdup(id);
         }
@@ -268,7 +268,7 @@ static void handle_http(lcb_t instance, lcb_PINGSVCTYPE type, const lcb_RESPHTTP
             char id[20] = {0};
             snprintf(id, sizeof(id), "%p", (void *)ctx->sock);
             svc.id = strdup(id);
-            svc.local = strdup(lcbio__inet_ntop(&ctx->sock->info->sa_local).c_str());
+            svc.local = strdup(ctx->sock->info->ep_local);
         }
         ck->responses.push_back(svc);
     }
@@ -438,7 +438,7 @@ lcb_diag(lcb_t instance, const void *cookie, const lcb_CMDDIAG *cmd)
             } else {
                 endpoint["remote"] = std::string(server->curhost->host) + ":" + std::string(server->curhost->port);
             }
-            endpoint["local"] = lcbio__inet_ntop(&ctx->sock->info->sa_local);
+            endpoint["local"] = ctx->sock->info->ep_local;
             endpoint["last_activity_us"] = (Json::Value::UInt64)(now > ctx->sock->atime ? now - ctx->sock->atime : 0);
             endpoint["status"] = "connected";
             root[lcbio_svcstr(ctx->sock->service)].append(endpoint);
@@ -464,7 +464,7 @@ lcb_diag(lcb_t instance, const void *cookie, const lcb_CMDDIAG *cmd)
                     } else {
                         endpoint["remote"] = std::string(htreq->host) + ":" + std::string(htreq->port);
                     }
-                    endpoint["local"] = lcbio__inet_ntop(&ctx->sock->info->sa_local);
+                    endpoint["local"] = ctx->sock->info->ep_local;
                     endpoint["last_activity_us"] = (Json::Value::UInt64)(now > ctx->sock->atime ? now - ctx->sock->atime : 0);
                     endpoint["status"] = "connected";
                     root[lcbio_svcstr(ctx->sock->service)].append(endpoint);
