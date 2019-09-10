@@ -73,6 +73,15 @@ void lcbtrace_span_finish(lcbtrace_SPAN *span, uint64_t now)
 }
 
 LIBCOUCHBASE_API
+void lcbtrace_span_add_tag_str_nocopy(lcbtrace_SPAN *span, const char *name, const char *value)
+{
+    if (!span || name == NULL || value == NULL) {
+        return;
+    }
+    span->add_tag(name, 0, value);
+}
+
+LIBCOUCHBASE_API
 void lcbtrace_span_add_tag_str(lcbtrace_SPAN *span, const char *name, const char *value)
 {
     if (!span || name == NULL || value == NULL) {
@@ -114,15 +123,15 @@ void lcbtrace_span_add_system_tags(lcbtrace_SPAN *span, lcb_settings *settings, 
     if (!span) {
         return;
     }
-    span->add_tag(LCBTRACE_TAG_SERVICE, 0, service);
+    span->add_tag(LCBTRACE_TAG_SERVICE, 0, service, 0);
     std::string client_string(LCB_CLIENT_ID);
     if (settings->client_string) {
         client_string += " ";
         client_string += settings->client_string;
     }
-    span->add_tag(LCBTRACE_TAG_COMPONENT, 0, client_string.c_str(), client_string.size());
+    span->add_tag(LCBTRACE_TAG_COMPONENT, 0, client_string.c_str(), client_string.size(), 1);
     if (settings->bucket) {
-        span->add_tag(LCBTRACE_TAG_DB_INSTANCE, 0, settings->bucket);
+        span->add_tag(LCBTRACE_TAG_DB_INSTANCE, 0, settings->bucket, 0);
     }
 }
 
