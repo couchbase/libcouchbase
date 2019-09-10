@@ -271,8 +271,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_fulldoc_get(lcb_SUBDOCSPECS *operati
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_fulldoc_add(lcb_SUBDOCSPECS *operations, size_t index, uint32_t flags,
-                                                        const char *value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_fulldoc_insert(lcb_SUBDOCSPECS *operations, size_t index, uint32_t flags,
+                                                           const char *value, size_t value_len)
 {
     operations->options |= LCB_CMDSUBDOC_F_INSERT_DOC;
     operations->specs[index].sdcmd = LCB_SDCMD_SET_FULLDOC;
