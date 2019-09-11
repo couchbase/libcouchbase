@@ -415,6 +415,16 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_create_if_missing(lcb_CMDSUBDOC *cmd, 
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_access_deleted(lcb_CMDSUBDOC *cmd, int flag)
+{
+    if (flag) {
+        cmd->cmdflags |= LCB_CMDSUBDOC_F_ACCESS_DELETED;
+    } else {
+        cmd->cmdflags &= ~LCB_CMDSUBDOC_F_ACCESS_DELETED;
+    }
+    return LCB_SUCCESS;
+}
+
 static lcb_size_t get_value_size(mc_PACKET *packet)
 {
     if (packet->flags & MCREQ_F_HASVALUE) {
