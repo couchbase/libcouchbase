@@ -717,7 +717,7 @@ class MutationHandler : public Handler
             lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
             lcb_cmdsubdoc_specs(cmd, specs);
             if (o_upsert.passed()) {
-                lcb_cmdsubdoc_create_if_missing(cmd, true);
+                lcb_cmdsubdoc_store_semantics(cmd, LCB_SUBDOC_STORE_UPSERT);
             }
             if (o_expiry.passed()) {
                 lcb_cmdsubdoc_expiration(cmd, o_expiry.result());

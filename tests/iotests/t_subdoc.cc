@@ -488,7 +488,7 @@ TEST_F(SubdocUnitTest, testMkdoc)
     lcb_CMDSUBDOC *cmd;
     lcb_cmdsubdoc_create(&cmd);
     lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
-    lcb_cmdsubdoc_create_if_missing(cmd, true);
+    lcb_cmdsubdoc_store_semantics(cmd, LCB_SUBDOC_STORE_UPSERT);
 
     lcb_SUBDOCSPECS *spec;
 

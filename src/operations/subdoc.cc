@@ -405,12 +405,19 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_durability(lcb_CMDSUBDOC *cmd, lcb_DUR
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_create_if_missing(lcb_CMDSUBDOC *cmd, int flag)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_store_semantics(lcb_CMDSUBDOC *cmd, lcb_SUBDOC_STORE_SEMANTICS mode)
 {
-    if (flag) {
-        cmd->cmdflags |= LCB_CMDSUBDOC_F_UPSERT_DOC;
-    } else {
-        cmd->cmdflags &= ~LCB_CMDSUBDOC_F_UPSERT_DOC;
+    cmd->cmdflags &= ~(LCB_CMDSUBDOC_F_UPSERT_DOC | LCB_CMDSUBDOC_F_INSERT_DOC);
+    switch (mode) {
+        case LCB_SUBDOC_STORE_REPLACE:
+            /* replace is default, does not require setting the flags */
+            break;
+        case LCB_SUBDOC_STORE_UPSERT:
+            cmd->cmdflags |= LCB_CMDSUBDOC_F_UPSERT_DOC;
+            break;
+        case LCB_SUBDOC_STORE_INSERT:
+            cmd->cmdflags |= LCB_CMDSUBDOC_F_INSERT_DOC;
+            break;
     }
     return LCB_SUCCESS;
 }
