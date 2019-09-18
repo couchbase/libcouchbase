@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
         lcb_wait(instance);
     }
 
-    if (argc >= 4) {
+    if (argc > 4) {
         const char *bucket = argv[4];
 
         {

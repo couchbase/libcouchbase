@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
     lcb_createopts_create(&options, LCB_TYPE_CLUSTER);
     lcb_createopts_connstr(options, argv[1], strlen(argv[1]));
     lcb_createopts_credentials(options, argv[2], strlen(argv[2]), argv[3], strlen(argv[3]));
-    if (argc >= 4) {
+    if (argc > 4) {
         bucket = argv[4];
     }
 
