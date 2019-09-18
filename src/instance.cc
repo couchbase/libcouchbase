@@ -472,7 +472,13 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
     obj->settings->conntype = type;
     obj->settings->ipv6 = spec.ipv6_policy();
 
-    settings->bucket = strdup(spec.bucket().c_str());
+    if (spec.bucket().empty()) {
+        if (type == LCB_TYPE_BUCKET) {
+            settings->bucket = strdup("default");
+        }
+    } else {
+        settings->bucket = strdup(spec.bucket().c_str());
+    }
 
     if (!spec.username().empty()) {
         settings->auth->set_mode(LCBAUTH_MODE_RBAC);
@@ -480,8 +486,7 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
                                   LCBAUTH_F_CLUSTER);
     } else {
         settings->auth->set_mode(LCBAUTH_MODE_CLASSIC);
-        err = settings->auth->add(spec.bucket(), spec.password(),
-                                  LCBAUTH_F_BUCKET);
+        err = settings->auth->add(settings->bucket, spec.password(), LCBAUTH_F_BUCKET);
     }
     if (err != LCB_SUCCESS) {
         goto GT_DONE;
@@ -739,6 +744,10 @@ lcb_STATUS lcb_connect(lcb_INSTANCE *instance)
 LIBCOUCHBASE_API
 lcb_STATUS lcb_open(lcb_INSTANCE *instance, const char *bucket, size_t bucket_len)
 {
+    if (bucket == NULL) {
+        lcb_log(LOGARGS(instance, ERR), "Bucket name cannot be a NULL, sorry");
+        return LCB_EINVAL;
+    }
     lcbvb_CONFIG *cfg = LCBT_VBCONFIG(instance);
     if (cfg == NULL) {
         lcb_log(LOGARGS(instance, ERR),
