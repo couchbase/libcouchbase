@@ -741,9 +741,12 @@ lcb_STATUS lcb_open(lcb_INSTANCE *instance, const char *bucket, size_t bucket_le
 {
     lcbvb_CONFIG *cfg = LCBT_VBCONFIG(instance);
     if (cfg == NULL) {
+        lcb_log(LOGARGS(instance, ERR),
+                "The instance wasn't not bootstrapped, unable to associate it with bucket, sorry");
         return LCB_EINVAL;
     }
     if (LCBVB_BUCKET_NAME(cfg)) {
+        lcb_log(LOGARGS(instance, ERR), "The instance has been associated with the bucket already, sorry");
         return LCB_EINVAL;
     }
     instance->settings->conntype = LCB_TYPE_BUCKET;
