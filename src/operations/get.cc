@@ -493,6 +493,11 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_value(const lcb_RESPGETREPLICA *r
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API int lcb_respreplica_is_final(const lcb_RESPGETREPLICA *resp)
+{
+    return resp->rflags & LCB_RESP_F_FINAL;
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetreplica_create(lcb_CMDGETREPLICA **cmd, lcb_REPLICA_MODE mode)
 {
     lcb_CMDGETREPLICA *res = (lcb_CMDGETREPLICA *)calloc(1, sizeof(lcb_CMDGETREPLICA));
