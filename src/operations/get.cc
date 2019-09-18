@@ -718,8 +718,6 @@ static lcb_STATUS getreplica_impl(uint32_t cid, lcb_INSTANCE *instance, void *co
     req.request.vbucket = htons((lcb_uint16_t)vbid);
     req.request.cas = 0;
     req.request.extlen = 0;
-    req.request.keylen = htons((lcb_uint16_t)cmd->key.contig.nbytes);
-    req.request.bodylen = htonl((lcb_uint32_t)cmd->key.contig.nbytes);
 
     rck->r_cur = r0;
     do {
@@ -742,7 +740,9 @@ static lcb_STATUS getreplica_impl(uint32_t cid, lcb_INSTANCE *instance, void *co
         pkt->flags |= MCREQ_F_REQEXT;
 
         mcreq_reserve_key(pl, pkt, sizeof(req.bytes), &cmd->key, cmd->cid);
-
+        size_t nkey = pkt->kh_span.size - MCREQ_PKT_BASESIZE + pkt->extlen;
+        req.request.keylen = htons((uint16_t)nkey);
+        req.request.bodylen = htonl((uint32_t)nkey);
         req.request.opaque = pkt->opaque;
         rck->remaining++;
         mcreq_write_hdr(pkt, &req);
