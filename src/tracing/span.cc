@@ -78,7 +78,7 @@ void lcbtrace_span_add_tag_str_nocopy(lcbtrace_SPAN *span, const char *name, con
     if (!span || name == NULL || value == NULL) {
         return;
     }
-    span->add_tag(name, 0, value);
+    span->add_tag(name, 0, value, 0);
 }
 
 LIBCOUCHBASE_API
@@ -87,7 +87,7 @@ void lcbtrace_span_add_tag_str(lcbtrace_SPAN *span, const char *name, const char
     if (!span || name == NULL || value == NULL) {
         return;
     }
-    span->add_tag(name, 1, value);
+    span->add_tag(name, 1, value, 1);
 }
 
 LIBCOUCHBASE_API
