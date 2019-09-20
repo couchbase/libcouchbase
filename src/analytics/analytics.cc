@@ -300,7 +300,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_ingest_options_method(lcb_INGEST_OPTIONS *option
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_ingest_options_expiration(lcb_INGEST_OPTIONS *options, uint32_t expiration)
+LIBCOUCHBASE_API lcb_STATUS lcb_ingest_options_expiry(lcb_INGEST_OPTIONS *options, uint32_t expiration)
 {
     options->exptime = expiration;
     return LCB_SUCCESS;
@@ -769,7 +769,7 @@ static lcb_STATUS cb_op_schedule(lcb::docreq::Queue *q, lcb::docreq::DocRequest 
     }
     lcb_CMDSTORE *cmd;
     lcb_cmdstore_create(&cmd, op);
-    lcb_cmdstore_expiration(cmd, areq->ingest->exptime);
+    lcb_cmdstore_expiry(cmd, areq->ingest->exptime);
     lcb_cmdstore_key(cmd, param.id, param.id_len);
     lcb_cmdstore_parent_span(cmd, areq->span);
     if (param.out) {

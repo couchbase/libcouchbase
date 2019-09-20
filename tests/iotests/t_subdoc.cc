@@ -762,7 +762,7 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     /* check if lcb_subdoc3 can detect mutation, and allow setting exptime */
     lcb_subdocspecs_create(&specs, 1);
     lcb_cmdsubdoc_specs(mcmd, specs);
-    lcb_cmdsubdoc_expiration(mcmd, 42);
+    lcb_cmdsubdoc_expiry(mcmd, 42);
     lcb_subdocspecs_dict_upsert(specs, 0, 0, "tmpPath", strlen("tmpPath"), "null", 4);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mr, mcmd, lcb_subdoc));
     ASSERT_EQ(LCB_SUCCESS, mr.rc);

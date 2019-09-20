@@ -544,7 +544,7 @@ class UpsertHandler : public Handler
         lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
         lcb_cmdsubdoc_specs(cmd, specs);
         if (o_expiry.passed()) {
-            lcb_cmdsubdoc_expiration(cmd, o_expiry.result());
+            lcb_cmdsubdoc_expiry(cmd, o_expiry.result());
         }
 
         lcb_sched_enter(instance);
@@ -720,7 +720,7 @@ class MutationHandler : public Handler
                 lcb_cmdsubdoc_store_semantics(cmd, LCB_SUBDOC_STORE_UPSERT);
             }
             if (o_expiry.passed()) {
-                lcb_cmdsubdoc_expiration(cmd, o_expiry.result());
+                lcb_cmdsubdoc_expiry(cmd, o_expiry.result());
             }
             err = lcb_subdoc(instance, this, cmd);
             lcb_subdocspecs_destroy(specs);
