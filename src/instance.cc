@@ -440,10 +440,6 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
     lcb_STATUS err;
     lcb_settings *settings;
 
-#if !defined(COMPILER_SUPPORTS_CXX11) || (defined(_MSC_VER) && _MSC_VER < 1600)
-    lcb_rnd_global_init();
-#endif
-
     if (options) {
         io_priv = options->io;
         type = options->type;
