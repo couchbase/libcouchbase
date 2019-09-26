@@ -2632,14 +2632,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_remove(lcb_SUBDOCSPECS *operations, 
                                                    const char *path, size_t path_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_get_count(lcb_SUBDOCSPECS *operations, size_t index, uint32_t flags,
                                                       const char *path, size_t path_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_fulldoc_get(lcb_SUBDOCSPECS *operations, size_t index, uint32_t flags);
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_fulldoc_insert(lcb_SUBDOCSPECS *operations, size_t index, uint32_t flags,
-                                                           const char *value, size_t value_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_fulldoc_upsert(lcb_SUBDOCSPECS *operations, size_t index, uint32_t flags,
-                                                           const char *value, size_t value_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_fulldoc_replace(lcb_SUBDOCSPECS *operations, size_t index, uint32_t flags,
-                                                            const char *value, size_t value_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_fulldoc_remove(lcb_SUBDOCSPECS *operations, size_t index, uint32_t flags);
 
 typedef struct lcb_CMDSUBDOC_ lcb_CMDSUBDOC;
 
