@@ -461,7 +461,7 @@ Request::setup_inputs(const lcb_CMDHTTP *cmd)
         }
     } else {
         if (cmd->host) {
-            if (reqtype == LCB_HTTP_TYPE_CBAS) {
+            if (reqtype == LCB_HTTP_TYPE_CBAS || reqtype == LCB_HTTP_TYPE_PING) {
                 /* might be a deferred URL */
                 base = cmd->host;
             } else {
