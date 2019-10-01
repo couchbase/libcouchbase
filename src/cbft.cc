@@ -93,10 +93,10 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdfts_callback(lcb_CMDFTS *cmd, lcb_FTS_CALLBAC
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdfts_query(lcb_CMDFTS *cmd, const char *query, size_t query_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdfts_payload(lcb_CMDFTS *cmd, const char *payload, size_t payload_len)
 {
-    cmd->query = query;
-    cmd->nquery = query_len;
+    cmd->query = payload;
+    cmd->nquery = payload_len;
     return LCB_SUCCESS;
 }
 
