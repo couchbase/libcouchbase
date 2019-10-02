@@ -654,6 +654,44 @@ static lcb_STATUS getreplica_validate(lcb_INSTANCE *instance, const lcb_CMDGETRE
     if (!LCBT_NREPLICAS(instance)) {
         return LCB_NO_MATCHING_SERVER;
     }
+
+    mc_CMDQUEUE *cq = &instance->cmdq;
+    int vbid, ixtmp;
+    unsigned r0, r1 = 0;
+
+    mcreq_map_key(cq, &cmd->key, MCREQ_PKT_BASESIZE, &vbid, &ixtmp);
+    if (cmd->strategy == LCB_REPLICA_SELECT) {
+        r0 = r1 = cmd->index;
+        if (lcbvb_vbreplica(cq->config, vbid, r0) < 0) {
+            return LCB_NO_MATCHING_SERVER;
+        }
+
+    } else if (cmd->strategy == LCB_REPLICA_ALL) {
+        unsigned ii;
+        r0 = 0;
+        r1 = LCBT_NREPLICAS(instance);
+        /* Make sure they're all online */
+        for (ii = 0; ii < LCBT_NREPLICAS(instance); ii++) {
+            if (lcbvb_vbreplica(cq->config, vbid, ii) < 0) {
+                return LCB_NO_MATCHING_SERVER;
+            }
+        }
+    } else {
+        for (r0 = 0; r0 < LCBT_NREPLICAS(instance); r0++) {
+            if (lcbvb_vbreplica(cq->config, vbid, r0) > -1) {
+                r1 = r0;
+                break;
+            }
+        }
+        if (r0 == LCBT_NREPLICAS(instance)) {
+            return LCB_NO_MATCHING_SERVER;
+        }
+    }
+
+    if (r1 < r0 || r1 >= cq->npipelines) {
+        return LCB_NO_MATCHING_SERVER;
+    }
+
     return LCB_SUCCESS;
 }
 

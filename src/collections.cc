@@ -21,7 +21,7 @@
 #include <string>
 #include <sstream>
 
-#define LOGARGS(instance, lvl) ()->m_instance->settings, "c9smgmt", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOGARGS(instance, lvl) (instance)->settings, "c9smgmt", LCB_LOG_##lvl, __FILE__, __LINE__
 
 namespace lcb {
     CollectionCache::CollectionCache(): cache_n2i(), cache_i2n()
@@ -99,7 +99,7 @@ static void handle_collcache_proc(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS err,
     ctx->instance->collcache->put(ctx->path, cid);
     lcb_STATUS rc = ctx->cb(cid, ctx->instance, (void *)ctx->cookie, ctx->arg);
     if (rc != LCB_SUCCESS) {
-        fprintf(stderr, "failed to schedule command\n");
+        lcb_log(LOGARGS(ctx->instance, WARN), "failed to schedule command, rc: %s", lcb_strerror_short(rc));
     }
     delete ctx;
 }
