@@ -481,8 +481,10 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
         err = settings->auth->add(spec.username(), spec.password(),
                                   LCBAUTH_F_CLUSTER);
     } else {
-        settings->auth->set_mode(LCBAUTH_MODE_CLASSIC);
-        err = settings->auth->add(settings->bucket, spec.password(), LCBAUTH_F_BUCKET);
+        if (type == LCB_TYPE_BUCKET) {
+            settings->auth->set_mode(LCBAUTH_MODE_CLASSIC);
+            err = settings->auth->add(settings->bucket, spec.password(), LCBAUTH_F_BUCKET);
+        }
     }
     if (err != LCB_SUCCESS) {
         goto GT_DONE;
