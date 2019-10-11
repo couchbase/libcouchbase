@@ -55,7 +55,7 @@ typedef struct {
     lcb_LOG_SEVERITY min_level;
 } my_json_logger;
 
-static void log_callback(lcb_LOGGER *logger, uint64_t iid, const char *subsys, lcb_LOG_SEVERITY severity,
+static void log_callback(const lcb_LOGGER *logger, uint64_t iid, const char *subsys, lcb_LOG_SEVERITY severity,
                          const char *srcfile, int srcline, const char *fmt, va_list ap)
 {
     my_json_logger *wrapper = NULL;
