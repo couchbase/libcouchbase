@@ -438,7 +438,7 @@ Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
         }
 
         req->set_ready(info);
-        lcb_log(LOGARGS(this, INFO), HE_LOGFMT "Found ready connection in pool. Reusing socket and not creating new connection", HE_LOGID(he));
+        lcb_log(LOGARGS(this, DEBUG), HE_LOGFMT "Found ready connection in pool. Reusing socket and not creating new connection", HE_LOGID(he));
 
     } else {
         req->set_pending(timeout);
@@ -495,7 +495,7 @@ void Pool::put(lcbio_SOCKET *sock)
         return;
     }
 
-    lcb_log(LOGARGS(mgr, INFO), HE_LOGFMT "Placing socket back into the pool. I=%p,C=%p", HE_LOGID(he), (void*)info, (void*)sock);
+    lcb_log(LOGARGS(mgr, DEBUG), HE_LOGFMT "Placing socket back into the pool. I=%p,C=%p", HE_LOGID(he), (void*)info, (void*)sock);
     info->idle_timer.rearm(mgr->options.tmoidle);
     lcb_clist_append(&he->ll_idle, info);
     info->state = PoolConnInfo::IDLE;
