@@ -434,8 +434,8 @@ lcb_STATUS lcb_VIEW_HANDLE_::request_http(const lcb_CMDVIEW *cmd)
     lcb_cmdhttp_path(htcmd, path.c_str(), path.size());
     lcb_cmdhttp_handle(htcmd, &htreq);
 
+    std::string content_type("application/json");
     if (cmd->npostdata) {
-        std::string content_type("application/json");
         lcb_cmdhttp_method(htcmd, LCB_HTTP_METHOD_POST);
         lcb_cmdhttp_body(htcmd, cmd->postdata, cmd->npostdata);
         lcb_cmdhttp_content_type(htcmd, content_type.c_str(), content_type.size());
