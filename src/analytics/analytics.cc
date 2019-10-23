@@ -163,8 +163,9 @@ struct lcb_CMDANALYTICS_ {
     lcb_ANALYTICS_CALLBACK callback;
     lcb_ANALYTICS_HANDLE **handle;
     lcb_INGEST_OPTIONS *ingest;
+    int priority;
 
-    lcb_CMDANALYTICS_() : root(Json::objectValue), callback(NULL), handle(NULL), ingest(NULL) {}
+    lcb_CMDANALYTICS_() : root(Json::objectValue), callback(NULL), handle(NULL), ingest(NULL), priority(-1) {}
 };
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_create(lcb_CMDANALYTICS **cmd)
@@ -224,6 +225,37 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_query(lcb_CMDANALYTICS *cmd, const 
         return LCB_EINVAL;
     }
     cmd->root = value;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_client_context_id(lcb_CMDANALYTICS *cmd, const char *value,
+                                                               size_t value_len)
+{
+    cmd->root["client_context_id"] = std::string(value, value_len);
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_readonly(lcb_CMDANALYTICS *cmd, int readonly)
+{
+    cmd->root["readonly"] = (bool)readonly;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_priority(lcb_CMDANALYTICS *cmd, int priority)
+{
+    cmd->priority = (bool)priority;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_consistency(lcb_CMDANALYTICS *cmd, lcb_ANALYTICS_CONSISTENCY level)
+{
+    if (level == LCB_ANALYTICS_CONSISTENCY_NOT_BOUNDED) {
+        cmd->root["scan_consistency"] = "not_bounded";
+    } else if (level == LCB_ANALYTICS_CONSISTENCY_REQUEST_PLUS) {
+        cmd->root["scan_consistency"] = "request_plus";
+    } else {
+        return LCB_EINVAL;
+    }
     return LCB_SUCCESS;
 }
 
@@ -913,6 +945,9 @@ lcb_STATUS lcb_analytics(lcb_INSTANCE *instance, void *cookie, const lcb_CMDANAL
 
     if ((err = req->issue_htreq()) != LCB_SUCCESS) {
         goto GT_DESTROY;
+    }
+    if (cmd->priority > 0) {
+        req->htreq->add_header("Analytics-Priority", "-1");
     }
 
     return LCB_SUCCESS;
