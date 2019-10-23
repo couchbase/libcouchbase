@@ -102,6 +102,12 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdcounter_destroy(lcb_CMDCOUNTER *cmd)
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdcounter_cas(lcb_CMDSTORE *cmd, uint64_t cas)
+{
+    cmd->cas = cas;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdcounter_timeout(lcb_CMDCOUNTER *cmd, uint32_t timeout)
 {
     cmd->timeout = timeout;
@@ -208,7 +214,7 @@ static lcb_STATUS counter_impl(uint32_t cid, lcb_INSTANCE *instance, void *cooki
     rdata->deadline = rdata->start + LCB_US2NS(cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, operation_timeout));
     hdr->request.magic = PROTOCOL_BINARY_REQ;
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    hdr->request.cas = 0;
+    hdr->request.cas = cmd->cas;
     hdr->request.opaque = packet->opaque;
     hdr->request.bodylen = htonl(ffextlen + hdr->request.extlen + ntohs(hdr->request.keylen));
 
