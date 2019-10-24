@@ -209,6 +209,8 @@ typedef struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
     /** Is this query to Analytics for N1QL service */
     bool is_cbas;
 
+    bool invalidate_credentials;
+
     lcbtrace_SPAN *span;
 
     lcb_N1QLCACHE &cache() const
@@ -303,6 +305,14 @@ typedef struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
         // Nothing
     }
 
+    void on_timeout()
+    {
+        if (lasterr == LCB_SUCCESS) {
+            lasterr = LCB_ERR_TIMEOUT;
+        }
+        delete this;
+    }
+    lcb::io::Timer<lcb_QUERY_HANDLE_, &lcb_QUERY_HANDLE_::on_timeout> timer;
 } N1QLREQ;
 
 static bool parse_json(const char *s, size_t n, Json::Value &res)
@@ -357,31 +367,35 @@ bool N1QLREQ::has_retriable_error(const Json::Value &root)
         }
         const Json::Value &jmsg = cur["msg"];
         const Json::Value &jcode = cur["code"];
-        unsigned code = 0;
         if (jcode.isNumeric()) {
-            code = jcode.asUInt();
+            unsigned int code = jcode.asUInt();
             switch (code) {
                     /* n1ql */
-                case 4040: /* statement not found */
-                case 4050:
-                case 4070:
+                case 4050:  // plan.build_prepared.unrecognized_prepared
+                case 4070:  // plan.build_prepared.decoding
+                case 12009: // datastore.couchbase.DML_error
                     /* analytics */
                 case 23000:
                 case 23003:
                 case 23007:
                     lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d", LOGID(this), code);
                     return true;
-                default:
-                    break;
+                case 13014: // datastore.couchbase.insufficient_credentials
+                    if (LCBT_SETTING(instance, auth)->mode() == LCBAUTH_MODE_DYNAMIC) {
+                        invalidate_credentials = true;
+                        return true;
+                        default:
+                            break;
+                    }
             }
-        }
-        if (jmsg.isString()) {
-            const char *jmstr = jmsg.asCString();
-            for (const char **curs = wtf_magic_strings; *curs; curs++) {
-                if (!strstr(jmstr, *curs)) {
-                    lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d, msg: %s", LOGID(this), code,
-                            jmstr);
-                    return true;
+            if (jmsg.isString()) {
+                const char *jmstr = jmsg.asCString();
+                for (const char **curs = wtf_magic_strings; *curs; curs++) {
+                    if (!strstr(jmstr, *curs)) {
+                        lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d, msg: %s", LOGID(this), code,
+                                jmstr);
+                        return true;
+                    }
                 }
             }
         }
@@ -405,16 +419,6 @@ bool N1QLREQ::maybe_retry()
         return false;
     }
 
-    if (was_retried) {
-        return false;
-    }
-
-    if (!use_prepcache()) {
-        // Didn't use our built-in caching (maybe using it from elsewhere?)
-        return false;
-    }
-
-    was_retried = true;
     parser->get_postmortem(meta);
     if (!parse_json(static_cast<const char *>(meta.iov_base), meta.iov_len, root)) {
         return false; // Not JSON
@@ -422,14 +426,25 @@ bool N1QLREQ::maybe_retry()
     if (!has_retriable_error(root)) {
         return false;
     }
+    if (was_retried && !invalidate_credentials) {
+        // preserve old behaviour where we only retry once
+        return false;
+    }
 
-    lcb_log(LOGARGS(this, ERROR), LOGFMT "Repreparing statement. Index or version mismatch.", LOGID(this));
+    was_retried = true;
+    if (use_prepcache()) {
+        lcb_log(LOGARGS(this, ERROR), LOGFMT "Repreparing statement. Index or version mismatch.", LOGID(this));
 
-    // Let's see if we can actually retry. First remove the existing prepared
-    // entry:
-    cache().remove_entry(statement);
+        // Let's see if we can actually retry. First remove the existing prepared
+        // entry:
+        cache().remove_entry(statement);
+        lasterr = request_plan();
+    } else {
+        // re-issue original request body
+        lasterr = issue_htreq();
+    }
 
-    if ((lasterr = request_plan()) == LCB_SUCCESS) {
+    if (lasterr == LCB_SUCCESS) {
         // We'll be parsing more rows later on..
         delete parser;
         parser = new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this);
@@ -583,6 +598,7 @@ lcb_QUERY_HANDLE_::~lcb_QUERY_HANDLE_()
     if (prepare_req) {
         lcb_query_cancel(instance, prepare_req);
     }
+    timer.release();
 }
 
 static void chunk_callback(lcb_INSTANCE *instance, int ign, const lcb_RESPBASE *rb)
@@ -699,7 +715,7 @@ lcb_STATUS N1QLREQ::request_plan()
 {
     Json::Value newbody(Json::objectValue);
     newbody["statement"] = "PREPARE " + statement;
-    if (json["query_context"].isString()) {
+    if (json.isMember("query_context") && json["query_context"].isString()) {
         newbody["query_context"] = json["query_context"];
     }
     lcb_CMDQUERY newcmd;
@@ -755,7 +771,8 @@ lcb_U32 lcb_n1qlreq_parsetmo(const std::string &s)
 lcb_QUERY_HANDLE_::lcb_QUERY_HANDLE_(lcb_INSTANCE *obj, const void *user_cookie, const lcb_CMDQUERY *cmd)
     : cur_htresp(nullptr), htreq(nullptr), parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this)),
       cookie(user_cookie), callback(cmd->callback), instance(obj), lasterr(LCB_SUCCESS), flags(cmd->cmdflags),
-      timeout(0), nrows(0), prepare_req(nullptr), was_retried(false), is_cbas(false), span(nullptr)
+      timeout(0), nrows(0), prepare_req(nullptr), was_retried(false), is_cbas(false), invalidate_credentials(false),
+      span(nullptr), timer(instance->iotable, this)
 {
     if (cmd->handle) {
         *cmd->handle = this;
@@ -827,6 +844,7 @@ lcb_QUERY_HANDLE_::lcb_QUERY_HANDLE_(lcb_INSTANCE *obj, const void *user_cookie,
     } else {
         client_context_id = ccid.asString();
     }
+    timer.rearm(timeout);
 
     // Determine if we need to add more credentials.
     // Because N1QL multi-bucket auth will not work on server versions < 4.5
