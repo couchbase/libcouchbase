@@ -188,6 +188,8 @@ typedef struct lcb_N1QLREQ : lcb::jsparse::Parser::Actions {
     /** Is this query to Analytics for N1QL service */
     bool is_cbas;
 
+    bool invalidate_credentials;
+
 #ifdef LCB_TRACING
     lcbtrace_SPAN *span;
 #endif
@@ -274,6 +276,13 @@ typedef struct lcb_N1QLREQ : lcb::jsparse::Parser::Actions {
         // Nothing
     }
 
+    void on_timeout() {
+        if (lasterr == LCB_SUCCESS) {
+            lasterr = LCB_ETIMEDOUT;
+        }
+        delete this;
+    }
+    lcb::io::Timer<lcb_N1QLREQ, &lcb_N1QLREQ::on_timeout> timer;
 } N1QLREQ;
 
 static bool
@@ -339,7 +348,6 @@ N1QLREQ::has_retriable_error(const Json::Value& root)
         const Json::Value& jmsg = cur["msg"];
         const Json::Value& jcode = cur["code"];
         unsigned code = 0;
-        lcb_AUTHENTICATOR * auth = instance->settings->auth;
         if (jcode.isNumeric()) {
             code = jcode.asUInt();
             switch (code) {
@@ -354,16 +362,8 @@ N1QLREQ::has_retriable_error(const Json::Value& root)
                 lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d", LOGID(this), code);
                 return true;
             case 13014: // datastore.couchbase.insufficient_credentials
-                if (auth->mode() == LCBAUTH_MODE_DYNAMIC) {
-                    /* request credentials */
-                    std::string username = auth->username_for(htreq->host.c_str(), htreq->port.c_str(), LCBT_SETTING(instance, bucket));
-                    std::string password = auth->password_for(htreq->host.c_str(), htreq->port.c_str(), LCBT_SETTING(instance, bucket));
-                    char authbuf[256];
-                    std::string upassbuf;
-                    upassbuf.append(username).append(":").append(password);
-                    lcb_base64_encode(upassbuf.c_str(), upassbuf.size(), authbuf, sizeof(authbuf));
-                    htreq->remove_header("Authorization");
-                    htreq->add_header("Authorization", std::string("Basic ") + authbuf);
+                if (LCBT_SETTING(instance, auth)->mode() == LCBAUTH_MODE_DYNAMIC) {
+                    invalidate_credentials = true;
                     return true;
                 }
                 break;
@@ -401,16 +401,6 @@ N1QLREQ::maybe_retry()
         return false;
     }
 
-    if (was_retried) {
-        return false;
-    }
-
-    if (!use_prepcache()) {
-        // Didn't use our built-in caching (maybe using it from elsewhere?)
-        return false;
-    }
-
-    was_retried = true;
     parser->get_postmortem(meta);
     if (!parse_json(static_cast<const char*>(meta.iov_base), meta.iov_len, root)) {
         return false; // Not JSON
@@ -418,14 +408,25 @@ N1QLREQ::maybe_retry()
     if (!has_retriable_error(root)) {
         return false;
     }
+    if (was_retried && !invalidate_credentials) {
+        // preserve old behaviour where we only retry once
+        return false;
+    }
 
-    lcb_log(LOGARGS(this, ERROR), LOGFMT "Repreparing statement. Index or version mismatch.", LOGID(this));
+    was_retried = true;
+    if (use_prepcache()) {
+        lcb_log(LOGARGS(this, ERROR), LOGFMT "Repreparing statement. Index or version mismatch.", LOGID(this));
 
-    // Let's see if we can actually retry. First remove the existing prepared
-    // entry:
-    cache().remove_entry(statement);
+        // Let's see if we can actually retry. First remove the existing prepared
+        // entry:
+        cache().remove_entry(statement);
+        lasterr = request_plan();
+    } else {
+        // re-issue original request body
+        lasterr = issue_htreq();
+    }
 
-    if ((lasterr = request_plan()) == LCB_SUCCESS) {
+    if (lasterr == LCB_SUCCESS) {
         // We'll be parsing more rows later on..
         delete parser;
         parser = new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this);
@@ -490,6 +491,7 @@ lcb_N1QLREQ::~lcb_N1QLREQ()
     if (prepare_req) {
         lcb_n1ql_cancel(instance, prepare_req);
     }
+    timer.release();
 }
 
 static void
@@ -668,10 +670,11 @@ lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
       parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this)),
       cookie(user_cookie), callback(cmd->callback), instance(obj),
       lasterr(LCB_SUCCESS), flags(cmd->cmdflags), timeout(0),
-      nrows(0), prepare_req(NULL), was_retried(false), is_cbas(false)
+      nrows(0), prepare_req(NULL), was_retried(false), is_cbas(false), invalidate_credentials(false),
 #ifdef LCB_TRACING
-    , span(NULL)
+      span(NULL),
 #endif
+      timer(instance->iotable, this)
 {
     if (cmd->handle) {
         *cmd->handle = this;
@@ -715,6 +718,7 @@ lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
         lasterr = LCB_EINVAL;
         return;
     }
+    timer.rearm(timeout);
 
     // Determine if we need to add more credentials.
     // Because N1QL multi-bucket auth will not work on server versions < 4.5
