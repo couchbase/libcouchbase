@@ -283,6 +283,8 @@ typedef struct lcb_N1QLREQ : lcb::jsparse::Parser::Actions {
         delete this;
     }
     lcb::io::Timer<lcb_N1QLREQ, &lcb_N1QLREQ::on_timeout> timer;
+    std::string last_host;
+    std::string last_port;
 } N1QLREQ;
 
 static bool
@@ -364,6 +366,10 @@ N1QLREQ::has_retriable_error(const Json::Value& root)
             case 13014: // datastore.couchbase.insufficient_credentials
                 if (LCBT_SETTING(instance, auth)->mode() == LCBAUTH_MODE_DYNAMIC) {
                     invalidate_credentials = true;
+                    if (!last_host.empty() && !last_port.empty()) {
+                        LCBT_SETTING(instance, auth)->invalidate_cache_for(last_host.c_str(), last_port.c_str(),
+                            LCBT_SETTING(instance, bucket));
+                    }
                     return true;
                 }
                 break;
@@ -510,6 +516,8 @@ chunk_callback(lcb_t instance, int ign, const lcb_RESPBASE *rb)
     }
 
     if (rh->rflags & LCB_RESP_F_FINAL) {
+        req->last_host = req->htreq->host;
+        req->last_port = req->htreq->port;
         req->htreq = NULL;
         if (!req->maybe_retry()) {
             delete req;
@@ -674,7 +682,7 @@ lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
 #ifdef LCB_TRACING
       span(NULL),
 #endif
-      timer(instance->iotable, this)
+      timer(instance->iotable, this), last_host(), last_port()
 {
     if (cmd->handle) {
         *cmd->handle = this;

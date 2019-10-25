@@ -485,7 +485,7 @@ Request::setup_inputs(const lcb_CMDHTTP *cmd)
             username.clear();
             password.clear();
         } else if (username.empty() && password.empty()) {
-            const Authenticator& auth = *LCBT_SETTING(instance, auth);
+            Authenticator& auth = *LCBT_SETTING(instance, auth);
             if (reqtype == LCB_HTTP_TYPE_MANAGEMENT) {
                 username = auth.username();
                 password = auth.password();

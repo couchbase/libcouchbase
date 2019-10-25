@@ -363,7 +363,7 @@ lcb_ping3(lcb_t instance, const void *cookie, const lcb_CMDPING *cmd)
                 htcmd.method = LCB_HTTP_METHOD_GET; \
                 htcmd.type = LCB_HTTP_TYPE_PING; \
                 htcmd.reqhandle = &htreq; \
-                const lcb::Authenticator& auth = *instance->settings->auth; \
+                lcb::Authenticator& auth = *instance->settings->auth; \
                 htcmd.username = auth.username_for(NULL, NULL, LCBT_SETTING(instance, bucket)).c_str(); \
                 htcmd.password = auth.password_for(NULL, NULL, LCBT_SETTING(instance, bucket)).c_str(); \
                 htcmd.cmdflags = LCB_CMDHTTP_F_CASTMO; \

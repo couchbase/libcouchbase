@@ -64,7 +64,7 @@ public:
     }
 
     bool setup(const lcbio_NAMEINFO& nistrs, const lcb_host_t& host,
-        const lcb::Authenticator& auth);
+        lcb::Authenticator& auth);
     void start(lcbio_SOCKET *sock);
     void send_list_mechs();
     std::string generate_agent_json();
@@ -217,7 +217,7 @@ SessionInfo::SessionInfo()
 
 bool
 SessionRequestImpl::setup(const lcbio_NAMEINFO& nistrs, const lcb_host_t& host,
-    const lcb::Authenticator& auth)
+    lcb::Authenticator& auth)
 {
     cbsasl_callback_t sasl_callbacks[4];
     sasl_callbacks[0].id = CBSASL_CB_USER;

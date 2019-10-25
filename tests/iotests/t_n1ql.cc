@@ -292,6 +292,7 @@ struct cycled_auth {
   private:
     vector<credentials> store_;
     size_t cur_;
+    size_t num_cyles_;
     credentials fallback_;
     string port_;
 
@@ -303,6 +304,7 @@ struct cycled_auth {
     }
 
     void clear() {
+        num_cyles_ = 0;
         cur_ = 0;
         store_.clear();
     }
@@ -314,9 +316,14 @@ struct cycled_auth {
         return fallback_;
     }
 
+    size_t num_cycles() {
+        return num_cyles_;
+    }
+
     void advance(string port) {
         if (port == port_) {
-            cur_ = (cur_ + 1) % store_.size();
+            num_cyles_++;
+            cur_ = num_cyles_ % store_.size();
         }
     }
 };
@@ -350,6 +357,7 @@ string get_n1ql_port(lcb_t instance)
     return buf.str();
 }
 
+#include "auth-priv.h"
 
 TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
 {
@@ -381,6 +389,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
 
     // make sure the index exists
     {
+        auth->reset_cache();
         res.reset();
         ca.clear();
         ca.add(valid_username, valid_password);
@@ -397,6 +406,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
 
     // send query with valid password
     {
+        auth->reset_cache();
         res.reset();
         ca.clear();
         ca.add(valid_username, valid_password);
@@ -411,6 +421,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
 
     // send query with invalid password
     {
+        auth->reset_cache();
         res.reset();
         ca.clear();
         ca.add(valid_username, invalid_password);
@@ -424,6 +435,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
 
     // send query with valid password
     {
+        auth->reset_cache();
         res.reset();
         ca.clear();
         ca.add(valid_username, invalid_password); // first request
@@ -443,6 +455,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
 
     // send query with valid password
     {
+        auth->reset_cache();
         res.reset();
         ca.clear();
         ca.add(valid_username, valid_password);
@@ -457,6 +470,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
 
     // send query with invalid password
     {
+        auth->reset_cache();
         res.reset();
         ca.clear();
         ca.add(valid_username, invalid_password);
@@ -470,11 +484,12 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
 
     // send query with valid password
     {
+        auth->reset_cache();
         res.reset();
         ca.clear();
         ca.add(valid_username, invalid_password); // first request
         ca.add(valid_username, valid_password);   // second request
-        ca.add(valid_username, valid_password);   // third request
+        ca.add(valid_username, invalid_password); // won't be used because valid will be cached
 
         lcb_error_t rc = lcb_n1ql_query(instance, &res, &cmd);
         ASSERT_EQ(LCB_SUCCESS, rc);
@@ -482,6 +497,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ASSERT_TRUE(res.called);
         ASSERT_EQ(LCB_SUCCESS, res.rc);
         ASSERT_TRUE(res.errors.empty());
+        ASSERT_EQ(2, ca.num_cycles());
     }
 
 }
