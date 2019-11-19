@@ -726,7 +726,7 @@ lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
         lasterr = LCB_EINVAL;
         return;
     }
-    timer.rearm(timeout);
+    timer.rearm(timeout + LCBT_SETTING(obj, n1ql_grace_period));
 
     // Determine if we need to add more credentials.
     // Because N1QL multi-bucket auth will not work on server versions < 4.5
