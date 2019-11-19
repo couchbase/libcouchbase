@@ -795,7 +795,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_getreplica(lcb_INSTANCE *instance, void *cookie,
 typedef struct lcb_RESPEXISTS_ lcb_RESPEXISTS;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_status(const lcb_RESPEXISTS *resp);
-LIBCOUCHBASE_API int lcb_respexists_is_persisted(const lcb_RESPEXISTS *resp);
+LCB_DEPRECATED2(LIBCOUCHBASE_API int lcb_respexists_is_persisted(const lcb_RESPEXISTS *resp),
+                "This function will be removed in GA");
 LIBCOUCHBASE_API int lcb_respexists_is_found(const lcb_RESPEXISTS *resp);
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_error_context(const lcb_RESPEXISTS *resp, const char **ctx, size_t *ctx_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_error_ref(const lcb_RESPEXISTS *resp, const char **ref, size_t *ref_len);

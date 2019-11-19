@@ -414,6 +414,34 @@ H_get(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse* response,
     free(freeptr);
 }
 
+static void H_exists(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response, lcb_STATUS immerr)
+{
+    lcb_INSTANCE *root = get_instance(pipeline);
+    lcb_RESPEXISTS resp = {0};
+    init_resp(root, response, request, immerr, &resp);
+    resp.cookie = const_cast< void * >(MCREQ_PKT_COOKIE(request));
+    resp.rflags |= LCB_RESP_F_FINAL;
+    if (resp.rc == LCB_SUCCESS) {
+        if (response->extlen() == (sizeof(uint32_t) * 3 + sizeof(uint64_t))) {
+            const char *ptr = response->ext();
+            memcpy(&resp.deleted, ptr, sizeof(uint32_t));
+            resp.deleted = ntohl(resp.deleted);
+            ptr += sizeof(uint32_t);
+            memcpy(&resp.flags, ptr, sizeof(uint32_t));
+            resp.flags = ntohl(resp.flags);
+            ptr += sizeof(uint32_t);
+            memcpy(&resp.expiry, ptr, sizeof(uint32_t));
+            resp.expiry = ntohl(resp.expiry);
+            ptr += sizeof(uint32_t);
+            memcpy(&resp.seqno, ptr, sizeof(uint64_t));
+            resp.seqno = lcb_ntohll(resp.seqno);
+        }
+    }
+    invoke_callback(request, root, &resp, LCB_CALLBACK_EXISTS);
+    LCBTRACE_KV_FINISH(pipeline, request, response);
+    TRACE_EXISTS_END(root, request, response, &resp);
+}
+
 static void
 H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request,
              MemcachedResponse *response, lcb_STATUS immerr)
@@ -658,42 +686,9 @@ H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, MemcachedResponse *response,
 }
 
 static void
-H_exists(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
-          lcb_STATUS immerr)
-{
-    lcb_INSTANCE *root = get_instance(pipeline);
-    lcb_RESPEXISTS resp = { 0 };
-    make_error(root, &resp, response, immerr);
-    resp.cookie = const_cast<void*>(MCREQ_PKT_COOKIE(request));
-    resp.rflags |= LCB_RESP_F_FINAL;
-    if (resp.rc == LCB_SUCCESS) {
-        const char * ptr = response->value() + sizeof(uint16_t); /* skip vbucket */
-        uint16_t nkey;
-        memcpy(&nkey, ptr, sizeof(uint16_t));
-        ptr += sizeof(uint16_t);
-        resp.nkey = ntohs(nkey);
-        resp.key = ptr;
-        ptr += resp.nkey;
-        memcpy(&resp.state, ptr, sizeof(uint8_t));
-        ptr += sizeof(uint8_t);
-        uint64_t cas;
-        memcpy(&cas, ptr, sizeof(uint64_t));
-        resp.cas = lcb_ntohll(cas);
-    }
-    invoke_callback(request, root, &resp, LCB_CALLBACK_EXISTS);
-    LCBTRACE_KV_FINISH(pipeline, request, response);
-    TRACE_EXISTS_END(root, request, response, &resp);
-}
-
-static void
 H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
           lcb_STATUS immerr)
 {
-    if ((request->flags & MCREQ_F_REQEXT) == 0) {
-        H_exists(pipeline, request, response, immerr);
-        return;
-    }
-
     lcb_INSTANCE *root = get_instance(pipeline);
     uint32_t ttp;
     uint32_t ttr;
@@ -1168,6 +1163,9 @@ mcreq_dispatch_response(
 
     case PROTOCOL_BINARY_CMD_COLLECTIONS_GET_CID:
         INVOKE_OP(H_collections_get_cid);
+
+    case PROTOCOL_BINARY_CMD_GET_META:
+        INVOKE_OP(H_exists);
 
     default:
         fprintf(stderr, "COUCHBASE: Received unknown opcode=0x%x\n", res->opcode());

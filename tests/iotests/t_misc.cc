@@ -785,6 +785,7 @@ static void existsCb(lcb_INSTANCE *, int, const lcb_RESPEXISTS *rb)
 
 TEST_F(MockUnitTest, testExists)
 {
+    SKIP_IF_MOCK();
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);

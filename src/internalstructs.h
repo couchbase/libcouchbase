@@ -931,7 +931,10 @@ struct lcb_CMDEXISTS_ {
 
 struct lcb_RESPEXISTS_ {
     LCB_RESP_BASE
-    lcb_U8 state;   /**<Bit set of flags */
+    uint32_t deleted;
+    uint32_t flags;
+    uint32_t expiry;
+    uint64_t seqno;
 };
 
 
