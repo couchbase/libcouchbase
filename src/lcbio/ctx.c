@@ -181,6 +181,7 @@ lcbio_ctx_close_ex(lcbio_CTX *ctx, lcbio_CTXCLOSE_cb cb, void *arg,
     } else {
         ctx->procs.cb_flush_ready = NULL;
     }
+    ctx->procs.cb_read = NULL;
 
     if (ctx->npending == 0 && ctx->entered == 0) {
         free_ctx(ctx);
@@ -270,6 +271,9 @@ static void
 invoke_read_cb(lcbio_CTX *ctx, unsigned nb)
 {
     ctx->rdwant = 0;
+    if (ctx->procs.cb_read == NULL) {
+        return;
+    }
     ctx->entered++;
     ctx->procs.cb_read(ctx, nb);
     ctx->entered--;
