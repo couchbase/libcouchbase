@@ -998,7 +998,7 @@ static lcb_STATUS subdoc_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
         hdr.request.opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION;
     }
     hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    hdr.request.extlen = pkt->extlen;
+    hdr.request.extlen = extlen;
     hdr.request.opaque = pkt->opaque;
     hdr.request.cas = lcb_htonll(cmd->cas);
     hdr.request.bodylen = htonl(hdr.request.extlen + ffextlen + ntohs(hdr.request.keylen) + ctx.payload_size);
