@@ -1107,10 +1107,12 @@ LIBCOUCHBASE_API lcb_STATUS lcb_n1ql_cancel(lcb_INSTANCE *instance, lcb_N1QL_HAN
     // extra network reads; whereas this function itself is intended as a
     // bailout for unexpected destruction.
 
-    if (handle->prepare_req) {
-        lcb_n1ql_cancel(instance, handle->prepare_req);
-        handle->prepare_req = NULL;
+    if (handle) {
+        if (handle->prepare_req) {
+            lcb_n1ql_cancel(instance, handle->prepare_req);
+            handle->prepare_req = NULL;
+        }
+        handle->callback = NULL;
     }
-    handle->callback = NULL;
     return LCB_SUCCESS;
 }
