@@ -238,10 +238,9 @@ HANDLER(config_poll_interval_handler) {
         return LCB_ECTL_BADARG;
     }
     lcb_STATUS rv = timeout_common(mode, instance, cmd, arg);
-    if (rv == LCB_SUCCESS &&
-            (mode == LCB_CNTL_SET || CNTL__MODE_SETSTRING) &&
-            // Note: This might be NULL during creation!
-            instance->bs_state) {
+    if (rv == LCB_SUCCESS && (mode == LCB_CNTL_SET || mode == CNTL__MODE_SETSTRING) &&
+        // Note: This might be NULL during creation!
+        instance->bs_state) {
         instance->bs_state->check_bgpoll();
     }
     return rv;

@@ -311,6 +311,10 @@ static void conn_readcb(struct bufferevent *bev, void *cookie)
         return;
     }
     void *pkt = malloc(pktlen);
+    if (pkt == NULL) {
+        lcb_log(LOGARGS(ERROR), CL_LOGFMT "unable allocate buffer for the packet", CL_LOGID(cl));
+        return;
+    }
     evbuffer_remove(input, pkt, pktlen);
 
     lcb_sched_enter(instance);

@@ -1115,7 +1115,7 @@ int lcbvb_nmv_remap_ex(lcbvb_CONFIG *cfg, int vbid, int bad, int heuristic)
     }
 
     /* this path is usually only followed if fvbuckets is not present */
-    if (heuristic && cur == bad) {
+    if (heuristic) {
         int validrv = -1;
         for (ii = 0; ii < cfg->ndatasrv; ii++) {
             rv = (rv + 1) % cfg->ndatasrv;
@@ -1313,25 +1313,27 @@ unsigned lcbvb_get_port(lcbvb_CONFIG *cfg, unsigned ix, lcbvb_SVCTYPE type, lcbv
     srv = cfg->servers + ix;
     svc = get_svc(srv, mode);
 
-    if (type == LCBVB_SVCTYPE_DATA) {
-        return svc->data;
-    } else if (type == LCBVB_SVCTYPE_MGMT) {
-        return svc->mgmt;
-    } else if (type == LCBVB_SVCTYPE_VIEWS) {
-        return svc->views;
-    } else if (type == LCBVB_SVCTYPE_IXADMIN) {
-        return svc->ixadmin;
-    } else if (type == LCBVB_SVCTYPE_IXQUERY) {
-        return svc->ixquery;
-    } else if (type == LCBVB_SVCTYPE_N1QL) {
-        return svc->n1ql;
-    } else if (type == LCBVB_SVCTYPE_FTS) {
-        return svc->fts;
-    } else if (type == LCBVB_SVCTYPE_CBAS) {
-        return svc->cbas;
-    } else {
-        return 0;
+    switch (type) {
+        case LCBVB_SVCTYPE_DATA:
+            return svc->data;
+        case LCBVB_SVCTYPE_MGMT:
+            return svc->mgmt;
+        case LCBVB_SVCTYPE_VIEWS:
+            return svc->views;
+        case LCBVB_SVCTYPE_IXADMIN:
+            return svc->ixadmin;
+        case LCBVB_SVCTYPE_IXQUERY:
+            return svc->ixquery;
+        case LCBVB_SVCTYPE_N1QL:
+            return svc->n1ql;
+        case LCBVB_SVCTYPE_FTS:
+            return svc->fts;
+        case LCBVB_SVCTYPE_CBAS:
+            return svc->cbas;
+        case LCBVB_SVCTYPE__MAX:
+            break;
     }
+    return 0;
 }
 
 LIBCOUCHBASE_API

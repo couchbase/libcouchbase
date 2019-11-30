@@ -267,10 +267,6 @@ lcb_FTS_HANDLE_::lcb_FTS_HANDLE_(lcb_INSTANCE * instance_, const void *cookie_, 
 
 lcb_FTS_HANDLE_::~lcb_FTS_HANDLE_()
 {
-    if (htreq != NULL) {
-        lcb_http_cancel(instance, htreq);
-        htreq = NULL;
-    }
     if (span) {
         if (htreq) {
             lcbio_CTX *ctx = htreq->ioctx;
@@ -281,6 +277,10 @@ lcb_FTS_HANDLE_::~lcb_FTS_HANDLE_()
         }
         lcbtrace_span_finish(span, LCBTRACE_NOW);
         span = NULL;
+    }
+    if (htreq != NULL) {
+        lcb_http_cancel(instance, htreq);
+        htreq = NULL;
     }
     if (parser) {
         delete parser;

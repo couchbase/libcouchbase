@@ -157,7 +157,7 @@ static lcb_STATUS remove_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
     mc_CMDQUEUE *cq = &instance->cmdq;
     mc_PIPELINE *pl;
     mc_PACKET *pkt;
-    protocol_binary_request_delete req = {0};
+    protocol_binary_request_delete req{};
     protocol_binary_request_header *hdr = &req.message.header;
     int new_durability_supported = LCBT_SUPPORT_SYNCREPLICATION(instance);
     lcb_U8 ffextlen = 0;

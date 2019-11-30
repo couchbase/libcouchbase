@@ -84,17 +84,17 @@ struct TimingInfo {
 
 static lcb_U64 intervalToNsec(lcb_U64 interval, lcb_timeunit_t unit)
 {
-    if (unit == LCB_TIMEUNIT_NSEC) {
-        return interval;
-    } else if (unit == LCB_TIMEUNIT_USEC) {
-        return interval * 1000;
-    } else if (unit == LCB_TIMEUNIT_MSEC) {
-        return interval * 1000000;
-    } else if (unit == LCB_TIMEUNIT_SEC) {
-        return interval * 1000000000;
-    } else {
-        return -1;
+    switch (unit) {
+        case LCB_TIMEUNIT_NSEC:
+            return interval;
+        case LCB_TIMEUNIT_USEC:
+            return interval * 1000;
+        case LCB_TIMEUNIT_MSEC:
+            return interval * 1000000;
+        case LCB_TIMEUNIT_SEC:
+            return interval * 1000000000;
     }
+    return 0;
 }
 
 struct LcbTimings {
@@ -151,13 +151,13 @@ void LcbTimings::dump() const
     std::vector< TimingInfo >::const_iterator ii = m_info.begin();
     for (; ii != m_info.end(); ii++) {
         if (ii->ns_end < 1000) {
-            printf("[%llu-%llu ns] %lu\n", (unsigned long long)ii->ns_start, (unsigned long long)ii->ns_end,
+            printf("[%llu-%llu ns] %llu\n", (unsigned long long)ii->ns_start, (unsigned long long)ii->ns_end,
                    (unsigned long long)ii->count);
         } else if (ii->ns_end < 10000000) {
-            printf("[%llu-%llu us] %lu\n", (unsigned long long)(ii->ns_start / 1000),
+            printf("[%llu-%llu us] %llu\n", (unsigned long long)(ii->ns_start / 1000),
                    (unsigned long long)ii->ns_end / 1000, (unsigned long long)ii->count);
         } else {
-            printf("[%llu-%llu ms] %lu\n", (unsigned long long)(ii->ns_start / 1000000),
+            printf("[%llu-%llu ms] %llu\n", (unsigned long long)(ii->ns_start / 1000000),
                    (unsigned long long)(ii->ns_end / 1000000), (unsigned long long)ii->count);
         }
     }
@@ -583,6 +583,7 @@ TEST_F(MockUnitTest, testConflictingOptions)
 
     lcb_cmdstore_cas(scmd, 0);
     err = lcb_store(instance, NULL, scmd);
+    lcb_cmdstore_destroy(scmd);
     ASSERT_EQ(LCB_SUCCESS, err);
 
     lcb_CMDCOUNTER *ccmd;

@@ -406,7 +406,7 @@ static lcb_STATUS store_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie,
     mc_PIPELINE *pipeline;
     mc_PACKET *packet;
     mc_CMDQUEUE *cq = &instance->cmdq;
-    protocol_binary_request_set scmd = {0};
+    protocol_binary_request_set scmd{};
     protocol_binary_request_header *hdr = &scmd.message.header;
     int new_durability_supported = LCBT_SUPPORT_SYNCREPLICATION(instance);
 

@@ -191,7 +191,7 @@ static lcb_STATUS reschedule_destroy(void *)
     return LCB_SUCCESS;
 }
 
-static lcb_STATUS reschedule_with_collection(uint32_t cid, lcb_INSTANCE *instance, void *cookie, const void *arg)
+static lcb_STATUS reschedule_with_collection(uint32_t cid, lcb_INSTANCE *instance, void * /* cookie */, const void *arg)
 {
     /** Reschedule the packet again .. */
     mc_PACKET *newpkt = (mc_PACKET *)arg;
@@ -926,7 +926,7 @@ Server::Server(lcb_INSTANCE *instance_, int ix)
 
 Server::Server()
     : state(S_TEMPORARY), io_timer(NULL), instance(NULL), settings(NULL), compsupport(0), jsonsupport(0),
-      mutation_tokens(0), connctx(NULL), connreq(NULL), curhost(NULL)
+      mutation_tokens(0), new_durability(0), connctx(NULL), connreq(NULL), curhost(NULL)
 {
 }
 

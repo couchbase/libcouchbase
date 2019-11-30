@@ -182,6 +182,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_destroy(lcb_CMDANALYTICS *cmd)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_timeout(lcb_CMDANALYTICS *cmd, uint32_t timeout)
 {
+    cmd->timeout = timeout;
     return LCB_SUCCESS;
 }
 
@@ -249,12 +250,15 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_priority(lcb_CMDANALYTICS *cmd, int
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_consistency(lcb_CMDANALYTICS *cmd, lcb_ANALYTICS_CONSISTENCY level)
 {
-    if (level == LCB_ANALYTICS_CONSISTENCY_NOT_BOUNDED) {
-        cmd->root["scan_consistency"] = "not_bounded";
-    } else if (level == LCB_ANALYTICS_CONSISTENCY_REQUEST_PLUS) {
-        cmd->root["scan_consistency"] = "request_plus";
-    } else {
-        return LCB_EINVAL;
+    switch (level) {
+        case LCB_ANALYTICS_CONSISTENCY_NOT_BOUNDED:
+            cmd->root["scan_consistency"] = "not_bounded";
+            break;
+        case LCB_ANALYTICS_CONSISTENCY_REQUEST_PLUS:
+            cmd->root["scan_consistency"] = "request_plus";
+            break;
+        default:
+            return LCB_EINVAL;
     }
     return LCB_SUCCESS;
 }
@@ -356,7 +360,7 @@ struct lcb_DEFERRED_HANDLE_ {
     std::string handle;
     lcb_ANALYTICS_CALLBACK callback;
 
-    lcb_DEFERRED_HANDLE_(std::string status_, std::string handle_) : status(status_), handle(handle_) {}
+    lcb_DEFERRED_HANDLE_(std::string status_, std::string handle_) : status(status_), handle(handle_), callback(NULL) {}
 };
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respanalytics_deferred_handle_extract(const lcb_RESPANALYTICS *resp,

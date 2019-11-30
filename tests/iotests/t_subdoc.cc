@@ -68,6 +68,7 @@ struct Result {
 
     Result(const lcb_RESPSUBDOC *resp, size_t idx)
     {
+        clear();
         assign(resp, idx);
     }
 
@@ -473,6 +474,7 @@ TEST_F(SubdocUnitTest, testSdStore)
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
     // See if our value actually matches
     ASSERT_PATHVAL_EQ("42", instance, key, "foo");
+    lcb_cmdsubdoc_destroy(cmd);
 }
 
 TEST_F(SubdocUnitTest, testMkdoc)

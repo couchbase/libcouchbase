@@ -38,7 +38,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_error_context(const lcb_RESPCOUNTER 
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_error_ref(const lcb_RESPCOUNTER *resp, const char **ref, size_t *ref_len)
 {
-    return LCB_SUCCESS;
     if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
         return LCB_KEY_ENOENT;
     }

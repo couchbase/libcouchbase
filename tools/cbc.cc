@@ -665,7 +665,7 @@ void GetHandler::run()
                         mode = LCB_REPLICA_MODE_IDX2;
                         break;
                     default:
-                        throw LcbError(err, "invalid replica mode");
+                        throw LcbError(LCB_EINVAL, "invalid replica mode");
                 }
             }
             lcb_CMDGETREPLICA *cmd;

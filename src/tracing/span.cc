@@ -326,7 +326,7 @@ LIBCOUCHBASE_API int lcbtrace_span_has_tag(lcbtrace_SPAN *span, const char *name
 using namespace lcb::trace;
 
 Span::Span(lcbtrace_TRACER *tracer, const char *opname, uint64_t start, lcbtrace_REF_TYPE ref, lcbtrace_SPAN *other)
-    : m_tracer(tracer), m_opname(opname)
+    : m_tracer(tracer), m_opname(opname), m_finish(0)
 {
     m_start = start ? start : lcbtrace_now();
     m_span_id = lcb_next_rand64();

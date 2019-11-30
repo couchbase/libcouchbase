@@ -914,7 +914,7 @@ static void real_main(int argc, char **argv)
             if (rv) {
                 fprintf(stderr, "Invalid input: unterminated single quote\n");
             } else {
-                if (rv == 0 && cmd_argc > 0) {
+                if (cmd_argc > 0) {
                     char *cmd_name = cmd_argv[0];
                     subdoc::Handler *handler = handlers[cmd_name];
                     if (handler == NULL) {

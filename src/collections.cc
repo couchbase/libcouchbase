@@ -91,7 +91,7 @@ struct GetCidCtx : mc_REQDATAEX {
     }
 };
 
-static void handle_collcache_proc(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS err, const void *rb)
+static void handle_collcache_proc(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS /* err */, const void *rb)
 {
     GetCidCtx *ctx = static_cast< GetCidCtx * >(pkt->u_rdata.exdata);
     const lcb_RESPGETCID *resp = (const lcb_RESPGETCID *)rb;
@@ -145,7 +145,7 @@ lcb_STATUS collcache_exec_str(std::string collection, lcb_INSTANCE *instance, vo
     LCB_KREQ_SIMPLE(&key, collection.c_str(), collection.size());
     pkt->flags |= MCREQ_F_NOCID;
     mcreq_reserve_key(pl, pkt, MCREQ_PKT_BASESIZE, &key, 0);
-    protocol_binary_request_header hdr = {0};
+    protocol_binary_request_header hdr{};
     hdr.request.magic = PROTOCOL_BINARY_REQ;
     hdr.request.opcode = PROTOCOL_BINARY_CMD_COLLECTIONS_GET_CID;
     hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
@@ -215,6 +215,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetmanifest_destroy(lcb_CMDGETMANIFEST *cmd)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetmanifest_timeout(lcb_CMDGETMANIFEST *cmd, uint32_t timeout)
 {
+    cmd->timeout = timeout;
     return LCB_SUCCESS;
 }
 
@@ -239,7 +240,7 @@ lcb_STATUS lcb_getmanifest(lcb_INSTANCE *instance, void *cookie, const lcb_CMDGE
     }
     mcreq_reserve_header(pl, pkt, MCREQ_PKT_BASESIZE);
 
-    protocol_binary_request_header hdr = {0};
+    protocol_binary_request_header hdr{};
     hdr.request.magic = PROTOCOL_BINARY_REQ;
     hdr.request.opcode = PROTOCOL_BINARY_CMD_COLLECTIONS_GET_MANIFEST;
     hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
@@ -300,6 +301,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetcid_destroy(lcb_CMDGETCID *cmd)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetcid_timeout(lcb_CMDGETCID *cmd, uint32_t timeout)
 {
+    cmd->timeout = timeout;
     return LCB_SUCCESS;
 }
 
@@ -352,7 +354,7 @@ lcb_STATUS lcb_getcid(lcb_INSTANCE *instance, void *cookie, const lcb_CMDGETCID 
     pkt->flags |= MCREQ_F_NOCID;
     mcreq_reserve_key(pl, pkt, MCREQ_PKT_BASESIZE, &key, 0);
 
-    protocol_binary_request_header hdr = {0};
+    protocol_binary_request_header hdr{};
     hdr.request.magic = PROTOCOL_BINARY_REQ;
     hdr.request.opcode = PROTOCOL_BINARY_CMD_COLLECTIONS_GET_CID;
     hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
