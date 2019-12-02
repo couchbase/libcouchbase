@@ -282,7 +282,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_createopts_io(lcb_CREATEOPTS *options, struct lc
  * lcb_INSTANCE *instance;
  * lcb_STATUS err = lcb_create(&instance, NULL);
  * if (err != LCB_SUCCESS) {
- *    fprintf(stderr, "Failed to create instance: %s\n", lcb_strerror(NULL, err));
+ *    fprintf(stderr, "Failed to create instance: %s\n", lcb_strerror_short(err));
  *    exit(EXIT_FAILURE);
  * }
  * @endcode
@@ -650,7 +650,7 @@ const char *lcb_strcbtype(int cbtype);
  *     printf("Got response for key: %.*s\n", (int)resp->key, resp->nkey);
  *
  *     if (resp->rc != LCB_SUCCESS) {
- *         printf("Couldn't get item: %s\n", lcb_strerror(NULL, resp->rc));
+ *         printf("Couldn't get item: %s\n", lcb_strerror_short(resp->rc));
  *     } else {
  *         printf("Got value: %.*s\n", (int)resp->nvalue, resp->value);
  *         printf("Got CAS: 0x%llx\n", resp->cas);
@@ -732,7 +732,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_get(lcb_INSTANCE *instance, void *cookie, const 
  *     if (resp->rc == LCB_SUCCESS) {
  *         printf("Got response: %.*s\n", (int)resp->value, resp->nvalue);
  *     else {
- *         printf("Couldn't retrieve: %s\n", lcb_strerror(NULL, resp->rc));
+ *         printf("Couldn't retrieve: %s\n", lcb_strerror_short(resp->rc));
  *     }
  * }
  * @endcode
@@ -893,7 +893,7 @@ typedef enum {
  *     if (rb->rc == LCB_SUCCESS) {
  *         printf("Store success: CAS=%llx\n", rb->cas);
  *     } else {
- *         printf("Store failed: %s\n", lcb_strerror(NULL, rb->rc);
+ *         printf("Store failed: %s\n", lcb_strerror_short(rb->rc);
  *     }
  * }
  * @endcode
@@ -996,7 +996,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_open(lcb_INSTANCE *instance, const char *bucket,
  * {
  *     printf("Key: %.*s...", (int)resp->nkey, resp->key);
  *     if (rb->rc != LCB_SUCCESS) {
- *         printf("Failed to remove item!: %s\n", lcb_strerror(NULL, rb->rc));
+ *         printf("Failed to remove item!: %s\n", lcb_strerror_short(rb->rc));
  *     } else {
  *         printf("Removed item!\n");
  *     }
@@ -1341,7 +1341,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const
  * {
  *     const lcb_RESPDIAG *resp = (const lcb_RESPDIAG *)rb;
  *     if (resp->rc != LCB_SUCCESS) {
- *         fprintf(stderr, "failed: %s\n", lcb_strerror(NULL, resp->rc));
+ *         fprintf(stderr, "failed: %s\n", lcb_strerror_short(resp->rc));
  *     } else {
  *         if (resp->njson) {
  *             fprintf(stderr, "\n%.*s", (int)resp->njson, resp->json);
@@ -1456,7 +1456,7 @@ typedef enum {
  * {
  *     const lcb_RESPHTTP *resp = (const lcb_RESPHTTP *)rb;
  *     if (resp->rc != LCB_SUCCESS) {
- *         printf("I/O Error for HTTP: %s\n", lcb_strerror(NULL, resp->rc));
+ *         printf("I/O Error for HTTP: %s\n", lcb_strerror_short(resp->rc));
  *         return;
  *     }
  *     printf("Got HTTP Status: %d\n", resp->htstatus);

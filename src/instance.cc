@@ -198,7 +198,7 @@ lcb_st::process_dns_srv(Connspec& spec)
     Hostlist* hl = dnssrv_getbslist(host.hostname.c_str(), spec.sslopts() & LCB_SSL_ENABLED, rc);
 
     if (hl == NULL) {
-        lcb_log(LOGARGS(this, INFO), "DNS SRV lookup failed: %s. Ignore this if not relying on DNS SRV records", lcb_strerror(this, rc));
+        lcb_log(LOGARGS(this, INFO), "DNS SRV lookup failed: %s. Ignore this if not relying on DNS SRV records", lcb_strerror_short(rc));
         if (spec.is_explicit_dnssrv()) {
             return rc;
         } else {
@@ -932,17 +932,6 @@ lcb_get_timings(lcb_INSTANCE *instance, const void *cookie, lcb_timings_callback
     }
     lcb_histogram_read(instance->kv_timings, &wrap, timings_wrapper_callback);
     return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API
-const char *lcb_strerror(lcb_INSTANCE *instance, lcb_STATUS error)
-{
-    #define X(c, v, t, s) if (error == c) { return s; }
-    LCB_XERR(X)
-    #undef X
-
-    (void)instance;
-    return "Unknown error";
 }
 
 LCB_INTERNAL_API

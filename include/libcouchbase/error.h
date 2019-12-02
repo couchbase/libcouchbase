@@ -615,18 +615,6 @@ LIBCOUCHBASE_API
 int lcb_get_errtype(lcb_STATUS err);
 
 /**
- * Get a textual descrtiption for the given error code
- * @param instance the instance the error code belongs to (you might
- *                 want different localizations for the different instances)
- * @param error the error code
- * @return A textual description of the error message. The caller should
- *         <b>not</b> release the memory returned from this function.
- * @committed
- */
-LIBCOUCHBASE_API
-const char *lcb_strerror(lcb_INSTANCE *instance, lcb_STATUS error);
-
-/**
  * Get a shorter textual description of an error message. This is the
  * constant name
  */

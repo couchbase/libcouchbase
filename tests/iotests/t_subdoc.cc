@@ -26,7 +26,7 @@ inline ostream &operator<<(ostream &os, const lcb_STATUS &rc)
     os << "LcbError <0x";
     os << std::hex << static_cast< unsigned >(rc);
     os << " (";
-    os << lcb_strerror(NULL, rc);
+    os << lcb_strerror_short(rc);
     os << ")>";
     return os;
 }

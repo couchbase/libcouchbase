@@ -601,7 +601,7 @@ typedef struct {
  *     const lcb_RESPENDURE *resp = (const lcb_RESPENDURE*)rb;
  *     printf("Durability polling result for %.*s.. ", (int)resp->nkey, resp->key);
  *     if (resp->rc != LCB_SUCCESS) {
- *         printf("Failed: %s\n", lcb_strerror(NULL, resp->rc);
+ *         printf("Failed: %s\n", lcb_strerror_short(resp->rc);
  *         return;
  *     }
  * }

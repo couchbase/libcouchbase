@@ -241,7 +241,7 @@ void Request::finish_or_retry(lcb_STATUS rc)
 
     // Reassemble URL:
     lcb_log(LOGARGS(this, DEBUG), LOGFMT "Retrying request on new node %s. Reason: 0x%02x (%s)", LOGID(this), nextnode,
-            rc, lcb_strerror(NULL, rc));
+            rc, lcb_strerror_short(rc));
 
     url.replace(url_info.field_data[UF_PORT].off, url_info.field_data[UF_PORT].len,
                 nextnode + next_info.field_data[UF_PORT].off, next_info.field_data[UF_PORT].len);
@@ -252,7 +252,7 @@ void Request::finish_or_retry(lcb_STATUS rc)
     newrc = assign_url(NULL, 0, NULL, 0);
     if (newrc != LCB_SUCCESS) {
         lcb_log(LOGARGS(this, ERR), LOGFMT "Failed to assign URL for retry request on next endpoint (%s): 0x%02x (%s)",
-                LOGID(this), nextnode, newrc, lcb_strerror(NULL, newrc));
+                LOGID(this), nextnode, newrc, lcb_strerror_short(newrc));
         finish(rc);
         return;
     }
@@ -260,7 +260,7 @@ void Request::finish_or_retry(lcb_STATUS rc)
     newrc = submit();
     if (newrc != LCB_SUCCESS) {
         lcb_log(LOGARGS(this, WARN), LOGFMT "Failed to retry request on next endpoint (%s): 0x%02x (%s)", LOGID(this),
-                nextnode, newrc, lcb_strerror(NULL, newrc));
+                nextnode, newrc, lcb_strerror_short(newrc));
         finish(rc);
     }
 }
