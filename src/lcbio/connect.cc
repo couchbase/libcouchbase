@@ -127,12 +127,12 @@ void Connstart::handler()
 
     if (state == CS_PENDING) {
         /* state was not changed since initial scheduling */
-        err = LCB_ETIMEDOUT;
+        err = LCB_ERR_TIMEOUT;
     } else if (state == CS_CONNECTED) {
         /* clear pending error */
         err = LCB_SUCCESS;
     } else {
-        if (sock != NULL && last_error == LCB_CONNECT_ERROR) {
+        if (sock != NULL && last_error == LCB_ERR_CONNECT_ERROR) {
             err = lcbio_mklcberr(syserr, sock->settings);
         } else {
             err = last_error;
@@ -305,7 +305,7 @@ static void E_conncb(lcb_socket_t, short events, void *arg)
 
 GT_NEXTSOCK:
     if (!cs->ensure_sock()) {
-        cs->notify_error(LCB_CONNECT_ERROR);
+        cs->notify_error(LCB_ERR_CONNECT_ERROR);
         return;
     }
 
@@ -402,7 +402,7 @@ void Connstart::C_connect()
 GT_NEXTSOCK:
     if (!ensure_sock()) {
         lcbio_mksyserr(IOT_ERRNO(io), &syserr);
-        notify_error(LCB_CONNECT_ERROR);
+        notify_error(LCB_ERR_CONNECT_ERROR);
         return;
     }
 
@@ -493,7 +493,7 @@ Connstart::Connstart(lcbio_TABLE *iot_, lcb_settings *settings_, const lcb_host_
     if ((rv = getaddrinfo(dest->host, dest->port, &hints, &ai_root))) {
         const char *errstr = rv != EAI_SYSTEM ? gai_strerror(rv) : "";
         lcb_log(LOGARGS_T(ERR), CSLOGFMT "Couldn't look up %s (%s) [EAI=%d]", CSLOGID_T(), dest->host, errstr, rv);
-        notify_error(LCB_UNKNOWN_HOST);
+        notify_error(LCB_ERR_UNKNOWN_HOST);
     } else {
         ai = ai_root;
 

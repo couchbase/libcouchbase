@@ -27,7 +27,7 @@ static bool callbackInvoked = false;
 extern "C" {
 static void get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
 {
-    EXPECT_EQ(LCB_KEY_ENOENT, lcb_respget_status(resp));
+    EXPECT_EQ(LCB_ERR_DOCUMENT_NOT_FOUND, lcb_respget_status(resp));
     int *counter_p;
     lcb_respget_cookie(resp, (void **)&counter_p);
     EXPECT_TRUE(counter_p != NULL);
@@ -158,7 +158,7 @@ TEST_F(RegressionUnitTest, CCBC_275)
     lcb_wait(instance);
     ASSERT_EQ(1, info.call_count);
 
-    ASSERT_ERRISA(info.last_err, LCB_ERRTYPE_NETWORK);
+    ASSERT_NE(0, LCB_ERROR_IS_NETWORK(info.last_err));
 
     // Make sure we've fully purged and disconnected the server
     struct lcb_cntl_vbinfo_st vbi;
@@ -181,7 +181,7 @@ TEST_F(RegressionUnitTest, CCBC_275)
     lcb_wait(instance);
     ASSERT_EQ(1, info.call_count);
 
-    ASSERT_EQ(LCB_KEY_ENOENT, info.last_err);
+    ASSERT_EQ(LCB_ERR_DOCUMENT_NOT_FOUND, info.last_err);
     lcb_cmdget_destroy(cmd);
 
     lcb_destroy(instance);

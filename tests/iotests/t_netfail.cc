@@ -187,7 +187,7 @@ static void set_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RE
 
     lcb_respstore_cookie(resp, (void **)&tc);
     EXPECT_EQ(tc->expected, lcb_respstore_status(resp));
-    if (resp->rc == LCB_ETIMEDOUT) {
+    if (resp->rc == LCB_ERR_TIMEOUT) {
         // Remove the hiccup at the first timeout failure
         MockEnvironment::getInstance()->hiccupNodes(0, 0);
     }
@@ -242,7 +242,7 @@ TEST_F(MockUnitTest, testTimeoutOnlyStale)
     lcb_cmdstore_value(cmd, value, strlen(value));
 
     cookies[0].counter = &nremaining;
-    cookies[0].expected = LCB_ETIMEDOUT;
+    cookies[0].expected = LCB_ERR_TIMEOUT;
     ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, cookies, cmd));
 
     cookies[1].counter = &nremaining;
@@ -292,7 +292,7 @@ TEST_F(MockUnitTest, testTimeoutOnlyStaleWithPerOperationProperty)
     lcb_cmdstore_timeout(cmd, tmoval);
 
     cookies[0].counter = &nremaining;
-    cookies[0].expected = LCB_ETIMEDOUT;
+    cookies[0].expected = LCB_ERR_TIMEOUT;
     ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, cookies, cmd));
 
     cookies[1].counter = &nremaining;
@@ -574,11 +574,11 @@ TEST_F(MockUnitTest, testSaslMechs)
     Item itm("key", "value");
     KVOperation kvo(&itm);
 
-    kvo.allowableErrors.insert(LCB_SASLMECH_UNAVAILABLE);
-    kvo.allowableErrors.insert(LCB_ETIMEDOUT);
+    kvo.allowableErrors.insert(LCB_ERR_SASLMECH_UNAVAILABLE);
+    kvo.allowableErrors.insert(LCB_ERR_TIMEOUT);
     kvo.store(instance);
 
-    ASSERT_FALSE(kvo.globalErrors.find(LCB_SASLMECH_UNAVAILABLE) == kvo.globalErrors.end());
+    ASSERT_FALSE(kvo.globalErrors.find(LCB_ERR_SASLMECH_UNAVAILABLE) == kvo.globalErrors.end());
 
     err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)"PLAIN");
     ASSERT_EQ(LCB_SUCCESS, err);
@@ -625,11 +625,11 @@ TEST_F(MockUnitTest, testSaslSHA)
         Item itm("key", "value");
         KVOperation kvo(&itm);
 
-        kvo.allowableErrors.insert(LCB_SASLMECH_UNAVAILABLE);
-        kvo.allowableErrors.insert(LCB_ETIMEDOUT);
+        kvo.allowableErrors.insert(LCB_ERR_SASLMECH_UNAVAILABLE);
+        kvo.allowableErrors.insert(LCB_ERR_TIMEOUT);
         kvo.store(instance);
 
-        ASSERT_FALSE(kvo.globalErrors.find(LCB_SASLMECH_UNAVAILABLE) == kvo.globalErrors.end());
+        ASSERT_FALSE(kvo.globalErrors.find(LCB_ERR_SASLMECH_UNAVAILABLE) == kvo.globalErrors.end());
 
         lcb_destroy(instance);
     }
@@ -651,8 +651,8 @@ TEST_F(MockUnitTest, testSaslSHA)
         Item itm("key", "value");
         KVOperation kvo(&itm);
 
-        kvo.allowableErrors.insert(LCB_SASLMECH_UNAVAILABLE);
-        kvo.allowableErrors.insert(LCB_ETIMEDOUT);
+        kvo.allowableErrors.insert(LCB_ERR_SASLMECH_UNAVAILABLE);
+        kvo.allowableErrors.insert(LCB_ERR_TIMEOUT);
         kvo.store(instance);
 
 #ifndef LCB_NO_SSL
@@ -802,7 +802,7 @@ static void get_callback3(lcb_INSTANCE *, int, const lcb_RESPGET *resp)
 /**
  * This tests the case where a negative index appears for a vbucket ID for the
  * mapped key. In this case we'd expect that the command would be retried
- * at least once, and not receive an LCB_NO_MATCHING_SERVER.
+ * at least once, and not receive an LCB_ERR_NO_MATCHING_SERVER.
  *
  * Unfortunately this test is a bit hacky since we need to modify the vbucket
  * information, and hopefully get a new config afterwards. Additionally we'd
@@ -834,7 +834,7 @@ TEST_F(MockUnitTest, testNegativeIndex)
     lcb_sched_leave(instance);
     lcb_wait(instance);
     ASSERT_EQ(1, ni.callCount);
-    ASSERT_EQ(LCB_NO_MATCHING_SERVER, ni.err);
+    ASSERT_EQ(LCB_ERR_NO_MATCHING_SERVER, ni.err);
     lcb_cmdget_destroy(gcmd);
     // That's it
 }

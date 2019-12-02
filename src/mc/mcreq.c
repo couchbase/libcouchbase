@@ -29,7 +29,7 @@ lcb_STATUS mcreq_reserve_header(mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_
     packet->kh_span.size = hdrsize;
     rv = netbuf_mblock_reserve(&pipeline->nbmgr, &packet->kh_span);
     if (rv != 0) {
-        return LCB_CLIENT_ENOMEM;
+        return LCB_ERR_NO_MEMORY;
     }
     return LCB_SUCCESS;
 }
@@ -100,7 +100,7 @@ lcb_STATUS mcreq_reserve_key(mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t h
         packet->kh_span.size += hdrsize + ncid;
         rv = netbuf_mblock_reserve(&pipeline->nbmgr, &packet->kh_span);
         if (rv != 0) {
-            return LCB_CLIENT_ENOMEM;
+            return LCB_ERR_NO_MEMORY;
         }
         /* copy collection ID prefix */
         if (ncid) {
@@ -121,7 +121,7 @@ lcb_STATUS mcreq_reserve_key(mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t h
 
     } else {
         /** IOVs not supported for keys */
-        return LCB_EINVAL;
+        return LCB_ERR_INVALID_ARGUMENT;
     }
 
     return LCB_SUCCESS;
@@ -138,7 +138,7 @@ lcb_STATUS mcreq_reserve_value2(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_size_t n)
     pkt->flags |= MCREQ_F_HASVALUE;
     rv = netbuf_mblock_reserve(&pl->nbmgr, &pkt->u_value.single);
     if (rv) {
-        return LCB_CLIENT_ENOMEM;
+        return LCB_ERR_NO_MEMORY;
     }
     return LCB_SUCCESS;
 }
@@ -157,7 +157,7 @@ lcb_STATUS mcreq_reserve_value(mc_PIPELINE *pipeline, mc_PACKET *packet, const l
         rv = netbuf_mblock_reserve(&pipeline->nbmgr, vspan);
 
         if (rv != 0) {
-            return LCB_CLIENT_ENOMEM;
+            return LCB_ERR_NO_MEMORY;
         }
 
         memcpy(SPAN_BUFFER(vspan), contig->bytes, contig->nbytes);
@@ -198,7 +198,7 @@ lcb_STATUS mcreq_reserve_value(mc_PIPELINE *pipeline, mc_PACKET *packet, const l
 
         rv = netbuf_mblock_reserve(&pipeline->nbmgr, vspan);
         if (rv != 0) {
-            return LCB_CLIENT_ENOMEM;
+            return LCB_ERR_NO_MEMORY;
         }
 
         for (ii = 0, cur_offset = 0; ii < msrc->niov; ii++) {
@@ -488,10 +488,10 @@ lcb_STATUS mcreq_basic_packet(mc_CMDQUEUE *queue, const lcb_CMDBASE *cmd, protoc
     uint16_t nkey;
 
     if (!queue->config) {
-        return LCB_CLIENT_ETMPFAIL;
+        return LCB_ERR_NO_CONFIGURATION;
     }
     if (!cmd) {
-        return LCB_EINVAL;
+        return LCB_ERR_INVALID_ARGUMENT;
     }
 
     mcreq_map_key(queue, &cmd->key, sizeof(*req) + extlen + ffextlen, &vb, &srvix);
@@ -502,13 +502,13 @@ lcb_STATUS mcreq_basic_packet(mc_CMDQUEUE *queue, const lcb_CMDBASE *cmd, protoc
         if ((options & MCREQ_BASICPACKET_F_FALLBACKOK) && queue->fallback) {
             *pipeline = queue->fallback;
         } else {
-            return LCB_NO_MATCHING_SERVER;
+            return LCB_ERR_NO_MATCHING_SERVER;
         }
     }
 
     *packet = mcreq_allocate_packet(*pipeline);
     if (*packet == NULL) {
-        return LCB_CLIENT_ENOMEM;
+        return LCB_ERR_NO_MEMORY;
     }
 
     mcreq_reserve_key(*pipeline, *packet, sizeof(*req) + extlen + ffextlen, &cmd->key, cmd->cid);

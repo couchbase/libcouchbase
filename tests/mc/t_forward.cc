@@ -172,7 +172,7 @@ TEST_F(McFwd, testInsufficientHeader)
     vars.iovs[0].iov_len = 0;
     vars.initInfo();
     rc = vars.requestPacket(&cq);
-    ASSERT_EQ(LCB_INCOMPLETE_PACKET, rc);
+    ASSERT_EQ(LCB_ERR_INCOMPLETE_PACKET, rc);
     ASSERT_EQ(24, vars.ioi.wanted);
 
     // Test with partial (but incomplete header)
@@ -180,7 +180,7 @@ TEST_F(McFwd, testInsufficientHeader)
     vars.iovs[0].iov_len = 20;
     vars.initInfo();
     rc = vars.requestPacket(&cq);
-    ASSERT_EQ(LCB_INCOMPLETE_PACKET, rc);
+    ASSERT_EQ(LCB_ERR_INCOMPLETE_PACKET, rc);
     ASSERT_EQ(24, vars.ioi.wanted);
 
     // Test with full header but partial key
@@ -188,7 +188,7 @@ TEST_F(McFwd, testInsufficientHeader)
     vars.iovs[0].iov_len = 30;
     vars.initInfo();
     rc = vars.requestPacket(&cq);
-    ASSERT_EQ(rc, LCB_INCOMPLETE_PACKET);
+    ASSERT_EQ(rc, LCB_ERR_INCOMPLETE_PACKET);
     ASSERT_EQ(vars.reqbuf.size(), vars.ioi.wanted);
 }
 

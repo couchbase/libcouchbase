@@ -499,7 +499,7 @@ static void view_callback(lcb_INSTANCE *, int, const lcb_RESPVIEW *resp)
     if (rc) {
         fprintf(stderr, "View query failed: %s\n", lcb_strerror_short(rc));
 
-        if (rc == LCB_HTTP_ERROR) {
+        if (rc == LCB_ERR_HTTP) {
             const lcb_RESPHTTP *http;
             lcb_respview_http_response(resp, &http);
             if (http != NULL) {
@@ -665,7 +665,7 @@ void GetHandler::run()
                         mode = LCB_REPLICA_MODE_IDX2;
                         break;
                     default:
-                        throw LcbError(LCB_EINVAL, "invalid replica mode");
+                        throw LcbError(LCB_ERR_INVALID_ARGUMENT, "invalid replica mode");
                 }
             }
             lcb_CMDGETREPLICA *cmd;
@@ -1365,7 +1365,7 @@ void KeygenHandler::run()
 
     unsigned num_vbuckets = lcbvb_get_nvbuckets(vbc);
     if (num_vbuckets == 0) {
-        throw LcbError(LCB_EINVAL, "the configuration does not contain any vBuckets");
+        throw LcbError(LCB_ERR_INVALID_ARGUMENT, "the configuration does not contain any vBuckets");
     }
     unsigned num_keys_per_vbucket = o_keys_per_vbucket.result();
     vector< vector< string > > keys(num_vbuckets);
@@ -1376,7 +1376,7 @@ void KeygenHandler::run()
     while (left > 0 && i < UINT_MAX) {
         int nbuf = snprintf(buf, MAX_KEY_SIZE, "key_%010u", i++);
         if (nbuf <= 0) {
-            throw LcbError(LCB_ERROR, "unable to render new key into buffer");
+            throw LcbError(LCB_ERR_GENERIC, "unable to render new key into buffer");
         }
         int vbid, srvix;
         lcbvb_map_key(vbc, buf, nbuf, &vbid, &srvix);
@@ -2071,18 +2071,20 @@ class StrErrorHandler : public Handler
             }
         }
 
-#define X(cname, code, cat, desc)                                                                                      \
+#define X(cname, code, cat, flags, desc)                                                                               \
     if (code == errcode) {                                                                                             \
-        fprintf(stderr, "%s\n", #cname);                                                                               \
-        fprintf(stderr, "  Type: 0x%x\n", cat);                                                                        \
+        fprintf(stderr, "%s (%d)\n", #cname, (int)cname);                                                              \
+        fprintf(stderr, "  Type: %s (%d)\n", #cat, (int)cat);                                                          \
+        fprintf(stderr, "  Flags: 0x%04x\n", (unsigned int)flags);                                                     \
         fprintf(stderr, "  Description: %s\n", desc);                                                                  \
         return;                                                                                                        \
     }
 
-        LCB_XERR(X)
+        LCB_XERROR(X)
 #undef X
 
         fprintf(stderr, "-- Error code not found in header. Trying runtime..\n");
+        fprintf(stderr, "%s\n", lcb_strerror_short((lcb_STATUS)errcode));
         fprintf(stderr, "%s\n", lcb_strerror_long((lcb_STATUS)errcode));
     }
 };

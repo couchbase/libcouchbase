@@ -413,7 +413,7 @@ void PoolRequest::timer_handler()
         invoke();
     } else {
         lcb_clist_delete(&host->requests, this);
-        invoke(LCB_ETIMEDOUT);
+        invoke(LCB_ERR_TIMEOUT);
     }
 }
 

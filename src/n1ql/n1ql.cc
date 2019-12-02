@@ -162,7 +162,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_query(lcb_CMDN1QL *cmd, const char *quer
     fix_strlen(query, query_len);
     Json::Value value;
     if (!Json::Reader().parse(query, query + query_len, value)) {
-        return LCB_EINVAL;
+        return LCB_ERR_INVALID_ARGUMENT;
     }
     cmd->root = value;
     return LCB_SUCCESS;
@@ -187,7 +187,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_positional_param(lcb_CMDN1QL *cmd, const
     fix_strlen(value, value_len);
     Json::Value jval;
     if (!Json::Reader().parse(value, value + value_len, jval)) {
-        return LCB_EINVAL;
+        return LCB_ERR_INVALID_ARGUMENT;
     }
     cmd->root["args"].append(jval);
     return LCB_SUCCESS;
@@ -267,7 +267,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_consistency_token_for_keyspace(lcb_CMDN1
                                                                        const lcb_MUTATION_TOKEN *token)
 {
     if (!LCB_MUTATION_TOKEN_ISVALID(token)) {
-        return LCB_EINVAL;
+        return LCB_ERR_INVALID_ARGUMENT;
     }
 
     cmd->root["scan_consistency"] = "at_plus";
@@ -307,7 +307,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_consistency_tokens(lcb_CMDN1QL *cmd, lcb
     }
 
     if (!sv_json) {
-        return LCB_KEY_ENOENT;
+        return LCB_ERR_DOCUMENT_NOT_FOUND;
     }
 
     return LCB_SUCCESS;
@@ -322,7 +322,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_option(lcb_CMDN1QL *cmd, const char *nam
     Json::Value jsonValue;
     bool rv = rdr.parse(value, value + value_len, jsonValue);
     if (!rv) {
-        return LCB_EINVAL;
+        return LCB_ERR_INVALID_ARGUMENT;
     }
 
     cmd->root[std::string(name, name_len)] = jsonValue;
@@ -594,7 +594,7 @@ typedef struct lcb_N1QL_HANDLE_ : lcb::jsparse::Parser::Actions {
     }
     void JSPARSE_on_error(const std::string &)
     {
-        lasterr = LCB_PROTOCOL_ERROR;
+        lasterr = LCB_ERR_PROTOCOL_ERROR;
     }
     void JSPARSE_on_complete(const std::string &)
     {
@@ -803,7 +803,7 @@ static void chunk_callback(lcb_INSTANCE *instance, int ign, const lcb_RESPBASE *
     req->cur_htresp = rh;
     if (rh->rc != LCB_SUCCESS || rh->htstatus != 200) {
         if (req->lasterr == LCB_SUCCESS || rh->htstatus != 200) {
-            req->lasterr = rh->rc ? rh->rc : LCB_HTTP_ERROR;
+            req->lasterr = rh->rc ? rh->rc : LCB_ERR_HTTP;
         }
     }
 
@@ -831,7 +831,7 @@ void N1QLREQ::fail_prepared(const lcb_RESPN1QL *orig, lcb_STATUS err)
     newresp.cookie = const_cast< void * >(cookie);
     newresp.rc = err;
     if (err == LCB_SUCCESS) {
-        newresp.rc = LCB_ERROR;
+        newresp.rc = LCB_ERR_GENERIC;
     }
 
     if (callback != NULL) {
@@ -856,7 +856,7 @@ static void prepare_rowcb(lcb_INSTANCE *instance, int, const lcb_RESPN1QL *row)
         Json::Value prepared;
         if (!parse_json(row->row, row->nrow, prepared)) {
             lcb_log(LOGARGS(origreq, ERROR), LOGFMT "Invalid JSON returned from PREPARE", LOGID(origreq));
-            origreq->fail_prepared(row, LCB_PROTOCOL_ERROR);
+            origreq->fail_prepared(row, LCB_ERR_PROTOCOL_ERROR);
             return;
         }
 
@@ -970,7 +970,7 @@ lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj, const void *user_cookie, c
     } else {
         std::string encoded = Json::FastWriter().write(cmd->root);
         if (!parse_json(encoded.c_str(), encoded.size(), json)) {
-            lasterr = LCB_EINVAL;
+            lasterr = LCB_ERR_INVALID_ARGUMENT;
             return;
         }
     }
@@ -979,7 +979,7 @@ lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj, const void *user_cookie, c
         is_cbas = true;
     }
     if (is_cbas && (flags & LCB_CMDN1QL_F_PREPCACHE)) {
-        lasterr = LCB_OPTIONS_CONFLICT;
+        lasterr = LCB_ERR_OPTIONS_CONFLICT;
         return;
     }
 
@@ -987,7 +987,7 @@ lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj, const void *user_cookie, c
     if (j_statement.isString()) {
         statement = j_statement.asString();
     } else if (!j_statement.isNull()) {
-        lasterr = LCB_EINVAL;
+        lasterr = LCB_ERR_INVALID_ARGUMENT;
         return;
     }
 
@@ -1004,7 +1004,7 @@ lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj, const void *user_cookie, c
         timeout = lcb_n1qlreq_parsetmo(tmoval.asString());
     } else {
         // Timeout is not a string!
-        lasterr = LCB_EINVAL;
+        lasterr = LCB_ERR_INVALID_ARGUMENT;
         return;
     }
 
@@ -1018,7 +1018,7 @@ lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj, const void *user_cookie, c
         Json::Value &creds = json["creds"];
         lcb::Authenticator::Map::const_iterator ii = auth.buckets().begin();
         if (!(creds.isNull() || creds.isArray())) {
-            lasterr = LCB_EINVAL;
+            lasterr = LCB_ERR_INVALID_ARGUMENT;
             return;
         }
         for (; ii != auth.buckets().end(); ++ii) {
@@ -1047,11 +1047,11 @@ lcb_STATUS lcb_n1ql(lcb_INSTANCE *instance, void *cookie, const lcb_CMDN1QL *cmd
     N1QLREQ *req = NULL;
 
     if ((cmd->query.empty() && cmd->root.empty()) || cmd->callback == NULL) {
-        return LCB_EINVAL;
+        return LCB_ERR_INVALID_ARGUMENT;
     }
     req = new lcb_N1QL_HANDLE_(instance, cookie, cmd);
     if (!req) {
-        err = LCB_CLIENT_ENOMEM;
+        err = LCB_ERR_NO_MEMORY;
         goto GT_DESTROY;
     }
     if ((err = req->lasterr) != LCB_SUCCESS) {
@@ -1060,7 +1060,7 @@ lcb_STATUS lcb_n1ql(lcb_INSTANCE *instance, void *cookie, const lcb_CMDN1QL *cmd
 
     if (cmd->cmdflags & LCB_CMDN1QL_F_PREPCACHE) {
         if (req->statement.empty()) {
-            err = LCB_EINVAL;
+            err = LCB_ERR_INVALID_ARGUMENT;
             goto GT_DESTROY;
         }
 

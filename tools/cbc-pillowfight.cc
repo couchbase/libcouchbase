@@ -1018,13 +1018,13 @@ static void updateStats(InstanceCookie *cookie, lcb_STATUS rc)
 {
     cookie->stats.total++;
     switch (rc) {
-        case LCB_ETMPFAIL:
+        case LCB_ERR_TEMPORARY_FAILURE:
             cookie->stats.etmpfail++;
             break;
-        case LCB_KEY_EEXISTS:
+        case LCB_ERR_DOCUMENT_EXISTS:
             cookie->stats.eexist++;
             break;
-        case LCB_ETIMEDOUT:
+        case LCB_ERR_TIMEOUT:
             cookie->stats.etimeout++;
             break;
         default:
@@ -1098,7 +1098,7 @@ static void getCallback(lcb_INSTANCE *instance, int, const lcb_RESPGET *resp)
             lcb_cmdstore_destroy(scmd);
 
             done = false;
-        } else if (rc == LCB_ETMPFAIL) {
+        } else if (rc == LCB_ERR_TEMPORARY_FAILURE) {
             NextOp op;
             op.m_mode = NextOp::STORE;
             op.m_key = key;

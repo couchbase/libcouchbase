@@ -428,7 +428,7 @@ lcb_STATUS SmokeTest::testMissingBucket()
     lcb_wait(session);
     err = lcb_get_bootstrap_status(session);
     EXPECT_NE(LCB_SUCCESS, err);
-    EXPECT_TRUE(err == LCB_BUCKET_ENOENT || err == LCB_AUTH_ERROR);
+    EXPECT_TRUE(err == LCB_ERR_BUCKET_NOT_FOUND || err == LCB_ERR_AUTHENTICATION);
     destroySession();
     return err;
 }
@@ -511,19 +511,19 @@ TEST_F(SmokeTest, testMemcachedBucket)
     lcb_cmdgetreplica_create(&cmd, LCB_REPLICA_MODE_ANY);
     lcb_cmdgetreplica_key(cmd, "key", 3);
     rc = lcb_getreplica(session, NULL, cmd);
-    ASSERT_EQ(LCB_NO_MATCHING_SERVER, rc);
+    ASSERT_EQ(LCB_ERR_NO_MATCHING_SERVER, rc);
     lcb_cmdgetreplica_destroy(cmd);
 
     lcb_cmdgetreplica_create(&cmd, LCB_REPLICA_MODE_ALL);
     lcb_cmdgetreplica_key(cmd, "key", 3);
     rc = lcb_getreplica(session, NULL, cmd);
-    ASSERT_EQ(LCB_NO_MATCHING_SERVER, rc);
+    ASSERT_EQ(LCB_ERR_NO_MATCHING_SERVER, rc);
     lcb_cmdgetreplica_destroy(cmd);
 
     lcb_cmdgetreplica_create(&cmd, LCB_REPLICA_MODE_IDX0);
     lcb_cmdgetreplica_key(cmd, "key", 3);
     rc = lcb_getreplica(session, NULL, cmd);
-    ASSERT_EQ(LCB_NO_MATCHING_SERVER, rc);
+    ASSERT_EQ(LCB_ERR_NO_MATCHING_SERVER, rc);
     lcb_cmdgetreplica_destroy(cmd);
 
     testMissingBucket();
@@ -557,6 +557,6 @@ TEST_F(SmokeTest, testSaslBucket)
     testSpuriousSaslError();
 
     destroySession();
-    connectCommon("protected", "incorrect", LCB_AUTH_ERROR);
+    connectCommon("protected", "incorrect", LCB_ERR_AUTHENTICATION);
     destroySession();
 }

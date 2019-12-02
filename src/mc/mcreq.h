@@ -563,7 +563,7 @@ lcb_STATUS mcreq_reserve_header(mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_
  *        the header size (i.e. 24 bytes) PLUS any extras therein.
  * @param kreq the user-provided key structure
  * @param cid the user-provided collection ID
- * @return LCB_SUCCESS on success, LCB_CLIENT_ENOMEM on allocation failure
+ * @return LCB_SUCCESS on success, LCB_ERR_NO_MEMORY on allocation failure
  */
 lcb_STATUS mcreq_reserve_key(mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize, const lcb_KEYBUF *kreq,
                              uint32_t cid);
@@ -574,7 +574,7 @@ lcb_STATUS mcreq_reserve_key(mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t h
  * @param pipeline the pipeline used to allocate the packet
  * @param packet the packet whose value field should be initialized
  * @param vreq the user-provided structure containing the value parameters
- * @return LCB_SUCCESS on success, LCB_CLIENT_ENOMEM on allocation failure
+ * @return LCB_SUCCESS on success, LCB_ERR_NO_MEMORY on allocation failure
  */
 lcb_STATUS mcreq_reserve_value(mc_PIPELINE *pipeline, mc_PACKET *packet, const lcb_VALBUF *vreq);
 
@@ -877,7 +877,7 @@ unsigned mcreq_pipeline_fail(mc_PIPELINE *pipeline, lcb_STATUS err, mcreq_pktfai
  * which are newer than the threshold are still kept
  *
  * @param pipeline the pipeline to fail out
- * @param err the error to provide to the handlers (usually LCB_ETIMEDOUT)
+ * @param err the error to provide to the handlers (usually LCB_ERR_TIMEOUT)
  * @param failcb the callback to invoke
  * @param cbarg the last argument to the callback
  * @param now the current wall clock time

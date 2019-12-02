@@ -26,7 +26,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respget_status(const lcb_RESPGET *resp)
 LIBCOUCHBASE_API lcb_STATUS lcb_respget_error_context(const lcb_RESPGET *resp, const char **ctx, size_t *ctx_len)
 {
     if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
-        return LCB_KEY_ENOENT;
+        return LCB_ERR_DOCUMENT_NOT_FOUND;
     }
     const char *val = lcb_resp_get_error_context(LCB_CALLBACK_GET, (const lcb_RESPBASE *)resp);
     if (val) {
@@ -39,7 +39,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respget_error_context(const lcb_RESPGET *resp, c
 LIBCOUCHBASE_API lcb_STATUS lcb_respget_error_ref(const lcb_RESPGET *resp, const char **ref, size_t *ref_len)
 {
     if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
-        return LCB_KEY_ENOENT;
+        return LCB_ERR_DOCUMENT_NOT_FOUND;
     }
     const char *val = lcb_resp_get_error_ref(LCB_CALLBACK_GET, (const lcb_RESPBASE *)resp);
     if (val) {
@@ -142,7 +142,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_expiry(lcb_CMDGET *cmd, uint32_t expirati
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_locktime(lcb_CMDGET *cmd, uint32_t duration)
 {
     if (duration == 0) {
-        return LCB_EINVAL;
+        return LCB_ERR_INVALID_ARGUMENT;
     }
     cmd->exptime = duration;
     cmd->lock = 1;
@@ -158,13 +158,13 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_durability(lcb_CMDGET *cmd, lcb_DURABILIT
 static lcb_STATUS get_validate(lcb_INSTANCE *instance, const lcb_CMDGET *cmd)
 {
     if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
-        return LCB_EMPTY_KEY;
+        return LCB_ERR_EMPTY_KEY;
     }
     if (cmd->cas || (cmd->dur_level && !cmd->exptime && !cmd->lock)) {
-        return LCB_OPTIONS_CONFLICT;
+        return LCB_ERR_OPTIONS_CONFLICT;
     }
     if (cmd->dur_level && !LCBT_SUPPORT_SYNCREPLICATION(instance)) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ERR_UNSUPPORTED_OPERATION;
     }
 
     return LCB_SUCCESS;
@@ -265,7 +265,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_status(const lcb_RESPUNLOCK *resp)
 LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_error_context(const lcb_RESPUNLOCK *resp, const char **ctx, size_t *ctx_len)
 {
     if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
-        return LCB_KEY_ENOENT;
+        return LCB_ERR_DOCUMENT_NOT_FOUND;
     }
     const char *val = lcb_resp_get_error_context(LCB_CALLBACK_UNLOCK, (const lcb_RESPBASE *)resp);
     if (val) {
@@ -278,7 +278,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_error_context(const lcb_RESPUNLOCK *r
 LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_error_ref(const lcb_RESPUNLOCK *resp, const char **ref, size_t *ref_len)
 {
     if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
-        return LCB_KEY_ENOENT;
+        return LCB_ERR_DOCUMENT_NOT_FOUND;
     }
     const char *val = lcb_resp_get_error_ref(LCB_CALLBACK_UNLOCK, (const lcb_RESPBASE *)resp);
     if (val) {
@@ -362,7 +362,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdunlock_cas(lcb_CMDUNLOCK *cmd, uint64_t cas)
 static lcb_STATUS unlock_validate(lcb_INSTANCE *, const lcb_CMDUNLOCK *cmd)
 {
     if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
-        return LCB_EMPTY_KEY;
+        return LCB_ERR_EMPTY_KEY;
     }
 
     return LCB_SUCCESS;
@@ -430,7 +430,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_error_context(const lcb_RESPGETRE
                                                              size_t *ctx_len)
 {
     if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
-        return LCB_KEY_ENOENT;
+        return LCB_ERR_DOCUMENT_NOT_FOUND;
     }
     const char *val = lcb_resp_get_error_context(LCB_CALLBACK_GETREPLICA, (const lcb_RESPBASE *)resp);
     if (val) {
@@ -444,7 +444,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_error_ref(const lcb_RESPGETREPLIC
                                                          size_t *ref_len)
 {
     if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
-        return LCB_KEY_ENOENT;
+        return LCB_ERR_DOCUMENT_NOT_FOUND;
     }
     const char *val = lcb_resp_get_error_ref(LCB_CALLBACK_GETREPLICA, (const lcb_RESPBASE *)resp);
     if (val) {
@@ -521,7 +521,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetreplica_create(lcb_CMDGETREPLICA **cmd, lc
             break;
         default:
             free(res);
-            return LCB_EINVAL;
+            return LCB_ERR_INVALID_ARGUMENT;
     }
     *cmd = res;
     return LCB_SUCCESS;
@@ -651,13 +651,13 @@ RGetCookie::RGetCookie(const void *cookie_, lcb_INSTANCE *instance_, lcb_replica
 static lcb_STATUS getreplica_validate(lcb_INSTANCE *instance, const lcb_CMDGETREPLICA *cmd)
 {
     if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
-        return LCB_EMPTY_KEY;
+        return LCB_ERR_EMPTY_KEY;
     }
     if (!instance->cmdq.config) {
-        return LCB_CLIENT_ETMPFAIL;
+        return LCB_ERR_NO_CONFIGURATION;
     }
     if (!LCBT_NREPLICAS(instance)) {
-        return LCB_NO_MATCHING_SERVER;
+        return LCB_ERR_NO_MATCHING_SERVER;
     }
 
     mc_CMDQUEUE *cq = &instance->cmdq;
@@ -668,7 +668,7 @@ static lcb_STATUS getreplica_validate(lcb_INSTANCE *instance, const lcb_CMDGETRE
     if (cmd->strategy == LCB_REPLICA_SELECT) {
         r0 = r1 = cmd->index;
         if (lcbvb_vbreplica(cq->config, vbid, r0) < 0) {
-            return LCB_NO_MATCHING_SERVER;
+            return LCB_ERR_NO_MATCHING_SERVER;
         }
 
     } else if (cmd->strategy == LCB_REPLICA_ALL) {
@@ -678,7 +678,7 @@ static lcb_STATUS getreplica_validate(lcb_INSTANCE *instance, const lcb_CMDGETRE
         /* Make sure they're all online */
         for (ii = 0; ii < LCBT_NREPLICAS(instance); ii++) {
             if (lcbvb_vbreplica(cq->config, vbid, ii) < 0) {
-                return LCB_NO_MATCHING_SERVER;
+                return LCB_ERR_NO_MATCHING_SERVER;
             }
         }
     } else {
@@ -689,12 +689,12 @@ static lcb_STATUS getreplica_validate(lcb_INSTANCE *instance, const lcb_CMDGETRE
             }
         }
         if (r0 == LCBT_NREPLICAS(instance)) {
-            return LCB_NO_MATCHING_SERVER;
+            return LCB_ERR_NO_MATCHING_SERVER;
         }
     }
 
     if (r1 < r0 || r1 >= cq->npipelines) {
-        return LCB_NO_MATCHING_SERVER;
+        return LCB_ERR_NO_MATCHING_SERVER;
     }
 
     return LCB_SUCCESS;
@@ -726,7 +726,7 @@ static lcb_STATUS getreplica_impl(uint32_t cid, lcb_INSTANCE *instance, void *co
     if (cmd->strategy == LCB_REPLICA_SELECT) {
         r0 = r1 = cmd->index;
         if ((ixtmp = lcbvb_vbreplica(cq->config, vbid, r0)) < 0) {
-            return LCB_NO_MATCHING_SERVER;
+            return LCB_ERR_NO_MATCHING_SERVER;
         }
 
     } else if (cmd->strategy == LCB_REPLICA_ALL) {
@@ -736,7 +736,7 @@ static lcb_STATUS getreplica_impl(uint32_t cid, lcb_INSTANCE *instance, void *co
         /* Make sure they're all online */
         for (ii = 0; ii < LCBT_NREPLICAS(instance); ii++) {
             if ((ixtmp = lcbvb_vbreplica(cq->config, vbid, ii)) < 0) {
-                return LCB_NO_MATCHING_SERVER;
+                return LCB_ERR_NO_MATCHING_SERVER;
             }
         }
     } else {
@@ -747,12 +747,12 @@ static lcb_STATUS getreplica_impl(uint32_t cid, lcb_INSTANCE *instance, void *co
             }
         }
         if (r0 == LCBT_NREPLICAS(instance)) {
-            return LCB_NO_MATCHING_SERVER;
+            return LCB_ERR_NO_MATCHING_SERVER;
         }
     }
 
     if (r1 < r0 || r1 >= cq->npipelines) {
-        return LCB_NO_MATCHING_SERVER;
+        return LCB_ERR_NO_MATCHING_SERVER;
     }
 
     /* Initialize the cookie */
@@ -781,7 +781,7 @@ static lcb_STATUS getreplica_impl(uint32_t cid, lcb_INSTANCE *instance, void *co
         pl = cq->pipelines[curix];
         pkt = mcreq_allocate_packet(pl);
         if (!pkt) {
-            return LCB_CLIENT_ENOMEM;
+            return LCB_ERR_NO_MEMORY;
         }
 
         pkt->u_rdata.exdata = rck;

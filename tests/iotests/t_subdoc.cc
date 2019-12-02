@@ -74,7 +74,7 @@ struct Result {
 
     void clear()
     {
-        rc = LCB_ERROR;
+        rc = LCB_ERR_GENERIC;
         cas = 0;
         index = -1;
         value.clear();
@@ -105,7 +105,7 @@ struct MultiResult {
         cas = 0;
         results.clear();
         cbtype = 0;
-        rc = LCB_AUTH_CONTINUE;
+        rc = LCB_ERR_AUTH_CONTINUE;
         is_single = false;
     }
 
@@ -144,7 +144,7 @@ static ::testing::AssertionResult verifySingleOk(const char *, const MultiResult
 {
     using namespace ::testing;
     if (mr.rc != LCB_SUCCESS) {
-        if (mr.rc == LCB_SUBDOC_MULTI_FAILURE) {
+        if (mr.rc == LCB_ERR_SUBDOC_GENERIC) {
             if (!mr.size()) {
                 return AssertionFailure() << "Top-level MULTI_FAILURE with no results";
             } else {
@@ -182,7 +182,7 @@ static ::testing::AssertionResult verifySingleOk(const char *, const char *, con
 static ::testing::AssertionResult verifySingleError(const char *, const char *, const MultiResult &mr, lcb_STATUS exp)
 {
     using namespace ::testing;
-    if (mr.rc != LCB_SUBDOC_MULTI_FAILURE) {
+    if (mr.rc != LCB_ERR_SUBDOC_GENERIC) {
         return AssertionFailure() << "Top-level error code is not MULTI_FAILURE. Got" << mr.rc;
     }
     if (mr.size() != 1) {
@@ -238,7 +238,7 @@ bool SubdocUnitTest::createSubdocConnection(HandleWrap &hw, lcb_INSTANCE **insta
     }
     lcb_wait(*instance);
 
-    if (res.rc == LCB_NOT_SUPPORTED || res.rc == LCB_UNKNOWN_COMMAND) {
+    if (res.rc == LCB_ERR_UNSUPPORTED_OPERATION || res.rc == LCB_ERR_UNSUPPORTED_OPERATION) {
         return false;
     }
 
@@ -332,29 +332,29 @@ TEST_F(SubdocUnitTest, testSdGetExists)
 
     lcb_subdocspecs_get(specs, 0, 0, "non-exist", strlen("non-exist"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_ENOENT);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_PATH_NOT_FOUND);
     lcb_subdocspecs_exists(specs, 0, 0, "non-exist", strlen("non-exist"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_ENOENT);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_PATH_NOT_FOUND);
 
     lcb_cmdsubdoc_key(cmd, "non-exist", strlen("non-exist"));
 
     lcb_subdocspecs_get(specs, 0, 0, "non-exist", strlen("non-exist"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_EQ(LCB_KEY_ENOENT, res.rc) << "Get non-exist document";
+    ASSERT_EQ(LCB_ERR_DOCUMENT_NOT_FOUND, res.rc) << "Get non-exist document";
     lcb_subdocspecs_exists(specs, 0, 0, "non-exist", strlen("non-exist"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_EQ(LCB_KEY_ENOENT, res.rc);
+    ASSERT_EQ(LCB_ERR_DOCUMENT_NOT_FOUND, res.rc);
 
     // Store non-JSON document
     lcb_cmdsubdoc_key(cmd, nonJsonKey.c_str(), nonJsonKey.size());
 
     lcb_subdocspecs_get(specs, 0, 0, "non-exist", strlen("non-exist"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_DOC_NOTJSON);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_DOCUMENT_NOT_JSON);
     lcb_subdocspecs_exists(specs, 0, 0, "non-exist", strlen("non-exist"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_DOC_NOTJSON);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_DOCUMENT_NOT_JSON);
 
     // Restore the key back to the document..
     lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
@@ -362,11 +362,11 @@ TEST_F(SubdocUnitTest, testSdGetExists)
     // Invalid paths
     lcb_subdocspecs_get(specs, 0, 0, "invalid..path", strlen("invalid..path"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_EINVAL);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_PATH_INVALID);
 
     lcb_subdocspecs_get(specs, 0, 0, "invalid[-2]", strlen("invalid[-2]"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_EINVAL);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_PATH_INVALID);
 
     // Test negative paths
     lcb_subdocspecs_get(specs, 0, 0, "array[-1][-1][-1]", strlen("array[-1][-1][-1]"));
@@ -382,7 +382,7 @@ TEST_F(SubdocUnitTest, testSdGetExists)
     // Test path mismatch
     lcb_subdocspecs_get(specs, 0, 0, "array.key", strlen("array.key"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_MISMATCH);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_PATH_MISMATCH);
 
     lcb_subdocspecs_destroy(specs);
     lcb_cmdsubdoc_destroy(cmd);
@@ -412,7 +412,7 @@ TEST_F(SubdocUnitTest, testSdStore)
 
     lcb_subdocspecs_dict_add(spec, 0, 0, "newpath", strlen("newpath"), "123", strlen("123"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_EEXISTS);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_PATH_EXISTS);
 
     lcb_subdocspecs_dict_upsert(spec, 0, 0, "newpath", strlen("newpath"), "123", strlen("123"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
@@ -423,7 +423,7 @@ TEST_F(SubdocUnitTest, testSdStore)
     // Try with a bad CAS
     lcb_cmdsubdoc_cas(cmd, res.cas + 1);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_EQ(LCB_KEY_EEXISTS, res.rc);
+    ASSERT_EQ(LCB_ERR_DOCUMENT_EXISTS, res.rc);
     lcb_cmdsubdoc_cas(cmd, 0); // Reset CAS
 
     // Try to add a compound value
@@ -437,14 +437,14 @@ TEST_F(SubdocUnitTest, testSdStore)
     // Try to insert a non-JSON value
     lcb_subdocspecs_dict_upsert(spec, 0, 0, "dict", strlen("dict"), "non-json", strlen("non-json"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_VALUE_CANTINSERT);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_CANNOT_INSERT_VALUE);
 
     const char *p = "parent.with.missing.children";
 
     // Intermediate paths
     lcb_subdocspecs_dict_upsert(spec, 0, 0, p, strlen(p), "null", strlen("null"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_ENOENT);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_PATH_NOT_FOUND);
 
     // set MKINTERMEDIATES (MKDIR_P)
     lcb_subdocspecs_dict_upsert(spec, 0, LCB_SUBDOCSPECS_F_MKINTERMEDIATES, p, strlen(p), "null", strlen("null"));
@@ -461,7 +461,7 @@ TEST_F(SubdocUnitTest, testSdStore)
     // Try replacing a non-existing path
     lcb_subdocspecs_replace(spec, 0, 0, "not-exists", strlen("not-exists"), "123", strlen("123"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_ENOENT);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_PATH_NOT_FOUND);
 
     // Try replacing array element
     lcb_subdocspecs_replace(spec, 0, 0, "array[1]", strlen("array[1]"), "true", strlen("true"));
@@ -546,12 +546,12 @@ TEST_F(SubdocUnitTest, testUnique)
 
     // Try adding the item again
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_EEXISTS);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_PATH_EXISTS);
 
     // Try adding a primitive
     lcb_subdocspecs_array_add_unique(spec, 0, LCB_SUBDOCSPECS_F_MKINTERMEDIATES, "a", strlen("a"), "{}", strlen("{}"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_VALUE_CANTINSERT);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_CANNOT_INSERT_VALUE);
 
     // Add the primitive using append
     lcb_subdocspecs_array_add_last(spec, 0, LCB_SUBDOCSPECS_F_MKINTERMEDIATES, "a", strlen("a"), "{}", strlen("{}"));
@@ -563,7 +563,7 @@ TEST_F(SubdocUnitTest, testUnique)
                                      strlen("null"));
     // Add unique to array with non-primitive
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_MISMATCH);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_PATH_MISMATCH);
 
     lcb_subdocspecs_destroy(spec);
     lcb_cmdsubdoc_destroy(cmd);
@@ -604,12 +604,12 @@ TEST_F(SubdocUnitTest, testCounter)
     // Try to increment by 1
     lcb_subdocspecs_counter(spec, 0, 0, "counter", strlen("counter"), 1);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_VALUE_CANTINSERT);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_CANNOT_INSERT_VALUE);
 
     // Try to increment by 0
     lcb_subdocspecs_counter(spec, 0, 0, "counter", strlen("counter"), 0);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_BAD_DELTA);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_DELTA_RANGE);
 
     // Try to use an already large number (so the number is too big on the server)
     std::string biggerNum(si64max);
@@ -621,12 +621,12 @@ TEST_F(SubdocUnitTest, testCounter)
     // Try the counter op again
     lcb_subdocspecs_counter(spec, 0, 0, "counter", strlen("counter"), 1);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_NUM_ERANGE);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_NUMBER_TOO_BIG);
 
     // Try the counter op with a non-numeric existing value
     lcb_subdocspecs_counter(spec, 0, 0, "dictkey", strlen("dictkey"), 1);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_MISMATCH);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_PATH_MISMATCH);
 
     // Reset the value again to 0
     lcb_subdocspecs_dict_upsert(spec, 0, 0, "counter", strlen("counter"), "0", 1);
@@ -673,7 +673,7 @@ TEST_F(SubdocUnitTest, testMultiLookup)
     ASSERT_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance);
 
-    ASSERT_EQ(LCB_SUBDOC_MULTI_FAILURE, mr.rc);
+    ASSERT_EQ(LCB_ERR_SUBDOC_GENERIC, mr.rc);
     ASSERT_EQ(4, mr.results.size());
     //    ASSERT_NE(0, mr.cas);
 
@@ -684,7 +684,7 @@ TEST_F(SubdocUnitTest, testMultiLookup)
     ASSERT_EQ(LCB_SUCCESS, mr.results[1].rc);
 
     ASSERT_TRUE(mr.results[2].value.empty());
-    ASSERT_EQ(LCB_SUBDOC_PATH_ENOENT, mr.results[2].rc);
+    ASSERT_EQ(LCB_ERR_SUBDOC_PATH_NOT_FOUND, mr.results[2].rc);
 
     ASSERT_EQ("2", mr.results[3].value);
     ASSERT_EQ(LCB_SUCCESS, mr.results[0].rc);
@@ -692,7 +692,7 @@ TEST_F(SubdocUnitTest, testMultiLookup)
     // Test multi lookups with bad command types
     lcb_subdocspecs_remove(specs, 1, 0, "array[0]", strlen("array[0]"));
     rc = lcb_subdoc(instance, NULL, mcmd);
-    ASSERT_EQ(LCB_OPTIONS_CONFLICT, rc);
+    ASSERT_EQ(LCB_ERR_OPTIONS_CONFLICT, rc);
     // Reset it to its previous command
     lcb_subdocspecs_get(specs, 1, 0, "array[0]", strlen("array[0]"));
 
@@ -705,7 +705,7 @@ TEST_F(SubdocUnitTest, testMultiLookup)
     rc = lcb_subdoc(instance, &mr, mcmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance);
-    ASSERT_EQ(LCB_KEY_ENOENT, mr.rc);
+    ASSERT_EQ(LCB_ERR_DOCUMENT_NOT_FOUND, mr.rc);
     ASSERT_TRUE(mr.results.empty());
 
     lcb_subdocspecs_destroy(specs);
@@ -748,7 +748,7 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     // New context. Try with mismatched commands
     lcb_subdocspecs_get(specs, 0, 0, "p", 1);
     rc = lcb_subdoc(instance, NULL, mcmd);
-    ASSERT_EQ(LCB_OPTIONS_CONFLICT, rc);
+    ASSERT_EQ(LCB_ERR_OPTIONS_CONFLICT, rc);
     lcb_subdocspecs_destroy(specs);
 
     lcb_subdocspecs_create(&specs, 3);
@@ -758,9 +758,9 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     lcb_subdocspecs_replace(specs, 2, 0, "bad..bad", strlen("bad..path"), "null", 4);
 
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mr, mcmd, lcb_subdoc));
-    ASSERT_EQ(LCB_SUBDOC_MULTI_FAILURE, mr.rc);
+    ASSERT_EQ(LCB_ERR_SUBDOC_GENERIC, mr.rc);
     ASSERT_EQ(2, mr.size());
-    ASSERT_EQ(LCB_SUBDOC_PATH_ENOENT, mr.results[1].rc);
+    ASSERT_EQ(LCB_ERR_SUBDOC_PATH_NOT_FOUND, mr.results[1].rc);
     lcb_subdocspecs_destroy(specs);
 
     /* check if lcb_subdoc3 can detect mutation, and allow setting exptime */
@@ -805,8 +805,8 @@ TEST_F(SubdocUnitTest, testGetCount)
     lcb_subdocspecs_get_count(spec, 1, 0, "array", strlen("array"));
     lcb_cmdsubdoc_specs(cmd, spec);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mres, cmd, lcb_subdoc));
-    ASSERT_EQ(LCB_SUBDOC_MULTI_FAILURE, mres.rc);
-    ASSERT_EQ(LCB_SUBDOC_PATH_ENOENT, mres.results[0].rc);
+    ASSERT_EQ(LCB_ERR_SUBDOC_GENERIC, mres.rc);
+    ASSERT_EQ(LCB_ERR_SUBDOC_PATH_NOT_FOUND, mres.results[0].rc);
     ASSERT_EQ(LCB_SUCCESS, mres.results[1].rc);
     ASSERT_EQ("5", mres.results[1].value);
     lcb_subdocspecs_destroy(spec);

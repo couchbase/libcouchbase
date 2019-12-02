@@ -171,7 +171,7 @@ void iotssl_log_errors(lcbio_XSSL *xs)
 #ifdef SSL_R_MISSING_VERIFY_MESSAGE
                 case SSL_R_MISSING_VERIFY_MESSAGE:
 #endif
-                    xs->errcode = LCB_SSL_CANTVERIFY;
+                    xs->errcode = LCB_ERR_SSL_CANTVERIFY;
                     break;
 
                 case SSL_R_BAD_PROTOCOL_VERSION_NUMBER:
@@ -179,10 +179,10 @@ void iotssl_log_errors(lcbio_XSSL *xs)
                 case SSL_R_WRONG_VERSION_NUMBER:
                 case SSL_R_UNKNOWN_SSL_VERSION:
                 case SSL_R_UNSUPPORTED_SSL_VERSION:
-                    xs->errcode = LCB_PROTOCOL_ERROR;
+                    xs->errcode = LCB_ERR_PROTOCOL_ERROR;
                     break;
                 default:
-                    xs->errcode = LCB_SSL_ERROR;
+                    xs->errcode = LCB_ERR_SSL_ERROR;
             }
         }
     }
@@ -312,12 +312,12 @@ lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *
 
     ret = calloc(1, sizeof(*ret));
     if (!ret) {
-        *errp = LCB_CLIENT_ENOMEM;
+        *errp = LCB_ERR_NO_MEMORY;
         goto GT_ERR;
     }
     ret->ctx = SSL_CTX_new(SSLv23_client_method());
     if (!ret->ctx) {
-        *errp = LCB_SSL_ERROR;
+        *errp = LCB_ERR_SSL_ERROR;
         goto GT_ERR;
     }
 
@@ -326,13 +326,13 @@ lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *
          * The client requested a list of ciphers, but openssl don't support
          * any of them.
          */
-        *errp = LCB_SSL_NO_CIPHERS;
+        *errp = LCB_ERR_SSL_NO_CIPHERS;
         goto GT_ERR;
     }
 
 #if HAVE_CIPERSUITES
     if (ciphersuites && SSL_CTX_set_ciphersuites(ret->ctx, ciphersuites) == 0 && strlen(ciphersuites) > 0) {
-        *errp = LCB_SSL_INVALID_CIPHERSUITES;
+        *errp = LCB_ERR_SSL_INVALID_CIPHERSUITES;
         goto GT_ERR;
     }
 #endif
@@ -340,23 +340,23 @@ lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *
     if (cafile || tsfile) {
         lcb_log(LOGARGS_S(settings, LCB_LOG_DEBUG), "Load verify locations from \"%s\"", tsfile ? tsfile : cafile);
         if (!SSL_CTX_load_verify_locations(ret->ctx, tsfile ? tsfile : cafile, NULL)) {
-            *errp = LCB_SSL_ERROR;
+            *errp = LCB_ERR_SSL_ERROR;
             goto GT_ERR;
         }
         if (cafile && keyfile) {
             lcb_log(LOGARGS_S(settings, LCB_LOG_DEBUG), "Authenticate with key \"%s\", cert \"%s\"", keyfile, cafile);
             if (!SSL_CTX_use_certificate_file(ret->ctx, cafile, SSL_FILETYPE_PEM)) {
-                *errp = LCB_SSL_ERROR;
+                *errp = LCB_ERR_SSL_ERROR;
                 goto GT_ERR;
             }
             if (!SSL_CTX_use_PrivateKey_file(ret->ctx, keyfile, SSL_FILETYPE_PEM)) {
                 lcb_log(LOGARGS_S(settings, LCB_LOG_ERROR), "Unable to load private key \"%s\"", keyfile);
-                *errp = LCB_SSL_ERROR;
+                *errp = LCB_ERR_SSL_ERROR;
                 goto GT_ERR;
             }
             if (!SSL_CTX_check_private_key(ret->ctx)) {
                 lcb_log(LOGARGS_S(settings, LCB_LOG_ERROR), "Unable to verify private key \"%s\"", keyfile);
-                *errp = LCB_SSL_ERROR;
+                *errp = LCB_ERR_SSL_ERROR;
                 goto GT_ERR;
             }
         }
@@ -423,7 +423,7 @@ lcb_STATUS lcbio_ssl_apply(lcbio_SOCKET *sock, lcbio_pSSLCTX sctx)
         return LCB_SUCCESS;
 
     } else {
-        return LCB_ERROR;
+        return LCB_ERR_SSL_ERROR;
     }
 }
 

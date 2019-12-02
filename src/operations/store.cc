@@ -32,7 +32,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respstore_status(const lcb_RESPSTORE *resp)
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_error_context(const lcb_RESPSTORE *resp, const char **ctx, size_t *ctx_len)
 {
     if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
-        return LCB_KEY_ENOENT;
+        return LCB_ERR_DOCUMENT_NOT_FOUND;
     }
     const char *val = lcb_resp_get_error_context(LCB_CALLBACK_STORE, (const lcb_RESPBASE *)resp);
     if (val) {
@@ -45,7 +45,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respstore_error_context(const lcb_RESPSTORE *res
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_error_ref(const lcb_RESPSTORE *resp, const char **ref, size_t *ref_len)
 {
     if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
-        return LCB_KEY_ENOENT;
+        return LCB_ERR_DOCUMENT_NOT_FOUND;
     }
     const char *val = lcb_resp_get_error_ref(LCB_CALLBACK_STORE, (const lcb_RESPBASE *)resp);
     if (val) {
@@ -83,7 +83,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respstore_operation(const lcb_RESPSTORE *resp, l
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_observe_stored(const lcb_RESPSTORE *resp, int *store_ok)
 {
     if (resp->dur_resp == NULL) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ERR_UNSUPPORTED_OPERATION;
     }
     *store_ok = resp->store_ok;
     return LCB_SUCCESS;
@@ -97,7 +97,7 @@ LIBCOUCHBASE_API int lcb_respstore_observe_attached(const lcb_RESPSTORE *resp)
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_observe_master_exists(const lcb_RESPSTORE *resp, int *master_exists)
 {
     if (resp->dur_resp == NULL) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ERR_UNSUPPORTED_OPERATION;
     }
     *master_exists = resp->dur_resp->exists_master;
     return LCB_SUCCESS;
@@ -106,7 +106,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respstore_observe_master_exists(const lcb_RESPST
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_observe_master_persisted(const lcb_RESPSTORE *resp, int *master_persisted)
 {
     if (resp->dur_resp == NULL) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ERR_UNSUPPORTED_OPERATION;
     }
     *master_persisted = resp->dur_resp->persisted_master;
     return LCB_SUCCESS;
@@ -115,7 +115,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respstore_observe_master_persisted(const lcb_RES
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_observe_num_responses(const lcb_RESPSTORE *resp, uint16_t *num_responses)
 {
     if (resp->dur_resp == NULL) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ERR_UNSUPPORTED_OPERATION;
     }
     *num_responses = resp->dur_resp->nresponses;
     return LCB_SUCCESS;
@@ -124,7 +124,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respstore_observe_num_responses(const lcb_RESPST
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_observe_num_persisted(const lcb_RESPSTORE *resp, uint16_t *num_persisted)
 {
     if (resp->dur_resp == NULL) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ERR_UNSUPPORTED_OPERATION;
     }
     *num_persisted = resp->dur_resp->npersisted;
     return LCB_SUCCESS;
@@ -133,7 +133,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respstore_observe_num_persisted(const lcb_RESPST
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_observe_num_replicated(const lcb_RESPSTORE *resp, uint16_t *num_replicated)
 {
     if (resp->dur_resp == NULL) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ERR_UNSUPPORTED_OPERATION;
     }
     *num_replicated = resp->dur_resp->nreplicated;
     return LCB_SUCCESS;
@@ -376,7 +376,7 @@ static lcb_STATUS get_esize_and_opcode(lcb_STORE_OPERATION ucmd, lcb_uint8_t *op
         *opcode = PROTOCOL_BINARY_CMD_PREPEND;
         *esize = 0;
     } else {
-        return LCB_EINVAL;
+        return LCB_ERR_INVALID_ARGUMENT;
     }
     return LCB_SUCCESS;
 }
@@ -444,7 +444,7 @@ static lcb_STATUS store_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie,
         int rv = mcreq_compress_value(pipeline, packet, &cmd->value, instance->settings, &should_compress);
         if (rv != 0) {
             mcreq_release_packet(pipeline, packet);
-            return LCB_CLIENT_ENOMEM;
+            return LCB_ERR_NO_MEMORY;
         }
     } else {
         mcreq_reserve_value(pipeline, packet, &cmd->value);
@@ -519,24 +519,24 @@ static lcb_STATUS store_validate(lcb_INSTANCE *instance, const lcb_CMDSTORE *cmd
     int new_durability_supported = LCBT_SUPPORT_SYNCREPLICATION(instance);
 
     if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
-        return LCB_EMPTY_KEY;
+        return LCB_ERR_EMPTY_KEY;
     }
 
     if (cmd->durability_mode == LCB_DURABILITY_SYNC) {
         if (cmd->durability.sync.dur_level && !new_durability_supported) {
-            return LCB_NOT_SUPPORTED;
+            return LCB_ERR_UNSUPPORTED_OPERATION;
         }
     }
     switch (cmd->operation) {
         case LCB_STORE_APPEND:
         case LCB_STORE_PREPEND:
             if (cmd->exptime || cmd->flags) {
-                return LCB_OPTIONS_CONFLICT;
+                return LCB_ERR_OPTIONS_CONFLICT;
             }
             break;
         case LCB_STORE_INSERT:
             if (cmd->cas) {
-                return LCB_OPTIONS_CONFLICT;
+                return LCB_ERR_OPTIONS_CONFLICT;
             }
             break;
         default:

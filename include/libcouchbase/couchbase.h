@@ -607,7 +607,7 @@ const char *lcb_strcbtype(int cbtype);
  * @see lcb_RESPGET
  *
  * @note The #cas member should be set to 0 for this operation. If the #cas is
- * not 0, lcb_get3() will fail with ::LCB_OPTIONS_CONFLICT.
+ * not 0, lcb_get3() will fail with ::LCB_ERR_OPTIONS_CONFLICT.
  *
  * ### Use of the `exptime` field
  *
@@ -661,8 +661,8 @@ const char *lcb_strcbtype(int cbtype);
  * @endcode
  *
  * @par Errors
- * @cb_err ::LCB_KEY_ENOENT if the item does not exist in the cluster
- * @cb_err ::LCB_ETMPFAIL if the lcb_CMDGET::lock option was set but the item
+ * @cb_err ::LCB_ERR_DOCUMENT_NOT_FOUND if the item does not exist in the cluster
+ * @cb_err ::LCB_ERR_TEMPORARY_FAILURE if the lcb_CMDGET::lock option was set but the item
  * was already locked. Note that this error may also be returned (as a generic
  * error) if there is a resource constraint within the server itself.
  */
@@ -745,8 +745,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_get(lcb_INSTANCE *instance, void *cookie, const 
  * function may query more than a single replica it may cause additional network
  * and server-side CPU load. Use sparingly and only when necessary.
  *
- * @cb_err ::LCB_KEY_ENOENT if the key is not found on the replica(s),
- * ::LCB_NO_MATCHING_SERVER if there are no replicas (either configured or online),
+ * @cb_err ::LCB_ERR_DOCUMENT_NOT_FOUND if the key is not found on the replica(s),
+ * ::LCB_ERR_NO_MATCHING_SERVER if there are no replicas (either configured or online),
  * or if the given replica
  * (if lcb_CMDGETREPLICA::strategy is ::LCB_REPLICA_SELECT) is not available or
  * is offline.
@@ -900,16 +900,16 @@ typedef enum {
  * @endcode
  *
  * Operation-specific error codes include:
- * @cb_err ::LCB_KEY_ENOENT if ::LCB_REPLACE was used and the key does not exist
- * @cb_err ::LCB_KEY_EEXISTS if ::LCB_ADD was used and the key already exists
- * @cb_err ::LCB_KEY_EEXISTS if the CAS was specified (for an operation other
+ * @cb_err ::LCB_ERR_DOCUMENT_NOT_FOUND if ::LCB_REPLACE was used and the key does not exist
+ * @cb_err ::LCB_ERR_DOCUMENT_EXISTS if ::LCB_ADD was used and the key already exists
+ * @cb_err ::LCB_ERR_DOCUMENT_EXISTS if the CAS was specified (for an operation other
  *          than ::LCB_ADD) and the item exists on the server with a different
  *          CAS
- * @cb_err ::LCB_KEY_EEXISTS if the item was locked and the CAS supplied did
+ * @cb_err ::LCB_ERR_DOCUMENT_EXISTS if the item was locked and the CAS supplied did
  * not match the locked item's CAS (or if no CAS was supplied)
- * @cb_err ::LCB_NOT_STORED if an ::LCB_APPEND or ::LCB_PREPEND operation was
+ * @cb_err ::LCB_ERR_NOT_STORED if an ::LCB_APPEND or ::LCB_PREPEND operation was
  * performed and the item did not exist on the server.
- * @cb_err ::LCB_E2BIG if the size of the value exceeds the cluster per-item
+ * @cb_err ::LCB_ERR_VALUE_TOO_LARGE if the size of the value exceeds the cluster per-item
  *         value limit (currently 20MB).
  *
  *
@@ -1005,10 +1005,10 @@ LIBCOUCHBASE_API lcb_STATUS lcb_open(lcb_INSTANCE *instance, const char *bucket,
  * @endcode
  *
  * The following operation-specific error codes are returned in the callback
- * @cb_err ::LCB_KEY_ENOENT if the key does not exist
- * @cb_err ::LCB_KEY_EEXISTS if the CAS was specified and it does not match the
+ * @cb_err ::LCB_ERR_DOCUMENT_NOT_FOUND if the key does not exist
+ * @cb_err ::LCB_ERR_DOCUMENT_EXISTS if the CAS was specified and it does not match the
  *         CAS on the server
- * @cb_err ::LCB_KEY_EEXISTS if the item was locked and no CAS (or an incorrect
+ * @cb_err ::LCB_ERR_DOCUMENT_EXISTS if the item was locked and no CAS (or an incorrect
  *         CAS) was specified.
  *
  */
@@ -1085,9 +1085,9 @@ LIBCOUCHBASE_API lcb_STATUS lcb_remove(lcb_INSTANCE *instance, void *cookie, con
  * In addition to generic errors, the following errors may be returned in the
  * callback (via lcb_RESPBASE::rc):
  *
- * @cb_err ::LCB_KEY_ENOENT if the counter doesn't exist
+ * @cb_err ::LCB_ERR_DOCUMENT_NOT_FOUND if the counter doesn't exist
  * (and lcb_CMDCOUNTER::create was not set)
- * @cb_err ::LCB_DELTA_BADVAL if the existing document's content could not
+ * @cb_err ::LCB_ERR_INVALID_DELTA if the existing document's content could not
  * be parsed as a number by the server.
  */
 
@@ -1690,7 +1690,7 @@ lcb_STATUS lcb_wait(lcb_INSTANCE *instance);
  * You must call lcb_wait() at least one after any batch of operations to ensure
  * they have been completed. This function is provided as an optimization only.
  *
- * @return LCB_CLIENT_FEATURE_UNAVAILABLE if the event loop does not support
+ * @return LCB_ERR_SDK_FEATURE_UNAVAILABLE if the event loop does not support
  * the "tick" mode.
  */
 LIBCOUCHBASE_API
@@ -1757,7 +1757,7 @@ int lcb_is_waiting(lcb_INSTANCE *instance);
  * * If a specific node has been failed
  *   over and the library has received a configuration in which there is no
  *   master node for a given key, the library will immediately return the error
- *   `LCB_NO_MATCHING_SERVER` for the given item and will not request a new
+ *   `LCB_ERR_NO_MATCHING_SERVER` for the given item and will not request a new
  *   configuration. In this state, the client will not perform any network I/O
  *   until a request has been made to it using a key that is mapped to a known
  *   active node.
@@ -1786,7 +1786,7 @@ int lcb_is_waiting(lcb_INSTANCE *instance);
  * do {
  *   retries--;
  *   err = lcb_get(instance, cookie, ncmds, cmds);
- *   if (err == LCB_NO_MATCHING_SERVER) {
+ *   if (err == LCB_ERR_NO_MATCHING_SERVER) {
  *     lcb_refresh_config(instance);
  *     usleep(100000);
  *     lcb_wait3(instance, LCB_WAIT_NO_CHECK);
@@ -2066,8 +2066,8 @@ typedef enum { LCB_VALUE_RAW = 0x00, LCB_VALUE_F_JSON = 0x01, LCB_VALUE_F_SNAPPY
  *      and for SET operations, the current configuration is
  *      updated with the contents of *arg.
  *
- * @return ::LCB_NOT_SUPPORTED if the code is unrecognized
- * @return ::LCB_EINVAL if there was a problem with the argument
+ * @return ::LCB_ERR_UNSUPPORTED_OPERATION if the code is unrecognized
+ * @return ::LCB_ERR_INVALID_ARGUMENT if there was a problem with the argument
  *         (typically for LCB_CNTL_SET) other error codes depending on the command.
  *
  * The following error codes are returned if the ::LCB_CNTL_DETAILED_ERRCODES
@@ -2075,7 +2075,7 @@ typedef enum { LCB_VALUE_RAW = 0x00, LCB_VALUE_F_JSON = 0x01, LCB_VALUE_F_SNAPPY
  *
  * @return ::LCB_ECTL_UNKNOWN if the code is unrecognized
  * @return ::LCB_ECTL_UNSUPPMODE An invalid _mode_ was passed
- * @return ::LCB_ECTL_BADARG if the value was invalid
+ * @return ::LCB_ERR_CONTROL_INVALID_ARGUMENT if the value was invalid
  *
  * @committed
  *

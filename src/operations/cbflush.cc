@@ -29,7 +29,7 @@ static void flush_cb(lcb_INSTANCE *instance, int, const lcb_RESPBASE *rb)
     fresp.rflags |= LCB_RESP_F_FINAL;
     if (resp->rc == LCB_SUCCESS) {
         if (resp->htstatus < 200 || resp->htstatus > 299) {
-            fresp.rc = LCB_HTTP_ERROR;
+            fresp.rc = LCB_ERR_HTTP;
         }
     }
     if (callback) {

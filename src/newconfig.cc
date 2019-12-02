@@ -202,7 +202,7 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *)
 
     mcreq_read_hdr(oldpkt, &hdr);
 
-    if (!lcb_should_retry(srv->get_settings(), oldpkt, LCB_MAX_ERROR)) {
+    if (!lcb_should_retry(srv->get_settings(), oldpkt, LCB_ERR_TOPOLOGY_CHANGE)) {
         return MCREQ_KEEP_PACKET;
     }
 
@@ -300,7 +300,7 @@ replace_config(lcb_INSTANCE *instance, lcbvb_CONFIG *oldconfig, lcbvb_CONFIG *ne
         }
 
         mcreq_iterwipe(cq, ppold[ii], iterwipe_cb, NULL);
-        static_cast<lcb::Server*>(ppold[ii])->purge(LCB_MAP_CHANGED);
+        static_cast< lcb::Server * >(ppold[ii])->purge(LCB_ERR_MAP_CHANGED);
         static_cast<lcb::Server*>(ppold[ii])->close();
     }
 

@@ -46,7 +46,7 @@ lcb_STATUS lcb_st::request_config(const void *cookie_, lcb::Server *server)
 
     packet = mcreq_allocate_packet(server);
     if (!packet) {
-        return LCB_CLIENT_ENOMEM;
+        return LCB_ERR_NO_MEMORY;
     }
 
     err = mcreq_reserve_header(server, packet, 24);
@@ -81,7 +81,7 @@ lcb_STATUS lcb_st::select_bucket(const void *cookie_, lcb::Server *server)
 
     packet = mcreq_allocate_packet(server);
     if (!packet) {
-        return LCB_CLIENT_ENOMEM;
+        return LCB_ERR_NO_MEMORY;
     }
 
     err = mcreq_reserve_header(server, packet, 24);

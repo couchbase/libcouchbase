@@ -154,7 +154,7 @@ static void io_read(lcbio_CTX *ctx, unsigned nr)
             lcb_log(LOGARGS(req, DEBUG), LOGFMT "Attempting redirect to %s", LOGID(req), req->pending_redirect.c_str());
             req->redirect();
         } else {
-            err = LCB_PROTOCOL_ERROR;
+            err = LCB_ERR_PROTOCOL_ERROR;
             lcb_log(LOGARGS(req, ERR), LOGFMT "Got parser error while parsing HTTP stream", LOGID(req));
             req->finish_or_retry(err);
         }
@@ -204,7 +204,7 @@ static void io_error(lcbio_CTX *ctx, lcb_STATUS err)
 
 static void request_timed_out(void *arg)
 {
-    (reinterpret_cast< Request * >(arg))->finish(LCB_ETIMEDOUT);
+    (reinterpret_cast< Request * >(arg))->finish(LCB_ERR_TIMEOUT);
 }
 
 static void on_connected(lcbio_SOCKET *sock, void *arg, lcb_STATUS err, lcbio_OSERR syserr)
@@ -258,7 +258,7 @@ lcb_STATUS Request::start_io(lcb_host_t &dest)
 
     creq = pool->get(dest, timeout(), on_connected, this);
     if (!creq) {
-        return LCB_CONNECT_ERROR;
+        return LCB_ERR_CONNECT_ERROR;
     }
 
     if (!timer) {

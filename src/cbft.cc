@@ -130,7 +130,7 @@ struct lcb_FTS_HANDLE_ : lcb::jsparse::Parser::Actions {
         invoke_row(&resp);
     }
     void JSPARSE_on_error(const std::string&) {
-        lasterr = LCB_PROTOCOL_ERROR;
+        lasterr = LCB_ERR_PROTOCOL_ERROR;
     }
     void JSPARSE_on_complete(const std::string&) {
         // Nothing
@@ -146,7 +146,7 @@ chunk_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
     req->cur_htresp = rh;
     if (rh->rc != LCB_SUCCESS || rh->htstatus != 200) {
         if (req->lasterr == LCB_SUCCESS || rh->htstatus != 200) {
-            req->lasterr = rh->rc ? rh->rc : LCB_HTTP_ERROR;
+            req->lasterr = rh->rc ? rh->rc : LCB_ERR_HTTP;
         }
     }
 
@@ -200,7 +200,7 @@ lcb_FTS_HANDLE_::lcb_FTS_HANDLE_(lcb_INSTANCE * instance_, const void *cookie_, 
   lasterr(LCB_SUCCESS), span(NULL)
 {
     if (!callback) {
-        lasterr = LCB_EINVAL;
+        lasterr = LCB_ERR_INVALID_ARGUMENT;
         return;
     }
 
@@ -216,14 +216,14 @@ lcb_FTS_HANDLE_::lcb_FTS_HANDLE_(lcb_INSTANCE * instance_, const void *cookie_, 
     Json::Value root;
     Json::Reader rr;
     if (!rr.parse(cmd->query, cmd->query + cmd->nquery, root)) {
-        lasterr = LCB_EINVAL;
+        lasterr = LCB_ERR_INVALID_ARGUMENT;
         return;
     }
 
     const Json::Value& constRoot = root;
     const Json::Value& j_ixname = constRoot["indexName"];
     if (!j_ixname.isString()) {
-        lasterr = LCB_EINVAL;
+        lasterr = LCB_ERR_INVALID_ARGUMENT;
         return;
     }
 

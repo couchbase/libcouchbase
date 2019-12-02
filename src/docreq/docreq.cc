@@ -103,7 +103,7 @@ static void docreq_handler(void *arg)
         q->n_awaiting_schedule--;
 
         if (q->cancelled) {
-            cont->docresp.rc = LCB_EINTERNAL;
+            cont->docresp.rc = LCB_ERR_SDK_INTERNAL;
             cont->ready = 1;
 
         } else {

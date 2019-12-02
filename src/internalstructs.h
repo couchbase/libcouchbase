@@ -146,7 +146,7 @@ struct lcb_CMDGET_ {
     LCB_CMD_BASE;
     /**If set to true, the `exptime` field inside `options` will take to mean
      * the time the lock should be held. While the lock is held, other operations
-     * trying to access the key will fail with an `LCB_ETMPFAIL` error. The
+     * trying to access the key will fail with an `LCB_ERR_TEMPORARY_FAILURE` error. The
      * item may be unlocked either via `lcb_unlock3()` or via a mutation
      * operation with a supplied CAS
      */
@@ -337,7 +337,7 @@ typedef enum {
      * CAS of the item on each server with the item specified in the input.
      * The durability operation is considered complete when all items' CAS
      * values match. If the CAS value on the master node changes then the
-     * durability operation will fail with ::LCB_KEY_EEXISTS.
+     * durability operation will fail with ::LCB_ERR_DOCUMENT_EXISTS.
      *
      * @note
      * CAS may change either because of a failover or because of another
@@ -361,7 +361,7 @@ typedef struct {
     /**
      * Upper limit in microseconds from the scheduling of the command. When
      * this timeout occurs, all remaining non-verified keys will have their
-     * callbacks invoked with @ref LCB_ETIMEDOUT.
+     * callbacks invoked with @ref LCB_ERR_TIMEOUT.
      *
      * If this field is not set, the value of @ref LCB_CNTL_DURABILITY_TIMEOUT
      * will be used.
@@ -389,7 +389,7 @@ typedef struct {
      * 1 + the total number of configured replicas for the bucket which are part
      * of the cluster. If this number is higher then it will either be
      * automatically capped to the maximum available if (#cap_max is set) or
-     * will result in an ::LCB_DURABILITY_ETOOMANY error.
+     * will result in an ::LCB_ERR_DURABILITY_TOO_MANY error.
      */
     lcb_U16 persist_to;
 
@@ -403,7 +403,7 @@ typedef struct {
      * The maximum valid value for this field is the total number of configured
      * replicas which are part of the cluster. If this number is higher then
      * it will either be automatically capped to the maximum available
-     * if (#cap_max is set) or will result in an ::LCB_DURABILITY_ETOOMANY
+     * if (#cap_max is set) or will result in an ::LCB_ERR_DURABILITY_TOO_MANY
      * error.
      * */
     lcb_U16 replicate_to;
@@ -520,9 +520,9 @@ typedef struct {
  * @par Scheduling Errors
  * The following errors may be encountered when scheduling:
  *
- * @cb_err ::LCB_DURABILITY_ETOOMANY if either lcb_DURABILITYOPTS::persist_to or
+ * @cb_err ::LCB_ERR_DURABILITY_TOO_MANY if either lcb_DURABILITYOPTS::persist_to or
  * lcb_DURABILITYOPTS::replicate_to is too big. `err` may indicate this.
- * @cb_err ::LCB_DURABILITY_NO_MUTATION_TOKENS if no relevant mutation token
+ * @cb_err ::LCB_ERR_DURABILITY_NO_MUTATION_TOKENS if no relevant mutation token
  * could be found for a given command (this is returned from the relevant
  * lcb_MULTICMD_CTX::addcmd call).
  * @cb_err ::LCB_DUPLICATE_COMMANDS if using CAS-based durability and the
@@ -531,11 +531,11 @@ typedef struct {
  *
  * @par Callback Errors
  * The following errors may be returned in the callback:
- * @cb_err ::LCB_ETIMEDOUT if the criteria could not be verified within the
+ * @cb_err ::LCB_ERR_TIMEOUT if the criteria could not be verified within the
  * accepted timeframe (see lcb_DURABILITYOPTSv0::timeout)
- * @cb_err ::LCB_KEY_EEXISTS if using CAS-based durability and the item's
+ * @cb_err ::LCB_ERR_DOCUMENT_EXISTS if using CAS-based durability and the item's
  * CAS has been changed on the master node
- * @cb_err ::LCB_MUTATION_LOST if using sequence-based durability and the
+ * @cb_err ::LCB_ERR_MUTATION_LOST if using sequence-based durability and the
  * server has detected that data loss has occurred due to a failover.
  *
  * @par Creating request context
@@ -635,9 +635,9 @@ lcb_MULTICMD_CTX *lcb_endure3_ctxnew(lcb_INSTANCE *instance, const lcb_durabilit
  *  as lcb_DURABILITYOPTSv0::cap_max.
  *
  * @return LCB_SUCCESS on success
- * @return LCB_DURABILITY_ETOOMANY if the requirements exceed the number of
+ * @return LCB_ERR_DURABILITY_TOO_MANY if the requirements exceed the number of
  *  servers currently available, and `CAPMAX` was not specifie
- * @return LCB_EINVAL if both `persist_to` and `replicate_to` are 0.
+ * @return LCB_ERR_INVALID_ARGUMENT if both `persist_to` and `replicate_to` are 0.
  */
 LIBCOUCHBASE_API
 lcb_STATUS lcb_durability_validate(lcb_INSTANCE *instance, lcb_U16 *persist_to, lcb_U16 *replicate_to, int options);
@@ -886,8 +886,8 @@ struct lcb_CMDREMOVE_ {
  * using the lcb_endure3_ctxnew() function. You can also use the
  * @ref lcb_MUTATION_TOKEN (via lcb_resp_get_mutation_token)
  *
- * The lcb_RESPREMOVE::rc field may be set to ::LCB_KEY_ENOENT if the item does
- * not exist, or ::LCB_KEY_EEXISTS if a CAS was specified and the item has since
+ * The lcb_RESPREMOVE::rc field may be set to ::LCB_ERR_DOCUMENT_NOT_FOUND if the item does
+ * not exist, or ::LCB_ERR_DOCUMENT_EXISTS if a CAS was specified and the item has since
  * been mutated.
  */
 struct lcb_RESPREMOVE_ {
@@ -937,14 +937,13 @@ struct lcb_RESPEXISTS_ {
     uint64_t seqno;
 };
 
-
 /**
  * @brief Command for counter operations.
  * @see lcb_counter3(), lcb_RESPCOUNTER.
  *
  * @warning You may only set the #exptime member if the #create member is set
  * to a true value. Setting `exptime` otherwise will cause the operation to
- * fail with @ref LCB_OPTIONS_CONFLICT
+ * fail with @ref LCB_ERR_OPTIONS_CONFLICT
  *
  * @warning The #cas member should be set to 0 for this operation. As this
  * operation itself is atomic, specifying a CAS is not necessary.
@@ -1196,7 +1195,7 @@ struct lcb_CMDVIEW_ {
      */
     unsigned docs_concurrent_max;
 
-    /**Callback to invoke for each row. If not provided, @ref LCB_EINVAL will
+    /**Callback to invoke for each row. If not provided, @ref LCB_ERR_INVALID_ARGUMENT will
      * be returned from lcb_view_query() */
     lcb_VIEW_CALLBACK callback;
 
@@ -1345,7 +1344,7 @@ typedef enum {
      *
      * Currently the value for this operation must be a JSON primitive (i.e.
      * no arrays or dictionaries) and the existing array itself must also
-     * contain only primitives (otherwise a @ref LCB_SUBDOC_PATH_MISMATCH
+     * contain only primitives (otherwise a @ref LCB_ERR_SUBDOC_PATH_MISMATCH
      * error will be received).
      */
     LCB_SDCMD_ARRAY_ADD_UNIQUE,
@@ -1791,7 +1790,7 @@ struct lcb_RESPGETCID_ {
                 break;                                                                                                 \
             default:                                                                                                   \
                 free(ret);                                                                                             \
-                return LCB_EINVAL;                                                                                     \
+                return LCB_ERR_INVALID_ARGUMENT;                                                                       \
                 break;                                                                                                 \
         }                                                                                                              \
         ret->cmdflags |= LCB_CMD_F_CLONE;                                                                              \

@@ -50,7 +50,7 @@ void subdoc_callback(lcb_INSTANCE *, int, const lcb_RESPSUBDOC *resp)
     std::string key = get_resp_key(resp);
 
     rc = lcb_respsubdoc_status(resp);
-    if (rc == LCB_SUCCESS || rc == LCB_SUBDOC_MULTI_FAILURE) {
+    if (rc == LCB_SUCCESS || rc == LCB_ERR_SUBDOC_GENERIC) {
         uint64_t cas;
         lcb_respsubdoc_cas(resp, &cas);
         fprintf(stderr, "%-20s CAS=0x%" PRIx64 "\n", key.c_str(), cas);

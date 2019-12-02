@@ -116,7 +116,7 @@ lcb_STATUS collcache_exec_str(std::string collection, lcb_INSTANCE *instance, vo
 {
     if (!LCBT_SETTING(instance, use_collections)) {
         if (!collection.empty()) {
-            return LCB_NOT_SUPPORTED;
+            return LCB_ERR_UNSUPPORTED_OPERATION;
         }
         return cb(0, instance, cookie, arg);
     }
@@ -128,17 +128,17 @@ lcb_STATUS collcache_exec_str(std::string collection, lcb_INSTANCE *instance, vo
 
     mc_CMDQUEUE *cq = &instance->cmdq;
     if (cq->config == NULL) {
-        return LCB_CLIENT_ETMPFAIL;
+        return LCB_ERR_NO_CONFIGURATION;
     }
 
     /* TODO: rotate pipelines */
     if (cq->npipelines < 1) {
-        return LCB_NO_MATCHING_SERVER;
+        return LCB_ERR_NO_MATCHING_SERVER;
     }
     mc_PIPELINE *pl = cq->pipelines[0];
     mc_PACKET *pkt = mcreq_allocate_packet(pl);
     if (!pkt) {
-        return LCB_CLIENT_ENOMEM;
+        return LCB_ERR_NO_MEMORY;
     }
     mcreq_reserve_header(pl, pkt, MCREQ_PKT_BASESIZE);
     lcb_KEYBUF key = {};
@@ -167,11 +167,11 @@ lcb_STATUS collcache_exec(const char *scope, size_t nscope, const char *collecti
         lcb_COLLCACHE_ARG_CLONE clone, lcb_COLLCACHE_ARG_DTOR dtor, const void *arg)
 {
     if (LCBT_SETTING(instance, conntype) != LCB_TYPE_BUCKET) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ERR_UNSUPPORTED_OPERATION;
     }
     if (!LCBT_SETTING(instance, use_collections)) {
         if (scope != NULL || collection != NULL) {
-            return LCB_NOT_SUPPORTED;
+            return LCB_ERR_UNSUPPORTED_OPERATION;
         }
         return cb(0, instance, cookie, arg);
     }
@@ -224,19 +224,19 @@ lcb_STATUS lcb_getmanifest(lcb_INSTANCE *instance, void *cookie, const lcb_CMDGE
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     if (cq->config == NULL) {
-        return LCB_CLIENT_ETMPFAIL;
+        return LCB_ERR_NO_CONFIGURATION;
     }
     if (!LCBT_SETTING(instance, use_collections)) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ERR_UNSUPPORTED_OPERATION;
     }
     if (cq->npipelines < 1) {
-        return LCB_NO_MATCHING_SERVER;
+        return LCB_ERR_NO_MATCHING_SERVER;
     }
     mc_PIPELINE *pl = cq->pipelines[0];
 
     mc_PACKET *pkt = mcreq_allocate_packet(pl);
     if (!pkt) {
-        return LCB_CLIENT_ENOMEM;
+        return LCB_ERR_NO_MEMORY;
     }
     mcreq_reserve_header(pl, pkt, MCREQ_PKT_BASESIZE);
 
@@ -325,22 +325,22 @@ lcb_STATUS lcb_getcid(lcb_INSTANCE *instance, void *cookie, const lcb_CMDGETCID 
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     if (cq->config == NULL) {
-        return LCB_CLIENT_ETMPFAIL;
+        return LCB_ERR_NO_CONFIGURATION;
     }
     if (!LCBT_SETTING(instance, use_collections)) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ERR_UNSUPPORTED_OPERATION;
     }
     if (cmd->nscope == 0 || cmd->scope == NULL || cmd->ncollection == 0 || cmd->collection == NULL) {
-        return LCB_EINVAL;
+        return LCB_ERR_INVALID_ARGUMENT;
     }
     if (cq->npipelines < 1) {
-        return LCB_NO_MATCHING_SERVER;
+        return LCB_ERR_NO_MATCHING_SERVER;
     }
     mc_PIPELINE *pl = cq->pipelines[0];
 
     mc_PACKET *pkt = mcreq_allocate_packet(pl);
     if (!pkt) {
-        return LCB_CLIENT_ENOMEM;
+        return LCB_ERR_NO_MEMORY;
     }
     mcreq_reserve_header(pl, pkt, MCREQ_PKT_BASESIZE);
 

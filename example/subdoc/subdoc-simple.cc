@@ -54,7 +54,7 @@ static void subdoc_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSUBDOC *re
     lcb_STATUS rc = lcb_respsubdoc_status(resp);
 
     fprintf(stderr, "Got callback for %s.. ", lcb_strcbtype(cbtype));
-    if (rc != LCB_SUCCESS && rc != LCB_SUBDOC_MULTI_FAILURE) {
+    if (rc != LCB_SUCCESS && rc != LCB_ERR_SUBDOC_GENERIC) {
         fprintf(stderr, "Operation failed (%s)\n", lcb_strerror_short(rc));
         return;
     }

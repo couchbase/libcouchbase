@@ -228,7 +228,7 @@ static void chunk_callback(lcb_INSTANCE *instance, int, const lcb_RESPBASE *rb)
                 req->lasterr = rh->rc;
             } else {
                 lcb_log(LOGARGS(instance, DEBUG), "Got not ok http status %d", rh->htstatus);
-                req->lasterr = LCB_HTTP_ERROR;
+                req->lasterr = LCB_ERR_HTTP;
             }
         }
         req->ref();
@@ -304,7 +304,7 @@ void lcb_VIEW_HANDLE_::JSPARSE_on_row(const lcb::jsparse::Row &datum)
 
 void lcb_VIEW_HANDLE_::JSPARSE_on_error(const std::string &)
 {
-    invoke_last(LCB_PROTOCOL_ERROR);
+    invoke_last(LCB_ERR_PROTOCOL_ERROR);
 }
 
 void lcb_VIEW_HANDLE_::JSPARSE_on_complete(const std::string &)
@@ -458,11 +458,11 @@ lcb_VIEW_HANDLE_::lcb_VIEW_HANDLE_(lcb_INSTANCE *instance_, const void *cookie_,
 
     // Validate:
     if (cmd->nddoc == 0 || cmd->nview == 0 || callback == NULL) {
-        lasterr = LCB_EINVAL;
+        lasterr = LCB_ERR_INVALID_ARGUMENT;
     } else if (is_include_docs() && is_no_rowparse()) {
-        lasterr = LCB_OPTIONS_CONFLICT;
+        lasterr = LCB_ERR_OPTIONS_CONFLICT;
     } else if (cmd->noptstr > MAX_GET_URI_LENGTH) {
-        lasterr = LCB_E2BIG;
+        lasterr = LCB_ERR_VALUE_TOO_LARGE;
     }
     if (lasterr != LCB_SUCCESS) {
         return;

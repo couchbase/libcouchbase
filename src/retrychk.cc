@@ -39,20 +39,20 @@ lcb_should_retry(const lcb_settings *settings, const mc_PACKET *pkt, lcb_STATUS 
         return 0;
     }
 
-    if (err == LCB_ETIMEDOUT || err == LCB_MAP_CHANGED) {
+    if (err == LCB_ERR_TIMEOUT || err == LCB_ERR_MAP_CHANGED) {
         /* We can't exceed a timeout for ETIMEDOUT */
         /* MAP_CHANGED is sent after we've already called this function on the
          * packet once before */
         return 0;
-    } else if (err == LCB_AUTH_ERROR) {
+    } else if (err == LCB_ERR_AUTHENTICATION) {
         /* spurious auth error */
         return 1;
-    } else if (err == LCB_NOT_MY_VBUCKET) {
+    } else if (err == LCB_ERR_NOT_MY_VBUCKET) {
         mode = LCB_RETRY_ON_VBMAPERR;
-    } else if (err == LCB_MAX_ERROR) {
+    } else if (err == LCB_ERR_TOPOLOGY_CHANGE) {
         /* special, topology change */
         mode = LCB_RETRY_ON_TOPOCHANGE;
-    } else if (LCB_EIFNET(err)) {
+    } else if (LCB_ERROR_IS_NETWORK(err)) {
         mode = LCB_RETRY_ON_SOCKERR;
     } else {
         /* invalid mode */

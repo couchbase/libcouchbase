@@ -61,7 +61,7 @@ static lcb_STATUS convert_lcberr(const lcbio_CTX *ctx, lcbio_IOSTATUS status)
     } else if (oserr != 0) {
         return lcbio_mklcberr(oserr, settings);
     } else {
-        return LCB_NETWORK_ERROR;
+        return LCB_ERR_NETWORK;
     }
 }
 
@@ -189,20 +189,20 @@ void lcbio_ctx_put(lcbio_CTX *ctx, const void *buf, unsigned nbuf)
         ctx->output = erb = calloc(1, sizeof(*ctx->output));
 
         if (!erb) {
-            lcbio_ctx_senderr(ctx, LCB_CLIENT_ENOMEM);
+            lcbio_ctx_senderr(ctx, LCB_ERR_NO_MEMORY);
             return;
         }
 
         erb->parent = ctx;
 
         if (!ringbuffer_initialize(&erb->rb, nbuf)) {
-            lcbio_ctx_senderr(ctx, LCB_CLIENT_ENOMEM);
+            lcbio_ctx_senderr(ctx, LCB_ERR_NO_MEMORY);
             return;
         }
     }
 
     if (!ringbuffer_ensure_capacity(&erb->rb, nbuf)) {
-        lcbio_ctx_senderr(ctx, LCB_CLIENT_ENOMEM);
+        lcbio_ctx_senderr(ctx, LCB_ERR_NO_MEMORY);
         return;
     }
 
