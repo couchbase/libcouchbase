@@ -996,7 +996,7 @@ GT_DESTROY:
     return err;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_cancel(lcb_INSTANCE *, lcb_ANALYTICS_HANDLE *handle)
+LIBCOUCHBASE_API lcb_STATUS lcb_analytics_cancel(lcb_INSTANCE *, lcb_ANALYTICS_HANDLE *handle)
 {
     if (handle->callback) {
         handle->callback = NULL;
