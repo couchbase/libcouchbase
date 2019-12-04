@@ -185,6 +185,57 @@ void lcb_errmap_free(ErrorMap *m)
     delete m;
 }
 
+LIBCOUCHBASE_API int lcb_retry_reason_allows_non_idempotent_retry(lcb_RETRY_REASON code)
+{
+#define X(n, c, nir, ar)                                                                                               \
+    if (code == c) {                                                                                                   \
+        return nir;                                                                                                    \
+    }
+    LCB_XRETRY_REASON(X)
+#undef X
+    return 0;
+}
+
+LIBCOUCHBASE_API int lcb_retry_reason_is_always_retry(lcb_RETRY_REASON code)
+{
+#define X(n, c, nir, ar)                                                                                               \
+    if (code == c) {                                                                                                   \
+        return ar;                                                                                                     \
+    }
+    LCB_XRETRY_REASON(X)
+#undef X
+    return 0;
+}
+
+LIBCOUCHBASE_API int lcb_retry_request_is_idempotent(lcb_RETRY_REQUEST *req)
+{
+    return req->is_idempotent;
+}
+
+LIBCOUCHBASE_API int lcb_retry_request_retry_attempts(lcb_RETRY_REQUEST *req)
+{
+    return req->retry_attempts;
+}
+
+lcb_RETRY_ACTION lcb_retry_strategy_best_effort(lcb_RETRY_REQUEST *req, lcb_RETRY_REASON reason)
+{
+    lcb_RETRY_ACTION res{0, 0};
+    if (lcb_retry_request_is_idempotent(req) || lcb_retry_reason_allows_non_idempotent_retry(reason)) {
+        res.should_retry = 1;
+        res.retry_after_ms = 0;
+    }
+    return res;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_retry_strategy(lcb_INSTANCE *instance, lcb_RETRY_STRATEGY strategy)
+{
+    if (strategy == NULL || instance == NULL) {
+        return LCB_ERR_INVALID_ARGUMENT;
+    }
+    instance->settings->retry_strategy = strategy;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_kv_rc(const lcb_KEY_VALUE_ERROR_CONTEXT *ctx)
 {
     return ctx->rc;

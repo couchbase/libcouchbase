@@ -335,6 +335,51 @@ typedef lcb_STATUS (*lcb_errmap_callback)(lcb_INSTANCE *instance, lcb_U16 bincod
 LIBCOUCHBASE_API
 lcb_errmap_callback lcb_set_errmap_callback(lcb_INSTANCE *instance, lcb_errmap_callback);
 
+/* clang-format off */
+#define LCB_XRETRY_REASON(X)                                                                                 \
+    /* name,                                                 code,   non_idempotent_retry,   always_retry */ \
+    X(LCB_RETRY_REASON_UNKNOWN,                              0,      0,                      0)              \
+    X(LCB_RETRY_REASON_SOCKET_NOT_AVAILABLE,                 1,      1,                      0)              \
+    X(LCB_RETRY_REASON_SERVICE_NOT_AVAILABLE,                2,      1,                      0)              \
+    X(LCB_RETRY_REASON_NODE_NOT_AVAILABLE,                   3,      1,                      0)              \
+    X(LCB_RETRY_REASON_KV_NOT_MY_VBUCKET,                    4,      1,                      1)              \
+    X(LCB_RETRY_REASON_KV_COLLECTION_OUTDATED,               5,      1,                      1)              \
+    X(LCB_RETRY_REASON_KV_ERROR_MAP_RETRY_INDICATED,         6,      1,                      0)              \
+    X(LCB_RETRY_REASON_KV_LOCKED,                            7,      1,                      0)              \
+    X(LCB_RETRY_REASON_KV_TEMPORARY_FAILURE,                 8,      1,                      0)              \
+    X(LCB_RETRY_REASON_KV_SYNC_WRITE_IN_PROGRESS,            9,      1,                      0)              \
+    X(LCB_RETRY_REASON_KV_SYNC_WRITE_RE_COMMIT_IN_PROGRESS,  10,     1,                      0)              \
+    X(LCB_RETRY_REASON_SERVICE_RESPONSE_CODE_INDICATED,      11,     1,                      0)              \
+    X(LCB_RETRY_REASON_SOCKET_CLOSED_WHILE_IN_FLIGHT,        12,     0,                      0)              \
+    X(LCB_RETRY_REASON_CIRCUIT_BREAKER_OPEN,                 13,     1,                      0)              \
+    X(LCB_RETRY_REASON_QUERY_PREPARED_STATEMENT_FAILURE,     14,     1,                      0)              \
+    X(LCB_RETRY_REASON_ANALYTICS_TEMPORARY_FAILURE,          15,     1,                      0)              \
+    X(LCB_RETRY_REASON_SEARCH_TOO_MANY_REQUESTS,             16,     1,                      0)
+/* clang-format on */
+
+typedef enum {
+#define X(n, c, nir, ar) n = c,
+    LCB_XRETRY_REASON(X)
+#undef X
+} lcb_RETRY_REASON;
+
+typedef struct lcb_RETRY_REQUEST_ lcb_RETRY_REQUEST;
+
+LIBCOUCHBASE_API int lcb_retry_reason_allows_non_idempotent_retry(lcb_RETRY_REASON code);
+LIBCOUCHBASE_API int lcb_retry_reason_is_always_retry(lcb_RETRY_REASON code);
+
+LIBCOUCHBASE_API int lcb_retry_request_is_idempotent(lcb_RETRY_REQUEST *req);
+LIBCOUCHBASE_API int lcb_retry_request_retry_attempts(lcb_RETRY_REQUEST *req);
+
+typedef struct {
+    uint32_t should_retry;
+    uint32_t retry_after_ms;
+} lcb_RETRY_ACTION;
+
+typedef lcb_RETRY_ACTION (*lcb_RETRY_STRATEGY)(lcb_RETRY_REQUEST *req, lcb_RETRY_REASON reason);
+
+LIBCOUCHBASE_API lcb_STATUS lcb_retry_strategy(lcb_INSTANCE *instance, lcb_RETRY_STRATEGY strategy);
+
 #ifdef __cplusplus
 }
 #endif

@@ -168,8 +168,8 @@ bool Server::handle_nmv(MemcachedResponse &resinfo, mc_PACKET *oldpkt)
         }
         instance->bootstrap(bs_options);
     }
-
-    if (!lcb_should_retry(settings, oldpkt, LCB_ERR_NOT_MY_VBUCKET)) {
+    lcb_RETRY_ACTION retry = lcb_kv_should_retry(settings, oldpkt, LCB_ERR_NOT_MY_VBUCKET);
+    if (!retry.should_retry) {
         return false;
     }
 
@@ -528,7 +528,8 @@ bool Server::maybe_retry_packet(mc_PACKET *pkt, lcb_STATUS err)
         /** memcached bucket */
         return false;
     }
-    if (!lcb_should_retry(settings, pkt, err)) {
+    lcb_RETRY_ACTION retry = lcb_kv_should_retry(settings, pkt, err);
+    if (!retry.should_retry) {
         return false;
     }
 

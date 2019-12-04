@@ -240,7 +240,7 @@ lcb_STATUS lcb_initialize_socket_subsystem(void);
 
 lcb_STATUS lcb_reinit(lcb_INSTANCE *obj, const char *connstr);
 
-int lcb_should_retry(const lcb_settings *settings, const mc_PACKET *pkt, lcb_STATUS err);
+lcb_RETRY_ACTION lcb_kv_should_retry(const lcb_settings *settings, const mc_PACKET *pkt, lcb_STATUS err);
 
 lcb_RESPCALLBACK lcb_find_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE cbtype);
 
