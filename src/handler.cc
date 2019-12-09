@@ -987,17 +987,6 @@ H_touch(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
 }
 
 static void
-H_flush(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
-        lcb_STATUS immerr)
-{
-    lcb_INSTANCE *root = get_instance(pipeline);
-    lcb_RESPFLUSH resp = { 0 };
-    mc_REQDATAEX *exdata = request->u_rdata.exdata;
-    make_error(root, &resp, response, immerr);
-    exdata->procs->handler(pipeline, request, resp.rc, &resp);
-}
-
-static void
 H_unlock(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
          lcb_STATUS immerr)
 {
@@ -1133,9 +1122,6 @@ mcreq_dispatch_response(
 
     case PROTOCOL_BINARY_CMD_STAT:
         INVOKE_OP(H_stats);
-
-    case PROTOCOL_BINARY_CMD_FLUSH:
-        INVOKE_OP(H_flush);
 
     case PROTOCOL_BINARY_CMD_VERSION:
         INVOKE_OP(H_version);

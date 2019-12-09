@@ -314,9 +314,6 @@ typedef struct {
  */
 LIBCOUCHBASE_API
 lcb_STATUS lcb_stats3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS *cmd);
-
-LIBCOUCHBASE_API lcb_CMDSTATS *lcb_cmdstats_alloc(void);
-LIBCOUCHBASE_API void lcb_cmdstats_dispose(lcb_CMDSTATS *cmd);
 /**@} (Name: Stats) */
 
 /**@name Server Versions
@@ -342,9 +339,6 @@ typedef struct {
  */
 LIBCOUCHBASE_API
 lcb_STATUS lcb_server_versions3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDVERSIONS *cmd);
-
-LIBCOUCHBASE_API lcb_CMDVERSIONS *lcb_cmdversions_alloc(void);
-LIBCOUCHBASE_API void lcb_cmdversions_dispose(lcb_CMDVERSIONS *cmd);
 /**@} (Name: MCversion) */
 
 /**
@@ -370,9 +364,6 @@ typedef lcb_RESPSERVERBASE lcb_RESPVERBOSITY;
 /**@volatile*/
 LIBCOUCHBASE_API
 lcb_STATUS lcb_server_verbosity3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDVERBOSITY *cmd);
-
-LIBCOUCHBASE_API lcb_CMDVERBOSITY *lcb_cmdverbosity_alloc(void);
-LIBCOUCHBASE_API void lcb_cmdverbosity_dispose(lcb_CMDVERBOSITY *cmd);
 /**@} (Name: Verbosity) */
 /**@} (Group: Misc) */
 
@@ -419,14 +410,6 @@ typedef struct {
  */
 LIBCOUCHBASE_API
 lcb_STATUS lcb_cbflush3(lcb_INSTANCE *instance, void *cookie, const lcb_CMDCBFLUSH *cmd);
-
-LIBCOUCHBASE_API lcb_CMDCBFLUSH *lcb_cmdcbflush_alloc(void);
-LIBCOUCHBASE_API void lcb_cmdcbflush_dispose(lcb_CMDCBFLUSH *cmd);
-
-typedef struct {
-    LCB_CMD_BASE;
-} lcb_CMDFLUSH;
-typedef lcb_RESPSERVERBASE lcb_RESPFLUSH;
 /**@} (Group: Flush) */
 
 /**
@@ -454,9 +437,6 @@ typedef lcb_RESPSERVERBASE lcb_RESPNOOP;
  */
 LIBCOUCHBASE_API
 lcb_STATUS lcb_noop3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDNOOP *cmd);
-
-LIBCOUCHBASE_API lcb_CMDNOOP *lcb_cmdnoop_alloc(void);
-LIBCOUCHBASE_API void lcb_cmdnoop_dispose(lcb_CMDNOOP *cmd);
 /**@} (Group: NOOP) */
 
 /**
