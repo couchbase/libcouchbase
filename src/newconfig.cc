@@ -211,7 +211,7 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *)
 
     } else {
         const char *key = NULL;
-        lcb_SIZE nkey = 0;
+        size_t nkey = 0;
         int tmpid;
 
         /* XXX: We ignore hashkey. This is going away soon, and is probably

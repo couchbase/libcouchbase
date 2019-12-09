@@ -249,7 +249,7 @@ TEST_F(McFwd, testNoMap)
 
     // Get the key
     const char *key;
-    lcb_SIZE nkey;
+    size_t nkey;
     mcreq_get_key(NULL, pkt_tmp, &key, &nkey);
     ASSERT_EQ(0, nkey);
 
