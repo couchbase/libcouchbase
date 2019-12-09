@@ -55,13 +55,13 @@ static void stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_STATUS err, const
     callback = lcb_find_callback(instance, LCB_CALLBACK_STATS);
 
     if (!arg) {
-        lcb_RESPSTATS s_resp = {0};
+        lcb_RESPSTATS s_resp{};
         if (--ck->remaining) {
             /* still have other servers which must reply. */
             return;
         }
 
-        s_resp.rc = err;
+        s_resp.ctx.rc = err;
         s_resp.cookie = const_cast< void * >(ck->cookie);
         s_resp.rflags = LCB_RESP_F_CLIENTGEN | LCB_RESP_F_FINAL;
         callback(instance, LCB_CALLBACK_STATS, (lcb_RESPBASE *)&s_resp);
@@ -193,7 +193,7 @@ static void handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS err, 
         u_resp.base->rflags = LCB_RESP_F_CLIENTGEN;
     }
 
-    u_resp.base->rc = err;
+    u_resp.base->ctx.rc = err;
     u_resp.base->cookie = const_cast< void * >(ck->cookie);
 
     std::string epbuf;
@@ -206,7 +206,7 @@ static void handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS err, 
     }
 
     u_empty.base.server = NULL;
-    u_empty.base.rc = err;
+    u_empty.base.ctx.rc = err;
     u_empty.base.rflags = LCB_RESP_F_CLIENTGEN | LCB_RESP_F_FINAL;
     u_empty.base.cookie = const_cast< void * >(ck->cookie);
     callback(server->get_instance(), ck->type, (lcb_RESPBASE *)&u_empty.base);

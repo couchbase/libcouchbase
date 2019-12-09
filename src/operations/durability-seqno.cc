@@ -52,8 +52,8 @@ static void seqno_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
     Item *ent = static_cast< Item * >(reinterpret_cast< CallbackCookie * >(resp->cookie));
 
     /* Now, process the response */
-    if (resp->rc != LCB_SUCCESS) {
-        ent->res().rc = resp->rc;
+    if (resp->ctx.rc != LCB_SUCCESS) {
+        ent->res().ctx.rc = resp->ctx.rc;
         goto GT_TALLY;
     }
 
@@ -123,7 +123,7 @@ lcb_STATUS SeqnoDurset::poll_impl()
                 waiting++;
                 has_ops = true;
             } else {
-                ent.res().rc = ret_err = err;
+                ent.res().ctx.rc = ret_err = err;
             }
         }
     }

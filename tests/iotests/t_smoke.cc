@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 #include "iotests.h"
 #include <libcouchbase/utils.h>
+#include "internalstructs.h"
 
 using std::string;
 using std::vector;
@@ -159,14 +160,14 @@ static void version_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPMC
     lcb_size_t nvstring = resp->nversion;
     rvbuf *rv = (rvbuf *)resp->cookie;
     char *str;
-    EXPECT_EQ(LCB_SUCCESS, resp->rc);
+    EXPECT_EQ(LCB_SUCCESS, resp->ctx.rc);
 
     if (server_endpoint == NULL) {
         assert(rv->counter == 0);
         return;
     }
 
-    rv->setError(resp->rc);
+    rv->setError(resp->ctx.rc);
     /*copy the key to an allocated buffer and ensure the key read from vstring
      * will not segfault
      */

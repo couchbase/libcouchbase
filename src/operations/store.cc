@@ -26,32 +26,20 @@ LIBCOUCHBASE_API int lcb_mutation_token_is_valid(const lcb_MUTATION_TOKEN *token
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_status(const lcb_RESPSTORE *resp)
 {
-    return resp->rc;
+    return resp->ctx.rc;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_respstore_error_context(const lcb_RESPSTORE *resp, const char **ctx, size_t *ctx_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_respstore_error_context(const lcb_RESPSTORE *resp,
+                                                        const lcb_KEY_VALUE_ERROR_CONTEXT **ctx)
 {
-    if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
-        return LCB_ERR_DOCUMENT_NOT_FOUND;
+    if (resp->rflags & LCB_RESP_F_ERRINFO) {
+        lcb_RESPSTORE *mut = const_cast< lcb_RESPSTORE * >(resp);
+        mut->ctx.context = lcb_resp_get_error_context(LCB_CALLBACK_STORE, (const lcb_RESPBASE *)resp);
+        mut->ctx.context_len = strlen(resp->ctx.context);
+        mut->ctx.ref = lcb_resp_get_error_ref(LCB_CALLBACK_STORE, (const lcb_RESPBASE *)resp);
+        mut->ctx.ref_len = strlen(resp->ctx.ref);
     }
-    const char *val = lcb_resp_get_error_context(LCB_CALLBACK_STORE, (const lcb_RESPBASE *)resp);
-    if (val) {
-        *ctx = val;
-        *ctx_len = strlen(val);
-    }
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API lcb_STATUS lcb_respstore_error_ref(const lcb_RESPSTORE *resp, const char **ref, size_t *ref_len)
-{
-    if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
-        return LCB_ERR_DOCUMENT_NOT_FOUND;
-    }
-    const char *val = lcb_resp_get_error_ref(LCB_CALLBACK_STORE, (const lcb_RESPBASE *)resp);
-    if (val) {
-        *ref = val;
-        *ref_len = strlen(val);
-    }
+    *ctx = &resp->ctx;
     return LCB_SUCCESS;
 }
 
@@ -63,14 +51,14 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respstore_cookie(const lcb_RESPSTORE *resp, void
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_cas(const lcb_RESPSTORE *resp, uint64_t *cas)
 {
-    *cas = resp->cas;
+    *cas = resp->ctx.cas;
     return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_key(const lcb_RESPSTORE *resp, const char **key, size_t *key_len)
 {
-    *key = (char *)resp->key;
-    *key_len = resp->nkey;
+    *key = (char *)resp->ctx.key;
+    *key_len = resp->ctx.key_len;
     return LCB_SUCCESS;
 }
 
@@ -264,7 +252,7 @@ struct DurStoreCtx : mc_REQDATAEX {
 static void handle_dur_storecb(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS err, const void *arg)
 {
     lcb_RESPCALLBACK cb;
-    lcb_RESPSTORE resp = {0};
+    lcb_RESPSTORE resp{};
     lcb_CMDENDURE dcmd = {0};
     const lcb_MUTATION_TOKEN *mt;
     DurStoreCtx *dctx = static_cast< DurStoreCtx * >(pkt->u_rdata.exdata);
@@ -276,14 +264,14 @@ static void handle_dur_storecb(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS err, co
     if (err != LCB_SUCCESS) {
         goto GT_BAIL;
     }
-    if (sresp->rc != LCB_SUCCESS) {
-        err = sresp->rc;
+    if (sresp->ctx.rc != LCB_SUCCESS) {
+        err = sresp->ctx.rc;
         goto GT_BAIL;
     }
 
     resp.store_ok = 1;
-    LCB_CMD_SET_KEY(&dcmd, sresp->key, sresp->nkey);
-    dcmd.cas = sresp->cas;
+    LCB_CMD_SET_KEY(&dcmd, sresp->ctx.key, sresp->ctx.key_len);
+    dcmd.cas = sresp->ctx.cas;
 
     mt = lcb_resp_get_mutation_token(LCB_CALLBACK_STORE, (const lcb_RESPBASE *)sresp);
     if (LCB_MUTATION_TOKEN_ISVALID(mt)) {
@@ -321,11 +309,11 @@ static void handle_dur_storecb(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS err, co
     }
 
 GT_BAIL : {
-    lcb_RESPENDURE dresp = {0};
-    resp.key = sresp->key;
-    resp.nkey = sresp->nkey;
+    lcb_RESPENDURE dresp{};
+    resp.ctx.key = sresp->ctx.key;
+    resp.ctx.key_len = sresp->ctx.key_len;
     resp.cookie = sresp->cookie;
-    resp.rc = err;
+    resp.ctx.rc = err;
     resp.dur_resp = &dresp;
     cb = lcb_find_callback(dctx->instance, LCB_CALLBACK_STORE);
     cb(dctx->instance, LCB_CALLBACK_STORE, (const lcb_RESPBASE *)&resp);

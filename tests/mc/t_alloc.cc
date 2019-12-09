@@ -143,7 +143,7 @@ TEST_F(McAlloc, testKeyAlloc)
     lcb_VALBUF vreq;
     memset(&vreq, 0, sizeof(vreq));
 
-    const void *key;
+    const char *key;
     lcb_size_t nkey;
     // Get back the key we just placed inside the header
     mcreq_get_key(NULL, packet, &key, &nkey);

@@ -21,7 +21,7 @@
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respping_status(const lcb_RESPPING *resp)
 {
-    return resp->rc;
+    return resp->ctx.rc;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respping_cookie(const lcb_RESPPING *resp, void **cookie)
@@ -450,8 +450,8 @@ static void handle_http(lcb_INSTANCE *instance, lcb_PING_SERVICE type, const lcb
         }
         svc.server = strdup(hh.c_str());
         svc.latency = gethrtime() - htreq->start;
-        svc.rc = resp->rc;
-        switch (resp->rc) {
+        svc.rc = resp->ctx.rc;
+        switch (resp->ctx.rc) {
             case LCB_ERR_TIMEOUT:
                 svc.status = LCB_PING_STATUS_TIMEOUT;
                 break;
@@ -600,7 +600,7 @@ lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const lcb_CMDPING *cmd
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respdiag_status(const lcb_RESPDIAG *resp)
 {
-    return resp->rc;
+    return resp->ctx.rc;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respdiag_cookie(const lcb_RESPDIAG *resp, void **cookie)
@@ -729,7 +729,7 @@ lcb_STATUS lcb_diag(lcb_INSTANCE *instance, void *cookie, const lcb_CMDDIAG *cmd
     std::string json = w->write(root);
     delete w;
 
-    lcb_RESPDIAG resp = {0};
+    lcb_RESPDIAG resp{};
     lcb_RESPCALLBACK callback;
 
     resp.njson = json.size();

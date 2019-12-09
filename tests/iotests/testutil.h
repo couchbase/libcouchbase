@@ -68,7 +68,7 @@ struct Item {
     {
         key.assign((const char *)resp->key, resp->nkey);
         cas = resp->cas;
-        err = resp->rc;
+        err = resp->ctx.rc;
     }
 
     Item()

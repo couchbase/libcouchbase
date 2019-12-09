@@ -73,8 +73,9 @@ class DurabilityOperation
     void assign(const lcb_RESPENDURE *resp)
     {
         this->resp = *resp;
-        key.assign((const char *)resp->key, resp->nkey);
-        this->resp.key = NULL;
+        key.assign((const char *)resp->ctx.key, resp->ctx.key_len);
+        this->resp.ctx.key = NULL;
+        this->resp.ctx.key_len = 0;
     }
 
     void wait(lcb_INSTANCE *instance)
@@ -117,7 +118,7 @@ class DurabilityOperation
 
     void assertCriteriaMatch(const lcb_durability_opts_st &opts)
     {
-        ASSERT_EQ(LCB_SUCCESS, resp.rc);
+        ASSERT_EQ(LCB_SUCCESS, resp.ctx.rc);
         ASSERT_TRUE(resp.persisted_master != 0);
         ASSERT_TRUE(opts.v.v0.persist_to <= resp.npersisted);
         ASSERT_TRUE(opts.v.v0.replicate_to <= resp.nreplicated);
@@ -131,10 +132,10 @@ class DurabilityOperation
         }
         std::stringstream ss;
         ss << "Key: " << key << std::endl
-           << "Error: " << resp.rc << std::endl
+           << "Error: " << resp.ctx.rc << std::endl
            << "Persisted (master?): " << resp.npersisted << " (" << resp.persisted_master << ")" << std::endl
            << "Replicated: " << resp.nreplicated << std::endl
-           << "CAS: 0x" << std::hex << resp.cas << std::endl;
+           << "CAS: 0x" << std::hex << resp.ctx.cas << std::endl;
         str += ss.str();
     }
 
@@ -181,11 +182,11 @@ class DurabilityMultiOperation
 
     void assign(const lcb_RESPENDURE *resp)
     {
-        ASSERT_GT(resp->nkey, 0U);
+        ASSERT_GT(resp->ctx.key_len, 0U);
         counter++;
 
         string key;
-        key.assign((const char *)resp->key, resp->nkey);
+        key.assign((const char *)resp->ctx.key, resp->ctx.key_len);
         ASSERT_TRUE(kmap.find(key) != kmap.end());
         kmap[key].assign(resp);
     }
@@ -214,7 +215,7 @@ class DurabilityMultiOperation
                 iter->second.assertCriteriaMatch(opts);
 
             } else if (_findItem(iter->second.key, items_missing, itm_tmp)) {
-                ASSERT_EQ(missing_err, iter->second.resp.rc);
+                ASSERT_EQ(missing_err, iter->second.resp.ctx.rc);
 
             } else {
                 ASSERT_STREQ("", "Key not in missing or OK list");
@@ -452,7 +453,7 @@ TEST_F(DurabilityUnitTest, testDelete)
     opts.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
     dop = DurabilityOperation();
     dop.run(instance, &opts, itm);
-    ASSERT_EQ(LCB_SUCCESS, dop.resp.rc);
+    ASSERT_EQ(LCB_SUCCESS, dop.resp.ctx.rc);
 }
 
 /**
@@ -492,7 +493,7 @@ TEST_F(DurabilityUnitTest, testModified)
     opts.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
     DurabilityOperation dop;
     dop.run(instance, &opts, kvo_stale.result);
-    ASSERT_EQ(LCB_SUCCESS, dop.resp.rc);
+    ASSERT_EQ(LCB_SUCCESS, dop.resp.ctx.rc);
 }
 
 /**
@@ -525,7 +526,7 @@ TEST_F(DurabilityUnitTest, testQuickTimeout)
     for (unsigned ii = 0; ii < 10; ii++) {
         DurabilityOperation dop;
         dop.run(instance, &opts, itm);
-        ASSERT_EQ(LCB_ERR_TIMEOUT, dop.resp.rc);
+        ASSERT_EQ(LCB_ERR_TIMEOUT, dop.resp.ctx.rc);
     }
 }
 
@@ -825,7 +826,7 @@ TEST_F(DurabilityUnitTest, testExternalSynctoken)
     DurabilityOperation dop;
     dop.run(instance2, &options, cmd);
     // TODO: How to actually run this?
-    ASSERT_EQ(LCB_SUCCESS, dop.resp.rc);
+    ASSERT_EQ(LCB_SUCCESS, dop.resp.ctx.rc);
 }
 
 TEST_F(DurabilityUnitTest, testOptionValidation)
@@ -1015,7 +1016,7 @@ TEST_F(DurabilityUnitTest, testFailoverAndSeqno)
     opts.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
     dop = DurabilityOperation();
     dop.run(instance, &opts, kvo.result);
-    ASSERT_EQ(LCB_SUCCESS, dop.resp.rc);
+    ASSERT_EQ(LCB_SUCCESS, dop.resp.ctx.rc);
 
     /* failover all nodes but master */
     lcbvb_CONFIG *vbc;
@@ -1034,5 +1035,5 @@ TEST_F(DurabilityUnitTest, testFailoverAndSeqno)
 
     dop = DurabilityOperation();
     dop.run(instance, &opts, kvo.result);
-    ASSERT_EQ(LCB_ERR_DURABILITY_TOO_MANY, dop.resp.rc);
+    ASSERT_EQ(LCB_ERR_DURABILITY_TOO_MANY, dop.resp.ctx.rc);
 }

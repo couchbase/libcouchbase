@@ -63,7 +63,7 @@ static void storecb(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
 {
     SnappyCookie *cookie = reinterpret_cast< SnappyCookie * >(rb->cookie);
     cookie->called = true;
-    cookie->rc = rb->rc;
+    cookie->rc = rb->ctx.rc;
 }
 static void getcb(lcb_INSTANCE *, int, const lcb_RESPGET *resp)
 {

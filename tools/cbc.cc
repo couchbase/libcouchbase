@@ -191,16 +191,17 @@ static void storePrintError(const lcb_RESPSTORE *resp, const char *message = NUL
     lcb_respstore_key(resp, &key, &sz);
     fprintf(stderr, "%-20.*s %s\n", (int)sz, key, lcb_strerror_short(lcb_respstore_status(resp)));
 
-    const char *ctx = NULL;
-    lcb_respstore_error_context(resp, &ctx, &sz);
-    if (ctx != NULL) {
-        fprintf(stderr, "%-20s %.*s\n", "", (int)sz, ctx);
+    const lcb_KEY_VALUE_ERROR_CONTEXT *ctx = NULL;
+    lcb_respstore_error_context(resp, &ctx);
+    const char *context, *ref;
+    size_t ncontext, nref;
+    lcb_errctx_kv_context(ctx, &context, &ncontext);
+    lcb_errctx_kv_ref(ctx, &ref, &nref);
+    if (context != NULL) {
+        fprintf(stderr, "%-20s %.*s\n", "", (int)ncontext, context);
     }
-
-    const char *ref = NULL;
-    lcb_respstore_error_ref(resp, &ref, &sz);
     if (ref != NULL) {
-        fprintf(stderr, "%-20s Ref: %.*s\n", "", (int)sz, ref);
+        fprintf(stderr, "%-20s Ref: %.*s\n", "", (int)nref, ref);
     }
 
     if (message) {
@@ -312,24 +313,24 @@ static void touch_callback(lcb_INSTANCE *, int type, const lcb_RESPTOUCH *resp)
 
 static void observe_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE cbtype, const lcb_RESPOBSERVE *resp)
 {
-    if (resp->nkey == 0) {
+    if (resp->ctx.key == 0) {
         return;
     }
 
-    string key((const char *)resp->key, resp->nkey);
-    if (resp->rc == LCB_SUCCESS) {
+    string key((const char *)resp->ctx.key, resp->ctx.key_len);
+    if (resp->ctx.rc == LCB_SUCCESS) {
         fprintf(stderr, "%-20s [%s] Status=0x%x, CAS=0x%" PRIx64 "\n", key.c_str(),
-                resp->ismaster ? "Master" : "Replica", resp->status, resp->cas);
+                resp->ismaster ? "Master" : "Replica", resp->status, resp->ctx.cas);
     } else {
-        printKeyError(key, resp->rc, cbtype, (const lcb_RESPBASE *)resp);
+        printKeyError(key, resp->ctx.rc, cbtype, (const lcb_RESPBASE *)resp);
     }
 }
 
 static void obseqno_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPOBSEQNO *resp)
 {
     int ix = resp->server_index;
-    if (resp->rc != LCB_SUCCESS) {
-        fprintf(stderr, "[%d] ERROR %s\n", ix, lcb_strerror_long(resp->rc));
+    if (resp->ctx.rc != LCB_SUCCESS) {
+        fprintf(stderr, "[%d] ERROR %s\n", ix, lcb_strerror_long(resp->ctx.rc));
         return;
     }
     lcb_U64 uuid, seq_disk, seq_mem;
@@ -352,16 +353,16 @@ static void obseqno_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPOB
 
 static void stats_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
 {
-    if (resp->rc != LCB_SUCCESS) {
-        fprintf(stderr, "ERROR %s\n", lcb_strerror_long(resp->rc));
+    if (resp->ctx.rc != LCB_SUCCESS) {
+        fprintf(stderr, "ERROR %s\n", lcb_strerror_long(resp->ctx.rc));
         return;
     }
-    if (resp->server == NULL || resp->key == NULL) {
+    if (resp->server == NULL || resp->ctx.key == NULL) {
         return;
     }
 
     string server = resp->server;
-    string key((const char *)resp->key, resp->nkey);
+    string key((const char *)resp->ctx.key, resp->ctx.key_len);
     string value;
     if (resp->nvalue > 0) {
         value.assign((const char *)resp->value, resp->nvalue);
@@ -384,15 +385,15 @@ static void stats_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTAT
 
 static void watch_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
 {
-    if (resp->rc != LCB_SUCCESS) {
-        fprintf(stderr, "ERROR %s\n", lcb_strerror_long(resp->rc));
+    if (resp->ctx.rc != LCB_SUCCESS) {
+        fprintf(stderr, "ERROR %s\n", lcb_strerror_long(resp->ctx.rc));
         return;
     }
-    if (resp->server == NULL || resp->key == NULL) {
+    if (resp->server == NULL || resp->ctx.key == NULL) {
         return;
     }
 
-    string key((const char *)resp->key, resp->nkey);
+    string key((const char *)resp->ctx.key, resp->ctx.key_len);
     if (resp->nvalue > 0) {
         char *nptr = NULL;
         uint64_t val =
@@ -423,8 +424,8 @@ static void common_server_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSER
     if (!sbase->server) {
         return;
     }
-    if (sbase->rc != LCB_SUCCESS) {
-        fprintf(stderr, "%s failed for server %s: %s\n", msg.c_str(), sbase->server, lcb_strerror_short(sbase->rc));
+    if (sbase->ctx.rc != LCB_SUCCESS) {
+        fprintf(stderr, "%s failed for server %s: %s\n", msg.c_str(), sbase->server, lcb_strerror_short(sbase->ctx.rc));
     } else {
         fprintf(stderr, "%s: %s\n", msg.c_str(), sbase->server);
     }
@@ -492,19 +493,19 @@ static void http_callback(lcb_INSTANCE *, int, const lcb_RESPHTTP *resp)
 static void view_callback(lcb_INSTANCE *, int, const lcb_RESPVIEW *resp)
 {
     if (lcb_respview_is_final(resp)) {
-        fprintf(stderr, "View query complete!\n");
+        fprintf(stderr, "---> View response finished\n");
     }
 
     lcb_STATUS rc = lcb_respview_status(resp);
     if (rc) {
-        fprintf(stderr, "View query failed: %s\n", lcb_strerror_short(rc));
+        fprintf(stderr, "---> View failed with library code %s\n", lcb_strerror_short(rc));
 
         if (rc == LCB_ERR_HTTP) {
             const lcb_RESPHTTP *http;
             lcb_respview_http_response(resp, &http);
             if (http != NULL) {
-                HttpReceiver ctx;
-                ctx.maybeInvokeStatus(http);
+                HttpReceiver receiver;
+                receiver.maybeInvokeStatus(http);
                 const char *body;
                 size_t nbody;
                 lcb_resphttp_body(http, &body, &nbody);
@@ -521,6 +522,26 @@ static void view_callback(lcb_INSTANCE *, int, const lcb_RESPVIEW *resp)
         lcb_respview_row(resp, &value, &nvalue);
         if (value) {
             fprintf(stderr, "Non-row data: %.*s\n", (int)nvalue, value);
+        }
+        const lcb_VIEW_ERROR_CONTEXT *ctx;
+        lcb_respview_error_context(resp, &ctx);
+        const char *ddoc, *view;
+        size_t nddoc, nview;
+        lcb_errctx_view_design_document(ctx, &ddoc, &nddoc);
+        lcb_errctx_view_view(ctx, &view, &nview);
+        fprintf(stderr, "---> View: %.*s/%.*s\n", (int)nddoc, ddoc, (int)nview, view);
+        uint32_t code;
+        lcb_errctx_view_http_response_code(ctx, &code);
+        fprintf(stderr, "---> HTTP response code: %d\n", code);
+        const char *err_code, *err_msg;
+        size_t nerr_code, nerr_msg;
+        lcb_errctx_view_first_error_code(ctx, &err_code, &nerr_code);
+        if (nerr_code != 0) {
+            fprintf(stderr, "---> First error code: %.*s\n", (int)nerr_code, err_code);
+        }
+        lcb_errctx_view_first_error_message(ctx, &err_msg, &nerr_msg);
+        if (nerr_msg != 0) {
+            fprintf(stderr, "---> First error message: %.*s\n", (int)nerr_msg, err_msg);
         }
         return;
     }
@@ -1550,14 +1571,22 @@ static void n1qlCallback(lcb_INSTANCE *, int, const lcb_RESPN1QL *resp)
         fprintf(stderr, "---> Query response finished\n");
         if (rc != LCB_SUCCESS) {
             fprintf(stderr, "---> Query failed with library code %s\n", lcb_strerror_short(rc));
-            const lcb_RESPHTTP *http;
-            lcb_respn1ql_http_response(resp, &http);
-            if (http) {
-                uint16_t status;
-                lcb_resphttp_http_status(http, &status);
-                fprintf(stderr, "---> Inner HTTP request failed with library code %s and HTTP status %d\n",
-                        lcb_strerror_short(lcb_resphttp_status(http)), status);
-            }
+
+            const lcb_N1QL_ERROR_CONTEXT *ctx;
+            lcb_respn1ql_error_context(resp, &ctx);
+            uint32_t code;
+            lcb_errctx_n1ql_http_response_code(ctx, &code);
+            fprintf(stderr, "---> HTTP response code: %d\n", code);
+            const char *client_id;
+            size_t nclient_id;
+            lcb_errctx_n1ql_client_context_id(ctx, &client_id, &nclient_id);
+            fprintf(stderr, "---> Client context ID: %.*s\n", (int)nclient_id, client_id);
+            uint32_t err;
+            const char *errmsg;
+            size_t nerrmsg;
+            lcb_errctx_n1ql_first_error_message(ctx, &errmsg, &nerrmsg);
+            lcb_errctx_n1ql_first_error_code(ctx, &err);
+            fprintf(stderr, "---> First query error: %d (%.*s)\n", err, (int)nerrmsg, errmsg);
         }
         if (row) {
             printf("%.*s\n", (int)nrow, row);

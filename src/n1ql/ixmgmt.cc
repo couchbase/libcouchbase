@@ -108,10 +108,10 @@ static void cb_generic(lcb_INSTANCE *instance, int, const lcb_RESPN1QL *resp)
     }
 
     IndexOpCtx *ctx = reinterpret_cast< IndexOpCtx * >(resp->cookie);
-    lcb_RESPN1XMGMT w_resp = {0};
+    lcb_RESPN1XMGMT w_resp{};
     w_resp.cookie = ctx->cookie;
 
-    if ((w_resp.rc = resp->rc) == LCB_SUCCESS || resp->rc == LCB_ERR_HTTP) {
+    if ((w_resp.rc = resp->ctx.rc) == LCB_SUCCESS || resp->ctx.rc == LCB_ERR_HTTP) {
         // Check if the top-level N1QL response succeeded, and then
         // descend to determine additional errors. This is primarily
         // required to support EEXIST for GSI primary indexes
@@ -356,7 +356,7 @@ class ListIndexCtx : public IndexOpCtx
 
     void finish(lcb_INSTANCE *instance, lcb_RESPN1XMGMT *resp = NULL)
     {
-        lcb_RESPN1XMGMT w_resp = {0};
+        lcb_RESPN1XMGMT w_resp{};
         if (resp == NULL) {
             resp = &w_resp;
             resp->rc = LCB_SUCCESS;
@@ -386,8 +386,8 @@ static void cb_index_list(lcb_INSTANCE *instance, int, const lcb_RESPN1QL *resp)
         return;
     }
 
-    lcb_RESPN1XMGMT w_resp = {0};
-    if ((w_resp.rc = resp->rc) == LCB_SUCCESS) {
+    lcb_RESPN1XMGMT w_resp{};
+    if ((w_resp.rc = resp->ctx.rc) == LCB_SUCCESS) {
         w_resp.rc = get_n1ql_error(resp->row, resp->nrow);
     }
     w_resp.inner = resp;
@@ -475,8 +475,8 @@ static void cb_build_submitted(lcb_INSTANCE *instance, int, const lcb_RESPN1QL *
     ListIndexCtx *ctx = reinterpret_cast< ListIndexCtx * >(resp->cookie);
 
     if (resp->rflags & LCB_RESP_F_FINAL) {
-        lcb_RESPN1XMGMT w_resp = {0};
-        if ((w_resp.rc = resp->rc) == LCB_SUCCESS) {
+        lcb_RESPN1XMGMT w_resp{};
+        if ((w_resp.rc = resp->ctx.rc) == LCB_SUCCESS) {
             w_resp.rc = get_n1ql_error(resp->row, resp->nrow);
         }
         ctx->finish(instance, &w_resp);
@@ -687,7 +687,7 @@ lcb_STATUS WatchIndexCtx::load_defs(const lcb_CMDN1XWATCH *cmd)
 
 void WatchIndexCtx::finish(lcb_STATUS rc, const lcb_RESPN1XMGMT *resp)
 {
-    lcb_RESPN1XMGMT my_resp = {0};
+    lcb_RESPN1XMGMT my_resp{};
     my_resp.cookie = cookie;
     my_resp.rc = rc;
 

@@ -644,7 +644,7 @@ static void tickOpCb(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
 {
     int *p = (int *)rb->cookie;
     *p -= 1;
-    EXPECT_EQ(LCB_SUCCESS, rb->rc);
+    EXPECT_EQ(LCB_SUCCESS, rb->ctx.rc);
 }
 }
 
@@ -732,7 +732,7 @@ extern "C" {
 static void appendE2BIGcb(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
 {
     lcb_STATUS *e = (lcb_STATUS *)rb->cookie;
-    *e = rb->rc;
+    *e = rb->ctx.rc;
 }
 }
 

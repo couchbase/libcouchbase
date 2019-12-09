@@ -598,7 +598,7 @@ uint32_t mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet)
     return 0;
 }
 
-void mcreq_get_key(lcb_INSTANCE *instance, const mc_PACKET *packet, const void **key, lcb_size_t *nkey)
+void mcreq_get_key(lcb_INSTANCE *instance, const mc_PACKET *packet, const char **key, lcb_size_t *nkey)
 {
     uint8_t ffext = 0;
     uint16_t nk = 0;
@@ -606,18 +606,18 @@ void mcreq_get_key(lcb_INSTANCE *instance, const mc_PACKET *packet, const void *
     uint32_t cid = 0;
     protocol_binary_request_header req;
     char *kh = SPAN_BUFFER(&packet->kh_span);
-    uint8_t *k = NULL;
+    char *k = NULL;
 
     memcpy(&req, kh, sizeof(req));
     if (req.request.magic == PROTOCOL_BINARY_AREQ) {
-        ffext = req.request.keylen & 0xff;
-        nk = req.request.keylen >> 8;
+        ffext = req.request.keylen & 0xffu;
+        nk = req.request.keylen >> 8u;
     } else {
         nk = ntohs(req.request.keylen);
     }
-    k = (uint8_t *)kh + sizeof(req) + req.request.extlen + ffext;
+    k = kh + sizeof(req) + req.request.extlen + ffext;
     if ((packet->flags & MCREQ_F_NOCID) == 0 && instance && LCBT_SETTING(instance, use_collections)) {
-        ncid = leb128_decode(k, nk, &cid);
+        ncid = leb128_decode((uint8_t *)k, nk, &cid);
         (void)cid;
     }
     *key = k + ncid;

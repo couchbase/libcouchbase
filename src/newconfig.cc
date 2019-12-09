@@ -210,7 +210,7 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *)
         newix = lcbvb_vbmaster(cq->config, ntohs(hdr.request.vbucket));
 
     } else {
-        const void *key = NULL;
+        const char *key = NULL;
         lcb_SIZE nkey = 0;
         int tmpid;
 

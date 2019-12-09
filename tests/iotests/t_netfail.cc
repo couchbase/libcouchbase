@@ -129,7 +129,7 @@ static bool syncWithNodeCount_(lcb_INSTANCE *instance, size_t expCount)
 extern "C" {
 static void opFromCallback_storeCB(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
 {
-    ASSERT_EQ(LCB_SUCCESS, resp->rc);
+    ASSERT_EQ(LCB_SUCCESS, resp->ctx.rc);
 }
 
 static void opFromCallback_statsCB(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
@@ -138,12 +138,12 @@ static void opFromCallback_statsCB(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, co
     lcb_size_t nstatkey;
 
     const char *server_endpoint = resp->server;
-    const void *key = resp->key;
-    lcb_size_t nkey = resp->nkey;
+    const void *key = resp->ctx.key;
+    lcb_size_t nkey = resp->ctx.key_len;
     const void *bytes = resp->value;
     lcb_size_t nbytes = resp->nvalue;
 
-    ASSERT_EQ(LCB_SUCCESS, resp->rc);
+    ASSERT_EQ(LCB_SUCCESS, resp->ctx.rc);
     if (server_endpoint != NULL) {
         nstatkey = strlen(server_endpoint) + nkey + 2;
         statkey = new char[nstatkey];
@@ -187,7 +187,7 @@ static void set_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RE
 
     lcb_respstore_cookie(resp, (void **)&tc);
     EXPECT_EQ(tc->expected, lcb_respstore_status(resp));
-    if (resp->rc == LCB_ERR_TIMEOUT) {
+    if (resp->ctx.rc == LCB_ERR_TIMEOUT) {
         // Remove the hiccup at the first timeout failure
         MockEnvironment::getInstance()->hiccupNodes(0, 0);
     }
@@ -336,9 +336,9 @@ static void store_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_
 {
     struct rvbuf *rv = (struct rvbuf *)resp->cookie;
     lcb_log(LOGARGS(instance, INFO), "Got storage callback for cookie %p with err=0x%x", (void *)resp->cookie,
-            (int)resp->rc);
+            (int)resp->ctx.rc);
 
-    rv->error = resp->rc;
+    rv->error = resp->ctx.rc;
     store_cnt++;
     if (!instance->wait) { /* do not touch IO if we are using lcb_wait() */
         lcb_stop_loop(instance);
@@ -736,7 +736,7 @@ static void doManyItems(lcb_INSTANCE *instance, std::vector< std::string > keys)
 extern "C" {
 static void mcdFoVerifyCb(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
 {
-    EXPECT_EQ(LCB_SUCCESS, rb->rc);
+    EXPECT_EQ(LCB_SUCCESS, rb->ctx.rc);
 }
 }
 

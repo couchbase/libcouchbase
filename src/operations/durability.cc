@@ -93,8 +93,8 @@ size_t Item::prepare(uint16_t ixarray[4])
     res().exists_master = 0;
     res().npersisted = 0;
     res().nreplicated = 0;
-    res().cas = 0;
-    res().rc = LCB_SUCCESS;
+    res().ctx.cas = 0;
+    res().ctx.rc = LCB_SUCCESS;
 
     if (parent->opts.persist_to == 1 && parent->opts.replicate_to == 0) {
         maxix = 1; /* Only master! */
@@ -213,11 +213,11 @@ void Item::finish()
     instance = parent->instance;
 
     if (parent->is_durstore) {
-        lcb_RESPSTORE resp = {0};
-        resp.key = result.key;
-        resp.nkey = result.nkey;
-        resp.rc = result.rc;
-        resp.cas = reqcas;
+        lcb_RESPSTORE resp{};
+        resp.ctx.key = result.ctx.key;
+        resp.ctx.key_len = result.ctx.key_len;
+        resp.ctx.rc = result.ctx.rc;
+        resp.ctx.cas = reqcas;
         resp.cookie = result.cookie;
         resp.store_ok = 1;
         resp.dur_resp = &result;
@@ -339,7 +339,7 @@ lcb_STATUS Durset::MCTX_addcmd(const lcb_CMDBASE *cmd)
     mcreq_map_key(&instance->cmdq, &cmd->key, MCREQ_PKT_BASESIZE, &vbid, &srvix);
 
     /* ok. now let's initialize the entry..*/
-    ent.res().nkey = cmd->key.contig.nbytes;
+    ent.res().ctx.key_len = cmd->key.contig.nbytes;
     ent.reqcas = cmd->cas;
     ent.parent = this;
     ent.vbid = vbid;
@@ -361,8 +361,8 @@ lcb_STATUS Durset::MCTX_done(const void *cookie_)
 
     for (size_t ii = 0; ii < entries.size(); ii++) {
         Item *ent = &entries[ii];
-        ent->res().key = kptr;
-        kptr += ent->res().nkey;
+        ent->res().ctx.key = kptr;
+        kptr += ent->res().ctx.key_len;
     }
 
     if ((err = prepare_schedule()) != LCB_SUCCESS) {
@@ -522,8 +522,8 @@ void Durset::tick()
                 if (ent->done) {
                     continue;
                 }
-                if (ent->res().rc == LCB_SUCCESS) {
-                    ent->res().rc = err;
+                if (ent->res().ctx.rc == LCB_SUCCESS) {
+                    ent->res().ctx.rc = err;
                 }
                 ent->finish();
             }

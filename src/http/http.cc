@@ -24,7 +24,7 @@
 
 LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_status(const lcb_RESPHTTP *resp)
 {
-    return resp->rc;
+    return resp->ctx.rc;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_cookie(const lcb_RESPHTTP *resp, void **cookie)
@@ -41,8 +41,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_http_status(const lcb_RESPHTTP *resp, u
 
 LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_path(const lcb_RESPHTTP *resp, const char **path, size_t *path_len)
 {
-    *path = (const char *)resp->key;
-    *path_len = resp->nkey;
+    *path = (const char *)resp->ctx.key;
+    *path_len = resp->ctx.key_len;
     return LCB_SUCCESS;
 }
 
@@ -296,8 +296,8 @@ void Request::init_resp(lcb_RESPHTTP *res)
     const lcb::htparse::Response &htres = parser->get_cur_response();
 
     res->cookie = const_cast< void * >(command_cookie);
-    res->key = url.c_str() + url_info.field_data[UF_PATH].off;
-    res->nkey = url_info.field_data[UF_PATH].len;
+    res->ctx.key = url.c_str() + url_info.field_data[UF_PATH].off;
+    res->ctx.key_len = url_info.field_data[UF_PATH].len;
     res->_htreq = static_cast< lcb_HTTP_HANDLE * >(this);
     if (!response_headers.empty()) {
         res->headers = &response_headers_clist[0];
@@ -314,10 +314,10 @@ void Request::finish(lcb_STATUS error)
 
     /* And this one too */
     if ((status & CBINVOKED) == 0) {
-        lcb_RESPHTTP resp = {0};
+        lcb_RESPHTTP resp{};
         init_resp(&resp);
         resp.rflags = LCB_RESP_F_FINAL;
-        resp.rc = error;
+        resp.ctx.rc = error;
 
         status |= CBINVOKED;
         callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPBASE *)&resp);

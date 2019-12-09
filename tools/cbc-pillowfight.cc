@@ -41,10 +41,10 @@
 #include <stdexcept>
 #include "common/options.h"
 #include "common/histogram.h"
-#include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
 
 #include "docgen/seqgen.h"
 #include "docgen/docgen.h"
+#include "internalstructs.h"
 
 using namespace std;
 using namespace cbc;
@@ -1036,8 +1036,8 @@ static void noopCallback(lcb_INSTANCE *instance, int, const lcb_RESPNOOP *resp)
 {
     InstanceCookie *cookie = InstanceCookie::get(instance);
     ThreadContext *tc = cookie->getContext();
-    tc->setError(resp->rc);
-    updateStats(cookie, resp->rc);
+    tc->setError(resp->ctx.rc);
+    updateStats(cookie, resp->ctx.rc);
     updateOpsPerSecDisplay();
 }
 

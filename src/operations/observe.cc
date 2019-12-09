@@ -77,7 +77,7 @@ static void handle_observe_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_STATUS 
         const char *end = ptr + pkt->u_value.single.size;
         while (ptr < end) {
             lcb_uint16_t nkey;
-            lcb_RESPOBSERVE cur = {0};
+            lcb_RESPOBSERVE cur{};
             cur.rflags = LCB_RESP_F_CLIENTGEN;
 
             ptr += 2;
@@ -86,10 +86,10 @@ static void handle_observe_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_STATUS 
             ptr += 2;
 
             memset(&cur, 0, sizeof(cur));
-            cur.key = ptr;
-            cur.nkey = nkey;
+            cur.ctx.key = ptr;
+            cur.ctx.key_len = nkey;
             cur.cookie = (void *)opc->cookie;
-            cur.rc = err;
+            cur.ctx.rc = err;
             handle_observe_callback(NULL, pkt, err, &cur);
             ptr += nkey;
             nfailed++;
@@ -99,7 +99,7 @@ static void handle_observe_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_STATUS 
     }
 
     resp->cookie = (void *)opc->cookie;
-    resp->rc = err;
+    resp->ctx.rc = err;
     oc->remaining--;
     if (oc->remaining == 0 && oc->span) {
         lcbtrace_span_finish(oc->span, LCBTRACE_NOW);
@@ -116,8 +116,8 @@ static void handle_observe_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_STATUS 
         return;
     }
     if (oc->remaining == 0) {
-        lcb_RESPOBSERVE resp2 = {0};
-        resp2.rc = err;
+        lcb_RESPOBSERVE resp2{};
+        resp2.ctx.rc = err;
         resp2.rflags = LCB_RESP_F_CLIENTGEN | LCB_RESP_F_FINAL;
         oc->oflags |= F_DESTROY;
         handle_observe_callback(NULL, pkt, err, &resp2);

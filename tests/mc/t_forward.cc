@@ -248,7 +248,7 @@ TEST_F(McFwd, testNoMap)
     ASSERT_NE(0, pkt_tmp->flags & MCREQ_F_UFWD);
 
     // Get the key
-    const void *key;
+    const char *key;
     lcb_SIZE nkey;
     mcreq_get_key(NULL, pkt_tmp, &key, &nkey);
     ASSERT_EQ(0, nkey);

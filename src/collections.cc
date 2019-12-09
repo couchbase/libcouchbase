@@ -184,7 +184,7 @@ lcb_STATUS collcache_exec(const char *scope, size_t nscope, const char *collecti
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetmanifest_status(const lcb_RESPGETMANIFEST *resp)
 {
-    return resp->rc;
+    return resp->ctx.rc;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetmanifest_cookie(const lcb_RESPGETMANIFEST *resp, void **cookie)
@@ -258,13 +258,13 @@ lcb_STATUS lcb_getmanifest(lcb_INSTANCE *instance, void *cookie, const lcb_CMDGE
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetcid_status(const lcb_RESPGETCID *resp)
 {
-    return resp->rc;
+    return resp->ctx.rc;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetcid_scoped_collection(const lcb_RESPGETCID *resp, const char **name, size_t *name_len)
 {
-    *name = (const char *)resp->key;
-    *name_len = resp->nkey;
+    *name = (const char *)resp->ctx.key;
+    *name_len = resp->ctx.key_len;
     return LCB_SUCCESS;
 }
 

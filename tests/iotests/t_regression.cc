@@ -38,8 +38,8 @@ static void get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *r
 
 static void stats_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
 {
-    EXPECT_EQ(resp->rc, LCB_SUCCESS);
-    if (resp->nkey == 0) {
+    EXPECT_EQ(resp->ctx.rc, LCB_SUCCESS);
+    if (resp->ctx.key_len == 0) {
         int *counter_p = reinterpret_cast< int * >(const_cast< void * >(resp->cookie));
         *counter_p -= 1;
     }

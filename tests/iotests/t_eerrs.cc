@@ -81,7 +81,7 @@ static void opcb(lcb_INSTANCE *, int cbtype, const lcb_RESPBASE *rb)
 {
     EerrsCookie *cookie = reinterpret_cast< EerrsCookie * >(rb->cookie);
     cookie->called = true;
-    cookie->rc = rb->rc;
+    cookie->rc = rb->ctx.rc;
 
     const char *ref = lcb_resp_get_error_ref(cbtype, rb);
     if (ref != NULL) {

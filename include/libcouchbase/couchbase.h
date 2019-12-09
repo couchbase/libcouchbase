@@ -505,7 +505,10 @@ typedef enum {
 /** Callback type for Analytics (cannot be used for lcb_install_callback3()) */
 #define LCB_CALLBACK_ANALYTICS -4
 
-#define LCB_CALLBACK_OPEN -5
+/** Callback type for Search (cannot be used for lcb_install_callback3()) */
+#define LCB_CALLBACK_FTS -5
+
+#define LCB_CALLBACK_OPEN -6
 
 /**
  * @uncommitted
@@ -649,8 +652,8 @@ const char *lcb_strcbtype(int cbtype);
  *     const lcb_RESPGET *resp = (const lcb_RESPGET*)rb;
  *     printf("Got response for key: %.*s\n", (int)resp->key, resp->nkey);
  *
- *     if (resp->rc != LCB_SUCCESS) {
- *         printf("Couldn't get item: %s\n", lcb_strerror_short(resp->rc));
+ *     if (resp->ctx.rc != LCB_SUCCESS) {
+ *         printf("Couldn't get item: %s\n", lcb_strerror_short(resp->ctx.rc));
  *     } else {
  *         printf("Got value: %.*s\n", (int)resp->nvalue, resp->value);
  *         printf("Got CAS: 0x%llx\n", resp->cas);
@@ -670,8 +673,7 @@ const char *lcb_strcbtype(int cbtype);
 typedef struct lcb_RESPGET_ lcb_RESPGET;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respget_status(const lcb_RESPGET *resp);
-LIBCOUCHBASE_API lcb_STATUS lcb_respget_error_context(const lcb_RESPGET *resp, const char **ctx, size_t *ctx_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_respget_error_ref(const lcb_RESPGET *resp, const char **ref, size_t *ref_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respget_error_context(const lcb_RESPGET *resp, const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API lcb_STATUS lcb_respget_cookie(const lcb_RESPGET *resp, void **cookie);
 LIBCOUCHBASE_API lcb_STATUS lcb_respget_cas(const lcb_RESPGET *resp, uint64_t *cas);
 LIBCOUCHBASE_API lcb_STATUS lcb_respget_datatype(const lcb_RESPGET *resp, uint8_t *datatype);
@@ -729,10 +731,10 @@ LIBCOUCHBASE_API lcb_STATUS lcb_get(lcb_INSTANCE *instance, void *cookie, const 
  * {
  *     const lcb_RESPGET *resp = (const lcb_RESPGET *)rb;
  *     printf("Got Get-From-Replica response for %.*s\n", (int)resp->key, resp->nkey);
- *     if (resp->rc == LCB_SUCCESS) {
+ *     if (resp->ctx.rc == LCB_SUCCESS) {
  *         printf("Got response: %.*s\n", (int)resp->value, resp->nvalue);
  *     else {
- *         printf("Couldn't retrieve: %s\n", lcb_strerror_short(resp->rc));
+ *         printf("Couldn't retrieve: %s\n", lcb_strerror_short(resp->ctx.rc));
  *     }
  * }
  * @endcode
@@ -764,10 +766,8 @@ typedef enum {
 typedef struct lcb_RESPGETREPLICA_ lcb_RESPGETREPLICA;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_status(const lcb_RESPGETREPLICA *resp);
-LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_error_context(const lcb_RESPGETREPLICA *resp, const char **ctx,
-                                                             size_t *ctx_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_error_ref(const lcb_RESPGETREPLICA *resp, const char **ref,
-                                                         size_t *ref_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_error_context(const lcb_RESPGETREPLICA *resp,
+                                                             const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_cookie(const lcb_RESPGETREPLICA *resp, void **cookie);
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_cas(const lcb_RESPGETREPLICA *resp, uint64_t *cas);
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_datatype(const lcb_RESPGETREPLICA *resp, uint8_t *datatype);
@@ -798,8 +798,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respexists_status(const lcb_RESPEXISTS *resp);
 LCB_DEPRECATED2(LIBCOUCHBASE_API int lcb_respexists_is_persisted(const lcb_RESPEXISTS *resp),
                 "This function will be removed in GA");
 LIBCOUCHBASE_API int lcb_respexists_is_found(const lcb_RESPEXISTS *resp);
-LIBCOUCHBASE_API lcb_STATUS lcb_respexists_error_context(const lcb_RESPEXISTS *resp, const char **ctx, size_t *ctx_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_respexists_error_ref(const lcb_RESPEXISTS *resp, const char **ref, size_t *ref_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respexists_error_context(const lcb_RESPEXISTS *resp,
+                                                         const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_cookie(const lcb_RESPEXISTS *resp, void **cookie);
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_cas(const lcb_RESPEXISTS *resp, uint64_t *cas);
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_key(const lcb_RESPEXISTS *resp, const char **key, size_t *key_len);
@@ -920,8 +920,8 @@ typedef enum {
 typedef struct lcb_RESPSTORE_ lcb_RESPSTORE;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_status(const lcb_RESPSTORE *resp);
-LIBCOUCHBASE_API lcb_STATUS lcb_respstore_error_context(const lcb_RESPSTORE *resp, const char **ctx, size_t *ctx_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_respstore_error_ref(const lcb_RESPSTORE *resp, const char **ref, size_t *ref_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respstore_error_context(const lcb_RESPSTORE *resp,
+                                                        const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_cookie(const lcb_RESPSTORE *resp, void **cookie);
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_cas(const lcb_RESPSTORE *resp, uint64_t *cas);
 LIBCOUCHBASE_API lcb_STATUS lcb_respstore_key(const lcb_RESPSTORE *resp, const char **key, size_t *key_len);
@@ -1016,8 +1016,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_open(lcb_INSTANCE *instance, const char *bucket,
 typedef struct lcb_RESPREMOVE_ lcb_RESPREMOVE;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respremove_status(const lcb_RESPREMOVE *resp);
-LIBCOUCHBASE_API lcb_STATUS lcb_respremove_error_context(const lcb_RESPREMOVE *resp, const char **ctx, size_t *ctx_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_respremove_error_ref(const lcb_RESPREMOVE *resp, const char **ref, size_t *ref_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respremove_error_context(const lcb_RESPREMOVE *resp,
+                                                         const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API lcb_STATUS lcb_respremove_cookie(const lcb_RESPREMOVE *resp, void **cookie);
 LIBCOUCHBASE_API lcb_STATUS lcb_respremove_cas(const lcb_RESPREMOVE *resp, uint64_t *cas);
 LIBCOUCHBASE_API lcb_STATUS lcb_respremove_key(const lcb_RESPREMOVE *resp, const char **key, size_t *key_len);
@@ -1074,7 +1074,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_remove(lcb_INSTANCE *instance, void *cookie, con
  * void counter_cb(lcb_INSTANCE *instance, int cbtype, const lcb_RESPBASE *rb)
  * {
  *     const lcb_RESPCOUNTER *resp = (const lcb_RESPCOUNTER *)rb;
- *     if (resp->rc == LCB_SUCCESS) {
+ *     if (resp->ctx.rc == LCB_SUCCESS) {
  *         printf("Incremented counter for %.*s. Current value %llu\n",
  *                (int)resp->nkey, resp->key, resp->value);
  *     }
@@ -1094,9 +1094,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_remove(lcb_INSTANCE *instance, void *cookie, con
 typedef struct lcb_RESPCOUNTER_ lcb_RESPCOUNTER;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_status(const lcb_RESPCOUNTER *resp);
-LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_error_context(const lcb_RESPCOUNTER *resp, const char **ctx,
-                                                          size_t *ctx_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_error_ref(const lcb_RESPCOUNTER *resp, const char **ref, size_t *ref_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_error_context(const lcb_RESPCOUNTER *resp,
+                                                          const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_cookie(const lcb_RESPCOUNTER *resp, void **cookie);
 LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_cas(const lcb_RESPCOUNTER *resp, uint64_t *cas);
 LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_key(const lcb_RESPCOUNTER *resp, const char **key, size_t *key_len);
@@ -1168,8 +1167,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_counter(lcb_INSTANCE *instance, void *cookie, co
 typedef struct lcb_RESPUNLOCK_ lcb_RESPUNLOCK;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_status(const lcb_RESPUNLOCK *resp);
-LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_error_context(const lcb_RESPUNLOCK *resp, const char **ctx, size_t *ctx_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_error_ref(const lcb_RESPUNLOCK *resp, const char **ref, size_t *ref_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_error_context(const lcb_RESPUNLOCK *resp,
+                                                         const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_cookie(const lcb_RESPUNLOCK *resp, void **cookie);
 LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_cas(const lcb_RESPUNLOCK *resp, uint64_t *cas);
 LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_key(const lcb_RESPUNLOCK *resp, const char **key, size_t *key_len);
@@ -1230,8 +1229,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_unlock(lcb_INSTANCE *instance, void *cookie, con
 typedef struct lcb_RESPTOUCH_ lcb_RESPTOUCH;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_status(const lcb_RESPTOUCH *resp);
-LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_error_context(const lcb_RESPTOUCH *resp, const char **ctx, size_t *ctx_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_error_ref(const lcb_RESPTOUCH *resp, const char **ref, size_t *ref_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_error_context(const lcb_RESPTOUCH *resp,
+                                                        const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_cookie(const lcb_RESPTOUCH *resp, void **cookie);
 LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_cas(const lcb_RESPTOUCH *resp, uint64_t *cas);
 LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_key(const lcb_RESPTOUCH *resp, const char **key, size_t *key_len);
@@ -1341,8 +1340,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const
  * void diag_callback(lcb_INSTANCE, int, const lcb_RESPBASE *rb)
  * {
  *     const lcb_RESPDIAG *resp = (const lcb_RESPDIAG *)rb;
- *     if (resp->rc != LCB_SUCCESS) {
- *         fprintf(stderr, "failed: %s\n", lcb_strerror_short(resp->rc));
+ *     if (resp->ctx.rc != LCB_SUCCESS) {
+ *         fprintf(stderr, "failed: %s\n", lcb_strerror_short(resp->ctx.rc));
  *     } else {
  *         if (resp->njson) {
  *             fprintf(stderr, "\n%.*s", (int)resp->njson, resp->json);
@@ -1456,8 +1455,8 @@ typedef enum {
  * void http_callback(lcb_INSTANCE, int, const lcb_RESPBASE *rb)
  * {
  *     const lcb_RESPHTTP *resp = (const lcb_RESPHTTP *)rb;
- *     if (resp->rc != LCB_SUCCESS) {
- *         printf("I/O Error for HTTP: %s\n", lcb_strerror_short(resp->rc));
+ *     if (resp->ctx.rc != LCB_SUCCESS) {
+ *         printf("I/O Error for HTTP: %s\n", lcb_strerror_short(resp->ctx.rc));
  *         return;
  *     }
  *     printf("Got HTTP Status: %d\n", resp->htstatus);
@@ -1478,7 +1477,7 @@ typedef enum {
  * {
  *     const lcb_RESPHTTP *resp = (const lcb_RESPHTTP *)resp;
  *     if (resp->rflags & LCB_RESP_F_FINAL) {
- *         if (resp->rc != LCB_SUCCESS) {
+ *         if (resp->ctx.rc != LCB_SUCCESS) {
  *             // ....
  *         }
  *         const char **hdrp = resp->headers;
@@ -2284,6 +2283,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respanalytics_cookie(const lcb_RESPANALYTICS *re
 LIBCOUCHBASE_API lcb_STATUS lcb_respanalytics_row(const lcb_RESPANALYTICS *resp, const char **row, size_t *row_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_respanalytics_http_response(const lcb_RESPANALYTICS *resp, const lcb_RESPHTTP **http);
 LIBCOUCHBASE_API lcb_STATUS lcb_respanalytics_handle(const lcb_RESPANALYTICS *resp, lcb_ANALYTICS_HANDLE **handle);
+LIBCOUCHBASE_API lcb_STATUS lcb_respanalytics_error_context(const lcb_RESPANALYTICS *resp,
+                                                            const lcb_ANALYTICS_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API int lcb_respanalytics_is_final(const lcb_RESPANALYTICS *resp);
 LIBCOUCHBASE_API lcb_STATUS lcb_respanalytics_deferred_handle_extract(const lcb_RESPANALYTICS *resp,
                                                                       lcb_DEFERRED_HANDLE **handle);
@@ -2380,6 +2381,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respfts_cookie(const lcb_RESPFTS *resp, void **c
 LIBCOUCHBASE_API lcb_STATUS lcb_respfts_row(const lcb_RESPFTS *resp, const char **row, size_t *row_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_respfts_http_response(const lcb_RESPFTS *resp, const lcb_RESPHTTP **http);
 LIBCOUCHBASE_API lcb_STATUS lcb_respfts_handle(const lcb_RESPFTS *resp, lcb_FTS_HANDLE **handle);
+LIBCOUCHBASE_API lcb_STATUS lcb_respfts_error_context(const lcb_RESPFTS *resp, const lcb_FTS_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API int lcb_respfts_is_final(const lcb_RESPFTS *resp);
 
 typedef struct lcb_CMDFTS_ lcb_CMDFTS;
@@ -2424,8 +2426,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_fts_cancel(lcb_INSTANCE *instance, lcb_FTS_HANDL
  * static void row_callback(lcb_INSTANCE *instance, int type, const lcb_RESPN1QL *resp)
  * {
  *     int *idx = (int *)resp->cookie;
- *     if (resp->rc != LCB_SUCCESS) {
- *         printf("failed to execute query: %s\n", lcb_strerror_short(resp->rc));
+ *     if (resp->ctx.rc != LCB_SUCCESS) {
+ *         printf("failed to execute query: %s\n", lcb_strerror_short(resp->ctx.rc));
  *         exit(EXIT_FAILURE);
  *     }
  *     if (resp->rflags & LCB_RESP_F_FINAL) {
@@ -2484,6 +2486,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respn1ql_cookie(const lcb_RESPN1QL *resp, void *
 LIBCOUCHBASE_API lcb_STATUS lcb_respn1ql_row(const lcb_RESPN1QL *resp, const char **row, size_t *row_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_respn1ql_http_response(const lcb_RESPN1QL *resp, const lcb_RESPHTTP **http);
 LIBCOUCHBASE_API lcb_STATUS lcb_respn1ql_handle(const lcb_RESPN1QL *resp, lcb_N1QL_HANDLE **handle);
+LIBCOUCHBASE_API lcb_STATUS lcb_respn1ql_error_context(const lcb_RESPN1QL *resp, const lcb_N1QL_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API int lcb_respn1ql_is_final(const lcb_RESPN1QL *resp);
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_create(lcb_CMDN1QL **cmd);
@@ -2556,6 +2559,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respview_row(const lcb_RESPVIEW *resp, const cha
 LIBCOUCHBASE_API lcb_STATUS lcb_respview_document(const lcb_RESPVIEW *resp, const lcb_RESPGET **doc);
 LIBCOUCHBASE_API lcb_STATUS lcb_respview_http_response(const lcb_RESPVIEW *resp, const lcb_RESPHTTP **http);
 LIBCOUCHBASE_API lcb_STATUS lcb_respview_handle(const lcb_RESPVIEW *resp, lcb_VIEW_HANDLE **handle);
+LIBCOUCHBASE_API lcb_STATUS lcb_respview_error_context(const lcb_RESPVIEW *resp, const lcb_VIEW_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API int lcb_respview_is_final(const lcb_RESPVIEW *resp);
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_create(lcb_CMDVIEW **cmd);
@@ -2589,8 +2593,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_view_cancel(lcb_INSTANCE *instance, lcb_VIEW_HAN
 typedef struct lcb_RESPSUBDOC_ lcb_RESPSUBDOC;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_status(const lcb_RESPSUBDOC *resp);
-LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_error_context(const lcb_RESPSUBDOC *resp, const char **ctx, size_t *ctx_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_error_ref(const lcb_RESPSUBDOC *resp, const char **ref, size_t *ref_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_error_context(const lcb_RESPSUBDOC *resp,
+                                                         const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_cookie(const lcb_RESPSUBDOC *resp, void **cookie);
 LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_cas(const lcb_RESPSUBDOC *resp, uint64_t *cas);
 LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_key(const lcb_RESPSUBDOC *resp, const char **key, size_t *key_len);

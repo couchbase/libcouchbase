@@ -586,6 +586,7 @@ int lcbvb_load_json_ex(lcbvb_CONFIG *cfg, const char *data, const char *source, 
 
     if (get_jstr(cj, "name", &tmp)) {
         cfg->bname = strdup(tmp);
+        cfg->bname_len = strlen(cfg->bname);
     }
 
     cfg->dtype = LCBVB_DIST_UNKNOWN;
@@ -1556,6 +1557,9 @@ int lcbvb_genconfig_ex(lcbvb_CONFIG *vb, const char *name, const char *uuid, con
     vb->nrepl = nreplica;
     vb->nsrv = nservers;
     vb->bname = strdup(name);
+    if (vb->bname) {
+        vb->bname_len = strlen(vb->bname);
+    }
     if (uuid) {
         vb->buuid = strdup(uuid);
     }

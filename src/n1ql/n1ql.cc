@@ -25,6 +25,7 @@
 #include <map>
 #include <string>
 #include <list>
+#include <regex>
 
 #define LOGFMT "(NR=%p) "
 #define LOGID(req) static_cast< const void * >(req)
@@ -69,7 +70,7 @@ struct lcb_CMDN1QL_ {
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respn1ql_status(const lcb_RESPN1QL *resp)
 {
-    return resp->rc;
+    return resp->ctx.rc;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respn1ql_cookie(const lcb_RESPN1QL *resp, void **cookie)
@@ -94,6 +95,12 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respn1ql_http_response(const lcb_RESPN1QL *resp,
 LIBCOUCHBASE_API lcb_STATUS lcb_respn1ql_handle(const lcb_RESPN1QL *resp, lcb_N1QL_HANDLE **handle)
 {
     *handle = resp->handle;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_respn1ql_error_context(const lcb_RESPN1QL *resp, const lcb_N1QL_ERROR_CONTEXT **ctx)
+{
+    *ctx = &resp->ctx;
     return LCB_SUCCESS;
 }
 
@@ -203,7 +210,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_adhoc(lcb_CMDN1QL *cmd, int adhoc)
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_client_context_id(lcb_CMDN1QL *cmd, const char* value, size_t value_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_client_context_id(lcb_CMDN1QL *cmd, const char *value, size_t value_len)
 {
     cmd->root["client_context_id"] = std::string(value, value_len);
     return LCB_SUCCESS;
@@ -336,7 +343,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_handle(lcb_CMDN1QL *cmd, lcb_N1QL_HANDLE
 }
 
 // Indicate that the 'creds' field is to be used.
-#define F_CMDN1QL_CREDSAUTH 1 << 15
+#define F_CMDN1QL_CREDSAUTH (1u << 15u)
 
 class Plan
 {
@@ -500,6 +507,9 @@ typedef struct lcb_N1QL_HANDLE_ : lcb::jsparse::Parser::Actions {
 
     /** String of the original statement. Cached here to avoid jsoncpp lookups */
     std::string statement;
+    std::string client_context_id;
+    std::string first_error_message;
+    uint32_t first_error_code;
 
     /** Whether we're retrying this */
     bool was_retried;
@@ -586,7 +596,7 @@ typedef struct lcb_N1QL_HANDLE_ : lcb::jsparse::Parser::Actions {
     // Parser overrides:
     void JSPARSE_on_row(const lcb::jsparse::Row &row)
     {
-        lcb_RESPN1QL resp = {0};
+        lcb_RESPN1QL resp{};
         resp.row = static_cast< const char * >(row.row.iov_base);
         resp.nrow = row.row.iov_len;
         nrows++;
@@ -743,13 +753,90 @@ void N1QLREQ::invoke_row(lcb_RESPN1QL *resp, bool is_last)
     resp->htresp = cur_htresp;
     resp->handle = this;
 
+    resp->ctx.http_response_code = cur_htresp->htstatus;
+    resp->ctx.client_context_id = client_context_id.c_str();
+    resp->ctx.client_context_id_len = client_context_id.size();
+    resp->ctx.statement = statement.c_str();
+    resp->ctx.statement_len = statement.size();
+
     if (is_last) {
-        lcb_IOV meta;
+        lcb_IOV meta_buf;
         resp->rflags |= LCB_RESP_F_FINAL;
-        resp->rc = lasterr;
-        parser->get_postmortem(meta);
-        resp->row = static_cast< const char * >(meta.iov_base);
-        resp->nrow = meta.iov_len;
+        resp->ctx.rc = lasterr;
+        parser->get_postmortem(meta_buf);
+        resp->row = static_cast< const char * >(meta_buf.iov_base);
+        resp->nrow = meta_buf.iov_len;
+        Json::Value meta;
+        if (parse_json(resp->row, resp->nrow, meta)) {
+            const Json::Value &errors = meta["errors"];
+            if (errors.isArray() && !errors.empty()) {
+                const Json::Value &err = errors[0];
+                const Json::Value &msg = err["msg"];
+                if (msg.isString()) {
+                    first_error_message = msg.asString();
+                    resp->ctx.first_error_message = first_error_message.c_str();
+                    resp->ctx.first_error_message_len = first_error_message.size();
+                }
+                const Json::Value &code = err["code"];
+                if (code.isNumeric()) {
+                    first_error_code = code.asUInt();
+                    resp->ctx.first_error_code = first_error_code;
+                    switch (first_error_code) {
+                        case 3000:
+                            resp->ctx.rc = LCB_ERR_PARSING_FAILED;
+                            break;
+                        case 12009:
+                            resp->ctx.rc = LCB_ERR_CAS_MISMATCH;
+                            break;
+                        case 4040:
+                        case 4050:
+                        case 4060:
+                        case 4070:
+                        case 4080:
+                        case 4090:
+                            resp->ctx.rc = LCB_ERR_PREPARED_STATEMENT;
+                            break;
+                        case 4300:
+                            if (!first_error_message.empty()) {
+                                std::regex already_exists("index.+already exists");
+                                if (std::regex_search(first_error_message, already_exists)) {
+                                    resp->ctx.rc = LCB_ERR_QUERY_INDEX_EXISTS;
+                                }
+                            }
+                            break;
+                        case 5000:
+                            if (!first_error_message.empty()) {
+                                std::regex already_exists("Index.+already exists"); /* NOTE: case sensitive */
+                                if (std::regex_search(first_error_message, already_exists)) {
+                                    resp->ctx.rc = LCB_ERR_QUERY_INDEX_EXISTS;
+                                } else {
+                                    std::regex not_found("index.+not found");
+                                    if (std::regex_search(first_error_message, not_found)) {
+                                        resp->ctx.rc = LCB_ERR_QUERY_INDEX_NOT_FOUND;
+                                    }
+                                }
+                            }
+                            break;
+                        case 12004:
+                        case 12016:
+                            resp->ctx.rc = LCB_ERR_QUERY_INDEX_NOT_FOUND;
+                            break;
+                        default:
+                            if (first_error_code >= 4000 && first_error_code < 5000) {
+                                resp->ctx.rc = LCB_ERR_PLANNING_FAILED;
+                            } else if (first_error_code >= 5000 && first_error_code < 6000) {
+                                resp->ctx.rc = LCB_ERR_INTERNAL_SERVER;
+                            } else if (first_error_code >= 10000 && first_error_code < 11000) {
+                                resp->ctx.rc = LCB_ERR_AUTHENTICATION;
+                            } else if ((first_error_code >= 12000 && first_error_code < 13000) ||
+                                       (first_error_code >= 14000 && first_error_code < 15000)) {
+                                resp->ctx.rc = LCB_ERR_QUERY_INDEX;
+                            }
+                            break;
+                    }
+                }
+            }
+        }
     }
 
     if (callback) {
@@ -762,13 +849,8 @@ void N1QLREQ::invoke_row(lcb_RESPN1QL *resp, bool is_last)
 
 lcb_N1QL_HANDLE_::~lcb_N1QL_HANDLE_()
 {
-    if (htreq) {
-        lcb_http_cancel(instance, htreq);
-        htreq = NULL;
-    }
-
     if (callback) {
-        lcb_RESPN1QL resp = {0};
+        lcb_RESPN1QL resp{};
         invoke_row(&resp, 1);
     }
 
@@ -782,6 +864,11 @@ lcb_N1QL_HANDLE_::~lcb_N1QL_HANDLE_()
         }
         lcbtrace_span_finish(span, LCBTRACE_NOW);
         span = NULL;
+    }
+
+    if (htreq) {
+        lcb_http_cancel(instance, htreq);
+        htreq = NULL;
     }
 
     if (parser) {
@@ -801,9 +888,9 @@ static void chunk_callback(lcb_INSTANCE *instance, int ign, const lcb_RESPBASE *
     (void)instance;
 
     req->cur_htresp = rh;
-    if (rh->rc != LCB_SUCCESS || rh->htstatus != 200) {
+    if (rh->ctx.rc != LCB_SUCCESS || rh->htstatus != 200) {
         if (req->lasterr == LCB_SUCCESS || rh->htstatus != 200) {
-            req->lasterr = rh->rc ? rh->rc : LCB_ERR_HTTP;
+            req->lasterr = rh->ctx.rc ? rh->ctx.rc : LCB_ERR_HTTP;
         }
     }
 
@@ -829,9 +916,9 @@ void N1QLREQ::fail_prepared(const lcb_RESPN1QL *orig, lcb_STATUS err)
     lcb_RESPN1QL newresp = *orig;
     newresp.rflags = LCB_RESP_F_FINAL;
     newresp.cookie = const_cast< void * >(cookie);
-    newresp.rc = err;
+    newresp.ctx.rc = err;
     if (err == LCB_SUCCESS) {
-        newresp.rc = LCB_ERR_GENERIC;
+        newresp.ctx.rc = LCB_ERR_GENERIC;
     }
 
     if (callback != NULL) {
@@ -849,8 +936,8 @@ static void prepare_rowcb(lcb_INSTANCE *instance, int, const lcb_RESPN1QL *row)
     lcb_n1ql_cancel(instance, origreq->prepare_req);
     origreq->prepare_req = NULL;
 
-    if (row->rc != LCB_SUCCESS || (row->rflags & LCB_RESP_F_FINAL)) {
-        origreq->fail_prepared(row, row->rc);
+    if (row->ctx.rc != LCB_SUCCESS || (row->rflags & LCB_RESP_F_FINAL)) {
+        origreq->fail_prepared(row, row->ctx.rc);
     } else {
         // Insert into cache
         Json::Value prepared;
@@ -863,7 +950,7 @@ static void prepare_rowcb(lcb_INSTANCE *instance, int, const lcb_RESPN1QL *row)
         bool eps = LCBVB_CCAPS(LCBT_VBCONFIG(instance)) & LCBVB_CCAP_N1QL_ENHANCED_PREPARED_STATEMENTS;
         // Insert plan into cache
         lcb_log(LOGARGS(origreq, DEBUG), LOGFMT "Got %sprepared statement. Inserting into cache and reissuing",
-            LOGID(origreq), eps ? "(enhanced) " : "");
+                LOGID(origreq), eps ? "(enhanced) " : "");
         const Plan &ent = origreq->cache().add_entry(origreq->statement, prepared, !eps);
 
         // Issue the query with the newly prepared plan
@@ -1006,6 +1093,15 @@ lcb_N1QL_HANDLE_::lcb_N1QL_HANDLE_(lcb_INSTANCE *obj, const void *user_cookie, c
         // Timeout is not a string!
         lasterr = LCB_ERR_INVALID_ARGUMENT;
         return;
+    }
+    Json::Value &ccid = json["client_context_id"];
+    if (ccid.isNull()) {
+        char buf[32];
+        size_t nbuf = snprintf(buf, sizeof(buf), "%016" PRIx64, lcb_next_rand64());
+        client_context_id.assign(buf, nbuf);
+        json["client_context_id"] = client_context_id;
+    } else {
+        client_context_id = ccid.asString();
     }
 
     // Determine if we need to add more credentials.
