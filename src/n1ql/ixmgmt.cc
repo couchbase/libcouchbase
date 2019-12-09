@@ -178,7 +178,7 @@ lcb_STATUS dispatch_common(lcb_INSTANCE *instance, const void *cookie, lcb_N1XMG
 
     lcb_CMDN1QL *cmd;
     lcb_cmdn1ql_create(&cmd);
-    lcb_cmdn1ql_query(cmd, s, n);
+    lcb_cmdn1ql_payload(cmd, s, n);
     lcb_cmdn1ql_callback(cmd, i_callback);
     lcb_log(LOGARGS(&ixwrap, DEBUG), LOGFMT "Issuing query %.*s", LOGID(obj), (int)n, s);
     rc = lcb_n1ql(instance, obj, cmd);

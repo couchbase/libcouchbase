@@ -1606,13 +1606,9 @@ void N1qlHandler::run()
 
     const char *payload;
     size_t npayload;
-    lcb_cmdn1ql_payload(cmd, &payload, &npayload);
+    lcb_cmdn1ql_encoded_payload(cmd, &payload, &npayload);
     fprintf(stderr, "---> Encoded query: %.*s\n", (int)npayload, payload);
 
-    // TODO: deprecate and expose in analytics
-    // if (o_analytics.passed()) {
-    //     cmd.cmdflags |= LCB_CMDN1QL_F_ANALYTICSQUERY;
-    // }
     rc = lcb_n1ql(instance, NULL, cmd);
     lcb_cmdn1ql_destroy(cmd);
     if (rc != LCB_SUCCESS) {

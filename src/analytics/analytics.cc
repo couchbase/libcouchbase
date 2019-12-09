@@ -160,6 +160,7 @@ struct lcb_CMDANALYTICS_ {
     LCB_CMD_BASE;
 
     Json::Value root;
+    std::string query;
     lcb_ANALYTICS_CALLBACK callback;
     lcb_ANALYTICS_HANDLE **handle;
     lcb_INGEST_OPTIONS *ingest;
@@ -218,14 +219,23 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_callback(lcb_CMDANALYTICS *cmd, lcb
         n = strlen(s);                                                                                                 \
     }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_query(lcb_CMDANALYTICS *cmd, const char *qstr, size_t nqstr)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_payload(lcb_CMDANALYTICS *cmd, const char *query, size_t query_len)
 {
-    fix_strlen(qstr, nqstr);
+    fix_strlen(query, query_len);
     Json::Value value;
-    if (!Json::Reader().parse(qstr, qstr + nqstr, value)) {
+    if (!Json::Reader().parse(query, query + query_len, value)) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
     cmd->root = value;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_encoded_payload(lcb_CMDANALYTICS *cmd, const char **payload,
+                                                             size_t *payload_len)
+{
+    cmd->query = Json::FastWriter().write(cmd->root);
+    *payload = cmd->query.c_str();
+    *payload_len = cmd->query.size();
     return LCB_SUCCESS;
 }
 

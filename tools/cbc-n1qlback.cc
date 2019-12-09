@@ -368,7 +368,7 @@ class ThreadContext
                     const char *p;
                     size_t n;
 
-                    lcb_cmdn1ql_payload(m_cmd, &p, &n);
+                    lcb_cmdn1ql_encoded_payload(m_cmd, &p, &n);
                     std::stringstream ss;
                     ss.write(p, n);
                     ss << endl;
@@ -423,7 +423,7 @@ class ThreadContext
         last_nrow = 0;
         last_nerr = 0;
 
-        lcb_cmdn1ql_query(m_cmd, txt.c_str(), txt.size());
+        lcb_cmdn1ql_payload(m_cmd, txt.c_str(), txt.size());
 
         // Set up our context
         QueryContext qctx(this);
