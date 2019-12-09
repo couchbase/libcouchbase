@@ -1646,6 +1646,160 @@ void N1qlHandler::run()
     lcb_wait(instance);
 }
 
+extern "C" {
+static void analyticsCallback(lcb_INSTANCE *, int, const lcb_RESPANALYTICS *resp)
+{
+    const char *row;
+    size_t nrow;
+    lcb_respanalytics_row(resp, &row, &nrow);
+
+    if (lcb_respanalytics_is_final(resp)) {
+        lcb_STATUS rc = lcb_respanalytics_status(resp);
+        fprintf(stderr, "---> Query response finished\n");
+        if (rc != LCB_SUCCESS) {
+            fprintf(stderr, "---> Query failed with library code %s\n", lcb_strerror_short(rc));
+
+            const lcb_ANALYTICS_ERROR_CONTEXT *ctx;
+            lcb_respanalytics_error_context(resp, &ctx);
+            uint32_t code;
+            lcb_errctx_analytics_http_response_code(ctx, &code);
+            fprintf(stderr, "---> HTTP response code: %d\n", code);
+            const char *client_id;
+            size_t nclient_id;
+            lcb_errctx_analytics_client_context_id(ctx, &client_id, &nclient_id);
+            fprintf(stderr, "---> Client context ID: %.*s\n", (int)nclient_id, client_id);
+            const char *errmsg;
+            size_t nerrmsg;
+            uint32_t err;
+            lcb_errctx_analytics_first_error_message(ctx, &errmsg, &nerrmsg);
+            lcb_errctx_analytics_first_error_code(ctx, &err);
+            fprintf(stderr, "---> First query error: %d (%.*s)\n", err, (int)nerrmsg, errmsg);
+        }
+        if (row) {
+            printf("%.*s\n", (int)nrow, row);
+        }
+    } else {
+        printf("%.*s,\n", (int)nrow, row);
+    }
+}
+}
+
+void AnalyticsHandler::run()
+{
+    Handler::run();
+    const string &qstr = getRequiredArg();
+    lcb_STATUS rc;
+
+    lcb_CMDANALYTICS *cmd;
+    lcb_cmdanalytics_create(&cmd);
+
+    rc = lcb_cmdanalytics_statement(cmd, qstr.c_str(), qstr.size());
+    if (rc != LCB_SUCCESS) {
+        throw LcbError(rc);
+    }
+
+    const vector< string > &vv_args = o_args.const_result();
+    for (size_t ii = 0; ii < vv_args.size(); ii++) {
+        string key, value;
+        splitKvParam(vv_args[ii], key, value);
+        rc = lcb_cmdanalytics_named_param(cmd, key.c_str(), key.size(), value.c_str(), value.size());
+        if (rc != LCB_SUCCESS) {
+            throw LcbError(rc);
+        }
+    }
+
+    const vector< string > &vv_opts = o_opts.const_result();
+    for (size_t ii = 0; ii < vv_opts.size(); ii++) {
+        string key, value;
+        splitKvParam(vv_opts[ii], key, value);
+        rc = lcb_cmdanalytics_option(cmd, key.c_str(), key.size(), value.c_str(), value.size());
+        if (rc != LCB_SUCCESS) {
+            throw LcbError(rc);
+        }
+    }
+    lcb_cmdanalytics_callback(cmd, analyticsCallback);
+
+    const char *payload;
+    size_t npayload;
+    lcb_cmdanalytics_encoded_payload(cmd, &payload, &npayload);
+    fprintf(stderr, "---> Encoded query: %.*s\n", (int)npayload, payload);
+
+    rc = lcb_analytics(instance, NULL, cmd);
+    lcb_cmdanalytics_destroy(cmd);
+    if (rc != LCB_SUCCESS) {
+        throw LcbError(rc);
+    }
+    lcb_wait(instance);
+}
+
+extern "C" {
+static void ftsCallback(lcb_INSTANCE *, int, const lcb_RESPFTS *resp)
+{
+    const char *row;
+    size_t nrow;
+    lcb_respfts_row(resp, &row, &nrow);
+
+    if (lcb_respfts_is_final(resp)) {
+        lcb_STATUS rc = lcb_respfts_status(resp);
+        fprintf(stderr, "---> Query response finished\n");
+        if (rc != LCB_SUCCESS) {
+            fprintf(stderr, "---> Query failed with library code %s\n", lcb_strerror_short(rc));
+
+            const lcb_FTS_ERROR_CONTEXT *ctx;
+            lcb_respfts_error_context(resp, &ctx);
+            uint32_t code;
+            lcb_errctx_fts_http_response_code(ctx, &code);
+            fprintf(stderr, "---> HTTP response code: %d\n", code);
+            const char *errmsg;
+            size_t nerrmsg;
+            lcb_errctx_fts_error_message(ctx, &errmsg, &nerrmsg);
+            fprintf(stderr, "---> Query error message: %.*s\n", (int)nerrmsg, errmsg);
+        }
+        if (row) {
+            printf("%.*s\n", (int)nrow, row);
+        }
+    } else {
+        printf("%.*s,\n", (int)nrow, row);
+    }
+}
+}
+
+void SearchHandler::run()
+{
+    Handler::run();
+    const string &qstr = getRequiredArg();
+    lcb_STATUS rc;
+
+    Json::Value query;
+    query["query"] = qstr;
+    const vector< string > &vv_opts = o_opts.const_result();
+    for (size_t ii = 0; ii < vv_opts.size(); ii++) {
+        string key, value;
+        splitKvParam(vv_opts[ii], key, value);
+        query[key] = value;
+    }
+    Json::Value payload;
+    payload["indexName"] = o_index.result();
+    payload["query"] = query;
+    std::string payload_str = Json::FastWriter().write(payload);
+    fprintf(stderr, "---> Encoded query: %.*s\n", (int)payload_str.size(), payload_str.c_str());
+
+    lcb_CMDFTS *cmd;
+    lcb_cmdfts_create(&cmd);
+    lcb_cmdfts_callback(cmd, ftsCallback);
+    rc = lcb_cmdfts_payload(cmd, payload_str.c_str(), payload_str.size());
+    if (rc != LCB_SUCCESS) {
+        throw LcbError(rc);
+    }
+
+    rc = lcb_fts(instance, NULL, cmd);
+    lcb_cmdfts_destroy(cmd);
+    if (rc != LCB_SUCCESS) {
+        throw LcbError(rc);
+    }
+    lcb_wait(instance);
+}
+
 void HttpReceiver::install(lcb_INSTANCE *instance)
 {
     lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
@@ -2039,6 +2193,8 @@ static const char *optionsOrder[] = {"help",
                                      "verbosity",
                                      "view",
                                      "query",
+                                     "analytics",
+                                     "search",
                                      "admin",
                                      "bucket-create",
                                      "bucket-delete",
@@ -2138,6 +2294,8 @@ static void setupHandlers()
     handlers_s["bucket-flush"] = new BucketFlushHandler();
     handlers_s["view"] = new ViewsHandler();
     handlers_s["query"] = new N1qlHandler();
+    handlers_s["analytics"] = new AnalyticsHandler();
+    handlers_s["search"] = new SearchHandler();
     handlers_s["connstr"] = new ConnstrHandler();
     handlers_s["write-config"] = new WriteConfigHandler();
     handlers_s["strerror"] = new StrErrorHandler();

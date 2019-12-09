@@ -537,6 +537,63 @@ class N1qlHandler : public Handler
     cliopts::BoolOption o_prepare;
 };
 
+class AnalyticsHandler : public Handler
+{
+  public:
+    AnalyticsHandler() : Handler("analytics"), o_args("qarg"), o_opts("qopt") {}
+    HANDLER_DESCRIPTION("Execute an Analytics Query")
+    HANDLER_USAGE("QUERY [--qarg PARAM1=VALUE1 --qopt PARAM2=VALUE2]")
+
+  protected:
+    void run();
+
+    void addOptions()
+    {
+        Handler::addOptions();
+        o_args.description("Specify values for placeholders (can be specified multiple times");
+        o_args.abbrev('A');
+        o_args.argdesc("PLACEHOLDER_PARAM=PLACEHOLDER_VALUE");
+
+        o_opts.description("Additional query options");
+        o_opts.abbrev('Q');
+
+        parser.addOption(o_args);
+        parser.addOption(o_opts);
+    }
+
+  private:
+    cliopts::ListOption o_args;
+    cliopts::ListOption o_opts;
+};
+
+class SearchHandler : public Handler
+{
+  public:
+    SearchHandler() : Handler("search"), o_index("index"), o_opts("qopt") {}
+    HANDLER_DESCRIPTION("Execute an Search Query")
+    HANDLER_USAGE("--index INDEX_NAME QUERY [--qopt PARAM2=VALUE2]")
+
+  protected:
+    void run();
+
+    void addOptions()
+    {
+        Handler::addOptions();
+        o_index.description("Name of the search index");
+        o_index.abbrev('i').mandatory(true);
+
+        o_opts.description("Additional query options");
+        o_opts.abbrev('Q');
+
+        parser.addOption(o_index);
+        parser.addOption(o_opts);
+    }
+
+  private:
+    cliopts::StringOption o_index;
+    cliopts::ListOption o_opts;
+};
+
 class HttpReceiver
 {
   public:
