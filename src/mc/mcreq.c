@@ -598,7 +598,7 @@ uint32_t mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet)
     return 0;
 }
 
-void mcreq_get_key(lcb_INSTANCE *instance, const mc_PACKET *packet, const char **key, lcb_size_t *nkey)
+void mcreq_get_key(lcb_INSTANCE *instance, const mc_PACKET *packet, const char **key, size_t *nkey)
 {
     uint8_t ffext = 0;
     uint16_t nk = 0;
