@@ -136,6 +136,7 @@ TEST_F(SnappyUnitTest, testSpec)
     lcb_cmdget_destroy(gcmd);
 
     setCompression("off");
+    hw.destroy();
     createConnection(hw, &instance);
     lcb_cntl_setu32(instance, LCB_CNTL_COMPRESSION_OPTS, LCB_COMPRESS_INOUT);
     lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)getcb);

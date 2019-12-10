@@ -34,9 +34,17 @@ static void ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_STATUS rc, c
             break;
     }
     free(rd);
+    req->u_rdata.exdata = NULL;
 }
 
-static mc_REQDATAPROCS procs = {ext_callback_proxy};
+static void ext_callback_dtor(mc_PACKET *pkt)
+{
+    mc_REQDATAEX *rd = pkt->u_rdata.exdata;
+    free(rd);
+    pkt->u_rdata.exdata = NULL;
+}
+
+static mc_REQDATAPROCS procs = {ext_callback_proxy, ext_callback_dtor};
 
 lcb_STATUS lcb_st::request_config(const void *cookie_, lcb::Server *server)
 {

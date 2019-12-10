@@ -475,6 +475,7 @@ TEST_F(SubdocUnitTest, testSdStore)
     // See if our value actually matches
     ASSERT_PATHVAL_EQ("42", instance, key, "foo");
     lcb_cmdsubdoc_destroy(cmd);
+    lcb_subdocspecs_destroy(spec);
 }
 
 TEST_F(SubdocUnitTest, testMkdoc)
@@ -584,51 +585,70 @@ TEST_F(SubdocUnitTest, testCounter)
 
     lcb_SUBDOCSPECS *spec;
     lcb_subdocspecs_create(&spec, 1);
-
     lcb_cmdsubdoc_specs(cmd, spec);
-
     lcb_subdocspecs_counter(spec, 0, 0, "counter", strlen("counter"), 42);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
     ASSERT_SD_VAL(res, "42");
     // Try it again
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
     ASSERT_SD_VAL(res, "84");
+    lcb_subdocspecs_destroy(spec);
 
     static const char *si64max = "9223372036854775807";
     // Use a large value
+    lcb_subdocspecs_create(&spec, 1);
+    lcb_cmdsubdoc_specs(cmd, spec);
     lcb_subdocspecs_dict_upsert(spec, 0, 0, "counter", strlen("counter"), si64max, strlen(si64max));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
     ASSERT_SD_OK(res);
     ASSERT_PATHVAL_EQ(si64max, instance, key, "counter");
+    lcb_subdocspecs_destroy(spec);
 
     // Try to increment by 1
+    lcb_subdocspecs_create(&spec, 1);
+    lcb_cmdsubdoc_specs(cmd, spec);
     lcb_subdocspecs_counter(spec, 0, 0, "counter", strlen("counter"), 1);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
     ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_CANNOT_INSERT_VALUE);
+    lcb_subdocspecs_destroy(spec);
 
     // Try to increment by 0
+    lcb_subdocspecs_create(&spec, 1);
+    lcb_cmdsubdoc_specs(cmd, spec);
     lcb_subdocspecs_counter(spec, 0, 0, "counter", strlen("counter"), 0);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
     ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_DELTA_RANGE);
+    lcb_subdocspecs_destroy(spec);
 
     // Try to use an already large number (so the number is too big on the server)
+    lcb_subdocspecs_create(&spec, 1);
+    lcb_cmdsubdoc_specs(cmd, spec);
     std::string biggerNum(si64max);
     biggerNum += "999999999999999999999999999999";
     lcb_subdocspecs_dict_upsert(spec, 0, 0, "counter", strlen("counter"), biggerNum.c_str(), biggerNum.size());
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
     ASSERT_SD_OK(res);
+    lcb_subdocspecs_destroy(spec);
 
     // Try the counter op again
+    lcb_subdocspecs_create(&spec, 1);
+    lcb_cmdsubdoc_specs(cmd, spec);
     lcb_subdocspecs_counter(spec, 0, 0, "counter", strlen("counter"), 1);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
     ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_NUMBER_TOO_BIG);
+    lcb_subdocspecs_destroy(spec);
 
     // Try the counter op with a non-numeric existing value
+    lcb_subdocspecs_create(&spec, 1);
+    lcb_cmdsubdoc_specs(cmd, spec);
     lcb_subdocspecs_counter(spec, 0, 0, "dictkey", strlen("dictkey"), 1);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
     ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_PATH_MISMATCH);
+    lcb_subdocspecs_destroy(spec);
 
     // Reset the value again to 0
+    lcb_subdocspecs_create(&spec, 1);
+    lcb_cmdsubdoc_specs(cmd, spec);
     lcb_subdocspecs_dict_upsert(spec, 0, 0, "counter", strlen("counter"), "0", 1);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
     ASSERT_SD_OK(res);

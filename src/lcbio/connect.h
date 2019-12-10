@@ -232,8 +232,10 @@ void lcbio_shutdown(lcbio_SOCKET *);
  * zero, lcbio_shutdown() will be called.
  */
 #define lcbio_unref(s)                                                                                                 \
-    if (!--(s)->refcount) {                                                                                            \
-        lcbio__destroy(s);                                                                                             \
+    if ((s) && !--(s)->refcount) {                                                                                     \
+        lcbio_SOCKET *t__ = (s);                                                                                       \
+        (s) = NULL;                                                                                                    \
+        lcbio__destroy(t__);                                                                                           \
     }
 
 /** @} */
