@@ -26,7 +26,7 @@
 #define CTX_SD(ctx) (ctx)->sd
 #define CTX_IOT(ctx) (ctx)->io
 #define CTX_INCR_METRIC(ctx, metric, n) do { \
-    if (ctx->sock->metrics) { \
+    if (ctx->sock && ctx->sock->metrics) { \
         ctx->sock->metrics->metric += n; \
     } \
 } while (0)
@@ -162,7 +162,7 @@ lcbio_ctx_close_ex(lcbio_CTX *ctx, lcbio_CTXCLOSE_cb cb, void *arg,
 
     ctx->sock->ctx = NULL;
     if (oldrc == ctx->sock->refcount) {
-        lcbio_shutdown(ctx->sock);
+        lcbio_unref(ctx->sock);
     }
 
     if (ctx->output) {

@@ -395,4 +395,5 @@ TEST_F(ConfigTest, testPresentNodesextMissingNodesKetama)
     ASSERT_NE((const char *)NULL, lcbvb_get_hostport(vbc, 1, LCBVB_SVCTYPE_DATA, LCBVB_SVCMODE_PLAIN));
     ASSERT_NE((const char *)NULL, lcbvb_get_hostport(vbc, 2, LCBVB_SVCTYPE_DATA, LCBVB_SVCMODE_PLAIN));
     ASSERT_EQ((const char *)NULL, lcbvb_get_hostport(vbc, 3, LCBVB_SVCTYPE_DATA, LCBVB_SVCMODE_PLAIN));
+    lcbvb_destroy(vbc);
 }
