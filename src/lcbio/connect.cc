@@ -141,6 +141,11 @@ void Connstart::handler()
 
     if (state == CS_CANCELLED) {
         /* ignore everything. Clean up resources */
+        if (sock->io->is_C() && sock->u.sd) {
+            sock->u.sd->lcbconn = NULL; /* we don't need IO backend to invoke any callbacks now */
+            lcb_assert(sock->refcount > 1);
+            sock->refcount--; /* dereference because of unsuccessful attempt */
+        }
         goto GT_DTOR;
     }
 
@@ -369,6 +374,9 @@ GT_NEXTSOCK:
 
 static void C_conncb(lcb_sockdata_t *sock, int status)
 {
+    if (sock->lcbconn == NULL) {
+        return;
+    }
     lcbio_SOCKET *s = reinterpret_cast< lcbio_SOCKET * >(sock->lcbconn);
     Connstart *cs = reinterpret_cast< Connstart * >(s->ctx);
 
