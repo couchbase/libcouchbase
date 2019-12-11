@@ -328,7 +328,7 @@ static void view_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPVIEW
         rc = lcb_respget_status(doc);
         uint64_t cas;
         lcb_respget_cas(doc, &cas);
-        printf("   Document for response. RC=0x%X. CAS=0x%llx\n", rc, cas);
+        printf("   Document for response. RC=0x%X. CAS=0x%llx\n", rc, (long long)cas);
     }
 }
 
