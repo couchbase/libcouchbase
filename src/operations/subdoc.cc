@@ -157,8 +157,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_replace(lcb_SUBDOCSPECS *operations,
         operations->specs[index].sdcmd = LCB_SDCMD_SET_FULLDOC;
     } else {
         operations->specs[index].sdcmd = LCB_SDCMD_REPLACE;
-        LCB_SDSPEC_SET_PATH(&operations->specs[index], path, path_len);
     }
+    LCB_SDSPEC_SET_PATH(&operations->specs[index], path, path_len);
     operations->specs[index].options = flags;
     LCB_SDSPEC_SET_VALUE(&operations->specs[index], value, value_len);
     return LCB_SUCCESS;
