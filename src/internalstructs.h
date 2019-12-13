@@ -305,8 +305,6 @@ struct lcb_CMDGET_ {
      * operation with a supplied CAS
      */
     int lock;
-    /** only for get with touch (when expiration set and lock is false) */
-    LCB_CMD_DURABILITY;
 };
 
 /** @brief Response structure when retrieving a single item */

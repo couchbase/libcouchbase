@@ -136,22 +136,13 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_locktime(lcb_CMDGET *cmd, uint32_t durati
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_durability(lcb_CMDGET *cmd, lcb_DURABILITY_LEVEL level)
-{
-    cmd->dur_level = level;
-    return LCB_SUCCESS;
-}
-
-static lcb_STATUS get_validate(lcb_INSTANCE *instance, const lcb_CMDGET *cmd)
+static lcb_STATUS get_validate(lcb_INSTANCE * /* instance */, const lcb_CMDGET *cmd)
 {
     if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
         return LCB_ERR_EMPTY_KEY;
     }
-    if (cmd->cas || (cmd->dur_level && !cmd->exptime && !cmd->lock)) {
+    if (cmd->cas) {
         return LCB_ERR_OPTIONS_CONFLICT;
-    }
-    if (cmd->dur_level && !LCBT_SUPPORT_SYNCREPLICATION(instance)) {
-        return LCB_ERR_UNSUPPORTED_OPERATION;
     }
 
     return LCB_SUCCESS;
@@ -173,8 +164,6 @@ static lcb_STATUS get_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie, c
     lcb_uint8_t opcode = PROTOCOL_BINARY_CMD_GET;
     protocol_binary_request_gat gcmd;
     protocol_binary_request_header *hdr = &gcmd.message.header;
-    int new_durability_supported = LCBT_SUPPORT_SYNCREPLICATION(instance);
-    lcb_U8 ffextlen = 0;
     lcb_STATUS err;
 
     hdr->request.magic = PROTOCOL_BINARY_REQ;
@@ -184,14 +173,9 @@ static lcb_STATUS get_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie, c
     } else if (cmd->exptime || (cmd->cmdflags & LCB_CMDGET_F_CLEAREXP)) {
         extlen = 4;
         opcode = PROTOCOL_BINARY_CMD_GAT;
-        if (cmd->dur_level && new_durability_supported) {
-            hdr->request.magic = PROTOCOL_BINARY_AREQ;
-            ffextlen = 4;
-        }
     }
 
-    err = mcreq_basic_packet(q, (const lcb_CMDBASE *)cmd, hdr, extlen, ffextlen, &pkt, &pl,
-                             MCREQ_BASICPACKET_F_FALLBACKOK);
+    err = mcreq_basic_packet(q, (const lcb_CMDBASE *)cmd, hdr, extlen, 0, &pkt, &pl, MCREQ_BASICPACKET_F_FALLBACKOK);
     if (err != LCB_SUCCESS) {
         return err;
     }
@@ -203,26 +187,19 @@ static lcb_STATUS get_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie, c
 
     hdr->request.opcode = opcode;
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    hdr->request.bodylen = htonl(extlen + ntohs(hdr->request.keylen) + ffextlen);
+    hdr->request.bodylen = htonl(extlen + ntohs(hdr->request.keylen));
     hdr->request.opaque = pkt->opaque;
     hdr->request.cas = 0;
 
     if (extlen) {
-        if (cmd->dur_level && new_durability_supported) {
-            gcmd.message.body.alt.meta = (1 << 4) | 3;
-            gcmd.message.body.alt.level = cmd->dur_level;
-            gcmd.message.body.alt.timeout = lcb_durability_timeout(instance);
-            gcmd.message.body.alt.expiration = htonl(cmd->exptime);
-        } else {
-            gcmd.message.body.norm.expiration = htonl(cmd->exptime);
-        }
+        gcmd.message.body.norm.expiration = htonl(cmd->exptime);
     }
 
     if (cmd->cmdflags & LCB_CMD_F_INTERNAL_CALLBACK) {
         pkt->flags |= MCREQ_F_PRIVCALLBACK;
     }
 
-    memcpy(SPAN_BUFFER(&pkt->kh_span), gcmd.bytes, MCREQ_PKT_BASESIZE + extlen + ffextlen);
+    memcpy(SPAN_BUFFER(&pkt->kh_span), gcmd.bytes, MCREQ_PKT_BASESIZE + extlen);
     LCB_SCHED_ADD(instance, pl, pkt);
     LCBTRACE_KV_START(instance->settings, cmd, LCBTRACE_OP_GET, pkt->opaque, rdata->span);
     TRACE_GET_BEGIN(instance, hdr, cmd);
