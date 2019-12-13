@@ -185,7 +185,7 @@ static lcb_STATUS touch_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie,
     if (cmd->dur_level && new_durability_supported) {
         tcmd.message.body.alt.meta = (1 << 4) | 3;
         tcmd.message.body.alt.level = cmd->dur_level;
-        tcmd.message.body.alt.timeout = lcb_durability_timeout(instance);
+        tcmd.message.body.alt.timeout = lcb_durability_timeout(instance, cmd->timeout);
         tcmd.message.body.alt.expiration = htonl(cmd->exptime);
     } else {
         tcmd.message.body.norm.expiration = htonl(cmd->exptime);
