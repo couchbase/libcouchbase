@@ -86,7 +86,6 @@ ConfigTest::testConfig(const char *fname, bool checkNew)
         }
     }
     if (checkNew) {
-        ASSERT_FALSE(NULL == vbc->buuid);
         ASSERT_GT(vbc->revid, -1);
     }
 
