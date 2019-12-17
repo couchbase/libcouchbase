@@ -320,7 +320,7 @@ int Server::handle_unknown_error(const mc_PACKET *request, const MemcachedRespon
     }
 
     if (err.hasAttribute(errmap::AUTH)) {
-        newerr = LCB_ERR_AUTHENTICATION;
+        newerr = LCB_ERR_AUTHENTICATION_FAILURE;
     }
 
     if (err.hasAttribute(errmap::SUBDOC) && newerr == LCB_SUCCESS) {
@@ -644,7 +644,7 @@ void Server::purge_single(mc_PACKET *pkt, lcb_STATUS err)
         return;
     }
 
-    if (err == LCB_ERR_AUTHENTICATION) {
+    if (err == LCB_ERR_AUTHENTICATION_FAILURE) {
         /* In-situ auth errors are actually dead servers. Let's provide this
          * as the actual error code. */
         err = LCB_ERR_MAP_CHANGED;

@@ -663,7 +663,7 @@ void ANALYTICSREQ::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
                             resp->ctx.rc = LCB_ERR_TEMPORARY_FAILURE;
                             break;
                         case 24000:
-                            resp->ctx.rc = LCB_ERR_PARSING_FAILED;
+                            resp->ctx.rc = LCB_ERR_PARSING_FAILURE;
                             break;
                         case 23007:
                             resp->ctx.rc = LCB_ERR_JOB_QUEUE_FULL;
@@ -683,10 +683,10 @@ void ANALYTICSREQ::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
                             resp->ctx.rc = LCB_ERR_DATAVERSE_EXISTS;
                             break;
                         case 24047:
-                            resp->ctx.rc = LCB_ERR_ANALYTICS_INDEX_NOT_FOUND;
+                            resp->ctx.rc = LCB_ERR_INDEX_NOT_FOUND;
                             break;
                         case 24048:
-                            resp->ctx.rc = LCB_ERR_ANALYTICS_INDEX_EXISTS;
+                            resp->ctx.rc = LCB_ERR_INDEX_EXISTS;
                             break;
                         case 24006:
                             resp->ctx.rc = LCB_ERR_ANALYTICS_LINK_NOT_FOUND;
@@ -695,9 +695,9 @@ void ANALYTICSREQ::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
                             if (first_error_code >= 24000 && first_error_code < 25000) {
                                 resp->ctx.rc = LCB_ERR_COMPILATION_FAILED;
                             } else if (first_error_code >= 25000 && first_error_code < 26000) {
-                                resp->ctx.rc = LCB_ERR_INTERNAL_SERVER;
+                                resp->ctx.rc = LCB_ERR_INTERNAL_SERVER_FAILURE;
                             } else if (first_error_code >= 20000 && first_error_code < 21000) {
-                                resp->ctx.rc = LCB_ERR_AUTHENTICATION;
+                                resp->ctx.rc = LCB_ERR_AUTHENTICATION_FAILURE;
                             }
                             break;
                     }

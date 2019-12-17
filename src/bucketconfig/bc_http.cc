@@ -136,7 +136,7 @@ static lcb_STATUS process_chunk(HttpProvider *http, const void *buf, unsigned nb
                 goto GT_CHECKDONE;
             }
         } else if (resp.status == 401) {
-            err = LCB_ERR_AUTHENTICATION;
+            err = LCB_ERR_AUTHENTICATION_FAILURE;
         } else {
             err = LCB_ERR_GENERIC;
         }

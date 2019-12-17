@@ -41,13 +41,14 @@ extern "C" {
 
 typedef enum {
     LCB_ERROR_TYPE_SUCCESS = 0,
-    LCB_ERROR_TYPE_BASE = 2,
-    LCB_ERROR_TYPE_SHARED = 3,
-    LCB_ERROR_TYPE_KEYVALUE = 4,
-    LCB_ERROR_TYPE_QUERY = 5,
-    LCB_ERROR_TYPE_ANALYTICS = 6,
-    LCB_ERROR_TYPE_SEARCH = 7,
-    LCB_ERROR_TYPE_VIEW = 8,
+    LCB_ERROR_TYPE_BASE = 1,
+    LCB_ERROR_TYPE_SHARED = 2,
+    LCB_ERROR_TYPE_KEYVALUE = 3,
+    LCB_ERROR_TYPE_QUERY = 4,
+    LCB_ERROR_TYPE_ANALYTICS = 5,
+    LCB_ERROR_TYPE_SEARCH = 6,
+    LCB_ERROR_TYPE_VIEW = 7,
+    LCB_ERROR_TYPE_MANAGEMENT = 8,
     LCB_ERROR_TYPE_SDK = 10
 } lcb_ERROR_TYPE;
 
@@ -60,72 +61,84 @@ X(LCB_SUCCESS,                   0,   LCB_ERROR_TYPE_SUCCESS, 0, "Success (Not a
 X(LCB_ERR_GENERIC,               100, LCB_ERROR_TYPE_BASE,    0, "Generic error code") \
 \
 /* Shared Error Definitions */ \
-X(LCB_ERR_TIMEOUT,               201, LCB_ERROR_TYPE_SHARED, LCB_ERROR_FLAG_NETWORK, "A request cannot be completed until the user-defined timeout fired") \
-X(LCB_ERR_REQUEST_CANCELED,      202, LCB_ERROR_TYPE_SHARED, 0, "A request is cancelled and cannot be resolved in a non-ambiguous way. Most likely the request is in-flight on the socket and the socket gets closed.") \
-X(LCB_ERR_INVALID_ARGUMENT,      203, LCB_ERROR_TYPE_SHARED, 0, "It is unambiguously determined that the error was caused because of invalid arguments from the user") \
-X(LCB_ERR_SERVICE_NOT_AVAILABLE, 204, LCB_ERROR_TYPE_SHARED, 0, "It was determined from the config unambiguously that the service is not available") \
-X(LCB_ERR_INTERNAL_SERVER,       205, LCB_ERROR_TYPE_SHARED, 0, "Internal server error") \
-X(LCB_ERR_AUTHENTICATION,        206, LCB_ERROR_TYPE_SHARED, 0, "Authentication error") \
-X(LCB_ERR_TEMPORARY_FAILURE,     207, LCB_ERROR_TYPE_SHARED, 0, "Temporary failure") \
-X(LCB_ERR_PARSING_FAILED,        208, LCB_ERROR_TYPE_SHARED, 0, "Parsing failed") \
-X(LCB_ERR_CAS_MISMATCH,          209, LCB_ERROR_TYPE_SHARED, 0, "CAS mismatch") \
-X(LCB_ERR_BUCKET_NOT_FOUND,      210, LCB_ERROR_TYPE_SHARED, 0, "A request is made but the current bucket is not found") \
-X(LCB_ERR_COLLECTION_NOT_FOUND,  211, LCB_ERROR_TYPE_SHARED, 0, "A request is made but the current collection (including scope) is not found") \
-X(LCB_ERR_UNSUPPORTED_OPERATION, 212, LCB_ERROR_TYPE_SHARED, 0, "Unsupported operation") \
-X(LCB_ERR_AMBIGUOUS_TIMEOUT,     213, LCB_ERROR_TYPE_SHARED, 0, "Ambiguous timeout") \
-X(LCB_ERR_UNAMBIGUOUS_TIMEOUT,   214, LCB_ERROR_TYPE_SHARED, 0, "Unambiguous timeout") \
+X(LCB_ERR_TIMEOUT,                  201, LCB_ERROR_TYPE_SHARED, LCB_ERROR_FLAG_NETWORK, "A request cannot be completed until the user-defined timeout fired") \
+X(LCB_ERR_REQUEST_CANCELED,         202, LCB_ERROR_TYPE_SHARED, 0, "A request is cancelled and cannot be resolved in a non-ambiguous way. Most likely the request is in-flight on the socket and the socket gets closed.") \
+X(LCB_ERR_INVALID_ARGUMENT,         203, LCB_ERROR_TYPE_SHARED, 0, "It is unambiguously determined that the error was caused because of invalid arguments from the user") \
+X(LCB_ERR_SERVICE_NOT_AVAILABLE,    204, LCB_ERROR_TYPE_SHARED, 0, "It was determined from the config unambiguously that the service is not available") \
+X(LCB_ERR_INTERNAL_SERVER_FAILURE,  205, LCB_ERROR_TYPE_SHARED, 0, "Internal server error") \
+X(LCB_ERR_AUTHENTICATION_FAILURE,   206, LCB_ERROR_TYPE_SHARED, 0, "Authentication error") \
+X(LCB_ERR_TEMPORARY_FAILURE,        207, LCB_ERROR_TYPE_SHARED, 0, "Temporary failure") \
+X(LCB_ERR_PARSING_FAILURE,          208, LCB_ERROR_TYPE_SHARED, 0, "Parsing failed") \
+X(LCB_ERR_CAS_MISMATCH,             209, LCB_ERROR_TYPE_SHARED, 0, "CAS mismatch") \
+X(LCB_ERR_BUCKET_NOT_FOUND,         210, LCB_ERROR_TYPE_SHARED, 0, "A request is made but the current bucket is not found") \
+X(LCB_ERR_COLLECTION_NOT_FOUND,     211, LCB_ERROR_TYPE_SHARED, 0, "A request is made but the current collection (including scope) is not found") \
+X(LCB_ERR_ENCODING_FAILURE,         212, LCB_ERROR_TYPE_SHARED, 0, "Encoding of user object failed while trying to write it to the cluster") \
+X(LCB_ERR_DECODING_FAILURE,         213, LCB_ERROR_TYPE_SHARED, 0, "Decoding of the data into the user object failed") \
+X(LCB_ERR_UNSUPPORTED_OPERATION,    214, LCB_ERROR_TYPE_SHARED, 0, "Unsupported operation") \
+X(LCB_ERR_AMBIGUOUS_TIMEOUT,        215, LCB_ERROR_TYPE_SHARED, 0, "Ambiguous timeout") \
+X(LCB_ERR_UNAMBIGUOUS_TIMEOUT,      216, LCB_ERROR_TYPE_SHARED, 0, "Unambiguous timeout") \
+X(LCB_ERR_SCOPE_NOT_FOUND,          217, LCB_ERROR_TYPE_SHARED, 0, "Scope is not found") \
+X(LCB_ERR_INDEX_NOT_FOUND,          218, LCB_ERROR_TYPE_SHARED, 0, "Index is not found") \
+X(LCB_ERR_INDEX_EXISTS,             219, LCB_ERROR_TYPE_SHARED, 0, "Index is exist already") \
 \
 /* KeyValue Error Definitions */ \
-X(LCB_ERR_DOCUMENT_NOT_FOUND,                   301, LCB_ERROR_TYPE_KEYVALUE, 0, "Document is not found") \
-X(LCB_ERR_SERVER_OUT_OF_MEMORY,                 302, LCB_ERROR_TYPE_KEYVALUE, 0, "Server is out of memory") \
-X(LCB_ERR_DOCUMENT_LOCKED,                      303, LCB_ERROR_TYPE_KEYVALUE, 0, "Document locked") \
-X(LCB_ERR_VALUE_TOO_LARGE,                      304, LCB_ERROR_TYPE_KEYVALUE, 0, "Value too large") \
-X(LCB_ERR_DOCUMENT_EXISTS,                      305, LCB_ERROR_TYPE_KEYVALUE, 0, "Document already exists") \
-X(LCB_ERR_VALUE_NOT_JSON,                       306, LCB_ERROR_TYPE_KEYVALUE, 0, "Value is not a JSON") \
-X(LCB_ERR_DURABILITY_LEVEL_NOT_AVAILABLE,       307, LCB_ERROR_TYPE_KEYVALUE, 0, "Durability level is not available") \
-X(LCB_ERR_DURABILITY_IMPOSSIBLE,                308, LCB_ERROR_TYPE_KEYVALUE, 0, "Durability impossible") \
-X(LCB_ERR_DURABILITY_AMBIGUOUS,                 309, LCB_ERROR_TYPE_KEYVALUE, 0, "Durability ambiguous") \
-X(LCB_ERR_DURABLE_WRITE_IN_PROGRESS,            310, LCB_ERROR_TYPE_KEYVALUE, 0, "Durable write in progress") \
-X(LCB_ERR_DURABLE_WRITE_RE_COMMIT_IN_PROGRESS,  311, LCB_ERROR_TYPE_KEYVALUE, 0, "Durable write re-commit in progress") \
-X(LCB_ERR_MUTATION_LOST,                        312, LCB_ERROR_TYPE_KEYVALUE, 0, "Mutation lost") \
-X(LCB_ERR_SUBDOC_PATH_NOT_FOUND,                313, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: path not found") \
-X(LCB_ERR_SUBDOC_PATH_MISMATCH,                 314, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: path mismatch") \
-X(LCB_ERR_SUBDOC_PATH_INVALID,                  315, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: path invalid") \
-X(LCB_ERR_SUBDOC_PATH_TOO_BIG,                  316, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: path too big") \
-X(LCB_ERR_SUBDOC_DOCUMENT_TOO_DEEP,             317, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: document too deep") \
-X(LCB_ERR_SUBDOC_VALUE_TOO_DEEP,                318, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: value too deep") \
-X(LCB_ERR_SUBDOC_CANNOT_INSERT_VALUE,           319, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: cannot insert value") \
-X(LCB_ERR_SUBDOC_DOCUMENT_NOT_JSON,             320, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: document is not a JSON") \
-X(LCB_ERR_SUBDOC_NUMBER_TOO_BIG,                321, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: number is too big") \
-X(LCB_ERR_SUBDOC_DELTA_RANGE,                   322, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: invalid delta range") \
-X(LCB_ERR_SUBDOC_PATH_EXISTS,                   323, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: path already exists") \
-X(LCB_ERR_SUBDOC_XATTR,                         324, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: XATTR error") \
-X(LCB_ERR_DOCUMENT_UNRETRIEVABLE,               325, LCB_ERROR_TYPE_KEYVALUE, 0, "Document is unretrievable") \
-X(LCB_ERR_SUBDOC_GENERIC,                       326, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: generic error") \
+X(LCB_ERR_DOCUMENT_NOT_FOUND,                           301, LCB_ERROR_TYPE_KEYVALUE, 0, "Document is not found") \
+X(LCB_ERR_DOCUMENT_UNRETRIEVABLE,                       302, LCB_ERROR_TYPE_KEYVALUE, 0, "Document is unretrievable") \
+X(LCB_ERR_DOCUMENT_LOCKED,                              303, LCB_ERROR_TYPE_KEYVALUE, 0, "Document locked") \
+X(LCB_ERR_VALUE_TOO_LARGE,                              304, LCB_ERROR_TYPE_KEYVALUE, 0, "Value too large") \
+X(LCB_ERR_DOCUMENT_EXISTS,                              305, LCB_ERROR_TYPE_KEYVALUE, 0, "Document already exists") \
+X(LCB_ERR_VALUE_NOT_JSON,                               306, LCB_ERROR_TYPE_KEYVALUE, 0, "Value is not a JSON") \
+X(LCB_ERR_DURABILITY_LEVEL_NOT_AVAILABLE,               307, LCB_ERROR_TYPE_KEYVALUE, 0, "Durability level is not available") \
+X(LCB_ERR_DURABILITY_IMPOSSIBLE,                        308, LCB_ERROR_TYPE_KEYVALUE, 0, "Durability impossible") \
+X(LCB_ERR_DURABILITY_AMBIGUOUS,                         309, LCB_ERROR_TYPE_KEYVALUE, 0, "Durability ambiguous") \
+X(LCB_ERR_DURABLE_WRITE_IN_PROGRESS,                    310, LCB_ERROR_TYPE_KEYVALUE, 0, "Durable write in progress") \
+X(LCB_ERR_DURABLE_WRITE_RE_COMMIT_IN_PROGRESS,          311, LCB_ERROR_TYPE_KEYVALUE, 0, "Durable write re-commit in progress") \
+X(LCB_ERR_MUTATION_LOST,                                312, LCB_ERROR_TYPE_KEYVALUE, 0, "Mutation lost") \
+X(LCB_ERR_SUBDOC_PATH_NOT_FOUND,                        313, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: path not found") \
+X(LCB_ERR_SUBDOC_PATH_MISMATCH,                         314, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: path mismatch") \
+X(LCB_ERR_SUBDOC_PATH_INVALID,                          315, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: path invalid") \
+X(LCB_ERR_SUBDOC_PATH_TOO_BIG,                          316, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: path too big") \
+X(LCB_ERR_SUBDOC_PATH_TOO_DEEP,                         317, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: document too deep") \
+X(LCB_ERR_SUBDOC_VALUE_TOO_DEEP,                        318, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: value too deep") \
+X(LCB_ERR_SUBDOC_VALUE_INVALID,                         319, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: cannot insert value") \
+X(LCB_ERR_SUBDOC_DOCUMENT_NOT_JSON,                     320, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: document is not a JSON") \
+X(LCB_ERR_SUBDOC_NUMBER_TOO_BIG,                        321, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: number is too big") \
+X(LCB_ERR_SUBDOC_DELTA_INVALID,                         322, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: invalid delta range") \
+X(LCB_ERR_SUBDOC_PATH_EXISTS,                           323, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: path already exists") \
+X(LCB_ERR_SUBDOC_XATTR_UNKNOWN_MACRO,                   324, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: XATTR unknown macro") \
+X(LCB_ERR_SUBDOC_XATTR_INVALID_FLAG_COMBO,              325, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: XATTR invalid flag combination") \
+X(LCB_ERR_SUBDOC_XATTR_INVALID_KEY_COMBO,               326, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: XATTR invalid key combination") \
+X(LCB_ERR_SUBDOC_XATTR_UNKNOWN_VIRTUAL_ATTRIBUTE,       327, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: XATTR unknown virtual attribute") \
+X(LCB_ERR_SUBDOC_XATTR_CANNOT_MODIFY_VIRTUAL_ATTRIBUTE, 328, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: XATTR cannot modify virtual attribute") \
+X(LCB_ERR_SUBDOC_XATTR_INVALID_ORDER,                   329, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: XATTR invalid order") \
+X(LCB_ERR_SUBDOC_GENERIC,                               330, LCB_ERROR_TYPE_KEYVALUE, LCB_ERROR_FLAG_SUBDOC, "Subdoc: generic error") \
 \
 /* Query Error Definitions */ \
-X(LCB_ERR_PLANNING_FAILED,          401, LCB_ERROR_TYPE_QUERY, 0, "Planning failed") \
-X(LCB_ERR_QUERY_INDEX,              402, LCB_ERROR_TYPE_QUERY, 0, "Query index error") \
-X(LCB_ERR_PREPARED_STATEMENT,       403, LCB_ERROR_TYPE_QUERY, 0, "Prepared statement") \
-X(LCB_ERR_QUERY_INDEX_NOT_FOUND,    404, LCB_ERROR_TYPE_QUERY, 0, "Query index is not found") \
-X(LCB_ERR_QUERY_INDEX_EXISTS,       405, LCB_ERROR_TYPE_QUERY, 0, "Query Index exists") \
+X(LCB_ERR_PLANNING_FAILURE,             401, LCB_ERROR_TYPE_QUERY, 0, "Planning failed") \
+X(LCB_ERR_INDEX_FAILURE,                402, LCB_ERROR_TYPE_QUERY, 0, "Query index failure") \
+X(LCB_ERR_PREPARED_STATEMENT_FAILURE,   403, LCB_ERROR_TYPE_QUERY, 0, "Prepared statement failure") \
 \
 /* Analytics Error Definitions */ \
 X(LCB_ERR_COMPILATION_FAILED,           501, LCB_ERROR_TYPE_ANALYTICS, 0, "Compilation failed") \
 X(LCB_ERR_JOB_QUEUE_FULL,               502, LCB_ERROR_TYPE_ANALYTICS, 0, "Job queue is full") \
 X(LCB_ERR_DATASET_NOT_FOUND,            503, LCB_ERROR_TYPE_ANALYTICS, 0, "Dataset is not found") \
-X(LCB_ERR_DATAVERSE_NOT_FOUND,          505, LCB_ERROR_TYPE_ANALYTICS, 0, "Dataverse is not found") \
-X(LCB_ERR_DATASET_EXISTS,               506, LCB_ERROR_TYPE_ANALYTICS, 0, "Dataset already exists") \
-X(LCB_ERR_DATAVERSE_EXISTS,             507, LCB_ERROR_TYPE_ANALYTICS, 0, "Dataverse already exists") \
-X(LCB_ERR_ANALYTICS_INDEX_NOT_FOUND,    508, LCB_ERROR_TYPE_ANALYTICS, 0, "Analytics index is not found") \
-X(LCB_ERR_ANALYTICS_INDEX_EXISTS,       509, LCB_ERROR_TYPE_ANALYTICS, 0, "Analytics index already exists") \
-X(LCB_ERR_ANALYTICS_LINK_NOT_FOUND,     510, LCB_ERROR_TYPE_ANALYTICS, 0, "Analytics link is not found") \
+X(LCB_ERR_DATAVERSE_NOT_FOUND,          504, LCB_ERROR_TYPE_ANALYTICS, 0, "Dataverse is not found") \
+X(LCB_ERR_DATASET_EXISTS,               505, LCB_ERROR_TYPE_ANALYTICS, 0, "Dataset already exists") \
+X(LCB_ERR_DATAVERSE_EXISTS,             506, LCB_ERROR_TYPE_ANALYTICS, 0, "Dataverse already exists") \
+X(LCB_ERR_ANALYTICS_LINK_NOT_FOUND,     507, LCB_ERROR_TYPE_ANALYTICS, 0, "Analytics link is not found") \
 \
-/* Search Error Definitions */ \
-X(LCB_ERR_SEARCH_INDEX_NOT_FOUND,   601, LCB_ERROR_TYPE_SEARCH, 0, "Search index is not found") \
+/* Search Error Definitions (6xx) */ \
 \
 /* View Error Definitions */ \
-X(LCB_ERR_VIEW_NOT_FOUND,   701, LCB_ERROR_TYPE_VIEW, 0, "View is not found") \
+X(LCB_ERR_VIEW_NOT_FOUND,               701, LCB_ERROR_TYPE_VIEW, 0, "View is not found") \
+X(LCB_ERR_DESIGN_DOCUMENT_NOT_FOUND,    702, LCB_ERROR_TYPE_VIEW, 0, "Design document is not found") \
+\
+/* Management API Error Definitions */ \
+X(LCB_ERR_COLLECTION_ALREADY_EXISTS,    701, LCB_ERROR_TYPE_MANAGEMENT, 0, "Collection already exists") \
+X(LCB_ERR_SCOPE_EXISTS,                 702, LCB_ERROR_TYPE_MANAGEMENT, 0, "Scope already exists") \
+X(LCB_ERR_USER_NOT_FOUND,               702, LCB_ERROR_TYPE_MANAGEMENT, 0, "User is not found") \
+X(LCB_ERR_GROUP_NOT_FOUND,              702, LCB_ERROR_TYPE_MANAGEMENT, 0, "Group is not found") \
+X(LCB_ERR_BUCKET_ALREADY_EXISTS,        702, LCB_ERROR_TYPE_MANAGEMENT, 0, "Bucket already exists") \
 \
 /* SDK-specific Error Definitions */ \
 X(LCB_ERR_SSL_INVALID_CIPHERSUITES,         1000, LCB_ERROR_TYPE_SDK, 0, "OpenSSL encountered an error in the provided ciphersuites (TLS >= 1.3)") \

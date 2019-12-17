@@ -429,7 +429,7 @@ lcb_STATUS SmokeTest::testMissingBucket()
     lcb_wait(session);
     err = lcb_get_bootstrap_status(session);
     EXPECT_NE(LCB_SUCCESS, err);
-    EXPECT_TRUE(err == LCB_ERR_BUCKET_NOT_FOUND || err == LCB_ERR_AUTHENTICATION);
+    EXPECT_TRUE(err == LCB_ERR_BUCKET_NOT_FOUND || err == LCB_ERR_AUTHENTICATION_FAILURE);
     destroySession();
     return err;
 }
@@ -558,6 +558,6 @@ TEST_F(SmokeTest, testSaslBucket)
     testSpuriousSaslError();
 
     destroySession();
-    connectCommon("protected", "incorrect", LCB_ERR_AUTHENTICATION);
+    connectCommon("protected", "incorrect", LCB_ERR_AUTHENTICATION_FAILURE);
     destroySession();
 }

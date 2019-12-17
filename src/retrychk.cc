@@ -44,7 +44,7 @@ lcb_should_retry(const lcb_settings *settings, const mc_PACKET *pkt, lcb_STATUS 
         /* MAP_CHANGED is sent after we've already called this function on the
          * packet once before */
         return 0;
-    } else if (err == LCB_ERR_AUTHENTICATION) {
+    } else if (err == LCB_ERR_AUTHENTICATION_FAILURE) {
         /* spurious auth error */
         return 1;
     } else if (err == LCB_ERR_NOT_MY_VBUCKET) {

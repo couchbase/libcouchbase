@@ -437,7 +437,7 @@ TEST_F(SubdocUnitTest, testSdStore)
     // Try to insert a non-JSON value
     lcb_subdocspecs_dict_upsert(spec, 0, 0, "dict", strlen("dict"), "non-json", strlen("non-json"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_CANNOT_INSERT_VALUE);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_VALUE_INVALID);
 
     const char *p = "parent.with.missing.children";
 
@@ -552,7 +552,7 @@ TEST_F(SubdocUnitTest, testUnique)
     // Try adding a primitive
     lcb_subdocspecs_array_add_unique(spec, 0, LCB_SUBDOCSPECS_F_MKINTERMEDIATES, "a", strlen("a"), "{}", strlen("{}"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_CANNOT_INSERT_VALUE);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_VALUE_INVALID);
 
     // Add the primitive using append
     lcb_subdocspecs_array_add_last(spec, 0, LCB_SUBDOCSPECS_F_MKINTERMEDIATES, "a", strlen("a"), "{}", strlen("{}"));
@@ -609,7 +609,7 @@ TEST_F(SubdocUnitTest, testCounter)
     lcb_cmdsubdoc_specs(cmd, spec);
     lcb_subdocspecs_counter(spec, 0, 0, "counter", strlen("counter"), 1);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_CANNOT_INSERT_VALUE);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_VALUE_INVALID);
     lcb_subdocspecs_destroy(spec);
 
     // Try to increment by 0
@@ -617,7 +617,7 @@ TEST_F(SubdocUnitTest, testCounter)
     lcb_cmdsubdoc_specs(cmd, spec);
     lcb_subdocspecs_counter(spec, 0, 0, "counter", strlen("counter"), 0);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_DELTA_RANGE);
+    ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_DELTA_INVALID);
     lcb_subdocspecs_destroy(spec);
 
     // Try to use an already large number (so the number is too big on the server)

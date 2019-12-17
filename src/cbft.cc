@@ -182,11 +182,11 @@ void lcb_FTS_HANDLE_::invoke_row(lcb_RESPFTS *resp)
     resp->ctx.index_len = index_name.size();
     switch (resp->ctx.http_response_code) {
         case 500:
-            resp->ctx.rc = LCB_ERR_INTERNAL_SERVER;
+            resp->ctx.rc = LCB_ERR_INTERNAL_SERVER_FAILURE;
             break;
         case 401:
         case 403:
-            resp->ctx.rc = LCB_ERR_AUTHENTICATION;
+            resp->ctx.rc = LCB_ERR_AUTHENTICATION_FAILURE;
             break;
     }
 
@@ -211,10 +211,10 @@ void lcb_FTS_HANDLE_::invoke_row(lcb_RESPFTS *resp)
                     resp->ctx.error_message = error_message.c_str();
                     resp->ctx.error_message_len = error_message.size();
                     if (error_message.find("QueryBleve parsing") != std::string::npos) {
-                        resp->ctx.rc = LCB_ERR_PARSING_FAILED;
+                        resp->ctx.rc = LCB_ERR_PARSING_FAILURE;
                     } else if (resp->ctx.http_response_code == 400 &&
                                error_message.find("not_found") != std::string::npos) {
-                        resp->ctx.rc = LCB_ERR_SEARCH_INDEX_NOT_FOUND;
+                        resp->ctx.rc = LCB_ERR_INDEX_NOT_FOUND;
                     }
                 }
             }

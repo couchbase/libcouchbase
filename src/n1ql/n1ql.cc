@@ -783,7 +783,7 @@ void N1QLREQ::invoke_row(lcb_RESPN1QL *resp, bool is_last)
                     resp->ctx.first_error_code = first_error_code;
                     switch (first_error_code) {
                         case 3000:
-                            resp->ctx.rc = LCB_ERR_PARSING_FAILED;
+                            resp->ctx.rc = LCB_ERR_PARSING_FAILURE;
                             break;
                         case 12009:
                             resp->ctx.rc = LCB_ERR_CAS_MISMATCH;
@@ -794,13 +794,13 @@ void N1QLREQ::invoke_row(lcb_RESPN1QL *resp, bool is_last)
                         case 4070:
                         case 4080:
                         case 4090:
-                            resp->ctx.rc = LCB_ERR_PREPARED_STATEMENT;
+                            resp->ctx.rc = LCB_ERR_PREPARED_STATEMENT_FAILURE;
                             break;
                         case 4300:
                             if (!first_error_message.empty()) {
                                 std::regex already_exists("index.+already exists");
                                 if (std::regex_search(first_error_message, already_exists)) {
-                                    resp->ctx.rc = LCB_ERR_QUERY_INDEX_EXISTS;
+                                    resp->ctx.rc = LCB_ERR_INDEX_EXISTS;
                                 }
                             }
                             break;
@@ -808,29 +808,29 @@ void N1QLREQ::invoke_row(lcb_RESPN1QL *resp, bool is_last)
                             if (!first_error_message.empty()) {
                                 std::regex already_exists("Index.+already exists"); /* NOTE: case sensitive */
                                 if (std::regex_search(first_error_message, already_exists)) {
-                                    resp->ctx.rc = LCB_ERR_QUERY_INDEX_EXISTS;
+                                    resp->ctx.rc = LCB_ERR_INDEX_EXISTS;
                                 } else {
                                     std::regex not_found("index.+not found");
                                     if (std::regex_search(first_error_message, not_found)) {
-                                        resp->ctx.rc = LCB_ERR_QUERY_INDEX_NOT_FOUND;
+                                        resp->ctx.rc = LCB_ERR_INDEX_NOT_FOUND;
                                     }
                                 }
                             }
                             break;
                         case 12004:
                         case 12016:
-                            resp->ctx.rc = LCB_ERR_QUERY_INDEX_NOT_FOUND;
+                            resp->ctx.rc = LCB_ERR_INDEX_NOT_FOUND;
                             break;
                         default:
                             if (first_error_code >= 4000 && first_error_code < 5000) {
-                                resp->ctx.rc = LCB_ERR_PLANNING_FAILED;
+                                resp->ctx.rc = LCB_ERR_PLANNING_FAILURE;
                             } else if (first_error_code >= 5000 && first_error_code < 6000) {
-                                resp->ctx.rc = LCB_ERR_INTERNAL_SERVER;
+                                resp->ctx.rc = LCB_ERR_INTERNAL_SERVER_FAILURE;
                             } else if (first_error_code >= 10000 && first_error_code < 11000) {
-                                resp->ctx.rc = LCB_ERR_AUTHENTICATION;
+                                resp->ctx.rc = LCB_ERR_AUTHENTICATION_FAILURE;
                             } else if ((first_error_code >= 12000 && first_error_code < 13000) ||
                                        (first_error_code >= 14000 && first_error_code < 15000)) {
-                                resp->ctx.rc = LCB_ERR_QUERY_INDEX;
+                                resp->ctx.rc = LCB_ERR_INDEX_FAILURE;
                             }
                             break;
                     }

@@ -71,7 +71,7 @@ void ViewsUnitTest::connectBeerSample(HandleWrap &hw, lcb_INSTANCE **instance, b
         ASSERT_EQ(LCB_SUCCESS, rv);
     }
 
-    ASSERT_TRUE(rv == LCB_ERR_BUCKET_NOT_FOUND || rv == LCB_ERR_AUTHENTICATION);
+    ASSERT_TRUE(rv == LCB_ERR_BUCKET_NOT_FOUND || rv == LCB_ERR_AUTHENTICATION_FAILURE);
     hw.destroy(); // Should really be called clear(), since that's what it does
 
     // Use the management API to load the beer-sample database

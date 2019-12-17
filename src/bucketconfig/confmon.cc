@@ -213,7 +213,7 @@ void Confmon::provider_failed(Provider *provider, lcb_STATUS reason)
         } else {
             last_error = reason;
         }
-        if (reason == LCB_ERR_AUTHENTICATION) {
+        if (reason == LCB_ERR_AUTHENTICATION_FAILURE) {
             goto GT_ERROR;
         }
     }

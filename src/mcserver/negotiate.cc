@@ -367,7 +367,7 @@ bool SessionRequestImpl::check_auth(const lcb::MemcachedResponse &packet)
     saslerr = cbsasl_client_check(sasl_client, packet.value(), packet.vallen());
 
     if (saslerr != SASL_OK) {
-        set_error(LCB_ERR_AUTHENTICATION, "Invalid SASL check");
+        set_error(LCB_ERR_AUTHENTICATION_FAILURE, "Invalid SASL check");
         return false;
     }
     return true;
@@ -562,7 +562,7 @@ GT_NEXT_PACKET:
             } else if (status == PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE) {
                 send_step(resp);
             } else {
-                set_error(LCB_ERR_AUTHENTICATION, "SASL AUTH failed", &resp);
+                set_error(LCB_ERR_AUTHENTICATION_FAILURE, "SASL AUTH failed", &resp);
                 break;
             }
             break;
@@ -573,7 +573,7 @@ GT_NEXT_PACKET:
                 completed = !maybe_select_bucket();
             } else {
                 lcb_log(LOGARGS(this, WARN), LOGFMT "SASL auth failed with STATUS=0x%x", LOGID(this), status);
-                set_error(LCB_ERR_AUTHENTICATION, "SASL Step failed", &resp);
+                set_error(LCB_ERR_AUTHENTICATION_FAILURE, "SASL Step failed", &resp);
             }
             break;
         }
