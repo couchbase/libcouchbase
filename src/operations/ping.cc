@@ -355,6 +355,9 @@ lcb_ping3(lcb_t instance, const void *cookie, const lcb_CMDPING *cmd)
             unsigned port; \
             port = lcbvb_get_port(cfg, idx, SVC, mode); \
             if (port) { \
+                lcb::Authenticator& auth = *instance->settings->auth; \
+                std::string username = auth.username_for(NULL, NULL, LCBT_SETTING(instance, bucket)); \
+                std::string password = auth.password_for(NULL, NULL, LCBT_SETTING(instance, bucket)); \
                 lcbvb_SERVER *srv = LCBVB_GET_SERVER(cfg, idx); \
                 bool ipv6 = strchr(srv->hostname, ':'); \
                 snprintf(buf, sizeof(buf), "%s://%s%s%s:%d%s", (mode == LCBVB_SVCMODE_PLAIN) ? "http" : "https", \
@@ -363,9 +366,8 @@ lcb_ping3(lcb_t instance, const void *cookie, const lcb_CMDPING *cmd)
                 htcmd.method = LCB_HTTP_METHOD_GET; \
                 htcmd.type = LCB_HTTP_TYPE_PING; \
                 htcmd.reqhandle = &htreq; \
-                lcb::Authenticator& auth = *instance->settings->auth; \
-                htcmd.username = auth.username_for(NULL, NULL, LCBT_SETTING(instance, bucket)).c_str(); \
-                htcmd.password = auth.password_for(NULL, NULL, LCBT_SETTING(instance, bucket)).c_str(); \
+                htcmd.username = username.c_str(); \
+                htcmd.password = password.c_str(); \
                 htcmd.cmdflags = LCB_CMDHTTP_F_CASTMO; \
                 htcmd.cas = LCBT_SETTING(instance, TMO); \
                 rc = lcb_http3(instance, ckwrap, &htcmd); \
