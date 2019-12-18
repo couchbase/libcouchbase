@@ -87,6 +87,8 @@ static const char* svc_to_string(lcb_PINGSVCTYPE type)
         return "views";
     case LCB_PINGSVC_N1QL:
         return "n1ql";
+    case LCB_PINGSVC_ANALYTICS:
+        return "analytics";
     case LCB_PINGSVC_FTS:
         return "fts";
     default:
@@ -283,6 +285,11 @@ static void handle_n1ql(lcb_t instance, int, const lcb_RESPBASE *resp)
     handle_http(instance, LCB_PINGSVC_N1QL, (const lcb_RESPHTTP *)resp);
 }
 
+static void handle_analytics(lcb_t instance, int, const lcb_RESPBASE *resp)
+{
+  handle_http(instance, LCB_PINGSVC_ANALYTICS, (const lcb_RESPHTTP *)resp);
+}
+
 static void handle_views(lcb_t instance, int, const lcb_RESPBASE *resp)
 {
     handle_http(instance, LCB_PINGSVC_VIEWS, (const lcb_RESPHTTP *)resp);
@@ -387,7 +394,7 @@ lcb_ping3(lcb_t instance, const void *cookie, const lcb_CMDPING *cmd)
             PING_HTTP(LCBVB_SVCTYPE_FTS, "/api/ping", http_timeout, handle_fts);
         }
         if (cmd->services & LCB_PINGSVC_F_ANALYTICS) {
-            PING_HTTP(LCBVB_SVCTYPE_ANALYTICS, "/admin/ping", n1ql_timeout, handle_n1ql);
+            PING_HTTP(LCBVB_SVCTYPE_ANALYTICS, "/admin/ping", n1ql_timeout, handle_analytics);
         }
 #undef PING_HTTP
     }
