@@ -211,7 +211,7 @@ static int sasl_get_password(cbsasl_conn_t *conn, void *context, int id, cbsasl_
     return SASL_OK;
 }
 
-SessionInfo::SessionInfo()
+SessionInfo::SessionInfo() : selected(false)
 {
     lcbio_PROTOCTX::id = LCBIO_PROTOCTX_SESSINFO;
     lcbio_PROTOCTX::dtor = (void (*)(lcbio_PROTOCTX *))cleanup_negotiated;
@@ -626,6 +626,7 @@ GT_NEXT_PACKET:
         case PROTOCOL_BINARY_CMD_SELECT_BUCKET: {
             if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
                 completed = true;
+                info->selected = true;
             } else if (status == PROTOCOL_BINARY_RESPONSE_EACCESS) {
                 set_error(LCB_ERR_BUCKET_NOT_FOUND,
                           "Provided credentials not allowed for bucket or bucket does not exist", &resp);
@@ -734,6 +735,11 @@ SessionRequest *SessionRequest::start(lcbio_SOCKET *sock, lcb_settings_st *setti
 SessionInfo *SessionInfo::get(lcbio_SOCKET *sock)
 {
     return static_cast< SessionInfo * >(lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SESSINFO));
+}
+
+bool SessionInfo::selected_bucket() const
+{
+    return selected;
 }
 
 bool SessionInfo::has_feature(uint16_t feature) const

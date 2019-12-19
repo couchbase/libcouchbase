@@ -150,7 +150,7 @@ lcb_STATUS CccpProvider::schedule_next_request(lcb_STATUS err, bool can_rollover
         lcb_log(LOGARGS(this, TRACE), "Re-Issuing CCCP Command on server struct %p (" LCB_HOST_FMT ")", (void *)server,
                 LCB_HOST_ARG(this->parent->settings, next_host));
         timer.rearm(settings().config_node_timeout);
-        if (settings().bucket && settings().bucket[0] != '\0' && config && config->vbc->bname == NULL) {
+        if (settings().bucket && settings().bucket[0] != '\0' && !server->selected_bucket) {
             instance->select_bucket(cmdcookie, server);
         }
         instance->request_config(cmdcookie, server);
@@ -167,7 +167,7 @@ lcb_STATUS CccpProvider::schedule_next_request(lcb_STATUS err, bool can_rollover
 
 lcb_STATUS CccpProvider::mcio_error(lcb_STATUS err)
 {
-    if (err != LCB_ERR_UNSUPPORTED_OPERATION && err != LCB_ERR_UNSUPPORTED_OPERATION) {
+    if (err != LCB_ERR_UNSUPPORTED_OPERATION) {
         lcb_log(LOGARGS(this, ERR), LOGFMT "Could not get configuration: %s", LOGID(this), lcb_strerror_short(err));
     }
 

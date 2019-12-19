@@ -869,6 +869,7 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
         mutation_tokens = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO);
         new_durability = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_SYNC_REPLICATION) &&
                          sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_ALT_REQUEST_SUPPORT);
+        selected_bucket = sessinfo->selected_bucket();
     }
 
     lcbio_CTXPROCS procs;
@@ -902,7 +903,7 @@ static void buf_done_cb(mc_PIPELINE *pl, const void *cookie, void *, void *)
 Server::Server(lcb_INSTANCE *instance_, int ix)
     : mc_PIPELINE(), state(S_CLEAN), io_timer(lcbio_timer_new(instance_->iotable, this, timeout_server)),
       instance(instance_), settings(lcb_settings_ref2(instance_->settings)), compsupport(0), jsonsupport(0),
-      mutation_tokens(0), new_durability(-1), connctx(NULL), curhost(new lcb_host_t())
+      mutation_tokens(0), new_durability(-1), selected_bucket(0), connctx(NULL), curhost(new lcb_host_t())
 {
     mcreq_pipeline_init(this);
     flush_start = (mcreq_flushstart_fn)server_connect;
