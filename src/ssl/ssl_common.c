@@ -26,7 +26,7 @@
 #include <openssl/opensslv.h>
 
 #if OPENSSL_VERSION_NUMBER >= 0x1010100fL
-#define HAVE_CIPERSUITES 1
+#define HAVE_CIPHERSUITES 1
 #endif
 
 #define LOGARGS(ssl, lvl) ((lcbio_SOCKET *)SSL_get_app_data(ssl))->settings, "SSL", lvl, __FILE__, __LINE__
@@ -276,7 +276,7 @@ static long decode_ssl_protocol(const char *protocol)
         disallow |= SSL_OP_NO_TLSv1;
     } else if (strcasecmp(protocol, "tlsv1.2") == 0) {
         disallow |= SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1;
-#if HAVE_CIPERSUITES
+#ifdef HAVE_CIPHERSUITES
     } else if (strcasecmp(protocol, "tlsv1.3") == 0) {
         disallow |= SSL_OP_NO_TLSv1_2 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1;
 #endif
@@ -297,7 +297,7 @@ lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *
         "CBC-SHA:EXP-EDH-DSS-DES-CBC-SHA:EXP-DES-CBC-SHA:EXP-RC2-CBC-MD5:EXP-RC2-CBC-MD5:EXP-RC4-MD5:EXP-RC4-MD5";
 
     const char* cipher_list = getenv("LCB_SSL_CIPHER_LIST");
-#if HAVE_CIPERSUITES
+#ifdef HAVE_CIPHERSUITES
     const char* ciphersuites = getenv("LCB_SSL_CIPHERSUITES");
 #endif
     const char* minimum_tls = getenv("LCB_SSL_MINIMUM_TLS");
@@ -330,7 +330,7 @@ lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *
         goto GT_ERR;
     }
 
-#if HAVE_CIPERSUITES
+#ifdef HAVE_CIPHERSUITES
     if (ciphersuites && SSL_CTX_set_ciphersuites(ret->ctx, ciphersuites) == 0 && strlen(ciphersuites) > 0) {
         *errp = LCB_ERR_SSL_INVALID_CIPHERSUITES;
         goto GT_ERR;
