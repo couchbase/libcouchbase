@@ -77,6 +77,8 @@ struct lcb_ANALYTICS_ERROR_CONTEXT_ {
     size_t statement_len;
     const char *client_context_id;
     size_t client_context_id_len;
+    const char *query_params;
+    size_t query_params_len;
     uint32_t http_response_code;
     const char *http_response_body;
     size_t http_response_body_len;

@@ -253,6 +253,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_analytics_first_error_message(const lcb_A
                                                                      const char **message, size_t *message_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_analytics_statement(const lcb_ANALYTICS_ERROR_CONTEXT *ctx,
                                                            const char **statement, size_t *statement_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_analytics_query_params(const lcb_ANALYTICS_ERROR_CONTEXT *ctx,
+                                                              const char **query_params, size_t *query_params_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_analytics_client_context_id(const lcb_ANALYTICS_ERROR_CONTEXT *ctx,
                                                                    const char **id, size_t *id_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_analytics_http_response_code(const lcb_ANALYTICS_ERROR_CONTEXT *ctx,

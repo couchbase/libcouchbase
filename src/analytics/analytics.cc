@@ -455,6 +455,7 @@ typedef struct lcb_ANALYTICS_HANDLE_ : lcb::jsparse::Parser::Actions {
 
     /** String of the original statement. Cached here to avoid jsoncpp lookups */
     std::string statement;
+    std::string query_params;
     std::string client_context_id;
     std::string first_error_message;
     uint32_t first_error_code;
@@ -630,6 +631,8 @@ void ANALYTICSREQ::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
     resp->ctx.client_context_id_len = client_context_id.size();
     resp->ctx.statement = statement.c_str();
     resp->ctx.statement_len = statement.size();
+    resp->ctx.query_params = query_params.c_str();
+    resp->ctx.query_params_len = query_params.size();
 
     if (is_last) {
         lcb_IOV meta_buf;
@@ -989,6 +992,10 @@ lcb_ANALYTICS_HANDLE_::lcb_ANALYTICS_HANDLE_(lcb_INSTANCE *obj, void *user_cooki
     } else {
         client_context_id = ccid.asString();
     }
+
+    Json::Value tmp = json;
+    tmp.removeMember("statement");
+    query_params = Json::FastWriter().write(cmd->root);
 
     if (instance->settings->tracer) {
         char id[20] = {0};

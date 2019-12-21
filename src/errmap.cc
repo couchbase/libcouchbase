@@ -390,6 +390,14 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_analytics_statement(const lcb_ANALYTICS_E
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_analytics_query_params(const lcb_ANALYTICS_ERROR_CONTEXT *ctx,
+                                                              const char **query_params, size_t *query_params_len)
+{
+    *query_params = ctx->query_params;
+    *query_params_len = ctx->query_params_len;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_analytics_client_context_id(const lcb_ANALYTICS_ERROR_CONTEXT *ctx,
                                                                    const char **id, size_t *id_len)
 {
