@@ -323,10 +323,6 @@ int Server::handle_unknown_error(const mc_PACKET *request, const MemcachedRespon
         newerr = LCB_ERR_AUTHENTICATION_FAILURE;
     }
 
-    if (err.hasAttribute(errmap::SUBDOC) && newerr == LCB_SUCCESS) {
-        newerr = LCB_ERR_SUBDOC_GENERIC;
-    }
-
     /* TODO: remove masking LOCKED in 3.0 release */
     if (err.hasAttribute(errmap::ITEM_LOCKED)) {
         switch (mcresp.opcode()) {

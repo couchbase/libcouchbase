@@ -26,7 +26,7 @@ static void subdoc_callback(lcb_INSTANCE *instance, int type, const lcb_RESPSUBD
 {
     lcb_STATUS rc = lcb_respsubdoc_status(resp);
     size_t idx, total;
-    if (rc != LCB_SUCCESS && rc != LCB_ERR_SUBDOC_GENERIC) {
+    if (rc != LCB_SUCCESS) {
         printf("Failure: %s\n", lcb_strerror_short(rc));
         return;
     }

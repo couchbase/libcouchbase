@@ -144,13 +144,6 @@ static ::testing::AssertionResult verifySingleOk(const char *, const MultiResult
 {
     using namespace ::testing;
     if (mr.rc != LCB_SUCCESS) {
-        if (mr.rc == LCB_ERR_SUBDOC_GENERIC) {
-            if (!mr.size()) {
-                return AssertionFailure() << "Top-level MULTI_FAILURE with no results";
-            } else {
-                return AssertionFailure() << "Got MULTI_FAILURE with sub-code: " << mr[0].rc;
-            }
-        }
         return AssertionFailure() << "Top-level error code failed. " << mr.rc;
     }
     if (mr.size() != 1) {
@@ -182,8 +175,8 @@ static ::testing::AssertionResult verifySingleOk(const char *, const char *, con
 static ::testing::AssertionResult verifySingleError(const char *, const char *, const MultiResult &mr, lcb_STATUS exp)
 {
     using namespace ::testing;
-    if (mr.rc != LCB_ERR_SUBDOC_GENERIC) {
-        return AssertionFailure() << "Top-level error code is not MULTI_FAILURE. Got" << mr.rc;
+    if (mr.rc != exp) {
+        return AssertionFailure() << "Top-level error code is not SUCCESS. Got" << mr.rc;
     }
     if (mr.size() != 1) {
         return AssertionFailure() << "Expected single result. Got " << mr.size();
@@ -693,7 +686,7 @@ TEST_F(SubdocUnitTest, testMultiLookup)
     ASSERT_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance);
 
-    ASSERT_EQ(LCB_ERR_SUBDOC_GENERIC, mr.rc);
+    ASSERT_EQ(LCB_SUCCESS, mr.rc);
     ASSERT_EQ(4, mr.results.size());
     //    ASSERT_NE(0, mr.cas);
 
@@ -778,7 +771,7 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     lcb_subdocspecs_replace(specs, 2, 0, "bad..bad", strlen("bad..path"), "null", 4);
 
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mr, mcmd, lcb_subdoc));
-    ASSERT_EQ(LCB_ERR_SUBDOC_GENERIC, mr.rc);
+    ASSERT_EQ(LCB_SUCCESS, mr.rc);
     ASSERT_EQ(2, mr.size());
     ASSERT_EQ(LCB_ERR_SUBDOC_PATH_NOT_FOUND, mr.results[1].rc);
     lcb_subdocspecs_destroy(specs);
@@ -825,7 +818,7 @@ TEST_F(SubdocUnitTest, testGetCount)
     lcb_subdocspecs_get_count(spec, 1, 0, "array", strlen("array"));
     lcb_cmdsubdoc_specs(cmd, spec);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mres, cmd, lcb_subdoc));
-    ASSERT_EQ(LCB_ERR_SUBDOC_GENERIC, mres.rc);
+    ASSERT_EQ(LCB_SUCCESS, mres.rc);
     ASSERT_EQ(LCB_ERR_SUBDOC_PATH_NOT_FOUND, mres.results[0].rc);
     ASSERT_EQ(LCB_SUCCESS, mres.results[1].rc);
     ASSERT_EQ("5", mres.results[1].value);

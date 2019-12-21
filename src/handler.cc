@@ -149,7 +149,7 @@ map_error(lcb_INSTANCE *instance, int in)
         return LCB_ERR_SUBDOC_PATH_EXISTS;
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_MULTI_PATH_FAILURE:
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_MULTI_PATH_FAILURE_DELETED:
-        return LCB_ERR_SUBDOC_GENERIC;
+        return LCB_SUCCESS; /* the real codes must be discovered on sub-result level */
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_INVALID_COMBO:
         return LCB_ERR_INVALID_ARGUMENT;
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_SUCCESS_DELETED:
@@ -530,7 +530,7 @@ H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request,
 
     if (response->opcode() == PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP ||
             response->opcode() == PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION) {
-        if (w.resp.ctx.rc == LCB_SUCCESS || w.resp.ctx.rc == LCB_ERR_SUBDOC_GENERIC) {
+        if (w.resp.ctx.rc == LCB_SUCCESS) {
             w.resp.responses = response;
             lcb_sdresult_parse(&w.resp, cbtype);
         } else {
@@ -545,7 +545,6 @@ H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request,
         } else if (LCB_ERROR_IS_SUBDOC(w.resp.ctx.rc)) {
             w.resp.responses = response;
             lcb_sdresult_parse(&w.resp, cbtype);
-            w.resp.ctx.rc = LCB_ERR_SUBDOC_GENERIC;
         } else {
             handle_error_info(response, &w);
         }
