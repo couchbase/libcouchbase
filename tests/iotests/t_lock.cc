@@ -256,7 +256,7 @@ TEST_F(LockUnitTest, testUnlLockContention)
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, gitm.err);
 
-    lcb_cas_t validCas = gitm.cas;
+    uint64_t validCas = gitm.cas;
     ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, &gitm, gcmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_ERR_TEMPORARY_FAILURE, gitm.err);

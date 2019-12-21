@@ -191,7 +191,7 @@ class SetHandler : public Handler
     cliopts::StringOption o_mode;
     cliopts::StringOption o_scope;
     cliopts::StringOption o_collection;
-    std::map< std::string, lcb_cas_t > items;
+    std::map< std::string, uint64_t > items;
 };
 
 class HashHandler : public Handler

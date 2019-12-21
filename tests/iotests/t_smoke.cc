@@ -30,7 +30,7 @@ struct rvbuf {
     lcb_STORE_OPERATION operation;
     vector< char > bytes;
     vector< char > key;
-    lcb_cas_t cas;
+    uint64_t cas;
     lcb_uint32_t flags;
     lcb_int32_t counter;
     lcb_uint32_t errorCount;

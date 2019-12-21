@@ -1036,7 +1036,7 @@ void UnlockHandler::run()
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < args.size(); ii += 2) {
         const string &key = args[ii];
-        lcb_CAS cas;
+        uint64_t cas;
         int rv;
         rv = sscanf(args[ii + 1].c_str(), "0x%" PRIx64, &cas);
         if (rv != 1) {

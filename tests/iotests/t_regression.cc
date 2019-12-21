@@ -207,8 +207,8 @@ TEST_F(MockUnitTest, testIssue59)
 extern "C" {
 struct rvbuf {
     lcb_STATUS error;
-    lcb_cas_t cas1;
-    lcb_cas_t cas2;
+    uint64_t cas1;
+    uint64_t cas2;
     char *bytes;
     lcb_size_t nbytes;
     lcb_int32_t counter;
