@@ -35,21 +35,21 @@ LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_cookie(const lcb_RESPHTTP *resp, void *
 
 LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_http_status(const lcb_RESPHTTP *resp, uint16_t *status)
 {
-    *status = resp->htstatus;
+    *status = resp->ctx.response_code;
     return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_path(const lcb_RESPHTTP *resp, const char **path, size_t *path_len)
 {
-    *path = (const char *)resp->ctx.key;
-    *path_len = resp->ctx.key_len;
+    *path = (const char *)resp->ctx.path;
+    *path_len = resp->ctx.path_len;
     return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_body(const lcb_RESPHTTP *resp, const char **body, size_t *body_len)
 {
-    *body = (const char *)resp->body;
-    *body_len = resp->nbody;
+    *body = (const char *)resp->ctx.body;
+    *body_len = resp->ctx.body_len;
     return LCB_SUCCESS;
 }
 
@@ -296,13 +296,13 @@ void Request::init_resp(lcb_RESPHTTP *res)
     const lcb::htparse::Response &htres = parser->get_cur_response();
 
     res->cookie = const_cast< void * >(command_cookie);
-    res->ctx.key = url.c_str() + url_info.field_data[UF_PATH].off;
-    res->ctx.key_len = url_info.field_data[UF_PATH].len;
+    res->ctx.path = url.c_str() + url_info.field_data[UF_PATH].off;
+    res->ctx.path_len = url_info.field_data[UF_PATH].len;
     res->_htreq = static_cast< lcb_HTTP_HANDLE * >(this);
     if (!response_headers.empty()) {
         res->headers = &response_headers_clist[0];
     }
-    res->htstatus = htres.status;
+    res->ctx.response_code = htres.status;
 }
 
 void Request::finish(lcb_STATUS error)

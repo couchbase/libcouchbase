@@ -625,7 +625,7 @@ void ANALYTICSREQ::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
     resp->cookie = const_cast< void * >(cookie);
     resp->htresp = cur_htresp;
 
-    resp->ctx.http_response_code = cur_htresp->htstatus;
+    resp->ctx.http_response_code = cur_htresp->ctx.response_code;
     resp->ctx.client_context_id = client_context_id.c_str();
     resp->ctx.client_context_id_len = client_context_id.size();
     resp->ctx.statement = statement.c_str();
@@ -758,8 +758,8 @@ static void chunk_callback(lcb_INSTANCE *instance, int ign, const lcb_RESPBASE *
     (void)instance;
 
     req->cur_htresp = rh;
-    if (rh->ctx.rc != LCB_SUCCESS || rh->htstatus != 200) {
-        if (req->lasterr == LCB_SUCCESS || rh->htstatus != 200) {
+    if (rh->ctx.rc != LCB_SUCCESS || rh->ctx.response_code != 200) {
+        if (req->lasterr == LCB_SUCCESS || rh->ctx.response_code != 200) {
             req->lasterr = rh->ctx.rc ? rh->ctx.rc : LCB_ERR_HTTP;
         }
     }
@@ -776,7 +776,7 @@ static void chunk_callback(lcb_INSTANCE *instance, int ign, const lcb_RESPBASE *
         req->unref();
         return;
     }
-    req->parser->feed(static_cast< const char * >(rh->body), rh->nbody);
+    req->parser->feed(static_cast< const char * >(rh->ctx.body), rh->ctx.body_len);
 }
 
 lcb_STATUS ANALYTICSREQ::issue_htreq(const std::string &body)

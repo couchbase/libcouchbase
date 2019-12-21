@@ -202,7 +202,7 @@ void lcb_VIEW_HANDLE_::invoke_last(lcb_STATUS err)
     resp.handle = this;
     resp.htresp = cur_htresp;
     if (cur_htresp) {
-        resp.ctx.http_response_code = cur_htresp->htstatus;
+        resp.ctx.http_response_code = cur_htresp->ctx.response_code;
     }
     resp.ctx.design_document = design_document.c_str();
     resp.ctx.design_document_len = design_document.size();
@@ -228,11 +228,11 @@ void lcb_VIEW_HANDLE_::invoke_last(lcb_STATUS err)
         }
     } else {
         resp.rflags |= LCB_RESP_F_CLIENTGEN;
-        if (cur_htresp && cur_htresp->htstatus != 200 && cur_htresp->nbody) {
+        if (cur_htresp && cur_htresp->ctx.response_code != 200 && cur_htresp->ctx.body_len) {
             // chances that were not able to parse response
             Json::Value meta;
-            if (Json::Reader().parse((const char *)cur_htresp->body, (const char *)cur_htresp->body + cur_htresp->nbody,
-                                     meta)) {
+            if (Json::Reader().parse((const char *)cur_htresp->ctx.body,
+                                     (const char *)cur_htresp->ctx.body + cur_htresp->ctx.body_len, meta)) {
                 Json::Value &error = meta["error"];
                 if (error.isString()) {
                     first_error_code = error.asString();
@@ -264,7 +264,7 @@ void lcb_VIEW_HANDLE_::invoke_row(lcb_RESPVIEW *resp)
     resp->cookie = const_cast< void * >(cookie);
     resp->htresp = cur_htresp;
     if (cur_htresp) {
-        resp->ctx.http_response_code = cur_htresp->htstatus;
+        resp->ctx.http_response_code = cur_htresp->ctx.response_code;
     }
     resp->ctx.design_document = design_document.c_str();
     resp->ctx.design_document_len = design_document.size();
@@ -282,12 +282,12 @@ static void chunk_callback(lcb_INSTANCE *instance, int, const lcb_RESPBASE *rb)
 
     req->cur_htresp = rh;
 
-    if (rh->ctx.rc != LCB_SUCCESS || rh->htstatus != 200 || (rh->rflags & LCB_RESP_F_FINAL)) {
-        if (req->lasterr == LCB_SUCCESS && rh->htstatus != 200) {
+    if (rh->ctx.rc != LCB_SUCCESS || rh->ctx.response_code != 200 || (rh->rflags & LCB_RESP_F_FINAL)) {
+        if (req->lasterr == LCB_SUCCESS && rh->ctx.response_code != 200) {
             if (rh->ctx.rc != LCB_SUCCESS) {
                 req->lasterr = rh->ctx.rc;
             } else {
-                lcb_log(LOGARGS(instance, DEBUG), "Got not ok http status %d", rh->htstatus);
+                lcb_log(LOGARGS(instance, DEBUG), "Got not ok http status %d", rh->ctx.response_code);
                 req->lasterr = LCB_ERR_HTTP;
             }
         }
@@ -307,7 +307,7 @@ static void chunk_callback(lcb_INSTANCE *instance, int, const lcb_RESPBASE *rb)
     }
 
     req->refcount++;
-    req->parser->feed(reinterpret_cast< const char * >(rh->body), rh->nbody);
+    req->parser->feed(reinterpret_cast< const char * >(rh->ctx.body), rh->ctx.body_len);
     req->cur_htresp = NULL;
     req->unref();
 }

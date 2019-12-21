@@ -153,8 +153,8 @@ static void chunk_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
     lcb_FTS_HANDLE_ *req = static_cast< lcb_FTS_HANDLE_ * >(rh->cookie);
 
     req->cur_htresp = rh;
-    if (rh->ctx.rc != LCB_SUCCESS || rh->htstatus != 200) {
-        if (req->lasterr == LCB_SUCCESS || rh->htstatus != 200) {
+    if (rh->ctx.rc != LCB_SUCCESS || rh->ctx.response_code != 200) {
+        if (req->lasterr == LCB_SUCCESS || rh->ctx.response_code != 200) {
             req->lasterr = rh->ctx.rc ? rh->ctx.rc : LCB_ERR_HTTP;
         }
     }
@@ -168,7 +168,7 @@ static void chunk_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
          * should remain alive (so we can cancel it later on) */
         delete req;
     } else {
-        req->parser->feed(static_cast< const char * >(rh->body), rh->nbody);
+        req->parser->feed(static_cast< const char * >(rh->ctx.body), rh->ctx.body_len);
     }
 }
 
@@ -177,7 +177,7 @@ void lcb_FTS_HANDLE_::invoke_row(lcb_RESPFTS *resp)
     resp->cookie = const_cast< void * >(cookie);
     resp->htresp = cur_htresp;
     resp->handle = this;
-    resp->ctx.http_response_code = cur_htresp->htstatus;
+    resp->ctx.http_response_code = cur_htresp->ctx.response_code;
     resp->ctx.index = index_name.c_str();
     resp->ctx.index_len = index_name.size();
     switch (resp->ctx.http_response_code) {

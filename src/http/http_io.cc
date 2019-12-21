@@ -77,8 +77,8 @@ int Request::handle_parse_chunked(const char *buf, unsigned nbuf)
             if (chunked) {
                 lcb_RESPHTTP htresp{};
                 init_resp(&htresp);
-                htresp.body = rbody;
-                htresp.nbody = nbody;
+                htresp.ctx.body = rbody;
+                htresp.ctx.body_len = nbody;
                 htresp.ctx.rc = LCB_SUCCESS;
                 passed_data = true;
                 callback(instance, LCB_CALLBACK_HTTP, (const lcb_RESPBASE *)&htresp);
@@ -105,8 +105,8 @@ int Request::handle_parse_chunked(const char *buf, unsigned nbuf)
         init_resp(&resp);
         resp.rflags = LCB_RESP_F_FINAL;
         resp.ctx.rc = LCB_SUCCESS;
-        resp.body = buf;
-        resp.nbody = nbuf;
+        resp.ctx.body = buf;
+        resp.ctx.body_len = nbuf;
         passed_data = true;
         callback(instance, LCB_CALLBACK_HTTP, (const lcb_RESPBASE *)&resp);
         status |= Request::CBINVOKED;

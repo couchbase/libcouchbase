@@ -291,6 +291,13 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_fts_http_response_code(const lcb_FTS_ERRO
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_fts_http_response_body(const lcb_FTS_ERROR_CONTEXT *ctx, const char **body,
                                                               size_t *body_len);
 
+typedef struct lcb_HTTP_ERROR_CONTEXT_ lcb_HTTP_ERROR_CONTEXT;
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_http_rc(const lcb_HTTP_ERROR_CONTEXT *ctx);
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_http_path(const lcb_HTTP_ERROR_CONTEXT *ctx, const char **path,
+                                                 size_t *path_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_http_response_code(const lcb_HTTP_ERROR_CONTEXT *ctx, uint32_t *code);
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_http_response_body(const lcb_HTTP_ERROR_CONTEXT *ctx, const char **body,
+                                                          size_t *body_len);
 /**
  * @brief Get error categories for a specific code
  * @param err the error received

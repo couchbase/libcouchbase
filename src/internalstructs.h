@@ -121,6 +121,18 @@ struct lcb_FTS_ERROR_CONTEXT_ {
     size_t http_response_body_len;
 };
 
+/**
+ * @private
+ */
+struct lcb_HTTP_ERROR_CONTEXT_ {
+    lcb_STATUS rc;
+    uint32_t response_code;
+    const char *path;
+    size_t path_len;
+    const char *body;
+    size_t body_len;
+};
+
 struct lcb_CREATEOPTS_ {
     lcb_INSTANCE_TYPE type;
     const char *connstr;
@@ -1199,21 +1211,14 @@ struct lcb_CMDHTTP_ {
  * code received.
  */
 struct lcb_RESPHTTP_ {
-    LCB_RESP_BASE
-    /**HTTP status code. The value is only valid if #rc is ::LCB_SUCCESS
-     * (if #rc is not LCB_SUCCESS then this field may be 0 as the response may
-     * have not been read/sent) */
-    short htstatus;
+    lcb_HTTP_ERROR_CONTEXT ctx;
+    void *cookie;
+    lcb_U16 rflags;
 
     /**List of key-value headers. This field itself may be `NULL`. The list
      * is terminated by a `NULL` pointer to indicate no more headers. */
     const char *const *headers;
 
-    /**If @ref LCB_CMDHTTP_F_STREAM is true, contains the current chunk
-     * of response content. Otherwise, contains the entire response body.*/
-    const void *body;
-    /** Length of buffer in #body */
-    lcb_SIZE nbody;
     /**@internal*/
     lcb_HTTP_HANDLE *_htreq;
 };

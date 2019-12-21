@@ -521,3 +521,29 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_fts_http_response_body(const lcb_FTS_ERRO
     *body_len = ctx->http_response_body_len;
     return LCB_SUCCESS;
 }
+
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_http_rc(const lcb_HTTP_ERROR_CONTEXT *ctx)
+{
+    return ctx->rc;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_http_path(const lcb_HTTP_ERROR_CONTEXT *ctx, const char **path, size_t *path_len)
+{
+    *path = ctx->path;
+    *path_len = ctx->path_len;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_http_response_code(const lcb_HTTP_ERROR_CONTEXT *ctx, uint32_t *code)
+{
+    *code = ctx->response_code;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_http_response_body(const lcb_HTTP_ERROR_CONTEXT *ctx, const char **body,
+                                                          size_t *body_len)
+{
+    *body = ctx->body;
+    *body_len = ctx->body_len;
+    return LCB_SUCCESS;
+}

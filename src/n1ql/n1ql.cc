@@ -753,7 +753,7 @@ void N1QLREQ::invoke_row(lcb_RESPN1QL *resp, bool is_last)
     resp->htresp = cur_htresp;
     resp->handle = this;
 
-    resp->ctx.http_response_code = cur_htresp->htstatus;
+    resp->ctx.http_response_code = cur_htresp->ctx.response_code;
     resp->ctx.client_context_id = client_context_id.c_str();
     resp->ctx.client_context_id_len = client_context_id.size();
     resp->ctx.statement = statement.c_str();
@@ -888,8 +888,8 @@ static void chunk_callback(lcb_INSTANCE *instance, int ign, const lcb_RESPBASE *
     (void)instance;
 
     req->cur_htresp = rh;
-    if (rh->ctx.rc != LCB_SUCCESS || rh->htstatus != 200) {
-        if (req->lasterr == LCB_SUCCESS || rh->htstatus != 200) {
+    if (rh->ctx.rc != LCB_SUCCESS || rh->ctx.response_code != 200) {
+        if (req->lasterr == LCB_SUCCESS || rh->ctx.response_code != 200) {
             req->lasterr = rh->ctx.rc ? rh->ctx.rc : LCB_ERR_HTTP;
         }
     }
@@ -906,7 +906,7 @@ static void chunk_callback(lcb_INSTANCE *instance, int ign, const lcb_RESPBASE *
         delete req;
         return;
     }
-    req->parser->feed(static_cast< const char * >(rh->body), rh->nbody);
+    req->parser->feed(static_cast< const char * >(rh->ctx.body), rh->ctx.body_len);
 }
 
 void N1QLREQ::fail_prepared(const lcb_RESPN1QL *orig, lcb_STATUS err)
