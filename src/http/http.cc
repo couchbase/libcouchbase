@@ -65,6 +65,12 @@ LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_handle(const lcb_RESPHTTP *resp, lcb_HT
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_error_context(const lcb_RESPHTTP *resp, const lcb_HTTP_ERROR_CONTEXT **ctx)
+{
+    *ctx = &resp->ctx;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API int lcb_resphttp_is_final(const lcb_RESPHTTP *resp)
 {
     return resp->rflags & LCB_RESP_F_FINAL;

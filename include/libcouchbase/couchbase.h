@@ -1503,6 +1503,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_http_status(const lcb_RESPHTTP *resp, u
 LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_path(const lcb_RESPHTTP *resp, const char **path, size_t *path_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_body(const lcb_RESPHTTP *resp, const char **body, size_t *body_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_handle(const lcb_RESPHTTP *resp, lcb_HTTP_HANDLE **handle);
+LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_error_context(const lcb_RESPHTTP *resp, const lcb_HTTP_ERROR_CONTEXT **ctx);
+
 LIBCOUCHBASE_API int lcb_resphttp_is_final(const lcb_RESPHTTP *resp);
 /**
  * List of key-value headers. This field itself may be `NULL`. The list
