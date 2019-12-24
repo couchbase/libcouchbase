@@ -309,6 +309,8 @@ void Request::init_resp(lcb_RESPHTTP *res)
         res->headers = &response_headers_clist[0];
     }
     res->ctx.response_code = htres.status;
+    res->ctx.endpoint = peer.c_str();
+    res->ctx.endpoint_len = peer.size();
 }
 
 void Request::finish(lcb_STATUS error)

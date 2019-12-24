@@ -305,6 +305,14 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_kv_ref(const lcb_KEY_VALUE_ERROR_CONTEXT 
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_kv_endpoint(const lcb_KEY_VALUE_ERROR_CONTEXT *ctx, const char **endpoint,
+                                                   size_t *endpoint_len)
+{
+    *endpoint = ctx->endpoint;
+    *endpoint_len = ctx->endpoint_len;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_n1ql_rc(const lcb_N1QL_ERROR_CONTEXT *ctx)
 {
     return ctx->rc;
@@ -359,6 +367,14 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_n1ql_http_response_body(const lcb_N1QL_ER
 {
     *body = ctx->http_response_message;
     *body_len = ctx->http_response_message_len;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_n1ql_endpoint(const lcb_N1QL_ERROR_CONTEXT *ctx, const char **endpoint,
+                                                     size_t *endpoint_len)
+{
+    *endpoint = ctx->endpoint;
+    *endpoint_len = ctx->endpoint_len;
     return LCB_SUCCESS;
 }
 
@@ -421,6 +437,14 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_analytics_http_response_body(const lcb_AN
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_analytics_endpoint(const lcb_ANALYTICS_ERROR_CONTEXT *ctx, const char **endpoint,
+                                                          size_t *endpoint_len)
+{
+    *endpoint = ctx->endpoint;
+    *endpoint_len = ctx->endpoint_len;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_rc(const lcb_VIEW_ERROR_CONTEXT *ctx)
 {
     return ctx->rc;
@@ -479,6 +503,14 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_http_response_body(const lcb_VIEW_ER
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_endpoint(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **endpoint,
+                                                     size_t *endpoint_len)
+{
+    *endpoint = ctx->endpoint;
+    *endpoint_len = ctx->endpoint_len;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_fts_rc(const lcb_FTS_ERROR_CONTEXT *ctx)
 {
     return ctx->rc;
@@ -530,6 +562,14 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_fts_http_response_body(const lcb_FTS_ERRO
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_fts_endpoint(const lcb_FTS_ERROR_CONTEXT *ctx, const char **endpoint,
+                                                    size_t *endpoint_len)
+{
+    *endpoint = ctx->endpoint;
+    *endpoint_len = ctx->endpoint_len;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_http_rc(const lcb_HTTP_ERROR_CONTEXT *ctx)
 {
     return ctx->rc;
@@ -553,5 +593,13 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_http_response_body(const lcb_HTTP_ERROR_C
 {
     *body = ctx->body;
     *body_len = ctx->body_len;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_http_endpoint(const lcb_HTTP_ERROR_CONTEXT *ctx, const char **endpoint,
+                                                     size_t *endpoint_len)
+{
+    *endpoint = ctx->endpoint;
+    *endpoint_len = ctx->endpoint_len;
     return LCB_SUCCESS;
 }

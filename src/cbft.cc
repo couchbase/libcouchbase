@@ -178,6 +178,8 @@ void lcb_FTS_HANDLE_::invoke_row(lcb_RESPFTS *resp)
     resp->htresp = cur_htresp;
     resp->handle = this;
     resp->ctx.http_response_code = cur_htresp->ctx.response_code;
+    resp->ctx.endpoint = resp->htresp->ctx.endpoint;
+    resp->ctx.endpoint_len = resp->htresp->ctx.endpoint_len;
     resp->ctx.index = index_name.c_str();
     resp->ctx.index_len = index_name.size();
     switch (resp->ctx.http_response_code) {

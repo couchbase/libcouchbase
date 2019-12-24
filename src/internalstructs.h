@@ -44,6 +44,8 @@ struct lcb_KEY_VALUE_ERROR_CONTEXT_ {
     size_t ref_len;
     const char *context;
     size_t context_len;
+    char endpoint[NI_MAXHOST + NI_MAXSERV + 4];
+    size_t endpoint_len;
 };
 
 /**
@@ -63,6 +65,8 @@ struct lcb_N1QL_ERROR_CONTEXT_ {
     uint32_t http_response_code;
     const char *http_response_message;
     size_t http_response_message_len;
+    const char *endpoint;
+    size_t endpoint_len;
 };
 
 /**
@@ -82,6 +86,8 @@ struct lcb_ANALYTICS_ERROR_CONTEXT_ {
     uint32_t http_response_code;
     const char *http_response_body;
     size_t http_response_body_len;
+    const char *endpoint;
+    size_t endpoint_len;
 };
 
 /**
@@ -102,6 +108,8 @@ struct lcb_VIEW_ERROR_CONTEXT_ {
     uint32_t http_response_code;
     const char *http_response_body;
     size_t http_response_body_len;
+    const char *endpoint;
+    size_t endpoint_len;
 };
 
 /**
@@ -121,6 +129,8 @@ struct lcb_FTS_ERROR_CONTEXT_ {
     uint32_t http_response_code;
     const char *http_response_body;
     size_t http_response_body_len;
+    const char *endpoint;
+    size_t endpoint_len;
 };
 
 /**
@@ -133,6 +143,8 @@ struct lcb_HTTP_ERROR_CONTEXT_ {
     size_t path_len;
     const char *body;
     size_t body_len;
+    const char *endpoint;
+    size_t endpoint_len;
 };
 
 struct lcb_CREATEOPTS_ {

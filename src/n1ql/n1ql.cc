@@ -754,6 +754,8 @@ void N1QLREQ::invoke_row(lcb_RESPN1QL *resp, bool is_last)
     resp->handle = this;
 
     resp->ctx.http_response_code = cur_htresp->ctx.response_code;
+    resp->ctx.endpoint = resp->htresp->ctx.endpoint;
+    resp->ctx.endpoint_len = resp->htresp->ctx.endpoint_len;
     resp->ctx.client_context_id = client_context_id.c_str();
     resp->ctx.client_context_id_len = client_context_id.size();
     resp->ctx.statement = statement.c_str();

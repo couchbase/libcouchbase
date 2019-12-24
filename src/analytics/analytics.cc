@@ -627,6 +627,8 @@ void ANALYTICSREQ::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
     resp->htresp = cur_htresp;
 
     resp->ctx.http_response_code = cur_htresp->ctx.response_code;
+    resp->ctx.endpoint = resp->htresp->ctx.endpoint;
+    resp->ctx.endpoint_len = resp->htresp->ctx.endpoint_len;
     resp->ctx.client_context_id = client_context_id.c_str();
     resp->ctx.client_context_id_len = client_context_id.size();
     resp->ctx.statement = statement.c_str();
