@@ -737,149 +737,6 @@ lcb_STATUS MultiBuilder::add_spec(const lcb_SDSPEC *spec)
     return LCB_SUCCESS;
 }
 
-static lcb_STATUS sd3_single(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC *cmd)
-{
-    // Find the trait
-    const lcb_SDSPEC *spec = cmd->specs;
-    const SubdocCmdTraits::Traits &traits = SubdocCmdTraits::find(spec->sdcmd);
-    lcb_STATUS rc;
-
-    // Any error here is implicitly related to the only spec
-    if (cmd->error_index) {
-        *cmd->error_index = 0;
-    }
-
-    if (!traits.valid()) {
-        return LCB_ERR_UNKNOWN_SUBDOC_COMMAND;
-    }
-
-    // Determine if the trait matches the mode. Technically we don't care
-    // about this (since it's always a single command) but we do want the
-    // API to remain consistent.
-    if (cmd->multimode != 0 && cmd->multimode != traits.mode()) {
-        return LCB_ERR_OPTIONS_CONFLICT;
-    }
-
-    if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
-        return LCB_ERR_EMPTY_KEY;
-    }
-    if (LCB_KEYBUF_IS_EMPTY(&spec->path) && !traits.chk_allow_empty_path(spec->options)) {
-        return LCB_ERR_SUBDOC_PATH_INVALID;
-    }
-
-    lcb_VALBUF valbuf;
-    const lcb_VALBUF *valbuf_p = &valbuf;
-    lcb_IOV tmpiov[2];
-    lcb_FRAGBUF *fbuf = &valbuf.u_buf.multi;
-
-    valbuf.vtype = LCB_KV_IOVCOPY;
-    fbuf->iov = tmpiov;
-    fbuf->niov = 1;
-    fbuf->total_length = 0;
-    tmpiov[0].iov_base = const_cast< void * >(spec->path.contig.bytes);
-    tmpiov[0].iov_len = spec->path.contig.nbytes;
-
-    if (traits.has_value) {
-        if (spec->value.vtype == LCB_KV_COPY) {
-            fbuf->niov = 2;
-            /* Subdoc value is the second IOV */
-            tmpiov[1].iov_base = (void *)spec->value.u_buf.contig.bytes;
-            tmpiov[1].iov_len = spec->value.u_buf.contig.nbytes;
-        } else {
-            /* Assume properly formatted packet */
-            valbuf_p = &spec->value;
-        }
-    }
-
-    uint8_t extlen = 3;
-    uint32_t exptime = 0;
-    if (cmd->exptime) {
-        if (!traits.allow_expiry) {
-            return LCB_ERR_OPTIONS_CONFLICT;
-        }
-        exptime = cmd->exptime;
-        extlen = 7;
-    }
-
-    uint8_t docflags = make_doc_flags(cmd->cmdflags);
-    if (docflags) {
-        extlen++;
-    }
-
-    protocol_binary_request_header hdr = {{0}};
-    mc_PACKET *packet;
-    mc_PIPELINE *pipeline;
-    int new_durability_supported = LCBT_SUPPORT_SYNCREPLICATION(instance);
-    lcb_U8 ffextlen = 0;
-
-    if (cmd->dur_level) {
-        if (new_durability_supported) {
-            hdr.request.magic = PROTOCOL_BINARY_AREQ;
-            ffextlen = 4;
-        } else {
-            return LCB_ERR_UNSUPPORTED_OPERATION;
-        }
-    }
-    rc = mcreq_basic_packet(&instance->cmdq, (const lcb_CMDBASE *)cmd, &hdr, extlen, ffextlen, &packet, &pipeline,
-                            MCREQ_BASICPACKET_F_FALLBACKOK);
-
-    if (rc != LCB_SUCCESS) {
-        return rc;
-    }
-
-    rc = mcreq_reserve_value(pipeline, packet, valbuf_p);
-    if (rc != LCB_SUCCESS) {
-        mcreq_wipe_packet(pipeline, packet);
-        mcreq_release_packet(pipeline, packet);
-        return rc;
-    }
-
-    MCREQ_PKT_RDATA(packet)->cookie = cookie;
-    MCREQ_PKT_RDATA(packet)->start = gethrtime();
-    MCREQ_PKT_RDATA(packet)->deadline = MCREQ_PKT_RDATA(packet)->start + LCB_US2NS(cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, operation_timeout));
-
-    hdr.request.magic = PROTOCOL_BINARY_REQ;
-    hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    hdr.request.extlen = packet->extlen;
-    hdr.request.opaque = packet->opaque;
-    hdr.request.opcode = traits.opcode;
-    hdr.request.cas = lcb_htonll(cmd->cas);
-    hdr.request.bodylen = htonl(hdr.request.extlen + ffextlen + ntohs(hdr.request.keylen) + get_value_size(packet));
-
-    memcpy(SPAN_BUFFER(&packet->kh_span), hdr.bytes, sizeof hdr.bytes);
-    if (cmd->dur_level && new_durability_supported) {
-        uint8_t meta = (1 << 4) | 3;
-        uint8_t level = cmd->dur_level;
-        uint16_t timeout = 0;
-        memcpy(SPAN_BUFFER(&packet->kh_span) + MCREQ_PKT_BASESIZE, &meta, sizeof(meta));
-        memcpy(SPAN_BUFFER(&packet->kh_span) + MCREQ_PKT_BASESIZE + 1, &level, sizeof(level));
-        memcpy(SPAN_BUFFER(&packet->kh_span) + MCREQ_PKT_BASESIZE + 2, &timeout, sizeof(timeout));
-    }
-    char *extras = SPAN_BUFFER(&packet->kh_span) + MCREQ_PKT_BASESIZE + ffextlen;
-    // Path length:
-    uint16_t enc_pathlen = htons(spec->path.contig.nbytes);
-    memcpy(extras, &enc_pathlen, 2);
-    extras += 2;
-
-    uint8_t path_flags = make_path_flags(spec->options);
-    memcpy(extras, &path_flags, 1);
-    extras += 1;
-
-    if (exptime) {
-        uint32_t enc_exptime = htonl(exptime);
-        memcpy(extras, &enc_exptime, 4);
-        extras += 4;
-    }
-
-    if (docflags) {
-        memcpy(extras, &docflags, 1);
-        extras += 1;
-    }
-
-    LCB_SCHED_ADD(instance, pipeline, packet);
-    return LCB_SUCCESS;
-}
-
 static lcb_STATUS subdoc_validate(lcb_INSTANCE *, const lcb_CMDSUBDOC *cmd)
 {
     // First validate the command
@@ -896,17 +753,6 @@ static lcb_STATUS subdoc_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
     if (LCBT_SETTING(instance, use_collections)) {
         lcb_CMDSUBDOC *mut = const_cast< lcb_CMDSUBDOC * >(cmd);
         mut->cid = cid;
-    }
-
-    if (cmd->nspecs == 1) {
-        switch (cmd->specs[0].sdcmd) {
-            case LCB_SDCMD_GET_FULLDOC:
-            case LCB_SDCMD_SET_FULLDOC:
-            case LCB_SDCMD_REMOVE_FULLDOC:
-                break;
-            default:
-                return sd3_single(instance, cookie, cmd);
-        }
     }
 
     uint32_t expiry = cmd->exptime;
@@ -1010,6 +856,7 @@ static lcb_STATUS subdoc_impl(uint32_t cid, lcb_INSTANCE *instance, void *cookie
     MCREQ_PKT_RDATA(pkt)->cookie = cookie;
     MCREQ_PKT_RDATA(pkt)->start = gethrtime();
     MCREQ_PKT_RDATA(pkt)->deadline = MCREQ_PKT_RDATA(pkt)->start + LCB_US2NS(cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, operation_timeout));
+    MCREQ_PKT_RDATA(pkt)->nsubreq = cmd->nspecs;
     LCB_SCHED_ADD(instance, pl, pkt);
     return LCB_SUCCESS;
 }

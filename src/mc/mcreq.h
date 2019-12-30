@@ -151,6 +151,7 @@ typedef struct mc_REQDATA {
      */
     hrtime_t dispatch;
     lcbtrace_SPAN *span;
+    uint32_t nsubreq; /* number of subrequests */
 } mc_REQDATA;
 
 struct mc_packet_st;
@@ -195,11 +196,12 @@ typedef struct mc_REQDATAEX {
      */
     hrtime_t dispatch;
     lcbtrace_SPAN *span;
+    uint32_t nsubreq;             /* number of subrequests */
     const mc_REQDATAPROCS *procs; /**< Common routines for the packet */
 
 #ifdef __cplusplus
     mc_REQDATAEX(const void *cookie_, const mc_REQDATAPROCS &procs_, hrtime_t start_)
-        : cookie(cookie_), start(start_), dispatch(0), span(NULL), procs(&procs_)
+        : cookie(cookie_), start(start_), dispatch(0), span(NULL), nsubreq(0), procs(&procs_)
     {
         deadline = start_ + LCB_DEFAULT_TIMEOUT;
     }

@@ -507,16 +507,15 @@ lcb_sdresult_parse(lcb_RESPSUBDOC *resp, lcb_CALLBACK_TYPE type)
     std::vector<lcb_SDENTRY> results;
     size_t iter = 0, oix = 0;
     lcb_SDENTRY ent;
+    results.resize(resp->nres);
 
     while (lcb_sdresult_next(resp, &ent, &iter)) {
         size_t index = oix++;
         if (type == LCB_CALLBACK_SDMUTATE) {
             index = ent.index;
         }
-        results.resize(index + 1);
         results[index] = ent;
     }
-    resp->nres = results.size();
     if (resp->nres) {
         resp->res = (lcb_SDENTRY *)calloc(resp->nres, sizeof(lcb_SDENTRY));
         for (size_t ii = 0; ii < resp->nres; ii++) {
@@ -556,6 +555,7 @@ H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request,
             response->opcode() == PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION) {
         if (w.resp.ctx.rc == LCB_SUCCESS) {
             w.resp.responses = response;
+            w.resp.nres = MCREQ_PKT_RDATA(request)->nsubreq;
             lcb_sdresult_parse(&w.resp, cbtype);
         } else {
             handle_error_info(response, &w);
