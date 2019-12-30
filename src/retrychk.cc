@@ -65,6 +65,7 @@ lcb_RETRY_ACTION lcb_kv_should_retry(const lcb_settings *settings, const mc_PACK
 
     lcb_RETRY_REASON retry_reason = mc_code_to_reason(err);
     lcb_RETRY_REQUEST retry_req;
+    retry_req.operation_cookie = const_cast< void * >(MCREQ_PKT_COOKIE(pkt));
     retry_req.is_idempotent = mc_is_idempotent(hdr.request.opcode);
     retry_req.retry_attempts = pkt->retries;
     lcb_RETRY_ACTION retry_action{};

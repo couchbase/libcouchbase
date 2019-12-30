@@ -217,6 +217,11 @@ LIBCOUCHBASE_API int lcb_retry_request_retry_attempts(lcb_RETRY_REQUEST *req)
     return req->retry_attempts;
 }
 
+LIBCOUCHBASE_API void *lcb_retry_request_operation_cookie(lcb_RETRY_REQUEST *req)
+{
+    return req->operation_cookie;
+}
+
 lcb_RETRY_ACTION lcb_retry_strategy_best_effort(lcb_RETRY_REQUEST *req, lcb_RETRY_REASON reason)
 {
     lcb_RETRY_ACTION res{0, 0};

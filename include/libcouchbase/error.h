@@ -391,6 +391,7 @@ LIBCOUCHBASE_API int lcb_retry_reason_is_always_retry(lcb_RETRY_REASON code);
 
 LIBCOUCHBASE_API int lcb_retry_request_is_idempotent(lcb_RETRY_REQUEST *req);
 LIBCOUCHBASE_API int lcb_retry_request_retry_attempts(lcb_RETRY_REQUEST *req);
+LIBCOUCHBASE_API void *lcb_retry_request_operation_cookie(lcb_RETRY_REQUEST *req);
 
 typedef struct {
     uint32_t should_retry;
