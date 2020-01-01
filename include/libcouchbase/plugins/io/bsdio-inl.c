@@ -68,7 +68,7 @@ recv_impl(lcb_io_opt_t iops, lcb_socket_t sock, void *buf, lcb_size_t nbuf,
 {
     WSABUF iov;
     iov.len = nbuf;
-    iov.buf = buf;
+    iov.buf = (CHAR *)buf;
     (void)fl_unused;
     return recvv_impl(iops, sock, (struct lcb_iovec_st *)&iov, 1);
 }
@@ -91,7 +91,7 @@ send_impl(lcb_io_opt_t iops, lcb_socket_t sock, const void *buf, lcb_size_t nbuf
           int flags)
 {
     WSABUF iov;
-    iov.buf = (void *)buf;
+    iov.buf = (CHAR *)buf;
     iov.len = nbuf;
     (void)flags;
     return sendv_impl(iops, sock, (struct lcb_iovec_st *)&iov, 1);
