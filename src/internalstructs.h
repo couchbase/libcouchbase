@@ -2156,7 +2156,7 @@ struct lcb_RESPGETCID_ {
 #define LCB_CMD_DESTROY_CLONE(cmd)                                                                                     \
     do {                                                                                                               \
         if (cmd->cmdflags & LCB_CMD_F_CLONE) {                                                                         \
-            if (cmd->key.contig.bytes && cmd->key.type == LCB_KV_CONTIG) {                                             \
+            if (cmd->key.contig.bytes && cmd->key.type == LCB_KV_COPY) {                                               \
                 free((void *)cmd->key.contig.bytes);                                                                   \
             }                                                                                                          \
         }                                                                                                              \
