@@ -47,7 +47,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->bc_http_urltype = LCB_DEFAULT_HTCONFIG_URLTYPE;
     settings->compressopts = LCB_DEFAULT_COMPRESSOPTS;
     settings->compress_min_size = LCB_DEFAULT_COMPRESS_MIN_SIZE;
-    settings->compress_min_ratio = LCB_DEFAULT_COMPRESS_MIN_RATIO;
+    settings->compress_min_ratio = (float)LCB_DEFAULT_COMPRESS_MIN_RATIO;
     settings->allocator_factory = rdb_bigalloc_new;
     settings->detailed_neterr = 0;
     settings->refresh_on_hterr = 1;
