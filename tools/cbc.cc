@@ -664,6 +664,8 @@ void GetHandler::run()
     lcb_install_callback(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)getreplica_callback);
     const vector< string > &keys = parser.getRestArgs();
     std::string replica_mode = o_replica.result();
+    std::string s = o_scope.result();
+    std::string c = o_collection.result();
 
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < keys.size(); ++ii) {
@@ -694,8 +696,6 @@ void GetHandler::run()
             const string &key = keys[ii];
             lcb_cmdgetreplica_key(cmd, key.c_str(), key.size());
             if (o_collection.passed()) {
-                std::string s = o_scope.result();
-                std::string c = o_collection.result();
                 lcb_cmdgetreplica_collection(cmd, s.c_str(), s.size(), c.c_str(), c.size());
             }
             err = lcb_getreplica(instance, this, cmd);
@@ -706,8 +706,6 @@ void GetHandler::run()
             const string &key = keys[ii];
             lcb_cmdget_key(cmd, key.c_str(), key.size());
             if (o_collection.passed()) {
-                std::string s = o_scope.result();
-                std::string c = o_collection.result();
                 lcb_cmdget_collection(cmd, s.c_str(), s.size(), c.c_str(), c.size());
             }
             if (o_exptime.passed()) {
@@ -804,12 +802,12 @@ void SetHandler::storeItem(const string &key, const char *value, size_t nvalue)
 {
     lcb_STATUS err;
     lcb_CMDSTORE *cmd;
+    std::string s = o_scope.result();
+    std::string c = o_collection.result();
 
     lcb_cmdstore_create(&cmd, mode());
     lcb_cmdstore_key(cmd, key.c_str(), key.size());
     if (o_collection.passed()) {
-        std::string s = o_scope.result();
-        std::string c = o_collection.result();
         lcb_cmdstore_collection(cmd, s.c_str(), s.size(), c.c_str(), c.size());
     }
     lcb_cmdstore_value(cmd, value, nvalue);
@@ -1001,6 +999,8 @@ void ExistsHandler::run()
     Handler::run();
     lcb_install_callback(instance, LCB_CALLBACK_EXISTS, (lcb_RESPCALLBACK)exists_callback);
     const vector< string > &args = parser.getRestArgs();
+    std::string s = o_scope.result();
+    std::string c = o_collection.result();
 
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < args.size(); ii++) {
@@ -1009,8 +1009,6 @@ void ExistsHandler::run()
         lcb_cmdexists_create(&cmd);
         lcb_cmdexists_key(cmd, key.c_str(), key.size());
         if (o_collection.passed()) {
-            std::string s = o_scope.result();
-            std::string c = o_collection.result();
             lcb_cmdexists_collection(cmd, s.c_str(), s.size(), c.c_str(), c.size());
         }
         lcb_STATUS err = lcb_exists(instance, NULL, cmd);
