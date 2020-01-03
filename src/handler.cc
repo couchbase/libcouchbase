@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2014-2019 Couchbase, Inc.
+ *     Copyright 2014-2020 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -182,6 +182,8 @@ map_error(lcb_INSTANCE *instance, int in)
         return LCB_ERR_AUTHENTICATION_FAILURE;
     case PROTOCOL_BINARY_RESPONSE_UNKNOWN_COLLECTION:
         return LCB_ERR_COLLECTION_NOT_FOUND;
+    case PROTOCOL_BINARY_RESPONSE_UNKNOWN_SCOPE:
+        return LCB_ERR_SCOPE_NOT_FOUND;
     case PROTOCOL_BINARY_RESPONSE_NO_COLLECTIONS_MANIFEST:
         return LCB_ERR_COLLECTION_NO_MANIFEST;
     case PROTOCOL_BINARY_RESPONSE_CANNOT_APPLY_COLLECTIONS_MANIFEST:
@@ -952,7 +954,7 @@ H_collections_get_cid(mc_PIPELINE *pipeline, mc_PACKET *request,
     }
 
     if (request->flags & MCREQ_F_REQEXT) {
-        request->u_rdata.exdata->procs->handler(pipeline, request, immerr, &resp);
+        request->u_rdata.exdata->procs->handler(pipeline, request, resp.ctx.rc, &resp);
     } else {
         invoke_callback(request, root, &resp, LCB_CALLBACK_GETCID);
     }
