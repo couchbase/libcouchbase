@@ -29,9 +29,13 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respremove_error_context(const lcb_RESPREMOVE *r
     if (resp->rflags & LCB_RESP_F_ERRINFO) {
         lcb_RESPREMOVE *mut = const_cast< lcb_RESPREMOVE * >(resp);
         mut->ctx.context = lcb_resp_get_error_context(LCB_CALLBACK_REMOVE, (const lcb_RESPBASE *)resp);
-        mut->ctx.context_len = strlen(resp->ctx.context);
+        if (mut->ctx.context) {
+            mut->ctx.context_len = strlen(resp->ctx.context);
+        }
         mut->ctx.ref = lcb_resp_get_error_ref(LCB_CALLBACK_REMOVE, (const lcb_RESPBASE *)resp);
-        mut->ctx.ref_len = strlen(resp->ctx.ref);
+        if (mut->ctx.ref) {
+            mut->ctx.ref_len = strlen(resp->ctx.ref);
+        }
     }
     *ctx = &resp->ctx;
     return LCB_SUCCESS;

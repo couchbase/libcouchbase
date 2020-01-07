@@ -28,9 +28,13 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respget_error_context(const lcb_RESPGET *resp, c
     if (resp->rflags & LCB_RESP_F_ERRINFO) {
         lcb_RESPGET *mut = const_cast< lcb_RESPGET * >(resp);
         mut->ctx.context = lcb_resp_get_error_context(LCB_CALLBACK_GET, (const lcb_RESPBASE *)resp);
-        mut->ctx.context_len = strlen(resp->ctx.context);
+        if (mut->ctx.context) {
+            mut->ctx.context_len = strlen(resp->ctx.context);
+        }
         mut->ctx.ref = lcb_resp_get_error_ref(LCB_CALLBACK_GET, (const lcb_RESPBASE *)resp);
-        mut->ctx.ref_len = strlen(resp->ctx.ref);
+        if (mut->ctx.ref) {
+            mut->ctx.ref_len = strlen(resp->ctx.ref);
+        }
     }
     *ctx = &resp->ctx;
     return LCB_SUCCESS;
@@ -232,9 +236,13 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_error_context(const lcb_RESPUNLOCK *r
     if (resp->rflags & LCB_RESP_F_ERRINFO) {
         lcb_RESPUNLOCK *mut = const_cast< lcb_RESPUNLOCK * >(resp);
         mut->ctx.context = lcb_resp_get_error_context(LCB_CALLBACK_UNLOCK, (const lcb_RESPBASE *)resp);
-        mut->ctx.context_len = strlen(resp->ctx.context);
+        if (mut->ctx.context) {
+            mut->ctx.context_len = strlen(resp->ctx.context);
+        }
         mut->ctx.ref = lcb_resp_get_error_ref(LCB_CALLBACK_UNLOCK, (const lcb_RESPBASE *)resp);
-        mut->ctx.ref_len = strlen(resp->ctx.ref);
+        if (mut->ctx.ref) {
+            mut->ctx.ref_len = strlen(resp->ctx.ref);
+        }
     }
     *ctx = &resp->ctx;
     return LCB_SUCCESS;
@@ -384,9 +392,13 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_error_context(const lcb_RESPGETRE
     if (resp->rflags & LCB_RESP_F_ERRINFO) {
         lcb_RESPGETREPLICA *mut = const_cast< lcb_RESPGETREPLICA * >(resp);
         mut->ctx.context = lcb_resp_get_error_context(LCB_CALLBACK_GETREPLICA, (const lcb_RESPBASE *)resp);
-        mut->ctx.context_len = strlen(resp->ctx.context);
+        if (mut->ctx.context) {
+            mut->ctx.context_len = strlen(resp->ctx.context);
+        }
         mut->ctx.ref = lcb_resp_get_error_ref(LCB_CALLBACK_GETREPLICA, (const lcb_RESPBASE *)resp);
-        mut->ctx.ref_len = strlen(resp->ctx.ref);
+        if (mut->ctx.ref) {
+            mut->ctx.ref_len = strlen(resp->ctx.ref);
+        }
     }
     *ctx = &resp->ctx;
     return LCB_SUCCESS;

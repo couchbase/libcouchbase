@@ -39,9 +39,13 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respexists_error_context(const lcb_RESPEXISTS *r
     if (resp->rflags & LCB_RESP_F_ERRINFO) {
         lcb_RESPEXISTS *mut = const_cast< lcb_RESPEXISTS * >(resp);
         mut->ctx.context = lcb_resp_get_error_context(LCB_CALLBACK_EXISTS, (const lcb_RESPBASE *)resp);
-        mut->ctx.context_len = strlen(resp->ctx.context);
+        if (mut->ctx.context) {
+            mut->ctx.context_len = strlen(resp->ctx.context);
+        }
         mut->ctx.ref = lcb_resp_get_error_ref(LCB_CALLBACK_EXISTS, (const lcb_RESPBASE *)resp);
-        mut->ctx.ref_len = strlen(resp->ctx.ref);
+        if (mut->ctx.ref) {
+            mut->ctx.ref_len = strlen(resp->ctx.ref);
+        }
     }
     *ctx = &resp->ctx;
     return LCB_SUCCESS;
