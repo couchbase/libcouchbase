@@ -228,6 +228,12 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_readonly(lcb_CMDN1QL *cmd, int readonly)
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_metrics(lcb_CMDN1QL *cmd, int metrics)
+{
+    cmd->root["metrics"] = metrics ? true : false;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdn1ql_scan_cap(lcb_CMDN1QL *cmd, int value)
 {
     cmd->root["scan_cap"] = Json::valueToString(value);
