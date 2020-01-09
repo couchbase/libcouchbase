@@ -1097,20 +1097,20 @@ void VersionHandler::run()
     if (err != LCB_SUCCESS) {
         changeset = "UNKNOWN";
     }
-    fprintf(stderr, "cbc:\n");
-    fprintf(stderr, "  Runtime: Version=%s, Changeset=%s\n", lcb_get_version(NULL), changeset);
-    fprintf(stderr, "  Headers: Version=%s, Changeset=%s\n", LCB_VERSION_STRING, LCB_VERSION_CHANGESET);
-    fprintf(stderr, "  Build Timestamp: %s\n", LCB_BUILD_TIMESTAMP);
+    printf("cbc:\n");
+    printf("  Runtime: Version=%s, Changeset=%s\n", lcb_get_version(NULL), changeset);
+    printf("  Headers: Version=%s, Changeset=%s\n", LCB_VERSION_STRING, LCB_VERSION_CHANGESET);
+    printf("  Build Timestamp: %s\n", LCB_BUILD_TIMESTAMP);
 
     if (LCB_LIBDIR[0] == '/') {
-        fprintf(stderr, "  Default plugin directory: %s\n", LCB_LIBDIR);
+        printf("  Default plugin directory: %s\n", LCB_LIBDIR);
     }
     struct lcb_cntl_iops_info_st info;
     memset(&info, 0, sizeof info);
     err = lcb_cntl(NULL, LCB_CNTL_GET, LCB_CNTL_IOPS_DEFAULT_TYPES, &info);
     if (err == LCB_SUCCESS) {
-        fprintf(stderr, "  IO: Default=%s, Current=%s, Accessible=", iops_to_string(info.v.v0.os_default),
-                iops_to_string(info.v.v0.effective));
+        printf("  IO: Default=%s, Current=%s, Accessible=", iops_to_string(info.v.v0.os_default),
+               iops_to_string(info.v.v0.effective));
     }
     {
         size_t ii;
@@ -1129,7 +1129,7 @@ void VersionHandler::run()
             }
         }
         *(--p) = '\n';
-        fprintf(stderr, "%s", buf);
+        printf("%s", buf);
     }
 
     if (lcb_supports_feature(LCB_SUPPORTS_SSL)) {
