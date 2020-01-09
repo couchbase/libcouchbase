@@ -263,7 +263,7 @@ ELSE()
     ENDIF(NOT OPENSSL_FOUND)
 
     IF(OPENSSL_FOUND)
-        MESSAGE(STATUS "SSL Found")
+        MESSAGE(STATUS "SSL Found: ${OPENSSL_VERSION} (${OPENSSL_LIBRARIES})")
     ELSE()
         MESSAGE(STATUS "SSL Not Found. SSL support will be disabled")
         ADD_DEFINITIONS(-DLCB_NO_SSL=1)
