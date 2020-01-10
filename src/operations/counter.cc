@@ -93,7 +93,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdcounter_destroy(lcb_CMDCOUNTER *cmd)
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdcounter_cas(lcb_CMDSTORE *cmd, uint64_t cas)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdcounter_cas(lcb_CMDCOUNTER *cmd, uint64_t cas)
 {
     cmd->cas = cas;
     return LCB_SUCCESS;
