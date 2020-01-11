@@ -87,7 +87,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_timeout(lcb_CMDSEARCH *cmd, uint32_t t
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdfts_parent_span(lcb_CMDSEARCH *cmd, lcbtrace_SPAN *span)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_parent_span(lcb_CMDSEARCH *cmd, lcbtrace_SPAN *span)
 {
     cmd->pspan = span;
     return LCB_SUCCESS;
