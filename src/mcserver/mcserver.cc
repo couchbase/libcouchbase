@@ -183,6 +183,7 @@ bool Server::handle_nmv(MemcachedResponse &resinfo, mc_PACKET *oldpkt)
 }
 
 struct packet_wrapper {
+    lcb_KEYBUF key;
     const char *scope = nullptr;
     size_t nscope = 0;
     const char *collection = nullptr;
@@ -195,22 +196,31 @@ struct packet_wrapper {
     std::string scope_;
     std::string collection_;
 
-    explicit packet_wrapper(const std::string &name)
+    packet_wrapper()
     {
-        size_t dot = name.find('.');
-        scope_ = name.substr(0, dot);
-        collection_ = name.substr(dot + 1);
-        update_pointers();
+        key.type = LCB_KV_COPY;
+        key.contig.bytes = nullptr;
+        key.contig.nbytes = 0;
+        key.vbid = 0;
     }
 
     packet_wrapper(const packet_wrapper &other)
     {
+        key = other.key;
         cid = other.cid;
         timeout = other.timeout;
         pkt = other.pkt;
         instance = other.instance;
         scope_ = other.scope_;
         collection_ = other.collection_;
+        update_pointers();
+    }
+
+    void assign_name(const std::string &name)
+    {
+        size_t dot = name.find('.');
+        scope_ = name.substr(0, dot);
+        collection_ = name.substr(dot + 1);
         update_pointers();
     }
 
@@ -241,13 +251,13 @@ bool Server::handle_unknown_collection(MemcachedResponse &, mc_PACKET *oldpkt)
     uint32_t cid = mcreq_get_cid(instance, oldpkt);
     std::string name = instance->collcache->id_to_name(cid);
 
+    packet_wrapper wrapper;
     protocol_binary_request_header req;
     memcpy(&req, SPAN_BUFFER(&oldpkt->kh_span), sizeof(req));
+    mcreq_get_key(instance, oldpkt, (const char **)&wrapper.key.contig.bytes, &wrapper.key.contig.nbytes);
     if (req.request.opcode == PROTOCOL_BINARY_CMD_COLLECTIONS_GET_CID) {
-        const char *key = NULL;
-        size_t nkey = 0;
-        mcreq_get_key(instance, oldpkt, &key, &nkey);
-        name.assign(key, nkey);
+        name = std::string(static_cast<const char *>(wrapper.key.contig.bytes), wrapper.key.contig.nbytes);
+        wrapper.assign_name(name);
     }
 
     lcb_log(LOGARGS_T(WARN), LOGFMT "UNKNOWN_COLLECTION. Packet=%p (S=%u), CID=%u, CNAME=%s", LOGID_T(), (void *)oldpkt,
@@ -261,7 +271,6 @@ bool Server::handle_unknown_collection(MemcachedResponse &, mc_PACKET *oldpkt)
         return false;
     }
 
-    packet_wrapper wrapper(name);
     wrapper.pkt = mcreq_renew_packet(oldpkt);
     wrapper.instance = instance;
     wrapper.timeout = MCREQ_PKT_RDATA(wrapper.pkt)->deadline - MCREQ_PKT_RDATA(wrapper.pkt)->start;

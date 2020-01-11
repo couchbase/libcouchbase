@@ -123,11 +123,12 @@ lcb_STATUS collcache_resolve(lcb_INSTANCE *instance, Command cmd, Operation op, 
         return LCB_ERR_NO_CONFIGURATION;
     }
 
-    /* TODO: rotate pipelines */
-    if (cq->npipelines < 1) {
+    int vbid, idx;
+    mcreq_map_key(cq, &cmd->key, MCREQ_PKT_BASESIZE, &vbid, &idx);
+    if (idx < 0) {
         return LCB_ERR_NO_MATCHING_SERVER;
     }
-    mc_PIPELINE *pl = cq->pipelines[0];
+    mc_PIPELINE *pl = cq->pipelines[idx];
     mc_PACKET *pkt = mcreq_allocate_packet(pl);
     if (!pkt) {
         return LCB_ERR_NO_MEMORY;
