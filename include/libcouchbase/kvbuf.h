@@ -51,7 +51,7 @@ typedef enum {
 typedef struct lcb_CONTIGBUF {
     const void *bytes;
     /** Number of total bytes */
-    lcb_size_t nbytes;
+    size_t nbytes;
 } lcb_CONTIGBUF;
 
 /** @brief Common request header for all keys */
