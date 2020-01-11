@@ -283,7 +283,7 @@ extern "C" {
         }                                                                                                              \
     }
 
-DEFINE_ROW_CALLBACK(n1ql_callback, lcb_RESPN1QL)
+DEFINE_ROW_CALLBACK(n1ql_callback, lcb_RESPQUERY)
 DEFINE_ROW_CALLBACK(fts_callback, lcb_RESPFTS)
 }
 
@@ -328,18 +328,18 @@ static void conn_readcb(struct bufferevent *bev, void *cookie)
         char *key = (char *)pkt + sizeof(header) + extlen;
         lcb_STATUS rc;
         if (memcmp(key, "n1ql ", 5) == 0) {
-            lcb_CMDN1QL *cmd;
-            lcb_cmdn1ql_create(&cmd);
+            lcb_CMDQUERY *cmd;
+            lcb_cmdquery_create(&cmd);
 
-            rc = lcb_cmdn1ql_statement(cmd, key + 5, keylen - 5);
+            rc = lcb_cmdquery_statement(cmd, key + 5, keylen - 5);
             if (rc != LCB_SUCCESS) {
                 lcb_log(LOGARGS(INFO), CL_LOGFMT "failed to set query for N1QL", CL_LOGID(cl));
                 goto FWD;
             }
-            lcb_cmdn1ql_callback(cmd, n1ql_callback);
+            lcb_cmdquery_callback(cmd, n1ql_callback);
             cl->cnt = 0;
-            rc = lcb_n1ql(instance, cl, cmd);
-            lcb_cmdn1ql_destroy(cmd);
+            rc = lcb_query(instance, cl, cmd);
+            lcb_cmdquery_destroy(cmd);
             if (rc != LCB_SUCCESS) {
                 lcb_log(LOGARGS(INFO), CL_LOGFMT "failed to schedule N1QL command", CL_LOGID(cl));
                 goto FWD;

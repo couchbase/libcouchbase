@@ -168,7 +168,7 @@ typedef struct lcb_RESPN1XMGMT_st {
     size_t nspecs;
 
     /** Inner N1QL response. Examine on error */
-    const lcb_RESPN1QL *inner;
+    const lcb_RESPQUERY *inner;
 } lcb_RESPN1XMGMT;
 
 /**

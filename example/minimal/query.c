@@ -63,28 +63,28 @@ static void ln2space(const void *buf, size_t nbuf)
     }
 }
 
-static void row_callback(lcb_INSTANCE *instance, int type, const lcb_RESPN1QL *resp)
+static void row_callback(lcb_INSTANCE *instance, int type, const lcb_RESPQUERY *resp)
 {
     const char *row;
     size_t nrow;
-    lcb_STATUS rc = lcb_respn1ql_status(resp);
+    lcb_STATUS rc = lcb_respquery_status(resp);
 
-    lcb_respn1ql_row(resp, &row, &nrow);
+    lcb_respquery_row(resp, &row, &nrow);
     ln2space(row, nrow);
     fprintf(stderr, "[\x1b[%dmQUERY\x1b[0m] %s, (%d) %.*s\n", err2color(rc), lcb_strerror_short(rc), (int)nrow,
             (int)nrow, row);
-    if (lcb_respn1ql_is_final(resp)) {
+    if (lcb_respquery_is_final(resp)) {
         fprintf(stderr, "\n");
     }
 }
 
 static void idx_callback(lcb_INSTANCE *instance, int type, const lcb_RESPN1XMGMT *resp)
 {
-    const lcb_RESPN1QL *inner = resp->inner;
+    const lcb_RESPQUERY *inner = resp->inner;
     const char *row;
     size_t nrow;
 
-    lcb_respn1ql_row(inner, &row, &nrow);
+    lcb_respquery_row(inner, &row, &nrow);
     ln2space(row, nrow);
     fprintf(stderr, "[\x1b[%dmINDEX\x1b[0m] %s, (%d) %.*s\n", err2color(resp->rc), lcb_strerror_short(resp->rc),
             (int)nrow, (int)nrow, row);
@@ -187,19 +187,19 @@ int main(int argc, char *argv[])
     sigaction(SIGINT, &action, NULL);
 
     while (running) {
-        lcb_CMDN1QL *cmd;
+        lcb_CMDQUERY *cmd;
         char query[1024] = {0};
         const char *param = "\"African Swallows\"";
-        lcb_cmdn1ql_create(&cmd);
+        lcb_cmdquery_create(&cmd);
 
         snprintf(query, sizeof(query), "SELECT * FROM `%s` WHERE $1 in interests LIMIT 1", bucket);
-        check(lcb_cmdn1ql_statement(cmd, query, strlen(query)), "set QUERY statement");
-        check(lcb_cmdn1ql_positional_param(cmd, param, strlen(param)), "set QUERY positional parameter");
-        check(lcb_cmdn1ql_option(cmd, "pretty", strlen("pretty"), "false", strlen("false")),
+        check(lcb_cmdquery_statement(cmd, query, strlen(query)), "set QUERY statement");
+        check(lcb_cmdquery_positional_param(cmd, param, strlen(param)), "set QUERY positional parameter");
+        check(lcb_cmdquery_option(cmd, "pretty", strlen("pretty"), "false", strlen("false")),
               "set QUERY 'pretty' option");
-        lcb_cmdn1ql_callback(cmd, row_callback);
-        check(lcb_n1ql(instance, NULL, cmd), "schedule QUERY operation");
-        lcb_cmdn1ql_destroy(cmd);
+        lcb_cmdquery_callback(cmd, row_callback);
+        check(lcb_query(instance, NULL, cmd), "schedule QUERY operation");
+        lcb_cmdquery_destroy(cmd);
         lcb_wait(instance);
     }
 

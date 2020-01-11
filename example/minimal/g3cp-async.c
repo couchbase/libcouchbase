@@ -33,14 +33,14 @@ static void check(lcb_STATUS err, const char *msg)
     }
 }
 
-static void row_callback(lcb_INSTANCE *instance, int type, const lcb_RESPN1QL *resp)
+static void row_callback(lcb_INSTANCE *instance, int type, const lcb_RESPQUERY *resp)
 {
     const char *row;
     size_t nrow;
 
-    lcb_respn1ql_row(resp, &row, &nrow);
-    printf("[\x1b[%dmQUERY-%s\x1b[0m] %d bytes\n%.*s\n", lcb_respn1ql_status(resp) == LCB_SUCCESS ? 32 : 31,
-           lcb_respn1ql_is_final(resp) ? "META" : "ROW", (int)nrow, (int)nrow, row);
+    lcb_respquery_row(resp, &row, &nrow);
+    printf("[\x1b[%dmQUERY-%s\x1b[0m] %d bytes\n%.*s\n", lcb_respquery_status(resp) == LCB_SUCCESS ? 32 : 31,
+           lcb_respquery_is_final(resp) ? "META" : "ROW", (int)nrow, (int)nrow, row);
     fflush(stdout);
 }
 
@@ -109,15 +109,15 @@ void bootstrap_callback(lcb_INSTANCE *instance, lcb_STATUS err)
     }
     fflush(stdout);
     {
-        lcb_CMDN1QL *cmd;
+        lcb_CMDQUERY *cmd;
         const char *query = "SELECT CLOCK_LOCAL() AS now";
 
-        lcb_cmdn1ql_create(&cmd);
-        check(lcb_cmdn1ql_statement(cmd, query, strlen(query)), "set QUERY statement");
-        check(lcb_cmdn1ql_pretty(cmd, 0), "set QUERY statement");
-        lcb_cmdn1ql_callback(cmd, row_callback);
-        check(lcb_n1ql(instance, NULL, cmd), "schedule QUERY operation");
-        lcb_cmdn1ql_destroy(cmd);
+        lcb_cmdquery_create(&cmd);
+        check(lcb_cmdquery_statement(cmd, query, strlen(query)), "set QUERY statement");
+        check(lcb_cmdquery_pretty(cmd, 0), "set QUERY statement");
+        lcb_cmdquery_callback(cmd, row_callback);
+        check(lcb_query(instance, NULL, cmd), "schedule QUERY operation");
+        lcb_cmdquery_destroy(cmd);
     }
     if (bucket) {
         lcb_set_open_callback(instance, open_callback);

@@ -538,8 +538,8 @@ static lcbvb_SVCTYPE httype2svctype(unsigned httype)
     switch (httype) {
         case LCB_HTTP_TYPE_VIEW:
             return LCBVB_SVCTYPE_VIEWS;
-        case LCB_HTTP_TYPE_N1QL:
-            return LCBVB_SVCTYPE_N1QL;
+        case LCB_HTTP_TYPE_QUERY:
+            return LCBVB_SVCTYPE_QUERY;
         case LCB_HTTP_TYPE_FTS:
             return LCBVB_SVCTYPE_FTS;
         case LCB_HTTP_TYPE_CBAS:
@@ -709,7 +709,7 @@ uint32_t Request::timeout() const
         return user_timeout;
     }
     switch (reqtype) {
-        case LCB_HTTP_TYPE_N1QL:
+        case LCB_HTTP_TYPE_QUERY:
         case LCB_HTTP_TYPE_FTS:
             return LCBT_SETTING(instance, n1ql_timeout);
         case LCB_HTTP_TYPE_VIEW:

@@ -50,7 +50,7 @@ typedef enum {
     LCBVB_SVCTYPE_MGMT,      /**< Administrative/'REST' UI */
     LCBVB_SVCTYPE_IXQUERY,   /**< Index query */
     LCBVB_SVCTYPE_IXADMIN,   /**< Index administration */
-    LCBVB_SVCTYPE_N1QL,      /**< N1QL Query */
+    LCBVB_SVCTYPE_QUERY,     /**< N1QL Query */
     LCBVB_SVCTYPE_FTS,       /**< Fulltext */
     LCBVB_SVCTYPE_ANALYTICS, /**< Analytics Query */
 /* for backward compatiblity */
@@ -466,7 +466,7 @@ const char *lcbvb_get_hostname(const lcbvb_CONFIG *cfg, unsigned ix);
  * Function to return the URL prefix for a REST service.
  *
  * Returns a string suitable for being passed as a URL. This is only valid
- * for ::LCBVB_SVCTYPE_VIEWS and ::LCBVB_SVCTYPE_N1QL.
+ * for ::LCBVB_SVCTYPE_VIEWS and ::LCBVB_SVCTYPE_QUERY.
  *
  * This function is different from lcbvb_get_hostport() -- it is mainly a
  * convenience, but does cache the string. Also, theoretically the cluster

@@ -1572,32 +1572,32 @@ static void splitKvParam(const string &src, string &key, string &value)
 }
 
 extern "C" {
-static void n1qlCallback(lcb_INSTANCE *, int, const lcb_RESPN1QL *resp)
+static void n1qlCallback(lcb_INSTANCE *, int, const lcb_RESPQUERY *resp)
 {
     const char *row;
     size_t nrow;
-    lcb_respn1ql_row(resp, &row, &nrow);
+    lcb_respquery_row(resp, &row, &nrow);
 
-    if (lcb_respn1ql_is_final(resp)) {
-        lcb_STATUS rc = lcb_respn1ql_status(resp);
+    if (lcb_respquery_is_final(resp)) {
+        lcb_STATUS rc = lcb_respquery_status(resp);
         fprintf(stderr, "---> Query response finished\n");
         if (rc != LCB_SUCCESS) {
             fprintf(stderr, "---> Query failed with library code %s\n", lcb_strerror_short(rc));
 
-            const lcb_N1QL_ERROR_CONTEXT *ctx;
-            lcb_respn1ql_error_context(resp, &ctx);
+            const lcb_QUERY_ERROR_CONTEXT *ctx;
+            lcb_respquery_error_context(resp, &ctx);
             uint32_t code;
-            lcb_errctx_n1ql_http_response_code(ctx, &code);
+            lcb_errctx_query_http_response_code(ctx, &code);
             fprintf(stderr, "---> HTTP response code: %d\n", code);
             const char *client_id;
             size_t nclient_id;
-            lcb_errctx_n1ql_client_context_id(ctx, &client_id, &nclient_id);
+            lcb_errctx_query_client_context_id(ctx, &client_id, &nclient_id);
             fprintf(stderr, "---> Client context ID: %.*s\n", (int)nclient_id, client_id);
             uint32_t err;
             const char *errmsg;
             size_t nerrmsg;
-            lcb_errctx_n1ql_first_error_message(ctx, &errmsg, &nerrmsg);
-            lcb_errctx_n1ql_first_error_code(ctx, &err);
+            lcb_errctx_query_first_error_message(ctx, &errmsg, &nerrmsg);
+            lcb_errctx_query_first_error_code(ctx, &err);
             fprintf(stderr, "---> First query error: %d (%.*s)\n", err, (int)nerrmsg, errmsg);
         }
         if (row) {
@@ -1615,10 +1615,10 @@ void N1qlHandler::run()
     const string &qstr = getRequiredArg();
     lcb_STATUS rc;
 
-    lcb_CMDN1QL *cmd;
-    lcb_cmdn1ql_create(&cmd);
+    lcb_CMDQUERY *cmd;
+    lcb_cmdquery_create(&cmd);
 
-    rc = lcb_cmdn1ql_statement(cmd, qstr.c_str(), qstr.size());
+    rc = lcb_cmdquery_statement(cmd, qstr.c_str(), qstr.size());
     if (rc != LCB_SUCCESS) {
         throw LcbError(rc);
     }
@@ -1627,7 +1627,7 @@ void N1qlHandler::run()
     for (size_t ii = 0; ii < vv_args.size(); ii++) {
         string key, value;
         splitKvParam(vv_args[ii], key, value);
-        rc = lcb_cmdn1ql_named_param(cmd, key.c_str(), key.size(), value.c_str(), value.size());
+        rc = lcb_cmdquery_named_param(cmd, key.c_str(), key.size(), value.c_str(), value.size());
         if (rc != LCB_SUCCESS) {
             throw LcbError(rc);
         }
@@ -1637,21 +1637,21 @@ void N1qlHandler::run()
     for (size_t ii = 0; ii < vv_opts.size(); ii++) {
         string key, value;
         splitKvParam(vv_opts[ii], key, value);
-        rc = lcb_cmdn1ql_option(cmd, key.c_str(), key.size(), value.c_str(), value.size());
+        rc = lcb_cmdquery_option(cmd, key.c_str(), key.size(), value.c_str(), value.size());
         if (rc != LCB_SUCCESS) {
             throw LcbError(rc);
         }
     }
-    lcb_cmdn1ql_adhoc(cmd, !o_prepare.passed());
-    lcb_cmdn1ql_callback(cmd, n1qlCallback);
+    lcb_cmdquery_adhoc(cmd, !o_prepare.passed());
+    lcb_cmdquery_callback(cmd, n1qlCallback);
 
     const char *payload;
     size_t npayload;
-    lcb_cmdn1ql_encoded_payload(cmd, &payload, &npayload);
+    lcb_cmdquery_encoded_payload(cmd, &payload, &npayload);
     fprintf(stderr, "---> Encoded query: %.*s\n", (int)npayload, payload);
 
-    rc = lcb_n1ql(instance, NULL, cmd);
-    lcb_cmdn1ql_destroy(cmd);
+    rc = lcb_query(instance, NULL, cmd);
+    lcb_cmdquery_destroy(cmd);
     if (rc != LCB_SUCCESS) {
         throw LcbError(rc);
     }

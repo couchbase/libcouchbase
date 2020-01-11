@@ -226,7 +226,7 @@ static void on_connected(lcbio_SOCKET *sock, void *arg, lcb_STATUS err, lcbio_OS
     procs.cb_read = io_read;
     req->ioctx = lcbio_ctx_new(sock, arg, &procs);
     switch (req->reqtype) {
-        case LCB_HTTP_TYPE_N1QL:
+        case LCB_HTTP_TYPE_QUERY:
             sock->service = LCBIO_SERVICE_N1QL;
             break;
         case LCB_HTTP_TYPE_VIEW:

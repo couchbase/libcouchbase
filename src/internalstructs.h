@@ -51,7 +51,7 @@ struct lcb_KEY_VALUE_ERROR_CONTEXT_ {
 /**
  * @private
  */
-struct lcb_N1QL_ERROR_CONTEXT_ {
+struct lcb_QUERY_ERROR_CONTEXT_ {
     lcb_STATUS rc;
     uint32_t first_error_code;
     const char *first_error_message;
@@ -1281,7 +1281,7 @@ struct lcb_CMDFTS_ {
  */
 #define LCB_CMDN1QL_F_PREPCACHE (1u << 16u)
 
-/** The lcb_CMDN1QL::query member is an internal JSON structure. @internal */
+/** The lcb_CMDQUERY::query member is an internal JSON structure. @internal */
 #define LCB_CMDN1QL_F_JSONQUERY (1u << 17u)
 
 /**
@@ -1296,8 +1296,8 @@ struct lcb_CMDFTS_ {
  * callback function for each result row received. The callback is also called
  * one last time when all
  */
-struct lcb_RESPN1QL_ {
-    lcb_N1QL_ERROR_CONTEXT ctx;
+struct lcb_RESPQUERY_ {
+    lcb_QUERY_ERROR_CONTEXT ctx;
     void *cookie;
     lcb_U16 rflags;
 
@@ -1311,7 +1311,7 @@ struct lcb_RESPN1QL_ {
     size_t nrow;
     /** Raw HTTP response, if applicable */
     const lcb_RESPHTTP *htresp;
-    lcb_N1QL_HANDLE *handle;
+    lcb_QUERY_HANDLE *handle;
 };
 
 /** Set this flag to execute an actual get with each response */

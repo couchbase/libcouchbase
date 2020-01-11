@@ -162,7 +162,7 @@ extern "C" {
  * @cntl_arg_both{lcb_U32*}
  * @committed
  */
-#define LCB_CNTL_N1QL_TIMEOUT 0x3D
+#define LCB_CNTL_QUERY_TIMEOUT 0x3D
 
 /**
  * @brief Get the name of the bucket
@@ -880,7 +880,7 @@ typedef enum {
  * This does not take any arguments, and is valid only on @ref LCB_CNTL_SET
  * @uncommitted
  */
-#define LCB_CNTL_N1QL_CLEARACHE 0x3E
+#define LCB_CNTL_QUERY_CLEARACHE 0x3E
 
 /**
  * Sets additional text for negotiation. This allows wrappers or applications
@@ -1031,7 +1031,7 @@ typedef const char *lcb_BUCKETCRED[2];
 
 typedef enum {
     LCBTRACE_THRESHOLD_KV = 0,
-    LCBTRACE_THRESHOLD_N1QL,
+    LCBTRACE_THRESHOLD_QUERY,
     LCBTRACE_THRESHOLD_VIEW,
     LCBTRACE_THRESHOLD_FTS,
     LCBTRACE_THRESHOLD_ANALYTICS,
@@ -1126,7 +1126,7 @@ typedef enum {
  * @cntl_arg_both{lcb_U32*}
  * @committed
  */
-#define LCB_CNTL_TRACING_THRESHOLD_N1QL 0x54
+#define LCB_CNTL_TRACING_THRESHOLD_QUERY 0x54
 
 /**
  * Minimum time for the tracing span of VIEW service to be considered by threshold tracer.
