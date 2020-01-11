@@ -271,13 +271,19 @@ bool Server::handle_unknown_collection(MemcachedResponse &, mc_PACKET *oldpkt)
         return false;
     }
 
+    hrtime_t now = gethrtime();
+    if (now > MCREQ_PKT_RDATA(oldpkt)->deadline) {
+        return false;
+    }
     wrapper.pkt = mcreq_renew_packet(oldpkt);
     wrapper.instance = instance;
-    wrapper.timeout = MCREQ_PKT_RDATA(wrapper.pkt)->deadline - MCREQ_PKT_RDATA(wrapper.pkt)->start;
+    wrapper.timeout = LCB_NS2US(MCREQ_PKT_RDATA(wrapper.pkt)->deadline - now);
     auto operation = [](const lcb_RESPGETCID *, packet_wrapper *wrp) {
+        if ((wrp->pkt->flags & MCREQ_F_NOCID) == 0) {
+            mcreq_set_cid(wrp->pkt, wrp->cid);
+        }
         /** Reschedule the packet again .. */
         wrp->pkt->flags &= ~MCREQ_STATE_FLAGS;
-        mcreq_set_cid(wrp->pkt, wrp->cid);
         wrp->instance->retryq->ucadd((mc_EXPACKET *)wrp->pkt);
         return LCB_SUCCESS;
     };
@@ -510,7 +516,9 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     } else if (mcresp.status() == PROTOCOL_BINARY_RESPONSE_UNKNOWN_COLLECTION) {
         /* consume the header */
         DO_ASSIGN_PAYLOAD()
-        handle_unknown_collection(mcresp, request);
+        if (!handle_unknown_collection(mcresp, request)) {
+            mcreq_dispatch_response(this, request, &mcresp, LCB_ERR_TIMEOUT);
+        }
         DO_SWALLOW_PAYLOAD()
         goto GT_DONE;
     } else if ((unknown_err_rv = handle_unknown_error(request, mcresp, err_override)) != ERRMAP_HANDLE_CONTINUE) {

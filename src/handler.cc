@@ -940,17 +940,19 @@ H_collections_get_cid(mc_PIPELINE *pipeline, mc_PACKET *request,
     handle_error_info(response, &w);
     resp.rflags |= LCB_RESP_F_FINAL;
 
-    const char *ptr = response->ext();
-    if (ptr) {
-        memcpy(&resp.manifest_id, ptr, sizeof(uint64_t));
-        resp.manifest_id = lcb_ntohll(resp.manifest_id);
-        ptr += sizeof(uint64_t);
-        memcpy(&resp.collection_id, ptr, sizeof(uint32_t));
-        resp.collection_id = ntohl(resp.collection_id);
-    } else {
-        resp.manifest_id = 0;
-        resp.collection_id = 0;
-        resp.ctx.rc = LCB_ERR_UNSUPPORTED_OPERATION;
+    if (resp.ctx.rc == LCB_SUCCESS) {
+        const char *ptr = response->ext();
+        if (ptr) {
+            memcpy(&resp.manifest_id, ptr, sizeof(uint64_t));
+            resp.manifest_id = lcb_ntohll(resp.manifest_id);
+            ptr += sizeof(uint64_t);
+            memcpy(&resp.collection_id, ptr, sizeof(uint32_t));
+            resp.collection_id = ntohl(resp.collection_id);
+        } else {
+            resp.manifest_id = 0;
+            resp.collection_id = 0;
+            resp.ctx.rc = LCB_ERR_UNSUPPORTED_OPERATION;
+        }
     }
 
     if (request->flags & MCREQ_F_REQEXT) {
