@@ -232,7 +232,7 @@ static void on_connected(lcbio_SOCKET *sock, void *arg, lcb_STATUS err, lcbio_OS
         case LCB_HTTP_TYPE_VIEW:
             sock->service = LCBIO_SERVICE_VIEW;
             break;
-        case LCB_HTTP_TYPE_FTS:
+        case LCB_HTTP_TYPE_SEARCH:
             sock->service = LCBIO_SERVICE_FTS;
             break;
         case LCB_HTTP_TYPE_CBAS:

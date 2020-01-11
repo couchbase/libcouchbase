@@ -115,7 +115,7 @@ struct lcb_VIEW_ERROR_CONTEXT_ {
 /**
  * @private
  */
-struct lcb_FTS_ERROR_CONTEXT_ {
+struct lcb_SEARCH_ERROR_CONTEXT_ {
     lcb_STATUS rc;
     int has_top_level_error;
     const char *error_message;
@@ -1240,8 +1240,8 @@ struct lcb_RESPHTTP_ {
 /**
  * Response structure for full-text searches.
  */
-struct lcb_RESPFTS_ {
-    lcb_FTS_ERROR_CONTEXT ctx;
+struct lcb_RESPSEARCH_ {
+    lcb_SEARCH_ERROR_CONTEXT ctx;
     void *cookie;
     lcb_U16 rflags;
     /**
@@ -1254,25 +1254,25 @@ struct lcb_RESPFTS_ {
     size_t nrow;
     /** Original HTTP response obejct */
     const lcb_RESPHTTP *htresp;
-    lcb_FTS_HANDLE *handle;
+    lcb_SEARCH_HANDLE *handle;
 };
 
 /**
  * @brief Search Command
  */
-struct lcb_CMDFTS_ {
+struct lcb_CMDSEARCH_ {
     LCB_CMD_BASE;
     /** Encoded JSON query */
     const char *query;
     /** Length of JSON query */
     size_t nquery;
     /** Callback to be invoked. This must be supplied */
-    lcb_FTS_CALLBACK callback;
+    lcb_SEARCH_CALLBACK callback;
     /**
      * Optional pointer to store the handle. The handle may then be
-     * used for query cancellation via lcb_fts_cancel()
+     * used for query cancellation via lcb_search_cancel()
      */
-    lcb_FTS_HANDLE **handle;
+    lcb_SEARCH_HANDLE **handle;
 };
 
 /**

@@ -80,18 +80,18 @@ static void ln2space(const void *buf, size_t nbuf)
     }
 }
 
-static void row_callback(lcb_INSTANCE *instance, int type, const lcb_RESPFTS *resp)
+static void row_callback(lcb_INSTANCE *instance, int type, const lcb_RESPSEARCH *resp)
 {
     const char *row;
     size_t nrow;
-    lcb_respfts_row(resp, &row, &nrow);
+    lcb_respsearch_row(resp, &row, &nrow);
     ln2space(row, nrow);
-    lcb_STATUS rc = lcb_respfts_status(resp);
+    lcb_STATUS rc = lcb_respsearch_status(resp);
     if (rc != LCB_SUCCESS) {
         printf("\x1b[31m%s\x1b[0m: ", lcb_strerror_short(rc));
     }
     printf("%.*s\n", (int)nrow, row);
-    if (lcb_respfts_is_final(resp)) {
+    if (lcb_respsearch_is_final(resp)) {
         printf("\n");
     }
 }
@@ -126,12 +126,12 @@ int main(int argc, char *argv[])
     }
 
     for (ii = 0; ii < num_queries; ii++) {
-        lcb_CMDFTS *cmd;
-        lcb_cmdfts_create(&cmd);
-        lcb_cmdfts_callback(cmd, row_callback);
-        lcb_cmdfts_payload(cmd, queries[ii].query, queries[ii].query_len);
-        check(lcb_fts(instance, NULL, cmd), "schedule FTS index creation operation");
-        lcb_cmdfts_destroy(cmd);
+        lcb_CMDSEARCH *cmd;
+        lcb_cmdsearch_create(&cmd);
+        lcb_cmdsearch_callback(cmd, row_callback);
+        lcb_cmdsearch_payload(cmd, queries[ii].query, queries[ii].query_len);
+        check(lcb_search(instance, NULL, cmd), "schedule FTS index creation operation");
+        lcb_cmdsearch_destroy(cmd);
         printf("----> \x1b[1m%s\x1b[0m\n", queries[ii].comment);
         printf("----> \x1b[32m%.*s\x1b[0m\n", (int)queries[ii].query_len, queries[ii].query);
         lcb_wait(instance);

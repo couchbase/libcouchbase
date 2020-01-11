@@ -1033,7 +1033,7 @@ typedef enum {
     LCBTRACE_THRESHOLD_KV = 0,
     LCBTRACE_THRESHOLD_QUERY,
     LCBTRACE_THRESHOLD_VIEW,
-    LCBTRACE_THRESHOLD_FTS,
+    LCBTRACE_THRESHOLD_SEARCH,
     LCBTRACE_THRESHOLD_ANALYTICS,
     LCBTRACE_THRESHOLD__MAX
 } lcbtrace_THRESHOLDOPTS;
@@ -1146,7 +1146,7 @@ typedef enum {
  * @cntl_arg_both{lcb_U32*}
  * @committed
  */
-#define LCB_CNTL_TRACING_THRESHOLD_FTS 0x56
+#define LCB_CNTL_TRACING_THRESHOLD_SEARCH 0x56
 
 /**
  * Minimum time for the tracing span of ANALYTICS service to be considered by threshold tracer.

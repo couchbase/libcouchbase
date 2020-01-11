@@ -284,7 +284,7 @@ extern "C" {
     }
 
 DEFINE_ROW_CALLBACK(n1ql_callback, lcb_RESPQUERY)
-DEFINE_ROW_CALLBACK(fts_callback, lcb_RESPFTS)
+DEFINE_ROW_CALLBACK(fts_callback, lcb_RESPSEARCH)
 }
 
 static void conn_readcb(struct bufferevent *bev, void *cookie)
@@ -346,12 +346,12 @@ static void conn_readcb(struct bufferevent *bev, void *cookie)
             }
             goto DONE;
         } else if (memcmp(key, "fts ", 4) == 0) {
-            lcb_CMDFTS *cmd;
-            lcb_cmdfts_create(&cmd);
-            lcb_cmdfts_payload(cmd, key + 4, keylen - 4);
-            lcb_cmdfts_callback(cmd, fts_callback);
-            rc = lcb_fts(instance, cl, cmd);
-            lcb_cmdfts_destroy(cmd);
+            lcb_CMDSEARCH *cmd;
+            lcb_cmdsearch_create(&cmd);
+            lcb_cmdsearch_payload(cmd, key + 4, keylen - 4);
+            lcb_cmdsearch_callback(cmd, fts_callback);
+            rc = lcb_search(instance, cl, cmd);
+            lcb_cmdsearch_destroy(cmd);
             cl->cnt = 0;
             if (rc != LCB_SUCCESS) {
                 lcb_log(LOGARGS(INFO), CL_LOGFMT "failed to schedule FTS command", CL_LOGID(cl));

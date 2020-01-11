@@ -75,7 +75,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->tracer_threshold[LCBTRACE_THRESHOLD_KV] = LCBTRACE_DEFAULT_THRESHOLD_KV;
     settings->tracer_threshold[LCBTRACE_THRESHOLD_QUERY] = LCBTRACE_DEFAULT_THRESHOLD_N1QL;
     settings->tracer_threshold[LCBTRACE_THRESHOLD_VIEW] = LCBTRACE_DEFAULT_THRESHOLD_VIEW;
-    settings->tracer_threshold[LCBTRACE_THRESHOLD_FTS] = LCBTRACE_DEFAULT_THRESHOLD_FTS;
+    settings->tracer_threshold[LCBTRACE_THRESHOLD_SEARCH] = LCBTRACE_DEFAULT_THRESHOLD_FTS;
     settings->tracer_threshold[LCBTRACE_THRESHOLD_ANALYTICS] = LCBTRACE_DEFAULT_THRESHOLD_ANALYTICS;
     settings->wait_for_config = 0;
     settings->enable_durable_write = 0;

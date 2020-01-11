@@ -506,7 +506,7 @@ typedef enum {
 #define LCB_CALLBACK_ANALYTICS -4
 
 /** Callback type for Search (cannot be used for lcb_install_callback3()) */
-#define LCB_CALLBACK_FTS -5
+#define LCB_CALLBACK_SEARCH -5
 
 #define LCB_CALLBACK_OPEN -6
 
@@ -1282,7 +1282,7 @@ typedef enum {
     LCB_PING_SERVICE_KV = 0,
     LCB_PING_SERVICE_VIEWS,
     LCB_PING_SERVICE_QUERY,
-    LCB_PING_SERVICE_FTS,
+    LCB_PING_SERVICE_SEARCH,
     LCB_PING_SERVICE_ANALYTICS,
     LCB_PING_SERVICE__MAX
 } lcb_PING_SERVICE;
@@ -1315,7 +1315,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_all(lcb_CMDPING *cmd);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_kv(lcb_CMDPING *cmd, int enable);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_query(lcb_CMDPING *cmd, int enable);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_views(lcb_CMDPING *cmd, int enable);
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_fts(lcb_CMDPING *cmd, int enable);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_search(lcb_CMDPING *cmd, int enable);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_analytics(lcb_CMDPING *cmd, int enable);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_no_metrics(lcb_CMDPING *cmd, int enable);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_encode_json(lcb_CMDPING *cmd, int enable, int pretty, int with_details);
@@ -1411,7 +1411,7 @@ typedef enum {
     LCB_HTTP_TYPE_QUERY = 3,
 
     /** Search a fulltext index */
-    LCB_HTTP_TYPE_FTS = 4,
+    LCB_HTTP_TYPE_SEARCH = 4,
 
     /** Execute an Analytics Query */
     LCB_HTTP_TYPE_CBAS = 5,
@@ -2374,29 +2374,30 @@ LIBCOUCHBASE_API lcb_STATUS lcb_analytics_cancel(lcb_INSTANCE *instance, lcb_ANA
  * @addtogroup lcb-cbft-api
  * @{
  */
-typedef struct lcb_FTS_HANDLE_ lcb_FTS_HANDLE;
-typedef struct lcb_RESPFTS_ lcb_RESPFTS;
+typedef struct lcb_SEARCH_HANDLE_ lcb_SEARCH_HANDLE;
+typedef struct lcb_RESPSEARCH_ lcb_RESPSEARCH;
 
-LIBCOUCHBASE_API lcb_STATUS lcb_respfts_status(const lcb_RESPFTS *resp);
-LIBCOUCHBASE_API lcb_STATUS lcb_respfts_cookie(const lcb_RESPFTS *resp, void **cookie);
-LIBCOUCHBASE_API lcb_STATUS lcb_respfts_row(const lcb_RESPFTS *resp, const char **row, size_t *row_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_respfts_http_response(const lcb_RESPFTS *resp, const lcb_RESPHTTP **http);
-LIBCOUCHBASE_API lcb_STATUS lcb_respfts_handle(const lcb_RESPFTS *resp, lcb_FTS_HANDLE **handle);
-LIBCOUCHBASE_API lcb_STATUS lcb_respfts_error_context(const lcb_RESPFTS *resp, const lcb_FTS_ERROR_CONTEXT **ctx);
-LIBCOUCHBASE_API int lcb_respfts_is_final(const lcb_RESPFTS *resp);
+LIBCOUCHBASE_API lcb_STATUS lcb_respsearch_status(const lcb_RESPSEARCH *resp);
+LIBCOUCHBASE_API lcb_STATUS lcb_respsearch_cookie(const lcb_RESPSEARCH *resp, void **cookie);
+LIBCOUCHBASE_API lcb_STATUS lcb_respsearch_row(const lcb_RESPSEARCH *resp, const char **row, size_t *row_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respsearch_http_response(const lcb_RESPSEARCH *resp, const lcb_RESPHTTP **http);
+LIBCOUCHBASE_API lcb_STATUS lcb_respsearch_handle(const lcb_RESPSEARCH *resp, lcb_SEARCH_HANDLE **handle);
+LIBCOUCHBASE_API lcb_STATUS lcb_respsearch_error_context(const lcb_RESPSEARCH *resp,
+                                                         const lcb_SEARCH_ERROR_CONTEXT **ctx);
+LIBCOUCHBASE_API int lcb_respsearch_is_final(const lcb_RESPSEARCH *resp);
 
-typedef struct lcb_CMDFTS_ lcb_CMDFTS;
-typedef void (*lcb_FTS_CALLBACK)(lcb_INSTANCE *, int, const lcb_RESPFTS *);
+typedef struct lcb_CMDSEARCH_ lcb_CMDSEARCH;
+typedef void (*lcb_SEARCH_CALLBACK)(lcb_INSTANCE *, int, const lcb_RESPSEARCH *);
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdfts_create(lcb_CMDFTS **cmd);
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdfts_destroy(lcb_CMDFTS *cmd);
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdfts_parent_span(lcb_CMDFTS *cmd, lcbtrace_SPAN *span);
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdfts_callback(lcb_CMDFTS *cmd, lcb_FTS_CALLBACK callback);
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdfts_payload(lcb_CMDFTS *cmd, const char *payload, size_t payload_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdfts_handle(lcb_CMDFTS *cmd, lcb_FTS_HANDLE **handle);
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdfts_timeout(lcb_CMDFTS *cmd, uint32_t timeout);
-LIBCOUCHBASE_API lcb_STATUS lcb_fts(lcb_INSTANCE *instance, void *cookie, const lcb_CMDFTS *cmd);
-LIBCOUCHBASE_API lcb_STATUS lcb_fts_cancel(lcb_INSTANCE *instance, lcb_FTS_HANDLE *handle);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_create(lcb_CMDSEARCH **cmd);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_destroy(lcb_CMDSEARCH *cmd);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_parent_span(lcb_CMDSEARCH *cmd, lcbtrace_SPAN *span);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_callback(lcb_CMDSEARCH *cmd, lcb_SEARCH_CALLBACK callback);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_payload(lcb_CMDSEARCH *cmd, const char *payload, size_t payload_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_handle(lcb_CMDSEARCH *cmd, lcb_SEARCH_HANDLE **handle);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_timeout(lcb_CMDSEARCH *cmd, uint32_t timeout);
+LIBCOUCHBASE_API lcb_STATUS lcb_search(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSEARCH *cmd);
+LIBCOUCHBASE_API lcb_STATUS lcb_search_cancel(lcb_INSTANCE *instance, lcb_SEARCH_HANDLE *handle);
 /** @} */
 
 /**

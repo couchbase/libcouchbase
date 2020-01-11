@@ -1745,26 +1745,26 @@ void AnalyticsHandler::run()
 }
 
 extern "C" {
-static void ftsCallback(lcb_INSTANCE *, int, const lcb_RESPFTS *resp)
+static void ftsCallback(lcb_INSTANCE *, int, const lcb_RESPSEARCH *resp)
 {
     const char *row;
     size_t nrow;
-    lcb_respfts_row(resp, &row, &nrow);
+    lcb_respsearch_row(resp, &row, &nrow);
 
-    if (lcb_respfts_is_final(resp)) {
-        lcb_STATUS rc = lcb_respfts_status(resp);
+    if (lcb_respsearch_is_final(resp)) {
+        lcb_STATUS rc = lcb_respsearch_status(resp);
         fprintf(stderr, "---> Query response finished\n");
         if (rc != LCB_SUCCESS) {
             fprintf(stderr, "---> Query failed with library code %s\n", lcb_strerror_short(rc));
 
-            const lcb_FTS_ERROR_CONTEXT *ctx;
-            lcb_respfts_error_context(resp, &ctx);
+            const lcb_SEARCH_ERROR_CONTEXT *ctx;
+            lcb_respsearch_error_context(resp, &ctx);
             uint32_t code;
-            lcb_errctx_fts_http_response_code(ctx, &code);
+            lcb_errctx_search_http_response_code(ctx, &code);
             fprintf(stderr, "---> HTTP response code: %d\n", code);
             const char *errmsg;
             size_t nerrmsg;
-            lcb_errctx_fts_error_message(ctx, &errmsg, &nerrmsg);
+            lcb_errctx_search_error_message(ctx, &errmsg, &nerrmsg);
             fprintf(stderr, "---> Query error message: %.*s\n", (int)nerrmsg, errmsg);
         }
         if (row) {
@@ -1796,16 +1796,16 @@ void SearchHandler::run()
     std::string payload_str = Json::FastWriter().write(payload);
     fprintf(stderr, "---> Encoded query: %.*s\n", (int)payload_str.size(), payload_str.c_str());
 
-    lcb_CMDFTS *cmd;
-    lcb_cmdfts_create(&cmd);
-    lcb_cmdfts_callback(cmd, ftsCallback);
-    rc = lcb_cmdfts_payload(cmd, payload_str.c_str(), payload_str.size());
+    lcb_CMDSEARCH *cmd;
+    lcb_cmdsearch_create(&cmd);
+    lcb_cmdsearch_callback(cmd, ftsCallback);
+    rc = lcb_cmdsearch_payload(cmd, payload_str.c_str(), payload_str.size());
     if (rc != LCB_SUCCESS) {
         throw LcbError(rc);
     }
 
-    rc = lcb_fts(instance, NULL, cmd);
-    lcb_cmdfts_destroy(cmd);
+    rc = lcb_search(instance, NULL, cmd);
+    lcb_cmdsearch_destroy(cmd);
     if (rc != LCB_SUCCESS) {
         throw LcbError(rc);
     }

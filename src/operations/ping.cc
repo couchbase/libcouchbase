@@ -174,7 +174,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_views(lcb_CMDPING *cmd, int enable)
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_fts(lcb_CMDPING *cmd, int enable)
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_search(lcb_CMDPING *cmd, int enable)
 {
     if (enable) {
         cmd->services |= LCB_PINGSVC_F_FTS;
@@ -289,7 +289,7 @@ static const char *svc_to_string(const lcb_PING_SERVICE type)
             return "views";
         case LCB_PING_SERVICE_QUERY:
             return "n1ql";
-        case LCB_PING_SERVICE_FTS:
+        case LCB_PING_SERVICE_SEARCH:
             return "fts";
         default:
             return "unknown";
@@ -489,7 +489,7 @@ static void handle_views(lcb_INSTANCE *instance, int, const lcb_RESPBASE *resp)
 
 static void handle_fts(lcb_INSTANCE *instance, int, const lcb_RESPBASE *resp)
 {
-    handle_http(instance, LCB_PING_SERVICE_FTS, (const lcb_RESPHTTP *)resp);
+    handle_http(instance, LCB_PING_SERVICE_SEARCH, (const lcb_RESPHTTP *)resp);
 }
 
 LIBCOUCHBASE_API
@@ -582,7 +582,7 @@ lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const lcb_CMDPING *cmd
             PING_HTTP(LCBVB_SVCTYPE_VIEWS, "/", views_timeout, handle_views);
         }
         if (cmd->services & LCB_PINGSVC_F_FTS) {
-            PING_HTTP(LCBVB_SVCTYPE_FTS, "/api/ping", http_timeout, handle_fts);
+            PING_HTTP(LCBVB_SVCTYPE_SEARCH, "/api/ping", http_timeout, handle_fts);
         }
         if (cmd->services & LCB_PINGSVC_F_ANALYTICS) {
             PING_HTTP(LCBVB_SVCTYPE_ANALYTICS, "/admin/ping", n1ql_timeout, handle_n1ql);

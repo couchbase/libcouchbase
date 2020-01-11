@@ -97,7 +97,8 @@ static lcb_uint32_t *get_timeout_field(lcb_INSTANCE *instance, int cmd)
     case LCB_CNTL_TRACING_THRESHOLD_QUERY:
         return &settings->tracer_threshold[LCBTRACE_THRESHOLD_QUERY];
     case LCB_CNTL_TRACING_THRESHOLD_VIEW: return &settings->tracer_threshold[LCBTRACE_THRESHOLD_VIEW];
-    case LCB_CNTL_TRACING_THRESHOLD_FTS: return &settings->tracer_threshold[LCBTRACE_THRESHOLD_FTS];
+    case LCB_CNTL_TRACING_THRESHOLD_SEARCH:
+        return &settings->tracer_threshold[LCBTRACE_THRESHOLD_SEARCH];
     case LCB_CNTL_TRACING_THRESHOLD_ANALYTICS: return &settings->tracer_threshold[LCBTRACE_THRESHOLD_ANALYTICS];
     case LCB_CNTL_PERSISTENCE_TIMEOUT_FLOOR: return &settings->persistence_timeout_floor;
     default: return NULL;
@@ -771,7 +772,7 @@ static ctl_handler handlers[] = {
     timeout_common,                       /* LCB_CNTL_TRACING_THRESHOLD_KV */
     timeout_common,                       /* LCB_CNTL_TRACING_THRESHOLD_QUERY */
     timeout_common,                       /* LCB_CNTL_TRACING_THRESHOLD_VIEW */
-    timeout_common,                       /* LCB_CNTL_TRACING_THRESHOLD_FTS */
+    timeout_common,                       /* LCB_CNTL_TRACING_THRESHOLD_SEARCH */
     timeout_common,                       /* LCB_CNTL_TRACING_THRESHOLD_ANALYTICS */
     comp_min_size_handler,                /* LCB_CNTL_COMPRESSION_MIN_SIZE */
     comp_min_ratio_handler,               /* LCB_CNTL_COMPRESSION_MIN_RATIO */
@@ -976,7 +977,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"tracing_threshold_kv", LCB_CNTL_TRACING_THRESHOLD_KV, convert_timevalue},
     {"tracing_threshold_search", LCB_CNTL_TRACING_THRESHOLD_QUERY, convert_timevalue},
     {"tracing_threshold_view", LCB_CNTL_TRACING_THRESHOLD_VIEW, convert_timevalue},
-    {"tracing_threshold_fts", LCB_CNTL_TRACING_THRESHOLD_FTS, convert_timevalue},
+    {"tracing_threshold_search", LCB_CNTL_TRACING_THRESHOLD_SEARCH, convert_timevalue},
     {"tracing_threshold_analytics", LCB_CNTL_TRACING_THRESHOLD_ANALYTICS, convert_timevalue},
     {"compression_min_size", LCB_CNTL_COMPRESSION_MIN_SIZE, convert_u32},
     {"compression_min_ratio", LCB_CNTL_COMPRESSION_MIN_RATIO, convert_float},

@@ -1327,7 +1327,7 @@ unsigned lcbvb_get_port(lcbvb_CONFIG *cfg, unsigned ix, lcbvb_SVCTYPE type, lcbv
             return svc->ixquery;
         case LCBVB_SVCTYPE_QUERY:
             return svc->n1ql;
-        case LCBVB_SVCTYPE_FTS:
+        case LCBVB_SVCTYPE_SEARCH:
             return svc->fts;
         case LCBVB_SVCTYPE_CBAS:
             return svc->cbas;
@@ -1398,7 +1398,7 @@ int lcbvb_get_randhost_ex(const lcbvb_CONFIG *cfg, lcbvb_SVCTYPE type, lcbvb_SVC
 
         has_svc = (type == LCBVB_SVCTYPE_DATA && svcs->data) || (type == LCBVB_SVCTYPE_IXADMIN && svcs->ixadmin) ||
                   (type == LCBVB_SVCTYPE_IXQUERY && svcs->ixquery) || (type == LCBVB_SVCTYPE_MGMT && svcs->mgmt) ||
-                  (type == LCBVB_SVCTYPE_QUERY && svcs->n1ql) || (type == LCBVB_SVCTYPE_FTS && svcs->fts) ||
+                  (type == LCBVB_SVCTYPE_QUERY && svcs->n1ql) || (type == LCBVB_SVCTYPE_SEARCH && svcs->fts) ||
                   (type == LCBVB_SVCTYPE_VIEWS && svcs->views) || (type == LCBVB_SVCTYPE_CBAS && svcs->cbas);
 
         if (has_svc) {
@@ -1451,7 +1451,7 @@ const char *lcbvb_get_resturl(lcbvb_CONFIG *cfg, unsigned ix, lcbvb_SVCTYPE svc,
     } else if (svc == LCBVB_SVCTYPE_QUERY) {
         path = srv->querypath;
         strp = &svcs->query_base_;
-    } else if (svc == LCBVB_SVCTYPE_FTS) {
+    } else if (svc == LCBVB_SVCTYPE_SEARCH) {
         path = srv->ftspath;
         strp = &svcs->fts_base_;
     } else if (svc == LCBVB_SVCTYPE_ANALYTICS) {
