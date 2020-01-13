@@ -939,8 +939,8 @@ std::string durability_level_to_string(lcb_DURABILITY_LEVEL level)
             return "none";
         case LCB_DURABILITYLEVEL_MAJORITY:
             return "majority";
-        case LCB_DURABILITYLEVEL_MAJORITY_AND_PERSIST_ON_MASTER:
-            return "majority_and_persist_on_master";
+        case LCB_DURABILITYLEVEL_MAJORITY_AND_PERSIST_TO_ACTIVE:
+            return "majority_and_persist_to_active";
         case LCB_DURABILITYLEVEL_PERSIST_TO_MAJORITY:
             return "persist_to_majority";
         default:
@@ -965,15 +965,15 @@ class DurabilityLevelHandler : public Handler
                 durability_level = LCB_DURABILITYLEVEL_NONE;
             } else if (level_str == "majority") {
                 durability_level = LCB_DURABILITYLEVEL_MAJORITY;
-            } else if (level_str == "majority_and_persist_on_master") {
-                durability_level = LCB_DURABILITYLEVEL_MAJORITY_AND_PERSIST_ON_MASTER;
+            } else if (level_str == "majority_and_persist_to_active") {
+                durability_level = LCB_DURABILITYLEVEL_MAJORITY_AND_PERSIST_TO_ACTIVE;
             } else if (level_str == "persist_to_majority") {
                 durability_level = LCB_DURABILITYLEVEL_PERSIST_TO_MAJORITY;
             } else {
                 throw std::runtime_error("Unknown durability level. Use of of the following:\n"
                                          "  - none\n"
                                          "  - majority\n"
-                                         "  - majority_and_persist_on_master\n"
+                                         "  - majority_and_persist_to_active\n"
                                          "  - persist_to_majority");
             }
         }

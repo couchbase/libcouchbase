@@ -37,14 +37,14 @@
                 return LCB_DURABILITYLEVEL_NONE;                                                                       \
             } else if (s == "majority") {                                                                              \
                 return LCB_DURABILITYLEVEL_MAJORITY;                                                                   \
-            } else if (s == "majority_and_persist_on_master") {                                                        \
-                return LCB_DURABILITYLEVEL_MAJORITY_AND_PERSIST_ON_MASTER;                                             \
+            } else if (s == "majority_and_persist_to_active") {                                                        \
+                return LCB_DURABILITYLEVEL_MAJORITY_AND_PERSIST_TO_ACTIVE;                                             \
             } else if (s == "persist_to_majority") {                                                                   \
                 return LCB_DURABILITYLEVEL_PERSIST_TO_MAJORITY;                                                        \
             } else {                                                                                                   \
                 throw BadArg(                                                                                          \
                     std::string("Invalid durability level \"") + s +                                                   \
-                    "\". Allowed values: \"majority\", \"majority_and_persist_on_master\", \"persist_to_majority\"."); \
+                    "\". Allowed values: \"majority\", \"majority_and_persist_to_active\", \"persist_to_majority\"."); \
             }                                                                                                          \
         }                                                                                                              \
         return LCB_DURABILITYLEVEL_NONE;                                                                               \

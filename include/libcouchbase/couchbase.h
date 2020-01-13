@@ -525,7 +525,7 @@ typedef enum {
     /**
      * As majority, but additionally persisted to the active node.
      */
-    LCB_DURABILITYLEVEL_MAJORITY_AND_PERSIST_ON_MASTER = 0x02,
+    LCB_DURABILITYLEVEL_MAJORITY_AND_PERSIST_TO_ACTIVE = 0x02,
     /**
      * Mutation must be persisted to (i.e. written and fsync'd to disk) a
      * majority of the configured nodes of the bucket.
