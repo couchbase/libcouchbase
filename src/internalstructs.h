@@ -444,7 +444,7 @@ struct lcb_CMDGETREPLICA_ {
  * ctx->addcmd(ctx, &cmd);
  *
  * ctx->done(ctx);
- * lcb_wait(instance);
+ * lcb_wait(instance, LCB_WAIT_DEFAULT);
  * @endcode
  */
 typedef struct lcb_MULTICMD_CTX_st {
@@ -1882,7 +1882,7 @@ typedef struct {
  * lcb_CMDSTATS cmd = { 0 };
  * // Using default stats, no further initialization
  * lcb_stats3(instance, fp, &cmd);
- * lcb_wait(instance);
+ * lcb_wait(instance, LCB_WAIT_DEFAULT);
  * @endcode
  *
  * @par Response

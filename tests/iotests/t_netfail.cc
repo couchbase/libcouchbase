@@ -100,7 +100,7 @@ class NumNodeRetryer : public Retryer
         lcb_cmdstore_destroy(scmd);
         if (nSubmit) {
             lcb_sched_leave(instance);
-            lcb_wait(instance);
+            lcb_wait(instance, LCB_WAIT_DEFAULT);
         }
 
         lcb_install_callback(instance, LCB_CALLBACK_STORE, oldCb);
@@ -173,7 +173,7 @@ TEST_F(MockUnitTest, testOpFromCallback)
     lcb_CMDSTATS stat = {0};
     ASSERT_EQ(LCB_SUCCESS, lcb_cntl_string(instance, "operation_timeout", "5.0"));
     ASSERT_EQ(LCB_SUCCESS, lcb_stats3(instance, NULL, &stat));
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 struct timeout_test_cookie {
@@ -256,7 +256,7 @@ TEST_F(MockUnitTest, testTimeoutOnlyStale)
     lcbio_timer_rearm(timer, 900000);
 
     lcb_log(LOGARGS(instance, INFO), "Waiting..");
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     lcbio_timer_destroy(timer);
 
     ASSERT_EQ(0, nremaining);
@@ -307,7 +307,7 @@ TEST_F(MockUnitTest, testTimeoutOnlyStaleWithPerOperationProperty)
     lcbio_timer_rearm(timer, 900000);
 
     lcb_log(LOGARGS(instance, INFO), "Waiting..");
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     lcbio_timer_destroy(timer);
 
     ASSERT_EQ(0, nremaining);
@@ -410,7 +410,7 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     mock->createConnection(hw, &instance);
     instance->settings->vb_noguess = 1;
     lcb_connect(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(0, lcb_get_num_replicas(instance));
 
     size_t numNodes = mock->getNumNodes();
@@ -426,7 +426,7 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     for (int i = 0; i < cmds.size(); i++) {
         ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &ctx, cmds[i]));
     }
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ctx.check((int)cmds.size());
 
     mock->respawnNode(0);
@@ -436,7 +436,7 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     for (int i = 0; i < cmds.size(); i++) {
         ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &ctx, cmds[i]));
     }
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ctx.check((int)cmds.size());
     for (int i = 0; i < cmds.size(); i++) {
         lcb_cmdstore_destroy(cmds[i]);
@@ -478,7 +478,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
 
     mock->createConnection(hw, &instance);
     lcb_connect(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     // Set the timeout for 15 seconds
     lcb_uint32_t tmoval = 15000000;
@@ -510,14 +510,14 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &rv, storecmd));
 
     store_cnt = 0;
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(1, store_cnt);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
 
     memset(&rv, 0, sizeof(rv));
     ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &rv, storecmd));
     store_cnt = 0;
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(1, store_cnt);
 
     lcb_cmdstore_destroy(storecmd);
@@ -529,7 +529,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, &rv, getcmd));
     lcb_cmdget_destroy(getcmd);
 
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     lcbio_timer_destroy(timer);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
     ASSERT_EQ(rv.nbytes, val.size());
@@ -565,7 +565,7 @@ TEST_F(MockUnitTest, testSaslMechs)
 
     err = lcb_connect(instance);
     ASSERT_EQ(LCB_SUCCESS, err);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     // Force our SASL mech
     err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)"blah");
@@ -617,7 +617,7 @@ TEST_F(MockUnitTest, testSaslSHA)
         instance->memd_sockpool->get_options().maxidle = 0;
 
         ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
-        ASSERT_EQ(LCB_SUCCESS, lcb_wait(instance));
+        ASSERT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
 
         err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)"SCRAM-SHA512");
         ASSERT_EQ(LCB_SUCCESS, err);
@@ -646,7 +646,7 @@ TEST_F(MockUnitTest, testSaslSHA)
         instance->memd_sockpool->get_options().maxidle = 0;
 
         ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
-        ASSERT_EQ(LCB_SUCCESS, lcb_wait(instance));
+        ASSERT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
 
         Item itm("key", "value");
         KVOperation kvo(&itm);
@@ -708,7 +708,7 @@ TEST_F(MockUnitTest, testDynamicAuth)
 
     err = lcb_connect(instance);
     ASSERT_EQ(LCB_SUCCESS, err);
-    ASSERT_EQ(LCB_SUCCESS, lcb_wait(instance));
+    ASSERT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
 
     Item itm("key", "value");
     KVOperation kvo(&itm);
@@ -730,7 +730,7 @@ static void doManyItems(lcb_INSTANCE *instance, std::vector< std::string > keys)
     }
     lcb_cmdstore_destroy(cmd);
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 extern "C" {
@@ -755,7 +755,7 @@ TEST_F(MockUnitTest, DISABLED_testMemcachedFailover)
 
     // Check internal setting here
     lcb_connect(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     size_t numNodes = mock->getNumNodes();
 
     oldCb = lcb_install_callback(instance, LCB_CALLBACK_STORE, mcdFoVerifyCb);
@@ -832,7 +832,7 @@ TEST_F(MockUnitTest, testNegativeIndex)
     lcb_STATUS err = lcb_get(instance, &ni, gcmd);
     ASSERT_EQ(LCB_SUCCESS, err);
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(1, ni.callCount);
     ASSERT_EQ(LCB_ERR_NO_MATCHING_SERVER, ni.err);
     lcb_cmdget_destroy(gcmd);

@@ -124,7 +124,7 @@ static lcb_INSTANCE *connect_as(char *username, char *password)
     assert(rc == LCB_SUCCESS);
     rc = lcb_connect(instance);
     assert(rc == LCB_SUCCESS);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     rc = lcb_get_bootstrap_status(instance);
     assert(rc == LCB_SUCCESS);
 
@@ -212,7 +212,7 @@ int main()
         assert(rc == LCB_SUCCESS);
     }
 
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     // Create a user and assign roles. This user will search for their available discounts.
     {
@@ -229,7 +229,7 @@ int main()
         lcb_cmdhttp_content_type(cmd, content_type, strlen(content_type));
         lcb_http(instance, NULL, cmd);
         lcb_cmdhttp_destroy(cmd);
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
 
     lcb_destroy(instance);
@@ -251,7 +251,7 @@ int main()
         printf("User \"jsmith123\" has discounts in the hotels below:\n");
         lcb_query(instance, NULL, cmd);
         lcb_cmdquery_destroy(cmd);
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
 
     lcb_destroy(instance);

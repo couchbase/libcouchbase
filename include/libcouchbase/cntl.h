@@ -860,7 +860,7 @@ typedef enum {
 #define LCB_CNTL_MUTATION_TOKENS_SUPPORTED 0x38
 
 /**
- * This setting determines if calls to lcb_wait() and lcb_wait3() will reset
+ * This setting determines if calls to lcb_wait() and lcb_wait() will reset
  * the timeout of pending operations to the time that lcb_wait() was called,
  * rather than having the operation maintain the time of the call which
  * scheduled it. If the time between lcb_store3() and family and the lcb_wait()

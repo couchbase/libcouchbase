@@ -136,7 +136,7 @@ TEST_F(HttpUnitTest, testPut)
 
     ASSERT_EQ(LCB_SUCCESS, lcb_http(instance, &ctx, cmd));
     lcb_cmdhttp_destroy(cmd);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     ASSERT_EQ(true, ctx.received);
     ASSERT_EQ(LCB_SUCCESS, ctx.err);
@@ -175,7 +175,7 @@ TEST_F(HttpUnitTest, testGet)
 
     ASSERT_EQ(LCB_SUCCESS, lcb_http(instance, &ctx, cmd));
     lcb_cmdhttp_destroy(cmd);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     ASSERT_EQ(true, ctx.received);
     ASSERT_EQ(200, ctx.status);
@@ -234,7 +234,7 @@ TEST_F(HttpUnitTest, testRefused)
 
     ASSERT_EQ(LCB_SUCCESS, lcb_http(instance, &ctx, cmd));
     lcb_cmdhttp_destroy(cmd);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     ASSERT_EQ(true, ctx.received);
     ASSERT_NE(0, LCB_ERROR_IS_NETWORK(ctx.err));
@@ -320,7 +320,7 @@ TEST_F(HttpUnitTest, testAdminApi)
     err = lcb_http(instance, &htr, cmd);
     ASSERT_EQ(LCB_SUCCESS, err);
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     ASSERT_TRUE(htr.gotComplete);
     ASSERT_EQ(LCB_SUCCESS, htr.rc);
@@ -334,7 +334,7 @@ TEST_F(HttpUnitTest, testAdminApi)
     err = lcb_http(instance, &htr, cmd);
     ASSERT_EQ(LCB_SUCCESS, err);
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     ASSERT_TRUE(htr.gotComplete);
     ASSERT_TRUE(htr.gotChunked);
@@ -391,7 +391,7 @@ TEST_F(HttpUnitTest, testDoubleCancel)
     ASSERT_EQ(LCB_SUCCESS, lcb_http(instance, NULL, cmd));
     lcb_cmdhttp_destroy(cmd);
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     // No crashes or errors here means we've done OK
 }
 
@@ -427,7 +427,7 @@ TEST_F(HttpUnitTest, testCancelWorks)
     ASSERT_EQ(LCB_SUCCESS, lcb_http(instance, &cookie, cmd));
     lcb_cmdhttp_destroy(cmd);
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 extern "C" {

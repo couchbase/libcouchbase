@@ -328,7 +328,7 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options);
  * if (rc != LCB_SUCCESS) {
  *    your_error_handling(rc);
  * }
- * lcb_wait(instance);
+ * lcb_wait(instance, LCB_WAIT_DEFAULT);
  * rc = lcb_get_bootstrap_status(instance);
  * if (rc != LCB_SUCCESS) {
  *    your_error_handler(rc);
@@ -882,7 +882,7 @@ typedef enum {
  * cmd.operation = LCB_ADD; // Only create if it does not exist
  * cmd.exptime = 60; // expire in a minute
  * lcb_store3(instance, cookie, &cmd);
- * lcb_wait3(instance, LCB_WAIT_NOCHECK);
+ * lcb_wait(instance, LCB_WAIT_NOCHECK);
  * @endcode
  *
  * ### Response
@@ -1064,7 +1064,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_remove(lcb_INSTANCE *instance, void *cookie, con
  * cmd.initial = 42; // Default value is 42 if it does not exist
  * cmd.exptime = 300; // Expire in 5 minutes
  * lcb_counter3(instance, NULL, &cmd);
- * lcb_wait3(instance, LCB_WAIT_NOCHECK);
+ * lcb_wait(instance, LCB_WAIT_NOCHECK);
  * @endcode
  *
  * @par Response
@@ -1330,7 +1330,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const
  * @code{.c}
  * lcb_CMDDIAG cmd = { 0 };
  * lcb_diag(instance, fp, &cmd);
- * lcb_wait(instance);
+ * lcb_wait(instance, LCB_WAIT_DEFAULT);
  * @endcode
  *
  * @par Response
@@ -1616,7 +1616,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_http_cancel(lcb_INSTANCE *instance, lcb_HTTP_HAN
  *   lcb_set_cookie(instance, info);
  *   lcb_set_bootstrap_callback(instance, bootstrap_callback);
  *   lcb_connect(instance);
- *   lcb_wait(instance);
+ *   lcb_wait(instance, LCB_WAIT_DEFAULT);
  *   printf("Status of instance is %s\n", info->status);
  * }
  * @endcode
@@ -1648,26 +1648,6 @@ const void *lcb_get_cookie(lcb_INSTANCE *instance);
  */
 
 /**
- * @brief Wait for the execution of all batched requests
- *
- * A batched request is any request which requires network I/O.
- * This includes most of the APIs. You should _not_ use this API if you are
- * integrating with an asynchronous event loop (i.e. one where your application
- * code is invoked asynchronously via event loops).
- *
- * This function will block the calling thread until either
- *
- * * All operations have been completed
- * * lcb_breakout() is explicitly called
- *
- * @param instance the instance containing the requests
- * @return whether the wait operation failed, or LCB_SUCCESS
- * @committed
- */
-LIBCOUCHBASE_API
-lcb_STATUS lcb_wait(lcb_INSTANCE *instance);
-
-/**
  * @volatile
  * This function will cause a single "tick" in the underlying event loop,
  * causing operations whose I/O can be executed immediately to be sent to
@@ -1696,7 +1676,7 @@ lcb_STATUS lcb_wait(lcb_INSTANCE *instance);
 LIBCOUCHBASE_API
 lcb_STATUS lcb_tick_nowait(lcb_INSTANCE *instance);
 
-/**@brief Flags for lcb_wait3()*/
+/**@brief Flags for lcb_wait()*/
 typedef enum {
     /**Behave like the old lcb_wait()*/
     LCB_WAIT_DEFAULT = 0x00,
@@ -1719,7 +1699,7 @@ typedef enum {
  * behavior identical to lcb_wait().
  */
 LIBCOUCHBASE_API
-void lcb_wait3(lcb_INSTANCE *instance, lcb_WAITFLAGS flags);
+lcb_STATUS lcb_wait(lcb_INSTANCE *instance, lcb_WAITFLAGS flags);
 
 /**
  * @brief Forcefully break from the event loop.
@@ -1771,7 +1751,7 @@ int lcb_is_waiting(lcb_INSTANCE *instance);
  * This function is provided as an aid to assist in such situations
  *
  * If you wish for your application to block until a new configuration is
- * received, you _must_ call lcb_wait3() with the LCB_WAIT_NO_CHECK flag as
+ * received, you _must_ call lcb_wait() with the LCB_WAIT_NO_CHECK flag as
  * this function call is not bound to a specific operation. Additionally there
  * is no status notification as to whether this operation succeeded or failed
  * (the configuration callback via lcb_set_configuration_callback() may
@@ -1789,13 +1769,13 @@ int lcb_is_waiting(lcb_INSTANCE *instance);
  *   if (err == LCB_ERR_NO_MATCHING_SERVER) {
  *     lcb_refresh_config(instance);
  *     usleep(100000);
- *     lcb_wait3(instance, LCB_WAIT_NO_CHECK);
+ *     lcb_wait(instance, LCB_WAIT_NO_CHECK);
  *   } else {
  *     break;
  *   }
  * } while (retries);
  * if (err == LCB_SUCCESS) {
- *   lcb_wait3(instance, 0); // equivalent to lcb_wait(instance);
+ *   lcb_wait(instance, 0); // equivalent to lcb_wait(instance, LCB_WAIT_DEFAULT);
  * } else {
  *   printf("Tried multiple times to fetch the key, but its node is down\n");
  * }
@@ -1875,7 +1855,7 @@ void lcb_refresh_config(lcb_INSTANCE *instance);
  * lcb_store3(...);
  * lcb_counter3(...);
  * lcb_sched_leave(instance);
- * lcb_wait3(instance, LCB_WAIT_NOCHECK);
+ * lcb_wait(instance, LCB_WAIT_NOCHECK);
  * @endcode
  */
 LIBCOUCHBASE_API
@@ -2419,7 +2399,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_search_cancel(lcb_INSTANCE *instance, lcb_SEARCH
  * cmd.query = query;
  * cmd.nquery = strlen(query);
  * lcb_n1ql_query(instance, &idx, &cmd);
- * lcb_wait(instance);
+ * lcb_wait(instance, LCB_WAIT_DEFAULT);
  * @endcode
  *
  * Where row_callback might be implemented like this:

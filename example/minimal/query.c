@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
         check(lcb_create(&instance, options), "create couchbase handle");
         lcb_createopts_destroy(options);
         check(lcb_connect(instance), "schedule connection");
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
         check(lcb_get_bootstrap_status(instance), "bootstrap from cluster");
         check(lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_BUCKETNAME, &bucket), "get bucket name");
         lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
         lcb_cmdstore_value(cmd, val, strlen(val));
         check(lcb_store(instance, NULL, cmd), "schedule STORE operation");
         lcb_cmdstore_destroy(cmd);
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
 
     {
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
         lcb_cmdget_key(cmd, key, strlen(key));
         check(lcb_get(instance, NULL, cmd), "schedule GET operation");
         lcb_cmdget_destroy(cmd);
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
 
     {
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
         cmd.spec.flags = LCB_N1XSPEC_F_PRIMARY;
         cmd.spec.ixtype = LCB_N1XSPEC_T_GSI;
         check(lcb_n1x_create(instance, NULL, &cmd), "schedule N1QL index creation operation");
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
 
     /* setup CTRL-C handler */
@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
         lcb_cmdquery_callback(cmd, row_callback);
         check(lcb_query(instance, NULL, cmd), "schedule QUERY operation");
         lcb_cmdquery_destroy(cmd);
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
 
     /* Now that we're all done, close down the connection handle */

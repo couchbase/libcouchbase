@@ -57,7 +57,7 @@ TEST_F(ConfigCacheUnitTest, testConfigCache)
     err = lcb_connect(instance);
     ASSERT_EQ(err, LCB_SUCCESS);
 
-    err = lcb_wait(instance);
+    err = lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(err, LCB_SUCCESS);
 
     // now try another one
@@ -73,7 +73,7 @@ TEST_F(ConfigCacheUnitTest, testConfigCache)
     err = lcb_connect(instance);
     ASSERT_EQ(LCB_SUCCESS, err);
 
-    err = lcb_wait(instance);
+    err = lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(LCB_SUCCESS, err);
 
     err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_CONFIG_CACHE_LOADED, &is_loaded);
@@ -91,7 +91,7 @@ TEST_F(ConfigCacheUnitTest, testConfigCache)
     ASSERT_EQ(LCB_SUCCESS, err);
     err = lcb_connect(instance);
     ASSERT_EQ(LCB_SUCCESS, err);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_CONFIG_CACHE_LOADED, &is_loaded);
     ASSERT_EQ(LCB_SUCCESS, err);
     ASSERT_NE(0, is_loaded);

@@ -51,10 +51,10 @@ thrfunc_unlocked(void *arg)
     lcb_INSTANCE *instance;
     lcb_create(&instance, NULL);
     lcb_connect(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     LCB_CMDGET cmd = { 0 };
     lcb_get3(instance, NULL, &cmd);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     lcb_destroy(instance);
     return NULL;
 }

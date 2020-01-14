@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
         die(instance, "Couldn't schedule connection", err);
     }
 
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     lcb_destroy(instance);
     lcb_logger_destroy(wrapper.base);

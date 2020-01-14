@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
     check(lcb_create(&instance, options), "create couchbase handle");
     lcb_createopts_destroy(options);
     check(lcb_connect(instance), "schedule connection");
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     check(lcb_get_bootstrap_status(instance), "bootstrap from cluster");
 
     {
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
         lcb_cmdquery_callback(cmd, row_callback);
         check(lcb_query(instance, NULL, cmd), "schedule QUERY operation");
         lcb_cmdquery_destroy(cmd);
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
 
     if (argc > 4) {
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
         {
             lcb_set_open_callback(instance, open_callback);
             check(lcb_open(instance, bucket, strlen(bucket)), "schedule bucket opening");
-            lcb_wait(instance);
+            lcb_wait(instance, LCB_WAIT_DEFAULT);
         }
 
         {
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
             lcb_cmdstore_value(cmd, "value", strlen("value"));
             check(lcb_store(instance, NULL, cmd), "schedule storage operation");
             lcb_cmdstore_destroy(cmd);
-            lcb_wait(instance);
+            lcb_wait(instance, LCB_WAIT_DEFAULT);
         }
 
         {
@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
             lcb_cmdget_key(gcmd, "key", strlen("key"));
             check(lcb_get(instance, NULL, gcmd), "schedule retrieval operation");
             lcb_cmdget_destroy(gcmd);
-            lcb_wait(instance);
+            lcb_wait(instance, LCB_WAIT_DEFAULT);
         }
     }
 

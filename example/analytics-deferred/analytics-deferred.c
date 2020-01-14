@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
         check(lcb_create(&instance, create_options), "create couchbase handle");
         lcb_createopts_destroy(create_options);
         check(lcb_connect(instance), "schedule connection");
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
         check(lcb_get_bootstrap_status(instance), "bootstrap from cluster");
         check(lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_BUCKETNAME, &bucket), "get bucket name");
         if (strcmp(bucket, "beer-sample") != 0) {
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
         check(lcb_analytics(instance, &idx, cmd), "schedule analytics query");
         printf("----> \x1b[36m%s\x1b[0m\n", stmt);
         lcb_cmdanalytics_destroy(cmd);
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
 
     /* Now that we're all done, close down the connection handle */

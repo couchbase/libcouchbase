@@ -627,7 +627,7 @@ void Handler::run()
     if (err != LCB_SUCCESS) {
         throw LcbError(err, "Failed to connect instance");
     }
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     err = lcb_get_bootstrap_status(instance);
     if (err != LCB_SUCCESS) {
         throw LcbError(err, "Failed to bootstrap instance");
@@ -737,7 +737,7 @@ void GetHandler::run()
         }
     }
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 void TouchHandler::addOptions()
@@ -767,7 +767,7 @@ void TouchHandler::run()
         }
     }
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 void SetHandler::addOptions()
@@ -891,7 +891,7 @@ void SetHandler::run()
     }
 
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 void HashHandler::run()
@@ -959,7 +959,7 @@ void ObserveHandler::run()
     err = mctx->done(mctx, NULL);
     if (err == LCB_SUCCESS) {
         lcb_sched_leave(instance);
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     } else {
         lcb_sched_fail(instance);
         throw LcbError(err);
@@ -1005,7 +1005,7 @@ void ObserveSeqnoHandler::run()
         }
     }
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 void ExistsHandler::run()
@@ -1032,7 +1032,7 @@ void ExistsHandler::run()
         }
     }
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 void UnlockHandler::run()
@@ -1066,7 +1066,7 @@ void UnlockHandler::run()
         }
     }
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 static const char *iops_to_string(lcb_io_ops_type_t type)
@@ -1182,7 +1182,7 @@ void RemoveHandler::run()
         }
     }
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 void StatsHandler::run()
@@ -1210,7 +1210,7 @@ void StatsHandler::run()
         }
     }
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 void WatchHandler::run()
@@ -1237,7 +1237,7 @@ void WatchHandler::run()
             throw LcbError(err);
         }
         lcb_sched_leave(instance);
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
         if (first) {
             for (vector<string>::iterator it = keys.begin(); it != keys.end(); ++it) {
                 fprintf(stderr, "%s: %" PRId64 "\n", it->c_str(), entry[*it]);
@@ -1286,7 +1286,7 @@ void VerbosityHandler::run()
         throw LcbError(err);
     }
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 void McVersionHandler::run()
@@ -1302,7 +1302,7 @@ void McVersionHandler::run()
         throw LcbError(err);
     }
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 static void collection_dump_manifest_callback(lcb_INSTANCE *, int, const lcb_RESPGETMANIFEST *resp)
@@ -1337,7 +1337,7 @@ void CollectionGetManifestHandler::run()
         throw LcbError(err);
     }
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 static void getcid_callback(lcb_INSTANCE *, int, const lcb_RESPGETCID *resp)
@@ -1382,7 +1382,7 @@ void CollectionGetCIDHandler::run()
         }
     }
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 void KeygenHandler::run()
@@ -1447,7 +1447,7 @@ void PingHandler::run()
             if (err != LCB_SUCCESS) {
                 throw LcbError(err);
             }
-            lcb_wait(instance);
+            lcb_wait(instance, LCB_WAIT_DEFAULT);
             count--;
             if (count > 0) {
                 printf(",\n");
@@ -1461,7 +1461,7 @@ void PingHandler::run()
             if (err != LCB_SUCCESS) {
                 throw LcbError(err);
             }
-            lcb_wait(instance);
+            lcb_wait(instance, LCB_WAIT_DEFAULT);
             printf("\n");
             sleep(interval);
         }
@@ -1489,7 +1489,7 @@ void BucketFlushHandler::run()
     if (err != LCB_SUCCESS) {
         throw LcbError(err);
     } else {
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
 }
 
@@ -1524,7 +1524,7 @@ void ArithmeticHandler::run()
         }
     }
     lcb_sched_leave(instance);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 void ViewsHandler::run()
@@ -1557,7 +1557,7 @@ void ViewsHandler::run()
     if (rc != LCB_SUCCESS) {
         throw LcbError(rc);
     }
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 static void splitKvParam(const string &src, string &key, string &value)
@@ -1655,7 +1655,7 @@ void N1qlHandler::run()
     if (rc != LCB_SUCCESS) {
         throw LcbError(rc);
     }
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 extern "C" {
@@ -1741,7 +1741,7 @@ void AnalyticsHandler::run()
     if (rc != LCB_SUCCESS) {
         throw LcbError(rc);
     }
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 extern "C" {
@@ -1809,7 +1809,7 @@ void SearchHandler::run()
     if (rc != LCB_SUCCESS) {
         throw LcbError(rc);
     }
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 void HttpReceiver::install(lcb_INSTANCE *instance)
@@ -1866,7 +1866,7 @@ void HttpBaseHandler::run()
         throw LcbError(err);
     }
 
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 lcb_HTTP_METHOD HttpBaseHandler::getMethod()

@@ -35,7 +35,7 @@ void MockUnitTest::SetUp()
 void checkConnectCommon(lcb_INSTANCE *instance)
 {
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
 }
 
@@ -70,6 +70,6 @@ lcb_STATUS MockUnitTest::tryCreateConnection(HandleWrap &hw, lcb_INSTANCE **inst
 {
     MockEnvironment::getInstance()->createConnection(hw, instance, crparams);
     EXPECT_EQ(LCB_SUCCESS, lcb_connect(*instance));
-    lcb_wait(*instance);
+    lcb_wait(*instance, LCB_WAIT_DEFAULT);
     return lcb_get_bootstrap_status(*instance);
 }

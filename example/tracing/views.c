@@ -364,7 +364,7 @@ int main(int argc, char *argv[])
         die(instance, "Couldn't schedule connection", err);
     }
 
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     err = lcb_get_bootstrap_status(instance);
     if (err != LCB_SUCCESS) {
@@ -415,7 +415,7 @@ int main(int argc, char *argv[])
 
     /* The store_callback is invoked from lcb_wait() */
     fprintf(stderr, "Will wait for view operation to complete..\n");
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     lcbtrace_span_finish(span, LCBTRACE_NOW);
 

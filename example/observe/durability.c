@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     if ((err = lcb_connect(instance)) != LCB_SUCCESS) {
         fail2("Couldn't schedule connection", err);
     }
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     if ((err = lcb_get_bootstrap_status(instance)) != LCB_SUCCESS) {
         fail2("Couldn't get initial cluster configuration", err);
     }
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
     lcb_store(instance, NULL, cmd);
     lcb_cmdstore_destroy(cmd);
 
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     lcb_destroy(instance);
     return EXIT_SUCCESS;

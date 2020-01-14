@@ -229,7 +229,7 @@ bool SubdocUnitTest::createSubdocConnection(HandleWrap &hw, lcb_INSTANCE **insta
     if (rc != LCB_SUCCESS) {
         return false;
     }
-    lcb_wait(*instance);
+    lcb_wait(*instance, LCB_WAIT_DEFAULT);
 
     if (res.rc == LCB_ERR_UNSUPPORTED_OPERATION || res.rc == LCB_ERR_UNSUPPORTED_OPERATION) {
         return false;
@@ -256,7 +256,7 @@ lcb_STATUS schedwait(lcb_INSTANCE *instance, MultiResult *res, const T *cmd,
     res->clear();
     lcb_STATUS rc = fn(instance, res, cmd);
     if (rc == LCB_SUCCESS) {
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
     return rc;
 }
@@ -684,7 +684,7 @@ TEST_F(SubdocUnitTest, testMultiLookup)
     lcb_subdocspecs_get(specs, 3, 0, "array[1]", strlen("array[1]"));
     rc = lcb_subdoc(instance, &mr, mcmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     ASSERT_EQ(LCB_SUCCESS, mr.rc);
     ASSERT_EQ(4, mr.results.size());
@@ -717,7 +717,7 @@ TEST_F(SubdocUnitTest, testMultiLookup)
     lcb_cmdsubdoc_key(mcmd, missing_key.c_str(), missing_key.size());
     rc = lcb_subdoc(instance, &mr, mcmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(LCB_ERR_DOCUMENT_NOT_FOUND, mr.rc);
     ASSERT_TRUE(mr.results.empty());
 

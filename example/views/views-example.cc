@@ -83,7 +83,7 @@ int main(int argc, const char **argv)
     assert(rc == LCB_SUCCESS);
     rc = lcb_connect(instance);
     assert(rc == LCB_SUCCESS);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     assert(lcb_get_bootstrap_status(instance) == LCB_SUCCESS);
 
     // Nao, set up the views..
@@ -103,7 +103,7 @@ int main(int argc, const char **argv)
     lcb_cmdview_destroy(vq);
 
     assert(rc == LCB_SUCCESS);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     lcb_destroy(instance);
     printf("Total Invocations=%d\n", cbCounter);
     return 0;

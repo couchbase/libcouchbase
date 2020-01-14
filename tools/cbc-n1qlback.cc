@@ -432,7 +432,7 @@ class ThreadContext
         if (rc != LCB_SUCCESS) {
             log_error(rc, txt.c_str(), txt.size());
         } else {
-            lcb_wait(m_instance);
+            lcb_wait(m_instance, LCB_WAIT_DEFAULT);
             m_metrics->lock();
             m_metrics->update_row(last_nrow);
             m_metrics->update_done(1);
@@ -505,7 +505,7 @@ static void real_main(int argc, char **argv)
         lcb_INSTANCE *instance;
         do_or_die(lcb_create(&instance, cropts));
         do_or_die(lcb_connect(instance));
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
         do_or_die(lcb_get_bootstrap_status(instance));
 
         if (ii == 0 && !instance_has_n1ql(instance)) {

@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
         die(instance, "Failed schedule connection", err);
     }
 
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     err = lcb_get_bootstrap_status(instance);
     if (err != LCB_SUCCESS) {
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
         if (err != LCB_SUCCESS) {
             die(instance, "Failed schedule command to upsert user", err);
         }
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
 
     printf("2. Retrieve list of all accounts in the cluster\n");
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
         if (err != LCB_SUCCESS) {
             die(instance, "Failed schedule command to upsert user", err);
         }
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
 
     printf("3. Remove account 'cbtestuser'\n");
@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
         if (err != LCB_SUCCESS) {
             die(instance, "Failed schedule command to upsert user", err);
         }
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
     /* Now that we're all done, close down the connection handle */
     lcb_destroy(instance);

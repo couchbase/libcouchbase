@@ -47,7 +47,7 @@ lcb_STATUS Pool::connect()
         if ((err = lcb_connect(*ii)) != LCB_SUCCESS) {
             return err;
         }
-        lcb_wait(*ii);
+        lcb_wait(*ii, LCB_WAIT_DEFAULT);
         if ((err = lcb_get_bootstrap_status(*ii)) != LCB_SUCCESS) {
             return err;
         }

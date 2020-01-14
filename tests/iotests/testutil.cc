@@ -104,7 +104,7 @@ void KVOperation::store(lcb_INSTANCE *instance)
     enter(instance);
     EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, this, cmd));
     lcb_cmdstore_destroy(cmd);
-    EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
+    EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
     leave(instance);
 
     ASSERT_EQ(1, callCount);
@@ -119,7 +119,7 @@ void KVOperation::remove(lcb_INSTANCE *instance)
     enter(instance);
     EXPECT_EQ(LCB_SUCCESS, lcb_remove(instance, this, cmd));
     lcb_cmdremove_destroy(cmd);
-    EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
+    EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
     leave(instance);
 
     ASSERT_EQ(1, callCount);
@@ -134,7 +134,7 @@ void KVOperation::get(lcb_INSTANCE *instance)
 
     enter(instance);
     EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, this, cmd));
-    EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
+    EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
     leave(instance);
 
     lcb_cmdget_destroy(cmd);

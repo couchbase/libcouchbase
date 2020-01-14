@@ -345,7 +345,7 @@ class Worker
         lcb_createopts_destroy(cropts);
         config.doCtls(instance);
         do_or_die(lcb_connect(instance), "Failed to connect to cluster");
-        do_or_die(lcb_wait(instance), "Failed to wait for connection bootstrap");
+        do_or_die(lcb_wait(instance, LCB_WAIT_DEFAULT), "Failed to wait for connection bootstrap");
         do_or_die(lcb_get_bootstrap_status(instance), "Failed to bootstrap");
         lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
         lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
@@ -513,9 +513,9 @@ void io_loop(Worker *worker, size_t num_items)
                 break;
             }
         }
-        lcb_wait(worker->instance);
+        lcb_wait(worker->instance, LCB_WAIT_DEFAULT);
     }
-    lcb_wait(worker->instance);
+    lcb_wait(worker->instance, LCB_WAIT_DEFAULT);
     if (has_limit) {
         worker->is_running = false;
         std::cout << "# worker " << worker->id << " has been stopped: " << worker->stats() << std::endl;

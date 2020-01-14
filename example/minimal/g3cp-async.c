@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
     lcb_createopts_destroy(options);
     lcb_set_bootstrap_callback(instance, bootstrap_callback);
     check(lcb_connect(instance), "schedule connection");
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     lcb_destroy(instance);
     return 0;
 }

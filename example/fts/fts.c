@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
         check(lcb_create(&instance, create_options), "create couchbase handle");
         lcb_createopts_destroy(create_options);
         check(lcb_connect(instance), "schedule connection");
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
         check(lcb_get_bootstrap_status(instance), "bootstrap from cluster");
         check(lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_BUCKETNAME, &bucket), "get bucket name");
         if (strcmp(bucket, "travel-sample") != 0) {
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
         lcb_cmdsearch_destroy(cmd);
         printf("----> \x1b[1m%s\x1b[0m\n", queries[ii].comment);
         printf("----> \x1b[32m%.*s\x1b[0m\n", (int)queries[ii].query_len, queries[ii].query);
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
     }
 
     /* Now that we're all done, close down the connection handle */

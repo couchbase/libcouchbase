@@ -142,7 +142,7 @@ TEST_F(QueryUnitTest, testSimple)
     makeCommand("SELECT mockrow");
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(LCB_SUCCESS, res.rc);
     ASSERT_EQ(1, res.rows.size());
 }
@@ -158,7 +158,7 @@ TEST_F(QueryUnitTest, testQueryError)
     makeCommand("SELECT blahblah FROM blahblah");
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_TRUE(res.rows.empty());
 }
 
@@ -186,7 +186,7 @@ TEST_F(QueryUnitTest, testPrepareOk)
     makeCommand("SELECT mockrow", true);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(res.rc, LCB_SUCCESS);
     ASSERT_EQ(1, res.rows.size());
 
@@ -202,7 +202,7 @@ TEST_F(QueryUnitTest, testPrepareOk)
     res.reset();
     rc = lcb_query(instance, &res, cmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     string plan2;
     lcb_n1qlcache_getplan(instance->n1ql_cache, query, plan2);
     ASSERT_FALSE(plan2.empty());
@@ -218,7 +218,7 @@ TEST_F(QueryUnitTest, testPrepareOk)
     res.reset();
     rc = lcb_query(instance, &res, cmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     ASSERT_EQ(1, res.rows.size());
     lcb_n1qlcache_getplan(instance->n1ql_cache, query, plan);
@@ -236,7 +236,7 @@ TEST_F(QueryUnitTest, testPrepareStale)
     makeCommand("SELECT mockrow", true);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(1, res.rows.size());
 
     // Reset the index "state"
@@ -257,7 +257,7 @@ TEST_F(QueryUnitTest, testPrepareStale)
     res.reset();
     rc = lcb_query(instance, &res, cmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_TRUE(res.rows.empty());
     ASSERT_FALSE(res.meta.empty());
     ASSERT_NE(string::npos, res.meta.find("indexNotFound"));
@@ -268,7 +268,7 @@ TEST_F(QueryUnitTest, testPrepareStale)
     res.reset();
     rc = lcb_query(instance, &res, cmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(1, res.rows.size());
 }
 
@@ -283,7 +283,7 @@ TEST_F(QueryUnitTest, testPrepareFailure)
     makeCommand("SELECT blahblah", true);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_TRUE(res.called);
     ASSERT_NE(LCB_SUCCESS, res.rc);
     ASSERT_TRUE(res.rows.empty());
@@ -304,7 +304,7 @@ TEST_F(QueryUnitTest, testCancellation)
     ASSERT_EQ(LCB_SUCCESS, rc);
     ASSERT_TRUE(handle != NULL);
     lcb_query_cancel(instance, handle);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_FALSE(res.called);
 }
 
@@ -323,6 +323,6 @@ TEST_F(QueryUnitTest, testClusterwide)
     ASSERT_EQ(LCB_SUCCESS, rc);
     ASSERT_TRUE(handle != NULL);
     lcb_query_cancel(instance, handle);
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_FALSE(res.called);
 }

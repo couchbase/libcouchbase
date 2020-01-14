@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     rc = lcb_connect(instance);
     assert(rc == LCB_SUCCESS);
 
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     rc = lcb_get_bootstrap_status(instance);
     assert(rc == LCB_SUCCESS);
 
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
     lcb_cmdstore_destroy(cmd);
 
     printf("\nCalling lcb_wait()\n");
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
     printf("\n");
     lcb_destroy(instance);
 }

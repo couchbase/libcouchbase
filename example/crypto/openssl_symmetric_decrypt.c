@@ -82,7 +82,7 @@ static void get_encrypted(lcb_INSTANCE *instance, const char *key)
     if (err != LCB_SUCCESS) {
         die(instance, "Couldn't schedule get operation", err);
     }
-    lcb_wait(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 int main(int argc, char *argv[])
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
             die(instance, "Couldn't schedule connection", err);
         }
 
-        lcb_wait(instance);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
 
         err = lcb_get_bootstrap_status(instance);
         if (err != LCB_SUCCESS) {
