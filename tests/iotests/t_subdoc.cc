@@ -344,10 +344,18 @@ TEST_F(SubdocUnitTest, testSdGetExists)
 
     lcb_subdocspecs_get(specs, 0, 0, "non-exist", strlen("non-exist"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_EQ(LCB_ERR_SUBDOC_DOCUMENT_NOT_JSON, res.rc);
+    if (MockEnvironment::getInstance()->isRealCluster()) {
+        ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_DOCUMENT_NOT_JSON);
+    } else {
+        ASSERT_EQ(LCB_ERR_SUBDOC_DOCUMENT_NOT_JSON, res.rc);
+    }
     lcb_subdocspecs_exists(specs, 0, 0, "non-exist", strlen("non-exist"));
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, cmd, lcb_subdoc));
-    ASSERT_EQ(LCB_ERR_SUBDOC_DOCUMENT_NOT_JSON, res.rc);
+    if (MockEnvironment::getInstance()->isRealCluster()) {
+        ASSERT_SD_ERR(res, LCB_ERR_SUBDOC_DOCUMENT_NOT_JSON);
+    } else {
+        ASSERT_EQ(LCB_ERR_SUBDOC_DOCUMENT_NOT_JSON, res.rc);
+    }
 
     // Restore the key back to the document..
     lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
