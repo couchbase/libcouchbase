@@ -798,6 +798,14 @@ static void get_callback3(lcb_INSTANCE *, int, const lcb_RESPGET *resp)
     ni->err = lcb_respget_status(resp);
     ni->callCount++;
 }
+
+static void store_callback3(lcb_INSTANCE *, int, const lcb_RESPSTORE *resp)
+{
+    NegativeIx *ni;
+    lcb_respstore_cookie(resp, (void **)&ni);
+    ni->err = lcb_respstore_status(resp);
+    ni->callCount++;
+}
 }
 /**
  * This tests the case where a negative index appears for a vbucket ID for the
@@ -814,24 +822,40 @@ TEST_F(MockUnitTest, testNegativeIndex)
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
     lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback3);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback3);
     std::string key("ni_key");
     // Get the config
     lcbvb_CONFIG *vbc = instance->cur_configinfo->vbc;
     int vb = lcbvb_k2vb(vbc, key.c_str(), key.size());
 
-    // Set the index to -1
-    vbc->vbuckets[vb].servers[0] = -1;
-    NegativeIx ni = {LCB_SUCCESS};
-    lcb_CMDGET *gcmd;
-    lcb_cmdget_create(&gcmd);
-    lcb_cmdget_key(gcmd, key.c_str(), key.size());
     // Set the timeout to something a bit shorter
     lcb_cntl_setu32(instance, LCB_CNTL_OP_TIMEOUT, 500000);
 
-    lcb_sched_enter(instance);
-    lcb_STATUS err = lcb_get(instance, &ni, gcmd);
+    NegativeIx ni;
+    lcb_STATUS err;
+
+    /* warm up the collection cache */
+    lcb_CMDSTORE *scmd;
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
+    lcb_cmdstore_key(scmd, key.c_str(), key.size());
+    std::string value("{}");
+    lcb_cmdstore_value(scmd, value.c_str(), value.size());
+    ni = {LCB_SUCCESS, 0};
+    err = lcb_store(instance, &ni, scmd);
     ASSERT_EQ(LCB_SUCCESS, err);
-    lcb_sched_leave(instance);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(1, ni.callCount);
+    ASSERT_EQ(LCB_SUCCESS, ni.err);
+    lcb_cmdstore_destroy(scmd);
+
+    lcb_CMDGET *gcmd;
+    lcb_cmdget_create(&gcmd);
+    lcb_cmdget_key(gcmd, key.c_str(), key.size());
+    ni = {LCB_SUCCESS, 0};
+    // Set the index to -1
+    vbc->vbuckets[vb].servers[0] = -1;
+    err = lcb_get(instance, &ni, gcmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(1, ni.callCount);
     ASSERT_EQ(LCB_ERR_NO_MATCHING_SERVER, ni.err);
