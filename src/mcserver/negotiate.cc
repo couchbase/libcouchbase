@@ -259,7 +259,6 @@ SessionRequestImpl::MechStatus SessionRequestImpl::set_chosen_mech(std::string &
                                                                    unsigned int *ndata)
 {
     cbsasl_error_t saslerr;
-    int allow_scram_sha = 0;
 
     if (mechlist.empty()) {
         lcb_log(LOGARGS(this, WARN), LOGFMT "Server does not support SASL (no mechanisms supported)", LOGID(this));
@@ -274,13 +273,10 @@ SessionRequestImpl::MechStatus SessionRequestImpl::set_chosen_mech(std::string &
             return MECH_UNAVAILABLE;
         }
         mechlist.assign(forcemech);
-        if (strncmp(forcemech, "SCRAM-SHA", sizeof("SCRAM-SHA") - 1) == 0) {
-            allow_scram_sha = 1;
-        }
     }
 
     const char *chosenmech;
-    saslerr = cbsasl_client_start(sasl_client, mechlist.c_str(), NULL, data, ndata, &chosenmech, allow_scram_sha);
+    saslerr = cbsasl_client_start(sasl_client, mechlist.c_str(), NULL, data, ndata, &chosenmech);
     switch (saslerr) {
         case SASL_OK:
             info->mech.assign(chosenmech);

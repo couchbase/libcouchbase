@@ -236,13 +236,8 @@ extern "C" {
                                      cbsasl_conn_t **pconn);
 
     CBSASL_PUBLIC_API
-    cbsasl_error_t cbsasl_client_start(cbsasl_conn_t *conn,
-                                       const char *mechlist,
-                                       void **prompt_need,
-                                       const char **clientout,
-                                       unsigned int *clientoutlen,
-                                       const char **mech,
-                                       int allow_scram_sha);
+    cbsasl_error_t cbsasl_client_start(cbsasl_conn_t *conn, const char *mechlist, void **prompt_need,
+                                       const char **clientout, unsigned int *clientoutlen, const char **mech);
 
     CBSASL_PUBLIC_API
     cbsasl_error_t cbsasl_client_step(cbsasl_conn_t *conn,

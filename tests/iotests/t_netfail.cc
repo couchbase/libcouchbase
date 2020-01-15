@@ -589,6 +589,7 @@ TEST_F(MockUnitTest, testSaslMechs)
     lcb_destroy(instance);
 }
 
+#ifndef LCB_NO_SSL
 TEST_F(MockUnitTest, testSaslSHA)
 {
     // Ensure our SASL mech listing works.
@@ -610,36 +611,12 @@ TEST_F(MockUnitTest, testSaslSHA)
     lcb_createopts_credentials(crParams, username.c_str(), username.size(), password.c_str(), password.size());
     lcb_createopts_bucket(crParams, bucket.c_str(), bucket.size());
 
-    {
-        doLcbCreate(&instance, crParams, protectedEnv);
-
-        // Make the socket pool disallow idle connections
-        instance->memd_sockpool->get_options().maxidle = 0;
-
-        ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
-        ASSERT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
-
-        err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)"SCRAM-SHA512");
-        ASSERT_EQ(LCB_SUCCESS, err);
-
-        Item itm("key", "value");
-        KVOperation kvo(&itm);
-
-        kvo.allowableErrors.insert(LCB_ERR_SASLMECH_UNAVAILABLE);
-        kvo.allowableErrors.insert(LCB_ERR_TIMEOUT);
-        kvo.store(instance);
-
-        ASSERT_FALSE(kvo.globalErrors.find(LCB_ERR_SASLMECH_UNAVAILABLE) == kvo.globalErrors.end());
-
-        lcb_destroy(instance);
-    }
-
     std::vector< std::string > mechs;
+
     mechs.push_back("SCRAM-SHA512");
     protectedEnv->setSaslMechs(mechs);
 
     {
-        instance = NULL;
         doLcbCreate(&instance, crParams, protectedEnv);
 
         // Make the socket pool disallow idle connections
@@ -651,23 +628,14 @@ TEST_F(MockUnitTest, testSaslSHA)
         Item itm("key", "value");
         KVOperation kvo(&itm);
 
-        kvo.allowableErrors.insert(LCB_ERR_SASLMECH_UNAVAILABLE);
-        kvo.allowableErrors.insert(LCB_ERR_TIMEOUT);
         kvo.store(instance);
-
-#ifndef LCB_NO_SSL
-        err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)"SCRAM-SHA512");
-        ASSERT_EQ(LCB_SUCCESS, err);
-
-        kvo.clear();
-        kvo.store(instance);
-#endif
 
         lcb_destroy(instance);
     }
 
     lcb_createopts_destroy(crParams);
 }
+#endif
 
 extern "C" {
 static const char *get_username(void *cookie, const char *host, const char *port, const char *bucket)

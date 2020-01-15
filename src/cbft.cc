@@ -349,7 +349,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_search(lcb_INSTANCE *instance, void *cookie, con
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_search_cancel(lcb_INSTANCE *instance, lcb_SEARCH_HANDLE *handle)
+LIBCOUCHBASE_API lcb_STATUS lcb_search_cancel(lcb_INSTANCE * /* instance */, lcb_SEARCH_HANDLE *handle)
 {
     handle->callback = NULL;
     return LCB_SUCCESS;
