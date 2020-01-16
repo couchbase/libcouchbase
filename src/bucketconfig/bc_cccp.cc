@@ -172,7 +172,14 @@ lcb_STATUS CccpProvider::mcio_error(lcb_STATUS err)
     }
 
     stop_current_request(err == LCB_ERR_UNSUPPORTED_OPERATION);
-    return schedule_next_request(err, false);
+    if (err == LCB_ERR_PROTOCOL_ERROR && LCBT_SETTING(instance, conntype) == LCB_TYPE_CLUSTER) {
+        lcb_log(LOGARGS(this, WARN), LOGFMT "Failed to bootstrap using CCCP", LOGID(this));
+        timer.cancel();
+        parent->provider_failed(this, err);
+        return err;
+    } else {
+        return schedule_next_request(err, false);
+    }
 }
 
 /** Update the configuration from a server. */

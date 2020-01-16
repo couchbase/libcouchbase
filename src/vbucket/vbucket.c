@@ -574,17 +574,23 @@ static void guess_network(cJSON *jnodes, int nsrv, const char *source, char **ne
 
 int lcbvb_load_json_ex(lcbvb_CONFIG *cfg, const char *data, const char *source, char **network)
 {
-    cJSON *cj = NULL, *jnodes_ext = NULL, *jnodes = NULL;
+    cJSON *cj = NULL, *jnodes_ext = NULL, *jnodes = NULL, *buckets = NULL;
     char *tmp = NULL;
     unsigned ii, jnodes_size = 0;
     int jnodes_defined = 0;
+    int is_cluster_cfg = 0;
 
     if ((cj = cJSON_Parse(data)) == NULL) {
         SET_ERRSTR(cfg, "Couldn't parse JSON");
         goto GT_ERROR;
     }
 
-    if (get_jstr(cj, "name", &tmp)) {
+    buckets = cJSON_GetObjectItem(cj, "buckets");
+    if (buckets != NULL && buckets->type != cJSON_Array) {
+        is_cluster_cfg = 1;
+    }
+
+    if (!is_cluster_cfg && get_jstr(cj, "name", &tmp)) {
         cfg->bname = strdup(tmp);
         cfg->bname_len = strlen(cfg->bname);
     }
@@ -1057,6 +1063,9 @@ int lcbvb_k2vb(lcbvb_CONFIG *cfg, const void *k, lcb_SIZE n)
 
 int lcbvb_vbmaster(lcbvb_CONFIG *cfg, int vbid)
 {
+    if (cfg->dtype != LCBVB_DIST_VBUCKET) {
+        return -1;
+    }
     return cfg->vbuckets[vbid].servers[0];
 }
 
@@ -1151,11 +1160,16 @@ int lcbvb_map_key(lcbvb_CONFIG *cfg, const void *key, lcb_SIZE nkey, int *vbid, 
             *vbid = 0;
         }
         return 0;
-    } else {
+    } else if (cfg->dtype == LCBVB_DIST_VBUCKET) {
         int vb = lcbvb_k2vb(cfg, key, nkey);
         *srvix = lcbvb_vbmaster(cfg, vb);
         if (vbid) {
             *vbid = vb;
+        }
+    } else {
+        *srvix = -1;
+        if (vbid) {
+            *vbid = 0;
         }
     }
     return 0;

@@ -46,7 +46,7 @@ Provider *Confmon::first_active()
     }
 }
 
-static const char *provider_string(Method type)
+const char *provider_string(Method type)
 {
     if (type == CLCONFIG_HTTP) {
         return "HTTP";

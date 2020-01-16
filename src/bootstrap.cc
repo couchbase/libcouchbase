@@ -144,11 +144,14 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info) {
     lcb_maybe_breakout(instance);
 }
 
+const char *provider_string(clconfig::Method type);
+
 void Bootstrap::clconfig_lsn(EventType e, ConfigInfo *i) {
     if (state == S_INITIAL_PRE) {
         config_callback(e, i);
     } else if (e == clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG) {
-        lcb_log(LOGARGS(parent, INFO), "Got new config. Will refresh asynchronously");
+        lcb_log(LOGARGS(parent, INFO), "Got new config (source=%s, bucket=%.*s, rev=%d). Will refresh asynchronously",
+                provider_string(i->get_origin()), (int)i->vbc->bname_len, i->vbc->bname, i->vbc->revid);
         tm.signal();
     }
 }
@@ -223,6 +226,8 @@ lcb_STATUS Bootstrap::bootstrap(unsigned options) {
     }
 
     if (options == BS_REFRESH_OPEN_BUCKET) {
+        parent->confmon->active_provider_list_id = 0;
+        parent->confmon->prepare();
         state = S_INITIAL_PRE;
         tm.rearm(LCBT_SETTING(parent, config_timeout));
         lcb_aspend_add(&parent->pendops, LCB_PENDTYPE_COUNTER, NULL);
@@ -264,7 +269,10 @@ lcb_STATUS Bootstrap::bootstrap(unsigned options) {
     if (options != BS_REFRESH_INITIAL) {
         last_refresh = now;
     }
-    parent->confmon->start(options & BS_REFRESH_OPEN_BUCKET);
+    if (parent->settings->bucket) {
+        options &= BS_REFRESH_OPEN_BUCKET;
+    }
+    parent->confmon->start(options);
     return LCB_SUCCESS;
 }
 
