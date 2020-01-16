@@ -378,10 +378,10 @@ N1QLREQ::has_retriable_error(const Json::Value& root)
             }
         }
         if (jmsg.isString()) {
-            const char *jmstr = jmsg.asCString();
+            std::string jmstr = jmsg.asString();
             for (const char **curs = wtf_magic_strings; *curs; curs++) {
-                if (!strstr(jmstr, *curs)) {
-                    lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d, msg: %s", LOGID(this), code, jmstr);
+                if (jmstr.find(*curs) != std::string::npos) {
+                    lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d, msg: %s", LOGID(this), code, jmstr.c_str());
                     return true;
                 }
             }
