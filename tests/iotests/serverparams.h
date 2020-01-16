@@ -44,6 +44,9 @@ class ServerParams
         }
         lcb_createopts_connstr(crst, connstr.c_str(), connstr.size());
         lcb_createopts_credentials(crst, user.c_str(), user.size(), pass.c_str(), pass.size());
+        if (type == LCB_TYPE_BUCKET) {
+            lcb_createopts_bucket(crst, bucket.c_str(), bucket.size());
+        }
         lcb_createopts_io(crst, io);
     }
 

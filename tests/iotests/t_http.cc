@@ -289,9 +289,14 @@ static void http_callback(lcb_INSTANCE *, int, const lcb_RESPHTTP *resp)
 }
 }
 
-static void makeAdminReq(lcb_CMDHTTP **cmd, std::string &bkbuf)
+static void makeAdminReq(lcb_CMDHTTP **cmd, std::string &bkbuf, lcb_INSTANCE *instance)
 {
-    bkbuf.assign("/pools/default/buckets/default");
+    char *bucketname = NULL;
+    lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_BUCKETNAME, &bucketname);
+    ASSERT_NE((const char *)NULL, bucketname);
+
+    bkbuf.assign("/pools/default/buckets/");
+    bkbuf.append(bucketname);
 
     lcb_cmdhttp_create(cmd, LCB_HTTP_TYPE_MANAGEMENT);
     lcb_cmdhttp_method(*cmd, LCB_HTTP_METHOD_GET);
@@ -310,8 +315,7 @@ TEST_F(HttpUnitTest, testAdminApi)
 
     // Make the request; this time we make it to the 'management' API
     lcb_CMDHTTP *cmd = NULL;
-
-    makeAdminReq(&cmd, pth);
+    makeAdminReq(&cmd, pth, instance);
     HtResult htr;
     htr.reset();
 
@@ -386,7 +390,7 @@ TEST_F(HttpUnitTest, testDoubleCancel)
     // Make the request; this time we make it to the 'management' API
     lcb_CMDHTTP *cmd = NULL;
     std::string bk;
-    makeAdminReq(&cmd, bk);
+    makeAdminReq(&cmd, bk, instance);
     lcb_sched_enter(instance);
     ASSERT_EQ(LCB_SUCCESS, lcb_http(instance, NULL, cmd));
     lcb_cmdhttp_destroy(cmd);
@@ -419,7 +423,7 @@ TEST_F(HttpUnitTest, testCancelWorks)
     lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)cancelVerify_callback);
     lcb_CMDHTTP *cmd = NULL;
     std::string ss;
-    makeAdminReq(&cmd, ss);
+    makeAdminReq(&cmd, ss, instance);
     // Make it chunked
     lcb_cmdhttp_streaming(cmd, true);
     bool cookie = false;
@@ -446,7 +450,7 @@ TEST_F(HttpUnitTest, testDestroyWithActiveRequest)
 
     lcb_CMDHTTP *cmd;
     std::string ss;
-    makeAdminReq(&cmd, ss);
+    makeAdminReq(&cmd, ss, instance);
 
     lcb_install_callback(instance, LCB_CALLBACK_HTTP, noInvoke_callback);
     lcb_sched_enter(instance);
