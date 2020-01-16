@@ -775,8 +775,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_key(const lcb_RESPGETREPLICA *res
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_value(const lcb_RESPGETREPLICA *resp, const char **value,
                                                      size_t *value_len);
 LIBCOUCHBASE_API int lcb_respgetreplica_is_final(const lcb_RESPGETREPLICA *resp);
-LCB_DEPRECATED2(LIBCOUCHBASE_API int lcb_respreplica_is_final(const lcb_RESPGETREPLICA *resp),
-                "Use lcb_respgetreplica_is_final() instead");
 
 typedef struct lcb_CMDGETREPLICA_ lcb_CMDGETREPLICA;
 
@@ -794,8 +792,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_getreplica(lcb_INSTANCE *instance, void *cookie,
 typedef struct lcb_RESPEXISTS_ lcb_RESPEXISTS;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_status(const lcb_RESPEXISTS *resp);
-LCB_DEPRECATED2(LIBCOUCHBASE_API int lcb_respexists_is_persisted(const lcb_RESPEXISTS *resp),
-                "This function will be removed in GA");
 LIBCOUCHBASE_API int lcb_respexists_is_found(const lcb_RESPEXISTS *resp);
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_error_context(const lcb_RESPEXISTS *resp,
                                                          const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);

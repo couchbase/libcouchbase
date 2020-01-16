@@ -24,11 +24,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respexists_status(const lcb_RESPEXISTS *resp)
     return resp->ctx.rc == LCB_ERR_DOCUMENT_NOT_FOUND ? LCB_SUCCESS : resp->ctx.rc;
 }
 
-LIBCOUCHBASE_API int lcb_respexists_is_persisted(const lcb_RESPEXISTS *)
-{
-    return 0;
-}
-
 LIBCOUCHBASE_API int lcb_respexists_is_found(const lcb_RESPEXISTS *resp)
 {
     return resp->ctx.rc == LCB_SUCCESS;
