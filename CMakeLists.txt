@@ -22,7 +22,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 # These variables can be modified as needed
 
 # Couchbase mock path to download
-SET(COUCHBASE_MOCK_VERSION 1.5.22)
+SET(COUCHBASE_MOCK_VERSION 1.5.25)
 SET(COUCHBASE_MOCK_URL "https://github.com/couchbase/CouchbaseMock/releases/download/${COUCHBASE_MOCK_VERSION}/CouchbaseMock-${COUCHBASE_MOCK_VERSION}.jar")
 project(libcouchbase)
 

@@ -279,6 +279,20 @@ SessionRequestImpl::MechStatus SessionRequestImpl::set_chosen_mech(std::string &
     saslerr = cbsasl_client_start(sasl_client, mechlist.c_str(), NULL, data, ndata, &chosenmech);
     switch (saslerr) {
         case SASL_OK:
+            if (!settings->ssl_ctx && strncmp(chosenmech, MECH_PLAIN, sizeof(MECH_PLAIN)) == 0) {
+#ifdef LCB_NO_SSL
+                lcb_log(LOGARGS(this, ERROR),
+                        LOGFMT
+                        "SASL PLAIN authentication is not allowed on non-TLS connections. But this libcouchbase "
+                        "compiled without OpenSSL, therefore PLAIN is the only option. The library will fallback to "
+                        "PLAIN, but using SCRAM methods is strongly recommended over non-encrypted transports.",
+                        LOGID(this));
+#else
+                lcb_log(LOGARGS(this, WARN), LOGFMT "SASL PLAIN authentication is not allowed on non-TLS connections",
+                        LOGID(this));
+                return MECH_UNAVAILABLE;
+#endif
+            }
             info->mech.assign(chosenmech);
             return MECH_OK;
         case SASL_NOMECH:

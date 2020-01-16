@@ -584,7 +584,14 @@ TEST_F(MockUnitTest, testSaslMechs)
     ASSERT_EQ(LCB_SUCCESS, err);
 
     kvo.clear();
+#ifndef LCB_NO_SSL
+    kvo.allowableErrors.insert(LCB_ERR_TIMEOUT);
+#endif
     kvo.store(instance);
+#ifndef LCB_NO_SSL
+    // should not be connected over non-SSL connection with PLAIN SASL auth
+    ASSERT_FALSE(kvo.globalErrors.find(LCB_ERR_TIMEOUT) == kvo.globalErrors.end());
+#endif
 
     lcb_destroy(instance);
 }
