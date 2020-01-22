@@ -133,11 +133,11 @@ X(LCB_ERR_VIEW_NOT_FOUND,               701, LCB_ERROR_TYPE_VIEW, 0, "View is no
 X(LCB_ERR_DESIGN_DOCUMENT_NOT_FOUND,    702, LCB_ERROR_TYPE_VIEW, 0, "Design document is not found") \
 \
 /* Management API Error Definitions */ \
-X(LCB_ERR_COLLECTION_ALREADY_EXISTS,    701, LCB_ERROR_TYPE_MANAGEMENT, 0, "Collection already exists") \
-X(LCB_ERR_SCOPE_EXISTS,                 702, LCB_ERROR_TYPE_MANAGEMENT, 0, "Scope already exists") \
-X(LCB_ERR_USER_NOT_FOUND,               702, LCB_ERROR_TYPE_MANAGEMENT, 0, "User is not found") \
-X(LCB_ERR_GROUP_NOT_FOUND,              702, LCB_ERROR_TYPE_MANAGEMENT, 0, "Group is not found") \
-X(LCB_ERR_BUCKET_ALREADY_EXISTS,        702, LCB_ERROR_TYPE_MANAGEMENT, 0, "Bucket already exists") \
+X(LCB_ERR_COLLECTION_ALREADY_EXISTS,    801, LCB_ERROR_TYPE_MANAGEMENT, 0, "Collection already exists") \
+X(LCB_ERR_SCOPE_EXISTS,                 802, LCB_ERROR_TYPE_MANAGEMENT, 0, "Scope already exists") \
+X(LCB_ERR_USER_NOT_FOUND,               803, LCB_ERROR_TYPE_MANAGEMENT, 0, "User is not found") \
+X(LCB_ERR_GROUP_NOT_FOUND,              804, LCB_ERROR_TYPE_MANAGEMENT, 0, "Group is not found") \
+X(LCB_ERR_BUCKET_ALREADY_EXISTS,        805, LCB_ERROR_TYPE_MANAGEMENT, 0, "Bucket already exists") \
 \
 /* SDK-specific Error Definitions */ \
 X(LCB_ERR_SSL_INVALID_CIPHERSUITES,         1000, LCB_ERROR_TYPE_SDK, 0, "OpenSSL encountered an error in the provided ciphersuites (TLS >= 1.3)") \
