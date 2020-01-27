@@ -258,6 +258,24 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_pipeline_batch(lcb_CMDQUERY *cmd, int v
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_profile(lcb_CMDQUERY *cmd, lcb_QUERY_PROFILE mode)
+{
+    switch (mode) {
+        case LCB_QUERY_PROFILE_OFF:
+            cmd->root["profile"] = "off";
+            break;
+        case LCB_QUERY_PROFILE_PHASES:
+            cmd->root["profile"] = "phases";
+            break;
+        case LCB_QUERY_PROFILE_TIMINGS:
+            cmd->root["profile"] = "timings";
+            break;
+        default:
+            return LCB_ERR_INVALID_ARGUMENT;
+    }
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_consistency(lcb_CMDQUERY *cmd, lcb_QUERY_CONSISTENCY mode)
 {
     if (mode == LCB_QUERY_CONSISTENCY_NONE) {
