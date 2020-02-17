@@ -944,7 +944,7 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
         selected_bucket = sessinfo->selected_bucket();
     }
 
-    lcbio_CTXPROCS procs;
+    lcbio_CTXPROCS procs{};
     procs.cb_err = on_error;
     procs.cb_read = on_read;
     procs.cb_flush_done = on_flush_done;
