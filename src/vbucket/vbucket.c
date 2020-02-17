@@ -763,7 +763,7 @@ static void replace_hoststr(char **orig, const char *replacement)
         return;
     }
 
-    newbuf = malloc(strlen(*orig) + strlen(replacement));
+    newbuf = malloc(strlen(*orig) + strlen(replacement) + 1);
     *match = '\0';
 
     /* copy until the placeholder */
