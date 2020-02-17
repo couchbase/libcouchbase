@@ -1343,9 +1343,9 @@ unsigned lcbvb_get_port(lcbvb_CONFIG *cfg, unsigned ix, lcbvb_SVCTYPE type, lcbv
             return svc->n1ql;
         case LCBVB_SVCTYPE_SEARCH:
             return svc->fts;
-        case LCBVB_SVCTYPE_CBAS:
+        case LCBVB_SVCTYPE_ANALYTICS:
             return svc->cbas;
-        case LCBVB_SVCTYPE__MAX:
+        default:
             break;
     }
     return 0;
