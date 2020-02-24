@@ -354,6 +354,7 @@ N1QLREQ::has_retriable_error(const Json::Value& root)
             code = jcode.asUInt();
             switch (code) {
                 /* n1ql */
+            case 4040:  // plan.build_prepared.no_such_name
             case 4050:  // plan.build_prepared.unrecognized_prepared
             case 4070:  // plan.build_prepared.decoding
             case 12009: // datastore.couchbase.DML_error
