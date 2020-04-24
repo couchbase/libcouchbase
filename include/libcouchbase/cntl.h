@@ -1121,7 +1121,7 @@ typedef enum {
 /**
  * Minimum time for the tracing span of N1QL service to be considered by threshold tracer.
  *
- * Use `tracing_threshold_n1ql` in the connection string
+ * Use `tracing_threshold_query` in the connection string
  *
  * @cntl_arg_both{lcb_U32*}
  * @committed
@@ -1141,7 +1141,7 @@ typedef enum {
 /**
  * Minimum time for the tracing span of FTS service to be considered by threshold tracer.
  *
- * Use `tracing_threshold_fts` in the connection string
+ * Use `tracing_threshold_search` in the connection string
  *
  * @cntl_arg_both{lcb_U32*}
  * @committed

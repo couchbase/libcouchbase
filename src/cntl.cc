@@ -975,7 +975,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"tracing_threshold_queue_flush_interval", LCB_CNTL_TRACING_THRESHOLD_QUEUE_FLUSH_INTERVAL, convert_timevalue},
     {"tracing_threshold_queue_size", LCB_CNTL_TRACING_THRESHOLD_QUEUE_SIZE, convert_u32},
     {"tracing_threshold_kv", LCB_CNTL_TRACING_THRESHOLD_KV, convert_timevalue},
-    {"tracing_threshold_search", LCB_CNTL_TRACING_THRESHOLD_QUERY, convert_timevalue},
+    {"tracing_threshold_query", LCB_CNTL_TRACING_THRESHOLD_QUERY, convert_timevalue},
     {"tracing_threshold_view", LCB_CNTL_TRACING_THRESHOLD_VIEW, convert_timevalue},
     {"tracing_threshold_search", LCB_CNTL_TRACING_THRESHOLD_SEARCH, convert_timevalue},
     {"tracing_threshold_analytics", LCB_CNTL_TRACING_THRESHOLD_ANALYTICS, convert_timevalue},
