@@ -477,9 +477,9 @@ static void H_exists(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedRespons
             resp.seqno = lcb_ntohll(resp.seqno);
         }
     }
-    invoke_callback(request, root, &resp, LCB_CALLBACK_EXISTS);
     LCBTRACE_KV_FINISH(pipeline, request, resp, response);
     TRACE_EXISTS_END(root, request, response, &resp);
+    invoke_callback(request, root, &resp, LCB_CALLBACK_EXISTS);
 }
 
 static void
