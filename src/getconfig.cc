@@ -87,7 +87,7 @@ lcb_STATUS lcb_st::select_bucket(const void *cookie_, lcb::Server *server)
     lcb_STATUS err;
     mc_PACKET *packet;
     mc_REQDATAEX *rd;
-
+    lcb_assert(settings->bucket);
     packet = mcreq_allocate_packet(server);
     if (!packet) {
         return LCB_ERR_NO_MEMORY;

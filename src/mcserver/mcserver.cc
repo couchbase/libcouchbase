@@ -742,7 +742,9 @@ void Server::purge_single(mc_PACKET *pkt, lcb_STATUS err)
         char opid[30] = {};
         snprintf(opid, sizeof(opid), "kv:%s", opcode_name(hdr.request.opcode));
         info["s"] = opid;
-        info["b"] = settings->bucket;
+        if (settings->bucket) {
+            info["b"] = settings->bucket;
+        }
         info["t"] = (Json::UInt64)LCB_NS2US(MCREQ_PKT_RDATA(pkt)->deadline - MCREQ_PKT_RDATA(pkt)->start);
 
         const lcb_host_t &remote = get_host();
