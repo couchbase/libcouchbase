@@ -1410,7 +1410,7 @@ typedef enum {
     LCB_HTTP_TYPE_SEARCH = 4,
 
     /** Execute an Analytics Query */
-    LCB_HTTP_TYPE_CBAS = 5,
+    LCB_HTTP_TYPE_ANALYTICS = 5,
 
     /**
      * Special pseudo-type, for ping endpoints in various services.

@@ -789,7 +789,7 @@ lcb_STATUS ANALYTICSREQ::issue_htreq(const std::string &body)
     lcb_CMDHTTP *htcmd;
     std::string content_type("application/json");
 
-    lcb_cmdhttp_create(&htcmd, LCB_HTTP_TYPE_CBAS);
+    lcb_cmdhttp_create(&htcmd, LCB_HTTP_TYPE_ANALYTICS);
     lcb_cmdhttp_body(htcmd, body.c_str(), body.size());
     lcb_cmdhttp_content_type(htcmd, content_type.c_str(), content_type.size());
 
