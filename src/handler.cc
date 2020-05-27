@@ -307,7 +307,7 @@ void init_resp(lcb_INSTANCE *instance, mc_PIPELINE *pipeline, const MemcachedRes
         ptr += strlen(remote->port);
         *ptr = '\0';
         ptr++;
-        resp->ctx.endpoint_len = ptr - resp->ctx.endpoint;
+        resp->ctx.endpoint_len = ptr - resp->ctx.endpoint - 1;
     }
 }
 
