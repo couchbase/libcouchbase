@@ -248,24 +248,9 @@ static lcb_STATUS reschedule_destroy(packet_wrapper *wrapper)
 
 bool Server::handle_unknown_collection(MemcachedResponse &, mc_PACKET *oldpkt)
 {
-    uint32_t cid = mcreq_get_cid(instance, oldpkt);
-    std::string name = instance->collcache->id_to_name(cid);
-
-    packet_wrapper wrapper;
     protocol_binary_request_header req;
     memcpy(&req, SPAN_BUFFER(&oldpkt->kh_span), sizeof(req));
-    mcreq_get_key(instance, oldpkt, (const char **)&wrapper.key.contig.bytes, &wrapper.key.contig.nbytes);
-    if (req.request.opcode == PROTOCOL_BINARY_CMD_COLLECTIONS_GET_CID) {
-        name = std::string(static_cast<const char *>(wrapper.key.contig.bytes), wrapper.key.contig.nbytes);
-        wrapper.assign_name(name);
-    }
 
-    lcb_log(LOGARGS_T(WARN), LOGFMT "UNKNOWN_COLLECTION. Packet=%p (S=%u), CID=%u, CNAME=%s", LOGID_T(), (void *)oldpkt,
-            oldpkt->opaque, (unsigned)cid, name.c_str());
-    if (name.empty()) {
-        return false;
-    }
-    instance->collcache->erase(cid);
     lcb_RETRY_ACTION retry = lcb_kv_should_retry(settings, oldpkt, LCB_ERR_COLLECTION_NOT_FOUND);
     if (!retry.should_retry) {
         return false;
@@ -275,6 +260,26 @@ bool Server::handle_unknown_collection(MemcachedResponse &, mc_PACKET *oldpkt)
     if (now > MCREQ_PKT_RDATA(oldpkt)->deadline) {
         return false;
     }
+
+    if (req.request.opcode == PROTOCOL_BINARY_CMD_COLLECTIONS_GET_CID) {
+        mc_PACKET *newpkt = mcreq_renew_packet(oldpkt);
+        newpkt->flags &= ~MCREQ_STATE_FLAGS;
+        instance->retryq->ucadd((mc_EXPACKET *)newpkt);
+        return true;
+    }
+
+    uint32_t cid = mcreq_get_cid(instance, oldpkt);
+    std::string name = instance->collcache->id_to_name(cid);
+
+    packet_wrapper wrapper;
+    mcreq_get_key(instance, oldpkt, (const char **)&wrapper.key.contig.bytes, &wrapper.key.contig.nbytes);
+
+    lcb_log(LOGARGS_T(WARN), LOGFMT "UNKNOWN_COLLECTION. Packet=%p (S=%u), CID=%u, CNAME=%s", LOGID_T(), (void *)oldpkt,
+            oldpkt->opaque, (unsigned)cid, name.c_str());
+    if (name.empty()) {
+        return false;
+    }
+    instance->collcache->erase(cid);
     wrapper.pkt = mcreq_renew_packet(oldpkt);
     wrapper.instance = instance;
     wrapper.timeout = LCB_NS2US(MCREQ_PKT_RDATA(wrapper.pkt)->deadline - now);

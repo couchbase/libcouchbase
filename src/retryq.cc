@@ -37,6 +37,7 @@ struct lcb::RetryOp : mc_EPKTDATUM, SchedNode, TmoNode {
      * change if read_ts_wait is enabled, and we don't want to end up looping
      * on a command forever. */
     hrtime_t start;
+    hrtime_t deadline;
     hrtime_t trytime; /**< Next retry time */
     mc_PACKET *pkt;
     lcb_STATUS origerr;
@@ -110,7 +111,7 @@ void RetryQueue::update_trytime(RetryOp *op, hrtime_t now)
 /** Comparison routine for sorting by timeout */
 static int cmpfn_tmo(lcb_list_t *ll_a, lcb_list_t *ll_b)
 {
-    return list_cmp(from_tmonode(ll_a)->start, from_tmonode(ll_b)->start);
+    return list_cmp(from_tmonode(ll_a)->deadline, from_tmonode(ll_b)->deadline);
 }
 
 static int cmpfn_retry(lcb_list_t *ll_a, lcb_list_t *ll_b)
@@ -185,7 +186,7 @@ void RetryQueue::schedule(hrtime_t now)
     RetryOp *first_sched = from_schednode(LCB_LIST_HEAD(&schedops));
 
     hrtime_t schednext = first_sched->trytime;
-    hrtime_t tmonext = first_tmo->start + LCB_US2NS(settings->operation_timeout);
+    hrtime_t tmonext = first_tmo->deadline;
     hrtime_t selected = schednext > tmonext ? tmonext : schednext;
 
     hrtime_t diff;
@@ -217,7 +218,7 @@ void RetryQueue::flush(bool throttle)
     LCB_LIST_SAFE_FOR(ll, ll_next, &tmoops)
     {
         RetryOp *op = from_tmonode(ll);
-        hrtime_t curtmo = op->start + LCB_US2NS(settings->operation_timeout);
+        hrtime_t curtmo = op->deadline;
 
         if (curtmo <= now) {
             fail(op, LCB_ERR_TIMEOUT);
@@ -302,7 +303,7 @@ static void op_dtorfn(mc_EPKTDATUM *d)
 }
 
 RetryOp::RetryOp(errmap::RetrySpec *spec_)
-    : mc_EPKTDATUM(), start(0), trytime(0), pkt(NULL), origerr(LCB_SUCCESS), spec(spec_)
+    : mc_EPKTDATUM(), start(0), deadline(0), trytime(0), pkt(NULL), origerr(LCB_SUCCESS), spec(spec_)
 {
     mc_EPKTDATUM::dtorfn = op_dtorfn;
     mc_EPKTDATUM::key = RETRY_PKT_KEY;
@@ -321,16 +322,19 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, errmap::RetrySpec *
     } else {
         op = new RetryOp(NULL);
         op->start = MCREQ_PKT_RDATA(&pkt->base)->start;
+        op->deadline = MCREQ_PKT_RDATA(&pkt->base)->deadline;
         if (spec) {
             op->spec = spec;
             spec->ref();
+            hrtime_t operation_timeout = LCB_NS2US(op->deadline - op->start);
 
-            if (spec->max_duration && spec->max_duration < settings->operation_timeout) {
+            if (spec->max_duration && spec->max_duration < operation_timeout) {
                 // Offset the start by the difference between the duration and
                 // the timeout. We really use this number only for calculating
                 // the timeout, so it shouldn't hurt to fake it.
-                uint32_t diff = settings->operation_timeout - op->spec->max_duration;
+                uint32_t diff = operation_timeout - op->spec->max_duration;
                 op->start -= LCB_US2NS(diff);
+                op->deadline -= LCB_US2NS(diff);
             }
         }
         mcreq_epkt_insert(pkt, op);
@@ -422,7 +426,7 @@ void RetryQueue::nmvadd(mc_EXPACKET *detchpkt)
 
 void RetryQueue::ucadd(mc_EXPACKET *pkt)
 {
-    add(pkt, LCB_ERR_COLLECTION_NOT_FOUND, NULL, RETRY_SCHED_IMM);
+    add(pkt, LCB_ERR_COLLECTION_NOT_FOUND, NULL, 0);
 }
 
 static void fallback_handler(mc_CMDQUEUE *cq, mc_PACKET *pkt)
@@ -443,6 +447,7 @@ void RetryQueue::reset_timeouts(lcb_U64 now)
     LCB_LIST_FOR(ll, &schedops)
     {
         RetryOp *op = from_schednode(ll);
+        op->deadline = now + (op->deadline - op->start);
         op->start = now;
     }
 }
