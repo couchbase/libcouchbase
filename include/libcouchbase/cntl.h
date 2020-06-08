@@ -1288,10 +1288,19 @@ typedef enum {
 #define LCB_CNTL_ALLOW_STATIC_CONFIG 0x60
 
 /**
+ * @brief Analytics Timeout
+ * This is the global I/O timeout for Analytics queries, issued via lcb_analytics()
+ *
+ * @cntl_arg_both{lcb_U32*}
+ * @committed
+ */
+#define LCB_CNTL_ANALYTICS_TIMEOUT 0x61
+
+/**
  * This is not a command, but rather an indicator of the last item.
  * @internal
  */
-#define LCB_CNTL__MAX 0x61
+#define LCB_CNTL__MAX 0x62
 /**@}*/
 
 #ifdef __cplusplus

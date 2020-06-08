@@ -81,6 +81,8 @@ static lcb_uint32_t *get_timeout_field(lcb_INSTANCE *instance, int cmd)
     case LCB_CNTL_VIEW_TIMEOUT: return &settings->views_timeout;
     case LCB_CNTL_QUERY_TIMEOUT:
         return &settings->n1ql_timeout;
+    case LCB_CNTL_ANALYTICS_TIMEOUT:
+        return &settings->analytics_timeout;
     case LCB_CNTL_DURABILITY_INTERVAL: return &settings->durability_interval;
     case LCB_CNTL_DURABILITY_TIMEOUT: return &settings->durability_timeout;
     case LCB_CNTL_HTTP_TIMEOUT: return &settings->http_timeout;
@@ -783,6 +785,7 @@ static ctl_handler handlers[] = {
     durable_write_handler,                /* LCB_CNTL_ENABLE_DURABLE_WRITE */
     timeout_common,                       /* LCB_CNTL_PERSISTENCE_TIMEOUT_FLOOR */
     allow_static_config_handler,          /* LCB_CNTL_ALLOW_STATIC_CONFIG */
+    timeout_common,                       /* LCB_CNTL_ANALYTICS_TIMEOUT */
     NULL
 };
 /* clang-format on */
@@ -989,6 +992,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"enable_durable_write", LCB_CNTL_ENABLE_DURABLE_WRITE, convert_intbool},
     {"persistence_timeout_floor", LCB_CNTL_PERSISTENCE_TIMEOUT_FLOOR, convert_timevalue},
     {"allow_static_config", LCB_CNTL_ALLOW_STATIC_CONFIG, convert_intbool},
+    {"analytics_timeout", LCB_CNTL_ANALYTICS_TIMEOUT, convert_timevalue},
     {NULL, -1}};
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))
