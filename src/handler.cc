@@ -112,8 +112,7 @@ lcb_errmap_default(lcb_INSTANCE *instance, lcb_uint16_t in)
     }
 }
 
-static lcb_STATUS
-map_error(lcb_INSTANCE *instance, int in)
+lcb_STATUS lcb_map_error(lcb_INSTANCE *instance, int in)
 {
     switch (in) {
     case PROTOCOL_BINARY_RESPONSE_SUCCESS:
@@ -258,7 +257,7 @@ void make_error(lcb_INSTANCE *instance, T* resp,
     } else if (response->status() == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         resp->ctx.rc = LCB_SUCCESS;
     } else {
-        resp->ctx.rc = map_error(instance, response->status());
+        resp->ctx.rc = lcb_map_error(instance, response->status());
     }
 }
 
@@ -610,7 +609,7 @@ sdlookup_next(const MemcachedResponse *response, lcb_SDENTRY *ent, size_t *iter)
     rc = ntohs(rc);
     vlen = ntohl(vlen);
 
-    ent->status = map_error(NULL, rc);
+    ent->status = lcb_map_error(NULL, rc);
     ent->nvalue = vlen;
 
     if (ent->status == LCB_SUCCESS) {
@@ -652,7 +651,7 @@ sdmutate_next(const MemcachedResponse *response, lcb_SDENTRY *ent, size_t *iter)
     ADVANCE_BUF(2);
 
     rc = ntohs(rc);
-    ent->status = map_error(NULL, rc);
+    ent->status = lcb_map_error(NULL, rc);
 
     if (rc == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         memcpy(&vlen, buf, 4);
@@ -701,7 +700,7 @@ lcb_sdresult_next(const lcb_RESPSUBDOC *resp, lcb_SDENTRY *ent, size_t *iter)
         }
         *iter = 1;
 
-        ent->status = map_error(NULL, response->status());
+        ent->status = lcb_map_error(NULL, response->status());
         ent->value = response->value();
         ent->nvalue = response->vallen();
         ent->index = 0;

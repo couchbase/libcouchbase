@@ -437,6 +437,8 @@ int Server::handle_unknown_error(const mc_PACKET *request, const MemcachedRespon
     return rv;
 }
 
+lcb_STATUS lcb_map_error(lcb_INSTANCE *instance, int in);
+
 /* This function is called within a loop to process a single packet.
  *
  * If a full packet is available, it will process the packet and return
@@ -509,7 +511,10 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     /* Check if the status code is one which must be handled carefully by the
      * client */
     if (is_fastpath_error(mcresp.status())) {
-        // Nothing here!
+        lcb_STATUS err = lcb_map_error(instance, mcresp.status());
+        if (err != LCB_SUCCESS && maybe_retry_packet(request, err)) {
+            goto GT_DONE;
+        }
     } else if (mcresp.status() == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
         /* consume the header */
         DO_ASSIGN_PAYLOAD()
