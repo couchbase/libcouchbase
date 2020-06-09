@@ -86,10 +86,10 @@ lcb_RETRY_ACTION lcb_kv_should_retry(const lcb_settings *settings, const mc_PACK
         /* spurious auth error */
         /* special, topology change */
         retry_action.should_retry = 1;
-    } else if (err == LCB_ERR_TIMEOUT || err == LCB_ERR_MAP_CHANGED) {
-        /* We can't exceed a timeout for ETIMEDOUT */
-        /* MAP_CHANGED is sent after we've already called this function on the
-         * packet once before */
+    } else if (err == LCB_ERR_TIMEOUT || err == LCB_ERR_MAP_CHANGED || retry_reason == LCB_RETRY_REASON_UNKNOWN) {
+        /* We can't exceed a timeout for ETIMEDOUT
+         * MAP_CHANGED is sent after we've already called this function on the packet once before
+         * Don't retry operations with status code that maps to unknown reason, as it is not specified in RFC */
         retry_action.should_retry = 0;
     } else if (lcb_retry_reason_is_always_retry(retry_reason)) {
         retry_action.should_retry = 1;
