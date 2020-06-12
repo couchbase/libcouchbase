@@ -1207,8 +1207,8 @@ static void compute_vb_list_diff(lcbvb_CONFIG *from, lcbvb_CONFIG *to, char **ou
         if (!found) {
             char *infostr = malloc(strlen(newsrv->authority) + 128);
             lcb_assert(infostr);
-            sprintf(infostr, "%s(Data=%d, Index=%d, Query=%d)", newsrv->authority, newsrv->svc.data, newsrv->svc.n1ql,
-                    newsrv->svc.ixquery);
+            sprintf(infostr, "%s(Data=%d, Index=%d, Query=%d)", newsrv->authority, newsrv->svc.data,
+                    newsrv->svc.ixquery, newsrv->svc.n1ql);
             out[offset] = infostr;
             ++offset;
         }
