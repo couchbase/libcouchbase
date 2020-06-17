@@ -1,5 +1,15 @@
 # Release Notes
 
+## 2.10.7 (June 17 2020)
+
+* CCBC-1234: Fixed SRV resolution to work with large record sizes. In some cases, the answer records exceed the default answer buffer size causing SRV lookups to fail on otherwise correctly configured clusters.  This specifically occured with Couchbase Cloud.
+
+* CCBC-1233: Updated RTO to independently specify `operation_name` (in accorance to RFC).
+
+* CCBC-1258: Fix port order in vbucket diff info log message.
+
+* MB-37768: Don't override `CMAKE_INSTALL_RPATH`
+
 ## 2.10.6 (February 26 2020)
 
 * CCBC-1129: fix algorithm to match retry marker strings
