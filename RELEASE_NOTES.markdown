@@ -10,6 +10,8 @@
 
 * MB-37768: Don't override `CMAKE_INSTALL_RPATH`
 
+* CCBC-1232: Fix build on CentOS 6
+
 ## 2.10.6 (February 26 2020)
 
 * CCBC-1129: fix algorithm to match retry marker strings

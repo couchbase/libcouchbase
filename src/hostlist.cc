@@ -20,8 +20,12 @@
 #include <ctype.h>
 #include <limits.h>
 #include <algorithm>
-#include <random>
 #include <string>
+
+#if !defined(COMPILER_SUPPORTS_CXX11) || (defined(_MSC_VER) && _MSC_VER < 1600) || defined(__APPLE__)
+#else
+#include <random>
+#endif
 
 using namespace lcb;
 
@@ -257,9 +261,13 @@ Hostlist::next(bool wrap)
 void
 Hostlist::randomize()
 {
+#if !defined(COMPILER_SUPPORTS_CXX11) || (defined(_MSC_VER) && _MSC_VER < 1600) || defined(__APPLE__)
+    std::random_shuffle(hosts.begin(), hosts.end());
+#else
     std::random_device rd;
     std::mt19937 g(rd());
     std::shuffle(hosts.begin(), hosts.end(), g);
+#endif
     reset_strlist();
 }
 
