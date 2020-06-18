@@ -222,7 +222,7 @@ lcb_STATUS lcb_counter(lcb_INSTANCE *instance, void *cookie, const lcb_CMDCOUNTE
         hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
         hdr->request.cas = cmd->cas;
         hdr->request.opaque = packet->opaque;
-        hdr->request.bodylen = htonl(ffextlen + hdr->request.extlen + ntohs(hdr->request.keylen));
+        hdr->request.bodylen = htonl(ffextlen + hdr->request.extlen + mcreq_get_key_size(hdr));
 
         uint32_t *exp;
         uint64_t *delta;

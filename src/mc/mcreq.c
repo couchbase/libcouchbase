@@ -480,6 +480,15 @@ void mcreq_map_key(mc_CMDQUEUE *queue, const lcb_KEYBUF *key, unsigned nhdr, int
     lcbvb_map_key(queue->config, hk, nhk, vbid, srvix);
 }
 
+uint16_t mcreq_get_key_size(protocol_binary_request_header *hdr)
+{
+    if (hdr->request.magic == PROTOCOL_BINARY_AREQ) {
+        return (hdr->request.keylen >> 8) & 0xff;
+    } else {
+        return ntohs(hdr->request.keylen);
+    }
+}
+
 lcb_STATUS mcreq_basic_packet(mc_CMDQUEUE *queue, const lcb_CMDBASE *cmd, protocol_binary_request_header *req,
                               lcb_uint8_t extlen, lcb_uint8_t ffextlen, mc_PACKET **packet, mc_PIPELINE **pipeline,
                               int options)
