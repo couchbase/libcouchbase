@@ -732,6 +732,9 @@ lcb_STATUS MultiBuilder::add_spec(const lcb_SDSPEC *spec)
 
 static lcb_STATUS subdoc_validate(lcb_INSTANCE *, const lcb_CMDSUBDOC *cmd)
 {
+    if (!lcb_is_collection_valid(cmd->scope, cmd->nscope, cmd->collection, cmd->ncollection)) {
+        return LCB_ERR_INVALID_ARGUMENT;
+    }
     // First validate the command
     if (cmd->nspecs == 0) {
         return LCB_ERR_NO_COMMANDS;
