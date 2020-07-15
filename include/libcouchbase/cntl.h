@@ -1297,10 +1297,17 @@ typedef enum {
 #define LCB_CNTL_ANALYTICS_TIMEOUT 0x61
 
 /**
+ * Tell the server that the library supports reordering the execution of the commands
+ * @cntl_arg_both{int (as boolean)}
+ * @volatile
+ */
+#define LCB_CNTL_ENABLE_UNORDERED_EXECUTION 0x62
+
+/**
  * This is not a command, but rather an indicator of the last item.
  * @internal
  */
-#define LCB_CNTL__MAX 0x62
+#define LCB_CNTL__MAX 0x63
 /**@}*/
 
 #ifdef __cplusplus

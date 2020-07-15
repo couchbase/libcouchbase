@@ -686,6 +686,10 @@ HANDLER(durable_write_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, enable_durable_write));
 }
 
+HANDLER(unordered_execution_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, enable_unordered_execution));
+}
+
 /* clang-format off */
 static ctl_handler handlers[] = {
     timeout_common,                       /* LCB_CNTL_OP_TIMEOUT */
@@ -786,6 +790,7 @@ static ctl_handler handlers[] = {
     timeout_common,                       /* LCB_CNTL_PERSISTENCE_TIMEOUT_FLOOR */
     allow_static_config_handler,          /* LCB_CNTL_ALLOW_STATIC_CONFIG */
     timeout_common,                       /* LCB_CNTL_ANALYTICS_TIMEOUT */
+    unordered_execution_handler,          /* LCB_CNTL_ENABLE_UNORDERED_EXECUTION */
     NULL
 };
 /* clang-format on */
@@ -993,6 +998,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"persistence_timeout_floor", LCB_CNTL_PERSISTENCE_TIMEOUT_FLOOR, convert_timevalue},
     {"allow_static_config", LCB_CNTL_ALLOW_STATIC_CONFIG, convert_intbool},
     {"analytics_timeout", LCB_CNTL_ANALYTICS_TIMEOUT, convert_timevalue},
+    {"enable_unordered_execution", LCB_CNTL_ENABLE_UNORDERED_EXECUTION, convert_intbool},
     {NULL, -1}};
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))

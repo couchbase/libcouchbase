@@ -414,6 +414,9 @@ bool SessionRequestImpl::send_hello()
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_ALT_REQUEST_SUPPORT;
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_SYNC_REPLICATION;
     }
+    if (settings->enable_unordered_execution) {
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_UNORDERED_EXECUTION;
+    }
 
     std::string agent = generate_agent_json();
     lcb::MemcachedRequest hdr(PROTOCOL_BINARY_CMD_HELLO);
