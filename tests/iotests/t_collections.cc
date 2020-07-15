@@ -362,7 +362,7 @@ static void testSetHitCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESP
     size_t nkey;
     lcb_respstore_key(resp, &key, &nkey);
     std::string val(key, nkey);
-    ASSERT_TRUE(val == "testStoreKey1" || val == "testStoreKey2");
+    ASSERT_TRUE(val == "testStoreKey1" || val == "testStoreKey2") << "val = \"" << val << "\"";
     ++(*counter);
     uint64_t cas;
     lcb_respstore_cas(resp, &cas);
