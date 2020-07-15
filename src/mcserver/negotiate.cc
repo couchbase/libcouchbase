@@ -499,7 +499,7 @@ bool SessionRequestImpl::update_errmap(const lcb::MemcachedResponse &resp)
 // Returns true if sending the SELECT_BUCKET command, false otherwise.
 bool SessionRequestImpl::maybe_select_bucket()
 {
-    if (settings->conntype != LCB_TYPE_BUCKET) {
+    if (settings->conntype != LCB_TYPE_BUCKET || settings->bucket == NULL) {
         return false;
     }
     // Only send a SELECT_BUCKET if we have the SELECT_BUCKET bit enabled.
@@ -513,13 +513,11 @@ bool SessionRequestImpl::maybe_select_bucket()
     }
 
     // send the SELECT_BUCKET command:
-    lcb_log(LOGARGS(this, DEBUG), LOGFMT "Sending SELECT_BUCKET", LOGID(this));
+    lcb_log(LOGARGS(this, DEBUG), LOGFMT "Sending SELECT_BUCKET \"%s\"", LOGID(this), settings->bucket);
     lcb::MemcachedRequest req(PROTOCOL_BINARY_CMD_SELECT_BUCKET);
-    req.sizes(0, settings->bucket ? strlen(settings->bucket) : 0, 0);
+    req.sizes(0, strlen(settings->bucket), 0);
     lcbio_ctx_put(ctx, req.data(), req.size());
-    if (settings->bucket) {
-        lcbio_ctx_put(ctx, settings->bucket, strlen(settings->bucket));
-    }
+    lcbio_ctx_put(ctx, settings->bucket, strlen(settings->bucket));
     LCBIO_CTX_RSCHEDULE(ctx, 24);
     return true;
 }
