@@ -392,9 +392,7 @@ bool SessionRequestImpl::send_hello()
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XATTR;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_JSON;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_SELECT_BUCKET;
-    if (settings->use_errmap) {
-        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XERROR;
-    }
+    features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XERROR;
     if (settings->tcp_nodelay) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TCPNODELAY;
     }
@@ -603,9 +601,7 @@ GT_NEXT_PACKET:
                 break;
             }
 
-            if (info->has_feature(PROTOCOL_BINARY_FEATURE_XERROR)) {
-                request_errmap();
-            } else {
+            if (!info->has_feature(PROTOCOL_BINARY_FEATURE_XERROR)) {
                 lcb_log(LOGARGS(this, TRACE), LOGFMT "GET_ERRORMAP unsupported/disabled", LOGID(this));
             }
 
@@ -708,6 +704,7 @@ void SessionRequestImpl::start(lcbio_SOCKET *sock)
     }
 
     send_hello();
+    request_errmap();
     if (!settings->keypath) {
         send_list_mechs();
     }

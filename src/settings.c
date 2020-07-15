@@ -62,7 +62,6 @@ void lcb_default_settings(lcb_settings *settings)
     settings->select_bucket = LCB_DEFAULT_SELECT_BUCKET;
     settings->tcp_keepalive = LCB_DEFAULT_TCP_KEEPALIVE;
     settings->config_poll_interval = LCB_DEFAULT_CONFIG_POLL_INTERVAL;
-    settings->use_errmap = 1;
     settings->use_collections = 1;
     settings->log_redaction = 0;
     settings->use_tracing = 1;

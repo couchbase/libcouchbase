@@ -222,9 +222,6 @@ HANDLER(kv_hg_handler) {
 HANDLER(read_chunk_size_handler) {
     RETURN_GET_SET(lcb_U32, LCBT_SETTING(instance, read_chunk_size));
 }
-HANDLER(enable_errmap_handler) {
-    RETURN_GET_SET(int, LCBT_SETTING(instance, use_errmap));
-}
 HANDLER(select_bucket_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, select_bucket));
 }
@@ -756,7 +753,7 @@ static ctl_handler handlers[] = {
     bucket_auth_handler,                  /* LCB_CNTL_BUCKET_CRED */
     timeout_common,                       /* LCB_CNTL_RETRY_NMV_DELAY */
     read_chunk_size_handler,              /* LCB_CNTL_READ_CHUNKSIZE */
-    enable_errmap_handler,                /* LCB_CNTL_ENABLE_ERRMAP */
+    NULL,                                 /* deprecated LCB_CNTL_ENABLE_ERRMAP (0x43) */
     select_bucket_handler,                /* LCB_CNTL_SELECT_BUCKET */
     tcp_keepalive_handler,                /* LCB_CNTL_TCP_KEEPALIVE */
     config_poll_interval_handler,         /* LCB_CNTL_CONFIG_POLL_INTERVAL */
@@ -966,7 +963,6 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"retry_nmv_delay", LCB_CNTL_RETRY_NMV_INTERVAL, convert_timevalue},
     {"bucket_cred", LCB_CNTL_BUCKET_CRED, NULL},
     {"read_chunk_size", LCB_CNTL_READ_CHUNKSIZE, convert_u32},
-    {"enable_errmap", LCB_CNTL_ENABLE_ERRMAP, convert_intbool},
     {"select_bucket", LCB_CNTL_SELECT_BUCKET, convert_intbool},
     {"tcp_keepalive", LCB_CNTL_TCP_KEEPALIVE, convert_intbool},
     {"config_poll_interval", LCB_CNTL_CONFIG_POLL_INTERVAL, convert_timevalue},

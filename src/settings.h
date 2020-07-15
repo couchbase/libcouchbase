@@ -178,7 +178,6 @@ typedef struct lcb_settings_st {
     unsigned ipv6 : 2;
     unsigned tcp_nodelay : 1;
     unsigned readj_ts_wait : 1;
-    unsigned use_errmap : 1;
     unsigned select_bucket : 1;
     unsigned tcp_keepalive : 1;
     unsigned use_collections : 1;

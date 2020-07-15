@@ -365,7 +365,7 @@ static bool is_fastpath_error(uint16_t rc)
 int Server::handle_unknown_error(const mc_PACKET *request, const MemcachedResponse &mcresp, lcb_STATUS &newerr)
 {
 
-    if (!settings->errmap->isLoaded() || !settings->use_errmap) {
+    if (!settings->errmap->isLoaded()) {
         // If there's no error map, just return false
         return ERRMAP_HANDLE_CONTINUE;
     }
