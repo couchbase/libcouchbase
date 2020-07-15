@@ -61,7 +61,6 @@ void lcb_default_settings(lcb_settings *settings)
     settings->vb_noremap = LCB_DEFAULT_VB_NOREMAP;
     settings->select_bucket = LCB_DEFAULT_SELECT_BUCKET;
     settings->tcp_keepalive = LCB_DEFAULT_TCP_KEEPALIVE;
-    settings->send_hello = 1;
     settings->config_poll_interval = LCB_DEFAULT_CONFIG_POLL_INTERVAL;
     settings->use_errmap = 1;
     settings->use_collections = 1;

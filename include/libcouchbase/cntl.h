@@ -990,22 +990,6 @@ typedef const char *lcb_BUCKETCRED[2];
 #define LCB_CNTL_CONFIG_POLL_INTERVAL 0x46
 
 /**
- * From version 2.7.4, the C library sends a HELLO command before
- * authentication. This works on all modern server versions, but may cause
- * disconnects on more ancient variants (Couchbase 2.x for example).
- *
- * This setting will disable the sending of the HELLO command (which older
- * servers don't understand anyway). To disable the sending of hello, set this
- * value to false.
- *
- * @cntl_arg_both{int* (as boolean)}
- * @committed
- *
- * You can also use `send_hello=false` in the connection string.
- */
-#define LCB_CNTL_SEND_HELLO 0x47
-
-/**
  * Once redaction is enabled, anything at ERROR, WARN and INFO will wrap
  * sensitive information with special tags, for further processing with the goal
  * to remove or encrypt that information.  DEBUG or TRACE level logging are

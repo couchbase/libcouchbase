@@ -611,9 +611,6 @@ GT_NEXT_PACKET:
 
             if (settings->keypath) {
                 completed = !maybe_select_bucket();
-            } else {
-                // In any event, it's also time to send the LIST_MECHS request
-                send_list_mechs();
             }
             break;
         }
@@ -710,10 +707,8 @@ void SessionRequestImpl::start(lcbio_SOCKET *sock)
         return;
     }
 
-    if (settings->send_hello) {
-        send_hello();
-    } else {
-        lcb_log(LOGARGS(this, WARN), LOGFMT "HELLO negotiation disabled by user", LOGID(this));
+    send_hello();
+    if (!settings->keypath) {
         send_list_mechs();
     }
     LCBIO_CTX_RSCHEDULE(ctx, 24);

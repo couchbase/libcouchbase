@@ -181,7 +181,6 @@ typedef struct lcb_settings_st {
     unsigned use_errmap : 1;
     unsigned select_bucket : 1;
     unsigned tcp_keepalive : 1;
-    unsigned send_hello : 1;
     unsigned use_collections : 1;
     unsigned log_redaction : 1;
     unsigned use_tracing : 1;

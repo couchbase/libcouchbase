@@ -228,9 +228,6 @@ HANDLER(enable_errmap_handler) {
 HANDLER(select_bucket_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, select_bucket));
 }
-HANDLER(send_hello_handler) {
-    RETURN_GET_SET(int, LCBT_SETTING(instance, send_hello));
-}
 HANDLER(log_redaction_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, log_redaction));
 }
@@ -724,7 +721,7 @@ static ctl_handler handlers[] = {
     config_nodes,                         /* LCB_CNTL_CONFIG_HTTP_NODES */
     config_nodes,                         /* LCB_CNTL_CONFIG_CCCP_NODES */
     get_changeset,                        /* LCB_CNTL_CHANGESET */
-    NULL,                                 /* LCB_CNTL_CONFIG_ALL_NODES */
+    NULL,                                 /* deprecated LCB_CNTL_CONFIG_ALL_NODES (0x20) */
     config_cache_handler,                 /* LCB_CNTL_CONFIGCACHE */
     ssl_mode_handler,                     /* LCB_CNTL_SSL_MODE */
     ssl_certpath_handler,                 /* LCB_CNTL_SSL_CERT */
@@ -745,7 +742,7 @@ static ctl_handler handlers[] = {
     vbguess_handler,                      /* LCB_CNTL_VBGUESS_PERSIST */
     unsafe_optimize,                      /* LCB_CNTL_UNSAFE_OPTIMIZE */
     fetch_mutation_tokens_handler,        /* LCB_CNTL_ENABLE_MUTATION_TOKENS */
-    NULL,                                 /* LCB_CNTL_DURABILITY_MUTATION_TOKENS */
+    NULL,                                 /* deprecated LCB_CNTL_DURABILITY_MUTATION_TOKENS (0x35) */
     config_cache_handler,                 /* LCB_CNTL_CONFIGCACHE_READONLY */
     nmv_imm_retry_handler,                /* LCB_CNTL_RETRY_NMV_IMM */
     mutation_tokens_supported_handler,    /* LCB_CNTL_MUTATION_TOKENS_SUPPORTED */
@@ -763,7 +760,7 @@ static ctl_handler handlers[] = {
     select_bucket_handler,                /* LCB_CNTL_SELECT_BUCKET */
     tcp_keepalive_handler,                /* LCB_CNTL_TCP_KEEPALIVE */
     config_poll_interval_handler,         /* LCB_CNTL_CONFIG_POLL_INTERVAL */
-    send_hello_handler,                   /* LCB_CNTL_SEND_HELLO */
+    NULL,                                 /* deprecated LCB_CNTL_SEND_HELLO (0x47) */
     buckettype_handler,                   /* LCB_CNTL_BUCKETTYPE */
     metrics_handler,                      /* LCB_CNTL_METRICS */
     collections_handler,                  /* LCB_CNTL_ENABLE_COLLECTIONS */
@@ -973,7 +970,6 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"select_bucket", LCB_CNTL_SELECT_BUCKET, convert_intbool},
     {"tcp_keepalive", LCB_CNTL_TCP_KEEPALIVE, convert_intbool},
     {"config_poll_interval", LCB_CNTL_CONFIG_POLL_INTERVAL, convert_timevalue},
-    {"send_hello", LCB_CNTL_SEND_HELLO, convert_intbool},
     {"ipv6", LCB_CNTL_IP6POLICY, convert_ipv6},
     {"metrics", LCB_CNTL_METRICS, convert_intbool},
     {"log_redaction", LCB_CNTL_LOG_REDACTION, convert_intbool},
