@@ -229,6 +229,9 @@ typedef struct lcb_settings_st {
     lcb_U32 compress_min_size;
     float compress_min_ratio;
     char *network; /** network resolution, AKA "Multi Network Configurations" */
+    int tcp_keep_interval;
+    int tcp_keep_idle;
+    int tcp_keep_count;
 } lcb_settings;
 
 LCB_INTERNAL_API

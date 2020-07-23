@@ -100,6 +100,10 @@ lcbio_is_netclosed(lcbio_SOCKET *sock, int flags);
  */
 lcb_error_t
 lcbio_enable_sockopt(lcbio_SOCKET *sock, int cntl);
+lcb_error_t
+lcbio_get_sockopt(lcbio_SOCKET *s, int cntl, int *value);
+lcb_error_t
+lcbio_set_sockopt(lcbio_SOCKET *s, int cntl, int *value);
 
 const char *
 lcbio_strsockopt(int cntl);

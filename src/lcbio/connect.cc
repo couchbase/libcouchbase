@@ -109,6 +109,19 @@ static void try_enable_sockopt(lcbio_SOCKET *sock, int cntl) {
     }
 }
 
+static void try_change_sockopt(lcbio_SOCKET *sock, int cntl, int newval) {
+  int oldval = -1;
+  if (lcbio_get_sockopt(sock, cntl, &oldval) == LCB_SUCCESS) {
+    if (lcbio_set_sockopt(sock, cntl, &newval) == LCB_SUCCESS) {
+      lcb_log(LOGARGS(sock, DEBUG), CSLOGFMT "Successfully set %s: %d -> %d", CSLOGID(sock), lcbio_strsockopt(cntl), oldval, newval);
+    } else {
+      lcb_log(LOGARGS(sock, INFO), CSLOGFMT "Couldn't set %s", CSLOGID(sock), lcbio_strsockopt(cntl));
+    }
+  } else {
+    lcb_log(LOGARGS(sock, INFO), CSLOGFMT "Couldn't get %s", CSLOGID(sock), lcbio_strsockopt(cntl));
+  }
+}
+
 /**
  * Handler invoked to deliver final status for a connection. This will invoke
  * the user supplied callback with the relevant status (if it has not been
@@ -151,6 +164,15 @@ void Connstart::handler() {
             }
             if (sock->settings->tcp_keepalive) {
                 try_enable_sockopt(sock, LCB_IO_CNTL_TCP_KEEPALIVE);
+                if (sock->settings->tcp_keep_count > 0) {
+                    try_change_sockopt(sock, LCB_IO_CNTL_TCP_KEEPCNT, sock->settings->tcp_keep_count);
+                }
+                if (sock->settings->tcp_keep_idle > 0) {
+                    try_change_sockopt(sock, LCB_IO_CNTL_TCP_KEEPIDLE, sock->settings->tcp_keep_idle);
+                }
+                if (sock->settings->tcp_keep_interval > 0) {
+                    try_change_sockopt(sock, LCB_IO_CNTL_TCP_KEEPINTVL, sock->settings->tcp_keep_interval);
+                }
             }
         } else {
             lcb_log(LOGARGS_T(ERR), CSLOGFMT "Failed to establish connection: %s, os errno=%u", CSLOGID_T(), lcb_strerror_short(err), syserr);

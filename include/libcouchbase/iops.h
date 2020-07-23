@@ -383,6 +383,10 @@ typedef int (*lcb_ioE_chkclosed_fn)
 /** Enable/Disable TCP Keepalive */
 #define LCB_IO_CNTL_TCP_KEEPALIVE 2
 
+#define LCB_IO_CNTL_TCP_KEEPCNT 3
+#define LCB_IO_CNTL_TCP_KEEPIDLE 4
+#define LCB_IO_CNTL_TCP_KEEPINTVL 5
+
 /**
  * @brief Execute a specificied operation on a socket.
  * @param iops The iops

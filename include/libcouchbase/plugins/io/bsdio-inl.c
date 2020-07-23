@@ -281,14 +281,11 @@ cntl_getset_impl(lcb_io_opt_t io, lcb_socket_t sock, int mode, int oslevel,
     int osopt, int optsize, void *optval)
 {
     int rv;
-    #ifndef _WIN32
-    socklen_t dummy = optsize;
-    #else
-    char dummy = optsize;
-    #endif
 
     if (mode == LCB_IO_CNTL_GET) {
-        rv = getsockopt(sock, oslevel, osopt, &dummy, optval);
+        socklen_t osize = optsize;
+        rv = getsockopt(sock, oslevel, osopt, optval, &osize);
+        lcb_assert(osize == (socklen_t)optsize);
     } else {
         rv = setsockopt(sock, oslevel, osopt, optval, optsize);
     }
@@ -316,6 +313,30 @@ cntl_impl(lcb_io_opt_t io, lcb_socket_t sock, int mode, int option, void *arg)
     case LCB_IO_CNTL_TCP_KEEPALIVE:
         return cntl_getset_impl(io,
             sock, mode, SOL_SOCKET, SO_KEEPALIVE, sizeof(int), arg);
+    case LCB_IO_CNTL_TCP_KEEPCNT:
+#ifdef TCP_KEEPCNT
+        return cntl_getset_impl(io,
+            sock, mode, IPPROTO_TCP, TCP_KEEPCNT, sizeof(int), arg);
+#else
+        LCB_IOPS_ERRNO(io) = ENOTSUP;
+        return -1;
+#endif
+    case LCB_IO_CNTL_TCP_KEEPIDLE:
+#ifdef TCP_KEEPIDLE
+        return cntl_getset_impl(io,
+            sock, mode, IPPROTO_TCP, TCP_KEEPIDLE, sizeof(int), arg);
+#else
+        LCB_IOPS_ERRNO(io) = ENOTSUP;
+        return -1;
+#endif
+    case LCB_IO_CNTL_TCP_KEEPINTVL:
+#ifdef TCP_KEEPINTVL
+        return cntl_getset_impl(io,
+            sock, mode, IPPROTO_TCP, TCP_KEEPINTVL, sizeof(int), arg);
+#else
+        LCB_IOPS_ERRNO(io) = ENOTSUP;
+        return -1;
+#endif
     default:
         LCB_IOPS_ERRNO(io) = ENOTSUP;
         return -1;

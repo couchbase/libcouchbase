@@ -254,6 +254,15 @@ HANDLER(tracing_threshold_queue_size_handler) {
     return LCB_ECTL_BADARG;
 #endif
 }
+HANDLER(tcp_keepcnt_handler) {
+  RETURN_GET_SET(lcb_U32, LCBT_SETTING(instance, tcp_keep_count));
+}
+HANDLER(tcp_keepidle_handler) {
+  RETURN_GET_SET(lcb_U32, LCBT_SETTING(instance, tcp_keep_idle));
+}
+HANDLER(tcp_keepintvl_handler) {
+  RETURN_GET_SET(lcb_U32, LCBT_SETTING(instance, tcp_keep_interval));
+}
 
 HANDLER(config_poll_interval_handler) {
     lcb_U32 *user = reinterpret_cast<lcb_U32*>(arg);
@@ -759,7 +768,10 @@ static ctl_handler handlers[] = {
     network_handler,                      /* LCB_CNTL_NETWORK */
     wait_for_config_handler,              /* LCB_CNTL_WAIT_FOR_CONFIG */
     http_pooltmo_handler,                 /* LCB_CNTL_HTTP_POOL_TIMEOUT */
-    timeout_common                        /* LCB_CNTL_N1QL_GRACE_PERIOD */
+    timeout_common,                       /* LCB_CNTL_N1QL_GRACE_PERIOD */
+    tcp_keepcnt_handler,                  /* LCB_CNTL_TCP_KEEPCNT */
+    tcp_keepidle_handler,                 /* LCB_CNTL_TCP_KEEPIDLE */
+    tcp_keepintvl_handler,                /* LCB_CNTL_TCP_KEEPINTVL */
 };
 
 /* Union used for conversion to/from string functions */
@@ -952,6 +964,9 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"wait_for_config", LCB_CNTL_WAIT_FOR_CONFIG, convert_intbool},
     {"http_pool_timeout", LCB_CNTL_HTTP_POOL_TIMEOUT, convert_timevalue},
     {"n1ql_grace_period", LCB_CNTL_N1QL_GRACE_PERIOD, convert_timevalue},
+    {"tcp_keepcnt", LCB_CNTL_TCP_KEEPCNT, convert_u32},
+    {"tcp_keepidle", LCB_CNTL_TCP_KEEPIDLE, convert_u32},
+    {"tcp_keepintvl", LCB_CNTL_TCP_KEEPINTVL, convert_u32},
     {NULL, -1}};
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))

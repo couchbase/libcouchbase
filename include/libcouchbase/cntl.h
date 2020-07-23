@@ -1403,10 +1403,43 @@ typedef enum {
 #define LCB_CNTL_HTTP_POOL_TIMEOUT 0x5d
 
 /**
+ * The maximum number of keepalive probes TCP should send before dropping the
+ * connection.
+ *
+ * Use `tcp_keepcnt` in the connection string
+ *
+ * @cntl_arg_setonly{lcb_U32*}
+ * @uncommitted
+ */
+#define LCB_CNTL_TCP_KEEPCNT 0x5f
+
+/**
+ * The time (in seconds) the connection needs to remain idle before TCP starts
+ * sending keepalive probes, if the socket option SO_KEEPALIVE has  been  set on
+ * this socket.
+ *
+ * Use `tcp_keepidle` in the connection string
+ *
+ * @cntl_arg_setonly{lcb_U32*}
+ * @uncommitted
+ */
+#define LCB_CNTL_TCP_KEEPIDLE 0x60
+
+/**
+ * The time (in seconds) between individual keepalive probes.
+ *
+ * Use `tcp_keepintvl` in the connection string
+ *
+ * @cntl_arg_setonly{lcb_U32*}
+ * @uncommitted
+ */
+#define LCB_CNTL_TCP_KEEPINTVL 0x61
+
+/**
  * This is not a command, but rather an indicator of the last item.
  * @internal
  */
-#define LCB_CNTL__MAX                    0x5f
+#define LCB_CNTL__MAX                    0x62
 
 /**@}*/
 
