@@ -54,6 +54,8 @@ OPTION(LCB_INSTALL_PKGCONFIG "Install pkgconfig/libcouchbase.pc" ON)
 OPTION(LCB_DUMP_PACKETS "Enable dumping network packets on TRACE log level" OFF)
 OPTION(LCB_USE_PROFILER "Build with profiler support (from gperftools)" OFF)
 OPTION(LCB_SKIP_GIT_VERSION "Skip version detection using git" OFF)
+# Read more at https://wiki.wireshark.org/TLS
+option(LCB_TLS_LOG_KEYS "Write per-session secrets to log file specified by env TLS_KEY_LOG_FILE. (Useful for Wireshark SSL/TLS dissection)" OFF)
 
 STRING(TIMESTAMP LCB_BUILD_TIMESTAMP "%Y-%m-%d %H:%M:%S" UTC)
 
