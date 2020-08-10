@@ -1239,11 +1239,22 @@ lcbvb_CONFIGDIFF *lcbvb_compare(lcbvb_CONFIG *from, lcbvb_CONFIG *to)
         ret->sequence_changed = 1;
     }
 
+    if (to->nrepl != from->nrepl) {
+        ret->n_repl_changed = 1;
+    }
+
     if (from->nvb == to->nvb) {
         for (ii = 0; ii < from->nvb; ii++) {
             lcbvb_VBUCKET *vba = from->vbuckets + ii, *vbb = to->vbuckets + ii;
             if (vba->servers[0] != vbb->servers[0]) {
                 ret->n_vb_changes++;
+            }
+            if (!ret->n_repl_changed) {
+                for (unsigned jj = 1; jj < from->nrepl + 1 /* skip master */; jj++) {
+                    if (vba->servers[jj] != vbb->servers[jj]) {
+                        ret->n_vb_changes++;
+                    }
+                }
             }
         }
     } else {
@@ -1277,6 +1288,9 @@ lcbvb_CHANGETYPE lcbvb_get_changetype(lcbvb_CONFIGDIFF *diff)
     }
     if (*diff->servers_added || *diff->servers_removed || diff->sequence_changed) {
         ret |= LCBVB_SERVERS_MODIFIED;
+    }
+    if (diff->n_repl_changed) {
+        ret |= LCBVB_REPLICAS_MODIFIED;
     }
     return ret;
 }
