@@ -654,3 +654,39 @@ TEST_F(CollectionUnitTest, testDroppedScope)
     EXPECT_EQ(4, numcallbacks);
 }
 
+/**
+ * @test
+ * Create 1000 collections for a single scope
+ *
+ * @pre
+ * Create scope and collection
+ *
+ * @post
+ *
+ * Collection creations are successful
+ */
+TEST_F(CollectionUnitTest, testMaxCollectionsPerScope)
+{
+    SKIP_IF_MOCK();
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70);
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
+
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testSetScopeMissCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)testGetScopeMissCallback);
+    lcb_STATUS rc;
+
+    std::string scope(unique_name("sScope1"));
+    EXPECT_EQ(LCB_SUCCESS, create_scope(instance, scope));
+    for (int i = 0; i < 1000; ++i) {
+        std::stringstream ss;
+        ss << i;
+        rc = create_collection(instance, scope, ss.str());
+            if (rc != LCB_SUCCESS) {
+                fprintf(stderr, "Failed creating collection %d . Got error: %s\n", i, lcb_strerror_short(rc));
+            }
+    }
+}
+
+
