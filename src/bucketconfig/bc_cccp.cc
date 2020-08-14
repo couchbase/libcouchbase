@@ -143,7 +143,6 @@ CccpProvider::schedule_next_request(lcb_error_t err, bool can_rollover)
         cmdcookie = new CccpCookie(this);
         lcb_log(LOGARGS(this, TRACE), "Re-Issuing CCCP Command on server struct %p (" LCB_HOST_FMT ")", (void *)server,
                 LCB_HOST_ARG(this->parent->settings, next_host));
-        timer.rearm(settings().config_node_timeout);
         instance->request_config(cmdcookie, server);
 
     } else {
