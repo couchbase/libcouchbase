@@ -2837,6 +2837,25 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_payload(lcb_CMDQUERY *cmd, const char *
  */
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_statement(lcb_CMDQUERY *cmd, const char *statement, size_t statement_len);
 /**
+ * Associate scope name with the query
+ * @param cmd the command
+ * @param scope the name of the scope
+ * @param scope_len length of the scope name string.
+ */
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_scope_name(lcb_CMDQUERY *cmd, const char *scope, size_t scope_len);
+/**
+ * @uncommitted
+ *
+ * Associate scope_qualifier (also known as `query_context`) with the query.
+ *
+ * The qualifier must be in form `${bucket_name}.${scope_name}` or `default:${bucket_name}.${scope_name}`.
+ *
+ * @param cmd the command
+ * @param qualifier the string containing qualifier
+ * @param qualifier_len length of the qualifier
+ */
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_scope_qualifier(lcb_CMDQUERY *cmd, const char *qualifier, size_t qualifier_len);
+/**
  * Sets a named argument for the query
  * @param cmd the command
  * @param name The argument name (e.g. `$age`)
