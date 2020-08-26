@@ -1,5 +1,11 @@
 # Release Notes
 
+## 3.0.4 (2020-08-26)
+
+* CCBC-1281: Implement scope qualifier for queries
+* CCBC-1301: expose cmake option to help dissecting TLS traffic
+* Detect configuration change when replica indexes changed.
+
 ## 3.0.3 (2020-07-27)
 
 * CCBC-1265: enable out of order execution by default
