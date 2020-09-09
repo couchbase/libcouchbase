@@ -137,6 +137,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_scope_name(lcb_CMDQUERY *cmd, const cha
         return LCB_ERR_INVALID_ARGUMENT;
     }
     cmd->scope_name.assign(scope, scope_len);
+    return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_scope_qualifier(lcb_CMDQUERY *cmd, const char *qualifier, size_t qualifier_len)
@@ -145,6 +146,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_scope_qualifier(lcb_CMDQUERY *cmd, cons
         return LCB_ERR_INVALID_ARGUMENT;
     }
     cmd->scope_qualifier.assign(qualifier, qualifier_len);
+    return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_reset(lcb_CMDQUERY *cmd)
