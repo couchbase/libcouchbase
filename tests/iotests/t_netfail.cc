@@ -570,28 +570,44 @@ TEST_F(MockUnitTest, testSaslMechs)
     // Force our SASL mech
     err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)"blah");
     ASSERT_EQ(LCB_SUCCESS, err);
-
     Item itm("key", "value");
     KVOperation kvo(&itm);
-
     kvo.allowableErrors.insert(LCB_ERR_SASLMECH_UNAVAILABLE);
     kvo.allowableErrors.insert(LCB_ERR_TIMEOUT);
     kvo.store(instance);
+    ASSERT_FALSE(kvo.globalErrors.find(LCB_ERR_SASLMECH_UNAVAILABLE) == kvo.globalErrors.end());
 
+    err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)"    ");
+    ASSERT_EQ(LCB_SUCCESS, err);
+    kvo.clear();
+    kvo.allowableErrors.insert(LCB_ERR_SASLMECH_UNAVAILABLE);
+    kvo.allowableErrors.insert(LCB_ERR_TIMEOUT);
+    kvo.store(instance);
     ASSERT_FALSE(kvo.globalErrors.find(LCB_ERR_SASLMECH_UNAVAILABLE) == kvo.globalErrors.end());
 
     err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)"PLAIN");
     ASSERT_EQ(LCB_SUCCESS, err);
-
     kvo.clear();
-#ifndef LCB_NO_SSL
-    kvo.allowableErrors.insert(LCB_ERR_TIMEOUT);
-#endif
     kvo.store(instance);
-#ifndef LCB_NO_SSL
-    // should not be connected over non-SSL connection with PLAIN SASL auth
-    ASSERT_FALSE(kvo.globalErrors.find(LCB_ERR_TIMEOUT) == kvo.globalErrors.end());
-#endif
+    ASSERT_TRUE(kvo.globalErrors.find(LCB_ERR_TIMEOUT) == kvo.globalErrors.end());
+
+    err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)"blah PLAIN");
+    ASSERT_EQ(LCB_SUCCESS, err);
+    kvo.clear();
+    kvo.store(instance);
+    ASSERT_TRUE(kvo.globalErrors.find(LCB_ERR_TIMEOUT) == kvo.globalErrors.end());
+
+    err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)"  PLAIN    ");
+    ASSERT_EQ(LCB_SUCCESS, err);
+    kvo.clear();
+    kvo.store(instance);
+    ASSERT_TRUE(kvo.globalErrors.find(LCB_ERR_TIMEOUT) == kvo.globalErrors.end());
+
+    err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)"blah,PLAIN");
+    ASSERT_EQ(LCB_SUCCESS, err);
+    kvo.clear();
+    kvo.store(instance);
+    ASSERT_TRUE(kvo.globalErrors.find(LCB_ERR_TIMEOUT) == kvo.globalErrors.end());
 
     lcb_destroy(instance);
 }
