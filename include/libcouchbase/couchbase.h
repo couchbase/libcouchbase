@@ -2910,6 +2910,15 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_metrics(lcb_CMDQUERY *cmd, int metrics)
  */
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_scan_cap(lcb_CMDQUERY *cmd, int value);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_scan_wait(lcb_CMDQUERY *cmd, uint32_t us);
+/**
+ * @uncommitted
+ *
+ * Tells the query engine to use a flex index (utilizing the search service).
+ *
+ * @param cmd the command
+ * @param value non-zero if a flex index should be used, zero is the default
+ */
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_flex_index(lcb_CMDQUERY *cmd, int value);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_profile(lcb_CMDQUERY *cmd, lcb_QUERY_PROFILE mode);
 /**
  * Sets maximum number of items each execution operator can buffer
