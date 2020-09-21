@@ -1,5 +1,16 @@
 # Release Notes
 
+## 2.10.8 (September 22 2020)
+
+* CCBC-1298: allow to adjust TCP keepalive settings
+  * `tcp_keepcnt` (`LCB_CNTL_TCP_KEEPCNT`):  the maximum number of keepalive probles
+  * `tcp_keepintvl` (`LCB_CNTL_KEEPINTVL`): the time (in seconds) between individual probes
+  * `tcp_keepidle` (`LCB_CNTL_TCP_KEEPIDLE`): the time (in seconds) the connection need to remain idle before TCP start sending probes.
+
+* Detect configuration change when replica indexes changed. libcouchbase will apply new configuration, when node is re-added after failover.
+
+* Do not re-arm config provider timer for existing connection. Each `request_config` operation has its own timer associated with the command.
+
 ## 2.10.7 (June 17 2020)
 
 * CCBC-1234: Fixed SRV resolution to work with large record sizes. In some cases, the answer records exceed the default answer buffer size causing SRV lookups to fail on otherwise correctly configured clusters.  This specifically occured with Couchbase Cloud.
