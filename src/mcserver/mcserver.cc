@@ -753,16 +753,16 @@ void Server::purge_single(mc_PACKET *pkt, lcb_STATUS err)
             info["b"] = settings->bucket;
         }
         info["t"] = (Json::UInt64)LCB_NS2US(MCREQ_PKT_RDATA(pkt)->deadline - MCREQ_PKT_RDATA(pkt)->start);
-
-        const lcb_host_t &remote = get_host();
-        std::string rhost;
-        if (remote.ipv6) {
-            rhost.append("[").append(remote.host).append("]:").append(remote.port);
-        } else {
-            rhost.append(remote.host).append(":").append(remote.port);
+        if (this->has_valid_host()) {
+            const lcb_host_t &remote = get_host();
+            std::string rhost;
+            if (remote.ipv6) {
+                rhost.append("[").append(remote.host).append("]:").append(remote.port);
+            } else {
+                rhost.append(remote.host).append(":").append(remote.port);
+            }
+            info["r"] = rhost.c_str();
         }
-        info["r"] = rhost.c_str();
-
         if (connctx) {
             char local_id[54] = {};
             snprintf(local_id, sizeof(local_id), "%016" PRIx64 "/%016" PRIx64 "/%x", settings->iid, connctx->sock->id,

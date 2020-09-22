@@ -37,6 +37,7 @@ static void refcnt_dtor_common(mc_PACKET *pkt)
 
 static const char *make_hp_string(const lcb::Server &server, std::string &out)
 {
+    lcb_assert(server.has_valid_host());
     out.assign(server.get_host().host);
     out.append(":");
     out.append(server.get_host().port);

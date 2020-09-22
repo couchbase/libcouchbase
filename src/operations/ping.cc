@@ -77,7 +77,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_remote(const lcb_RESPPING *resp,
         return LCB_ERR_OPTIONS_CONFLICT;
     }
     *address = resp->services[index].server;
-    *address_len = strlen(*address);
+    *address_len = *address ? strlen(*address) : 0;
     return LCB_SUCCESS;
 }
 
@@ -302,7 +302,9 @@ static void build_ping_json(lcb_INSTANCE *instance, lcb_RESPPING &ping, Json::Va
     for (size_t ii = 0; ii < ping.nservices; ii++) {
         lcb_PINGSVC &svc = ping.services[ii];
         Json::Value service;
-        service["remote"] = svc.server;
+        if (svc.server) {
+            service["remote"] = svc.server;
+        }
         if (svc.local) {
             service["local"] = svc.local;
         }
@@ -390,16 +392,18 @@ static void handle_ping(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS err, c
     PingCookie *ck = (PingCookie *)req->u_rdata.exdata;
 
     if (ck->needMetrics()) {
-        const lcb_host_t &remote = server->get_host();
-        std::string hh;
-        if (remote.ipv6) {
-            hh.append("[").append(remote.host).append("]:").append(remote.port);
-        } else {
-            hh.append(remote.host).append(":").append(remote.port);
-        }
         lcb_PINGSVC svc = {};
+        if (server->has_valid_host()) {
+            const lcb_host_t &remote = server->get_host();
+            std::string hh;
+            if (remote.ipv6) {
+                hh.append("[").append(remote.host).append("]:").append(remote.port);
+            } else {
+                hh.append(remote.host).append(":").append(remote.port);
+            }
+            svc.server = strdup(hh.c_str());
+        }
         svc.type = LCB_PING_SERVICE_KV;
-        svc.server = strdup(hh.c_str());
         svc.latency = gethrtime() - MCREQ_PKT_RDATA(req)->start;
         svc.rc = err;
         switch (err) {
