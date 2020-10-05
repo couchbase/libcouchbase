@@ -435,6 +435,7 @@ bool SessionRequestImpl::send_hello()
     if (settings->enable_unordered_execution) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_UNORDERED_EXECUTION;
     }
+    features[nfeatures++] = PROTOCOL_BINARY_FEATURE_CREATE_AS_DELETED;
 
     std::string agent = generate_agent_json();
     lcb::MemcachedRequest hdr(PROTOCOL_BINARY_CMD_HELLO);

@@ -3100,6 +3100,12 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_result_status(const lcb_RESPSUBDOC *r
 LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_result_value(const lcb_RESPSUBDOC *resp, size_t index, const char **value,
                                                         size_t *value_len);
 
+/**
+ * @private
+ * @return non-zero if if the fetched document is a tombstone.
+ */
+LIBCOUCHBASE_API int lcb_respsubdoc_is_deleted(const lcb_RESPSUBDOC *resp);
+
 typedef struct lcb_SUBDOCSPECS_ lcb_SUBDOCSPECS;
 
 /** Create intermediate paths */
@@ -3167,6 +3173,12 @@ typedef enum {
 } lcb_SUBDOC_STORE_SEMANTICS;
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_store_semantics(lcb_CMDSUBDOC *cmd, lcb_SUBDOC_STORE_SEMANTICS mode);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_access_deleted(lcb_CMDSUBDOC *cmd, int flag);
+
+/**
+ * If new document created, the server will create it as a tombstone.
+ * Any system or user XATTRs will be stored, but a document body will not be.
+ */
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_create_as_deleted(lcb_CMDSUBDOC *cmd, int flag);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_timeout(lcb_CMDSUBDOC *cmd, uint32_t timeout);
 
 LIBCOUCHBASE_API lcb_STATUS lcb_subdoc(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC *cmd);

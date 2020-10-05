@@ -1657,6 +1657,8 @@ typedef struct {
  */
 #define LCB_CMDSUBDOC_F_ACCESS_DELETED (1u << 18u)
 
+#define LCB_CMDSUBDOC_F_CREATE_AS_DELETED (1u << 19u)
+
 struct lcb_SUBDOCSPECS_ {
     uint32_t options;
 
