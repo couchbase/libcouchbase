@@ -229,7 +229,7 @@ static mc_REQDATAPROCS ping_procs = {handle_ping, refcnt_dtor_ping};
 struct PingCookie : mc_REQDATAEX {
     int remaining;
     int options;
-    std::list< lcb_PINGSVC > responses;
+    std::list<lcb_PINGSVC> responses;
     std::string id;
 
     PingCookie(const void *cookie_, int _options)
@@ -239,7 +239,7 @@ struct PingCookie : mc_REQDATAEX {
 
     ~PingCookie()
     {
-        for (std::list< lcb_PINGSVC >::iterator it = responses.begin(); it != responses.end(); it++) {
+        for (std::list<lcb_PINGSVC>::iterator it = responses.begin(); it != responses.end(); it++) {
             if (it->server) {
                 free((void *)it->server);
                 it->server = NULL;
@@ -274,7 +274,7 @@ struct PingCookie : mc_REQDATAEX {
 
 static void refcnt_dtor_ping(mc_PACKET *pkt)
 {
-    PingCookie *ck = static_cast< PingCookie * >(pkt->u_rdata.exdata);
+    PingCookie *ck = static_cast<PingCookie *>(pkt->u_rdata.exdata);
     if (!--ck->remaining) {
         delete ck;
     }
@@ -358,7 +358,7 @@ static void invoke_ping_callback(lcb_INSTANCE *instance, PingCookie *ck)
     if (ck->needMetrics()) {
         ping.nservices = ck->responses.size();
         ping.services = new lcb_PINGSVC[ping.nservices];
-        for (std::list< lcb_PINGSVC >::const_iterator it = ck->responses.begin(); it != ck->responses.end(); ++it) {
+        for (std::list<lcb_PINGSVC>::const_iterator it = ck->responses.begin(); it != ck->responses.end(); ++it) {
             ping.services[idx++] = *it;
         }
         if (ck->needJSON()) {
@@ -378,7 +378,7 @@ static void invoke_ping_callback(lcb_INSTANCE *instance, PingCookie *ck)
     }
     lcb_RESPCALLBACK callback;
     callback = lcb_find_callback(instance, LCB_CALLBACK_PING);
-    ping.cookie = const_cast< void * >(ck->cookie);
+    ping.cookie = const_cast<void *>(ck->cookie);
     callback(instance, LCB_CALLBACK_PING, (lcb_RESPBASE *)&ping);
     if (ping.services != NULL) {
         delete[] ping.services;
@@ -388,7 +388,7 @@ static void invoke_ping_callback(lcb_INSTANCE *instance, PingCookie *ck)
 
 static void handle_ping(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS err, const void *)
 {
-    lcb::Server *server = static_cast< lcb::Server * >(pipeline);
+    lcb::Server *server = static_cast<lcb::Server *>(pipeline);
     PingCookie *ck = (PingCookie *)req->u_rdata.exdata;
 
     if (ck->needMetrics()) {
@@ -441,7 +441,7 @@ static void handle_http(lcb_INSTANCE *instance, lcb_PING_SERVICE type, const lcb
         return;
     }
     PingCookie *ck = (PingCookie *)resp->cookie;
-    lcb::http::Request *htreq = reinterpret_cast< lcb::http::Request * >(resp->_htreq);
+    lcb::http::Request *htreq = reinterpret_cast<lcb::http::Request *>(resp->_htreq);
 
     if (ck->needMetrics()) {
         lcb_PINGSVC svc = {};
@@ -675,7 +675,7 @@ lcb_STATUS lcb_diag(lcb_INSTANCE *instance, void *cookie, const lcb_CMDDIAG *cmd
     size_t ii;
     Json::Value kv;
     for (ii = 0; ii < instance->cmdq.npipelines; ii++) {
-        lcb::Server *server = static_cast< lcb::Server * >(instance->cmdq.pipelines[ii]);
+        lcb::Server *server = static_cast<lcb::Server *>(instance->cmdq.pipelines[ii]);
         lcbio_CTX *ctx = server->connctx;
         if (ctx) {
             Json::Value endpoint;
@@ -688,10 +688,15 @@ lcb_STATUS lcb_diag(lcb_INSTANCE *instance, void *cookie, const lcb_CMDDIAG *cmd
             } else {
                 endpoint["remote"] = std::string(server->curhost->host) + ":" + std::string(server->curhost->port);
             }
-            endpoint["local"] = ctx->sock->info->ep_local;
-            endpoint["last_activity_us"] = (Json::Value::UInt64)(now > ctx->sock->atime ? now - ctx->sock->atime : 0);
-            endpoint["status"] = "connected";
-            root[lcbio_svcstr(ctx->sock->service)].append(endpoint);
+            if (ctx->sock) {
+                if (ctx->sock->info) {
+                    endpoint["local"] = ctx->sock->info->ep_local;
+                }
+                endpoint["last_activity_us"] =
+                    (Json::Value::UInt64)(now > ctx->sock->atime ? now - ctx->sock->atime : 0);
+                endpoint["status"] = "connected";
+                root[lcbio_svcstr(ctx->sock->service)].append(endpoint);
+            }
         }
     }
     instance->memd_sockpool->toJSON(now, root);
@@ -702,7 +707,7 @@ lcb_STATUS lcb_diag(lcb_INSTANCE *instance, void *cookie, const lcb_CMDDIAG *cmd
         lcb_ASPEND_SETTYPE *pendq;
         if ((pendq = instance->pendops.items[LCB_PENDTYPE_HTTP])) {
             for (it = pendq->begin(); it != pendq->end(); ++it) {
-                lcb::http::Request *htreq = reinterpret_cast< lcb::http::Request * >(*it);
+                lcb::http::Request *htreq = reinterpret_cast<lcb::http::Request *>(*it);
                 lcbio_CTX *ctx = htreq->ioctx;
                 if (ctx) {
                     Json::Value endpoint;
@@ -714,11 +719,15 @@ lcb_STATUS lcb_diag(lcb_INSTANCE *instance, void *cookie, const lcb_CMDDIAG *cmd
                     } else {
                         endpoint["remote"] = std::string(htreq->host) + ":" + std::string(htreq->port);
                     }
-                    endpoint["local"] = ctx->sock->info->ep_local;
-                    endpoint["last_activity_us"] =
-                        (Json::Value::UInt64)(now > ctx->sock->atime ? now - ctx->sock->atime : 0);
-                    endpoint["status"] = "connected";
-                    root[lcbio_svcstr(ctx->sock->service)].append(endpoint);
+                    if (ctx->sock) {
+                        if (ctx->sock->info) {
+                            endpoint["local"] = ctx->sock->info->ep_local;
+                        }
+                        endpoint["last_activity_us"] =
+                            (Json::Value::UInt64)(now > ctx->sock->atime ? now - ctx->sock->atime : 0);
+                        endpoint["status"] = "connected";
+                        root[lcbio_svcstr(ctx->sock->service)].append(endpoint);
+                    }
                 }
             }
         }
@@ -740,7 +749,7 @@ lcb_STATUS lcb_diag(lcb_INSTANCE *instance, void *cookie, const lcb_CMDDIAG *cmd
     resp.json = json.c_str();
 
     callback = lcb_find_callback(instance, LCB_CALLBACK_DIAG);
-    resp.cookie = const_cast< void * >(cookie);
+    resp.cookie = const_cast<void *>(cookie);
     callback(instance, LCB_CALLBACK_DIAG, (lcb_RESPBASE *)&resp);
 
     return LCB_SUCCESS;

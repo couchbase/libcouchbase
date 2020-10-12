@@ -248,7 +248,8 @@ static lcb_STATUS reschedule_destroy(packet_wrapper *wrapper)
 
 bool Server::handle_unknown_collection(MemcachedResponse &resp, mc_PACKET *oldpkt)
 {
-    lcb_STATUS orig_err = resp.status() == PROTOCOL_BINARY_RESPONSE_UNKNOWN_SCOPE ? LCB_ERR_SCOPE_NOT_FOUND : LCB_ERR_COLLECTION_NOT_FOUND;
+    lcb_STATUS orig_err = resp.status() == PROTOCOL_BINARY_RESPONSE_UNKNOWN_SCOPE ? LCB_ERR_SCOPE_NOT_FOUND
+                                                                                  : LCB_ERR_COLLECTION_NOT_FOUND;
     protocol_binary_request_header req;
     memcpy(&req, SPAN_BUFFER(&oldpkt->kh_span), sizeof(req));
 
@@ -520,7 +521,8 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
         }
         DO_SWALLOW_PAYLOAD()
         goto GT_DONE;
-    } else if (mcresp.status() == PROTOCOL_BINARY_RESPONSE_UNKNOWN_COLLECTION || mcresp.status() == PROTOCOL_BINARY_RESPONSE_UNKNOWN_SCOPE) {
+    } else if (mcresp.status() == PROTOCOL_BINARY_RESPONSE_UNKNOWN_COLLECTION ||
+               mcresp.status() == PROTOCOL_BINARY_RESPONSE_UNKNOWN_SCOPE) {
         /* consume the header */
         DO_ASSIGN_PAYLOAD()
         if (!handle_unknown_collection(mcresp, request)) {
@@ -582,8 +584,7 @@ static void on_read(lcbio_CTX *ctx, unsigned)
         return;
     }
 
-    Server::ReadState rv;
-    while ((rv = server->try_read(ctx, ior)) == Server::PKT_READ_COMPLETE)
+    while (server->try_read(ctx, ior) == Server::PKT_READ_COMPLETE)
         ;
     lcbio_ctx_schedule(ctx);
     lcb_maybe_breakout(server->instance);
