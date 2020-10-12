@@ -33,8 +33,9 @@ static void ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_STATUS rc, c
             }
             break;
         case PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG:
-            lcb_assert(server->has_valid_host());
-            lcb::clconfig::cccp_update(rd->cookie, rc, res->value(), res->vallen(), &server->get_host());
+            if (rc == LCB_SUCCESS && server->has_valid_host()) {
+                lcb::clconfig::cccp_update(rd->cookie, rc, res->value(), res->vallen(), &server->get_host());
+            }
             break;
     }
     free(rd);
