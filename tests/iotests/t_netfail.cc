@@ -109,7 +109,7 @@ class NumNodeRetryer : public Retryer
   private:
     lcb_INSTANCE *instance;
     size_t expCount;
-    std::vector< std::string > distKeys;
+    std::vector<std::string> distKeys;
 };
 } // namespace
 
@@ -363,8 +363,8 @@ static void get_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RE
 }
 
 struct StoreContext {
-    std::map< std::string, lcb_STATUS > mm;
-    typedef std::map< std::string, lcb_STATUS >::iterator MyIter;
+    std::map<std::string, lcb_STATUS> mm;
+    typedef std::map<std::string, lcb_STATUS>::iterator MyIter;
 
     void check(int expected)
     {
@@ -404,8 +404,8 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
 
     MockEnvironment mock_o(argv), *mock = &mock_o;
 
-    std::vector< std::string > keys;
-    std::vector< lcb_CMDSTORE * > cmds;
+    std::vector<std::string> keys;
+    std::vector<lcb_CMDSTORE *> cmds;
 
     mock->createConnection(hw, &instance);
     instance->settings->vb_noguess = 1;
@@ -634,7 +634,7 @@ TEST_F(MockUnitTest, testSaslSHA)
     lcb_createopts_credentials(crParams, username.c_str(), username.size(), password.c_str(), password.size());
     lcb_createopts_bucket(crParams, bucket.c_str(), bucket.size());
 
-    std::vector< std::string > mechs;
+    std::vector<std::string> mechs;
 
     mechs.push_back("SCRAM-SHA512");
     protectedEnv->setSaslMechs(mechs);
@@ -668,7 +668,7 @@ static const char *get_username(void *cookie, const char *host, const char *port
 
 static const char *get_password(void *cookie, const char *host, const char *port, const char *bucket)
 {
-    std::map< std::string, std::string > *credentials = static_cast< std::map< std::string, std::string > * >(cookie);
+    std::map<std::string, std::string> *credentials = static_cast<std::map<std::string, std::string> *>(cookie);
     return (*credentials)[bucket].c_str();
 }
 }
@@ -690,7 +690,7 @@ TEST_F(MockUnitTest, testDynamicAuth)
     lcb_createopts_bucket(crParams, bucket.c_str(), bucket.size());
     doLcbCreate(&instance, crParams, mock);
 
-    std::map< std::string, std::string > credentials;
+    std::map<std::string, std::string> credentials;
     credentials["protected"] = "secret";
     lcb_AUTHENTICATOR *auth = lcbauth_new();
     lcbauth_set_callbacks(auth, &credentials, get_username, get_password);
@@ -709,7 +709,7 @@ TEST_F(MockUnitTest, testDynamicAuth)
     lcb_createopts_destroy(crParams);
 }
 
-static void doManyItems(lcb_INSTANCE *instance, std::vector< std::string > keys)
+static void doManyItems(lcb_INSTANCE *instance, std::vector<std::string> keys)
 {
     lcb_CMDSTORE *cmd;
     lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
@@ -752,7 +752,7 @@ TEST_F(MockUnitTest, DISABLED_testMemcachedFailover)
     oldCb = lcb_install_callback(instance, LCB_CALLBACK_STORE, mcdFoVerifyCb);
 
     // Get the command list:
-    std::vector< std::string > distKeys;
+    std::vector<std::string> distKeys;
     genDistKeys(LCBT_VBCONFIG(instance), distKeys);
     doManyItems(instance, distKeys);
     // Should succeed implicitly with callback above
@@ -817,6 +817,9 @@ TEST_F(MockUnitTest, testNegativeIndex)
     std::string key("ni_key");
     // Get the config
     lcbvb_CONFIG *vbc = instance->cur_configinfo->vbc;
+    /* make sure monitor will not overwrite out "fix" */
+    instance->confmon->stop();
+    instance->confmon->stop_real();
     int vb = lcbvb_k2vb(vbc, key.c_str(), key.size());
 
     // Set the timeout to something a bit shorter
@@ -850,6 +853,7 @@ TEST_F(MockUnitTest, testNegativeIndex)
     err = lcb_get(instance, &ni, gcmd);
     ASSERT_EQ(LCB_SUCCESS, err);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
+    vbc = instance->cur_configinfo->vbc;
     ASSERT_EQ(1, ni.callCount);
     ASSERT_EQ(LCB_ERR_NO_MATCHING_SERVER, ni.err);
     lcb_cmdget_destroy(gcmd);
