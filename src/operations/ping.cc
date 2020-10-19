@@ -101,8 +101,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_latency(const lcb_RESPPING *resp
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_scope(const lcb_RESPPING *resp, size_t index, const char **name,
-                                                      size_t *name_len)
+LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_namespace(const lcb_RESPPING *resp, size_t index, const char **name,
+                                                          size_t *name_len)
 {
     if (index >= resp->nservices) {
         return LCB_ERR_OPTIONS_CONFLICT;
@@ -110,6 +110,12 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_scope(const lcb_RESPPING *resp, 
     *name = resp->services[index].scope;
     *name_len = strlen(*name);
     return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_scope(const lcb_RESPPING *resp, size_t index, const char **name,
+                                                      size_t *name_len)
+{
+    return lcb_respping_result_namespace(resp, index, name, name_len);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_create(lcb_CMDPING **cmd)
@@ -314,7 +320,7 @@ static void build_ping_json(lcb_INSTANCE *instance, lcb_RESPPING &ping, Json::Va
             service["id"] = svc.id;
         }
         if (svc.scope) {
-            service["scope"] = svc.scope;
+            service["namespace"] = svc.scope;
         }
 
         service["latency_us"] = (Json::Value::UInt64)LCB_NS2US(svc.latency);

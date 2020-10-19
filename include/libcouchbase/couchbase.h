@@ -598,7 +598,6 @@ lcb_RESPCALLBACK lcb_get_callback(lcb_INSTANCE *instance, int cbtype);
 LIBCOUCHBASE_API
 const char *lcb_strcbtype(int cbtype);
 
-
 /**
  * @ingroup lcb-kv-api
  * @defgroup lcb-get Read
@@ -1015,7 +1014,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_open(lcb_INSTANCE *instance, const char *bucket,
  * @{
  */
 
-
 /**@committed
  * @brief Spool a removal of an item
  * @param instance the handle
@@ -1368,8 +1366,13 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_remote(const lcb_RESPPING *resp,
 LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_local(const lcb_RESPPING *resp, size_t index, const char **address,
                                                       size_t *address_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_latency(const lcb_RESPPING *resp, size_t index, uint64_t *latency);
-LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_scope(const lcb_RESPPING *resp, size_t index, const char **name,
-                                                      size_t *name_len);
+
+LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_namespace(const lcb_RESPPING *resp, size_t index, const char **name,
+                                                          size_t *name_len);
+
+LCB_DEPRECATED2(LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_scope(const lcb_RESPPING *resp, size_t index,
+                                                                      const char **name, size_t *name_len),
+                "Use lcb_respping_result_namespace");
 
 typedef struct lcb_CMDPING_ lcb_CMDPING;
 
@@ -2337,7 +2340,6 @@ int lcb_supports_feature(int n);
 LIBCOUCHBASE_API
 int lcb_is_redacting_logs(lcb_INSTANCE *instance);
 
-
 /** @} */
 
 /**
@@ -2811,8 +2813,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_encoded_payload(lcb_CMDQUERY *cmd, cons
  * }
  * @endcode
  *
-  *
-  */
+ *
+ */
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_parent_span(lcb_CMDQUERY *cmd, lcbtrace_SPAN *span);
 /**@}*/
 
@@ -2854,7 +2856,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_scope_name(lcb_CMDQUERY *cmd, const cha
  * @param qualifier the string containing qualifier
  * @param qualifier_len length of the qualifier
  */
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_scope_qualifier(lcb_CMDQUERY *cmd, const char *qualifier, size_t qualifier_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_scope_qualifier(lcb_CMDQUERY *cmd, const char *qualifier,
+                                                         size_t qualifier_len);
 /**
  * Sets a named argument for the query
  * @param cmd the command
