@@ -1356,6 +1356,8 @@ typedef struct lcb_RESPPING_ lcb_RESPPING;
 LIBCOUCHBASE_API lcb_STATUS lcb_respping_status(const lcb_RESPPING *resp);
 LIBCOUCHBASE_API lcb_STATUS lcb_respping_cookie(const lcb_RESPPING *resp, void **cookie);
 LIBCOUCHBASE_API lcb_STATUS lcb_respping_value(const lcb_RESPPING *resp, const char **json, size_t *json_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respping_report_id(const lcb_RESPPING *resp, const char **report_id,
+                                                   size_t *report_id_len);
 LIBCOUCHBASE_API size_t lcb_respping_result_size(const lcb_RESPPING *resp);
 LIBCOUCHBASE_API lcb_PING_STATUS lcb_respping_result_status(const lcb_RESPPING *resp, size_t index);
 LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_id(const lcb_RESPPING *resp, size_t index, const char **endpoint_id,

@@ -37,6 +37,14 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respping_value(const lcb_RESPPING *resp, const c
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_respping_report_id(const lcb_RESPPING *resp, const char **report_id,
+                                                   size_t *report_id_len)
+{
+    *report_id = resp->id.data();
+    *report_id_len = resp->id.size();
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API size_t lcb_respping_result_size(const lcb_RESPPING *resp)
 {
     return resp->nservices;
@@ -359,11 +367,11 @@ static void build_ping_json(lcb_INSTANCE *instance, lcb_RESPPING &ping, Json::Va
 
 static void invoke_ping_callback(lcb_INSTANCE *instance, PingCookie *ck)
 {
-    lcb_RESPPING ping;
+    lcb_RESPPING ping{};
     std::string json;
     size_t idx = 0;
-    memset(&ping, 0, sizeof(ping));
     if (ck->needMetrics()) {
+        ping.id = ck->id;
         ping.nservices = ck->responses.size();
         ping.services = new lcb_PINGSVC[ping.nservices];
         for (std::list<lcb_PINGSVC>::const_iterator it = ck->responses.begin(); it != ck->responses.end(); ++it) {
@@ -526,6 +534,9 @@ lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const lcb_CMDPING *cmd
         ckwrap->id = id;
         if (cmd->id) {
             ckwrap->id.append("/").append(cmd->id);
+        } else {
+            snprintf(id, sizeof(id), "%016" PRIx64, lcb_next_rand64());
+            ckwrap->id.append("/").append(id);
         }
     }
 
