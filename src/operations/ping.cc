@@ -151,6 +151,12 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_report_id(lcb_CMDPING *cmd, const char *
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_timeout(lcb_CMDPING *cmd, uint32_t timeout)
+{
+    cmd->timeout = timeout;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_all(lcb_CMDPING *cmd)
 {
     cmd->services =
@@ -540,6 +546,7 @@ lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const lcb_CMDPING *cmd
         }
     }
 
+    hrtime_t timeout = LCB_US2NS(cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, operation_timeout));
     lcbvb_CONFIG *cfg = LCBT_VBCONFIG(instance);
     const lcbvb_SVCMODE mode = LCBT_SETTING_SVCMODE(instance);
     if (cmd->services & LCB_PINGSVC_F_KV) {
@@ -558,6 +565,7 @@ lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const lcb_CMDPING *cmd
                 return LCB_ERR_NO_MEMORY;
             }
 
+            ckwrap->deadline = ckwrap->start + timeout;
             pkt->u_rdata.exdata = ckwrap;
             pkt->flags |= MCREQ_F_REQEXT;
 
@@ -594,7 +602,7 @@ lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const lcb_CMDPING *cmd
         lcb_cmdhttp_username(htcmd, username.c_str(), username.size());                                                \
         std::string password = auth.password_for(NULL, NULL, LCBT_SETTING(instance, bucket));                          \
         lcb_cmdhttp_password(htcmd, password.c_str(), password.size());                                                \
-        lcb_cmdhttp_timeout(htcmd, LCBT_SETTING(instance, TMO));                                                       \
+        lcb_cmdhttp_timeout(htcmd, LCB_NS2US(timeout));                                                                \
         rc = lcb_http(instance, ckwrap, htcmd);                                                                        \
         lcb_cmdhttp_destroy(htcmd);                                                                                    \
         if (rc == LCB_SUCCESS) {                                                                                       \
