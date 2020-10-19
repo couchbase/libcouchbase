@@ -108,7 +108,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respping_result_namespace(const lcb_RESPPING *re
         return LCB_ERR_OPTIONS_CONFLICT;
     }
     *name = resp->services[index].scope;
-    *name_len = strlen(*name);
+    *name_len = (*name == NULL) ? 0 : strlen(*name);
     return LCB_SUCCESS;
 }
 
