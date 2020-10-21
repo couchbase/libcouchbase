@@ -37,7 +37,6 @@
 
 /* Internal dependencies */
 #include <lcbio/lcbio.h>
-#include <strcodecs/strcodecs.h>
 #include "mcserver/mcserver.h"
 #include "mc/mcreq.h"
 #include "settings.h"
@@ -132,7 +131,7 @@ struct lcb_st {
     lcb_COLLCACHE *collcache;    /**< Collection cache */
 
 #ifdef __cplusplus
-    typedef std::map< std::string, lcbcrypto_PROVIDER * > lcb_ProviderMap;
+    typedef std::map<std::string, lcbcrypto_PROVIDER *> lcb_ProviderMap;
     lcb_ProviderMap *crypto;
     lcb_settings *getSettings()
     {
@@ -148,7 +147,7 @@ struct lcb_st {
     inline void populate_nodes(const lcb::Connspec &);
     lcb::Server *get_server(size_t index) const
     {
-        return static_cast< lcb::Server * >(cmdq.pipelines[index]);
+        return static_cast<lcb::Server *>(cmdq.pipelines[index]);
     }
     lcb::Server *find_server(const lcb_host_t &host) const;
     lcb_STATUS request_config(const void *cookie, lcb::Server *server);

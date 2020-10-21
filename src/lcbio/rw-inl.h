@@ -21,7 +21,6 @@
 #include <errno.h>
 #include <limits.h> /* For IOV_MAX */
 #include "ctx-log-inl.h"
-#include "strcodecs/strcodecs.h"
 
 #ifndef INLINE
 #ifdef _MSC_VER

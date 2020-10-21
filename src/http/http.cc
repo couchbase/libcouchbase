@@ -21,6 +21,7 @@
 #include "http/http-priv.h"
 #include "auth-priv.h"
 #include "trace.h"
+#include "strcodecs/strcodecs.h"
 
 LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_status(const lcb_RESPHTTP *resp)
 {

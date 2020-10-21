@@ -16,6 +16,7 @@
  */
 
 #include "internal.h"
+#include "strcodecs/strcodecs.h"
 
 #define LOGARGS(instance, lvl) instance->settings, "crypto", LCB_LOG_##lvl, __FILE__, __LINE__
 

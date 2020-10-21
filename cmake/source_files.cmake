@@ -4,11 +4,13 @@
 
 # couchbase_utils
 SET(LCB_UTILS_SRC
-    src/strcodecs/base64.c
     src/gethrtime.c
     src/list.c
     src/logging.c
     src/ringbuffer.c)
+
+SET(LCB_UTILS_CXXSRC
+    src/strcodecs/base64.cc)
 
 # lcbio
 FILE(GLOB LCB_IO_SRC src/lcbio/*.c)

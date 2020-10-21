@@ -213,6 +213,7 @@ INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
 # be considered as 'static'
 
 ADD_LIBRARY(couchbase_utils OBJECT ${LCB_UTILS_SRC})
+ADD_LIBRARY(couchbase_utils-cxx OBJECT ${LCB_UTILS_CXXSRC})
 
 MACRO(LCB_UTIL tgt)
     SET_TARGET_PROPERTIES(${tgt}
@@ -245,6 +246,7 @@ LCB_UTIL(netbuf)
 LCB_UTIL(rdb)
 LCB_UTIL(lcbio)
 LCB_CXXUTIL(lcbio-cxx)
+LCB_CXXUTIL(couchbase_utils-cxx)
 LCB_UTIL(couchbase_utils)
 LCB_UTIL(mcreq)
 LCB_CXXUTIL(mcreq-cxx)
@@ -308,11 +310,13 @@ INCLUDE_DIRECTORIES(contrib/snappy)
 SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:couchbase_select>
     $<TARGET_OBJECTS:couchbase_utils>
+    $<TARGET_OBJECTS:couchbase_utils-cxx>
     $<TARGET_OBJECTS:vbucket-lcb>
     $<TARGET_OBJECTS:mcreq>
     $<TARGET_OBJECTS:mcreq-cxx>
     $<TARGET_OBJECTS:netbuf>
     $<TARGET_OBJECTS:cbsasl-lcb>
+    $<TARGET_OBJECTS:cbsasl-lcb-cxx>
     $<TARGET_OBJECTS:lcbio>
     $<TARGET_OBJECTS:lcbio-cxx>
     $<TARGET_OBJECTS:rdb>

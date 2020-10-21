@@ -21,6 +21,8 @@
 #include "auth-priv.h"
 #include <lcbio/ssl.h>
 #include "ctx-log-inl.h"
+#include "strcodecs/strcodecs.h"
+
 #define LOGARGS(ht, lvlbase) ht->parent->settings, "htconfig", LCB_LOG_##lvlbase, __FILE__, __LINE__
 
 #define LOGFMT CTX_LOGFMT
@@ -206,7 +208,7 @@ GT_CHECKDONE:
 static void read_common(lcbio_CTX *ctx, unsigned nr)
 {
     lcbio_CTXRDITER riter;
-    HttpProvider *http = reinterpret_cast< HttpProvider * >(lcbio_ctx_data(ctx));
+    HttpProvider *http = reinterpret_cast<HttpProvider *>(lcbio_ctx_data(ctx));
     int old_generation = http->generation;
 
     lcb_log(LOGARGS(http, TRACE), LOGFMT "Received %d bytes on HTTP stream", LOGID(http), nr);
@@ -300,7 +302,7 @@ void HttpProvider::reset_stream_state()
 
 static void on_connected(lcbio_SOCKET *sock, void *arg, lcb_STATUS err, lcbio_OSERR syserr)
 {
-    HttpProvider *http = reinterpret_cast< HttpProvider * >(arg);
+    HttpProvider *http = reinterpret_cast<HttpProvider *>(arg);
     lcb_host_t *host;
     lcbio_CTXPROCS procs{};
     http->creq = NULL;
@@ -511,12 +513,12 @@ HttpProvider::HttpProvider(Confmon *parent_)
 
 static void io_error_handler(lcbio_CTX *ctx, lcb_STATUS err)
 {
-    reinterpret_cast< HttpProvider * >(lcbio_ctx_data(ctx))->on_io_error(err);
+    reinterpret_cast<HttpProvider *>(lcbio_ctx_data(ctx))->on_io_error(err);
 }
 
 const lcbio_SOCKET *lcb::clconfig::http_get_conn(const Provider *p)
 {
-    const HttpProvider *http = static_cast< const HttpProvider * >(p);
+    const HttpProvider *http = static_cast<const HttpProvider *>(p);
     if (!http->ioctx) {
         return NULL;
     }
