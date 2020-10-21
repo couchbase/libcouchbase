@@ -39,7 +39,7 @@ void lcbcrypto_register(lcb_INSTANCE *instance, const char *name, lcbcrypto_PROV
         lcb_log(LOGARGS(instance, ERROR), "Unsupported version for \"%s\" crypto provider, ignoring", name);
         return;
     }
-    std::map< std::string, lcbcrypto_PROVIDER * >::iterator old = instance->crypto->find(name);
+    std::map<std::string, lcbcrypto_PROVIDER *>::iterator old = instance->crypto->find(name);
     if (old != instance->crypto->end()) {
         lcbcrypto_unref(old->second);
     }
@@ -49,7 +49,7 @@ void lcbcrypto_register(lcb_INSTANCE *instance, const char *name, lcbcrypto_PROV
 
 void lcbcrypto_unregister(lcb_INSTANCE *instance, const char *name)
 {
-    std::map< std::string, lcbcrypto_PROVIDER * >::iterator old = instance->crypto->find(name);
+    std::map<std::string, lcbcrypto_PROVIDER *>::iterator old = instance->crypto->find(name);
     if (old != instance->crypto->end()) {
         lcbcrypto_unref(old->second);
         instance->crypto->erase(old);
@@ -64,19 +64,19 @@ static bool lcbcrypto_is_valid(lcbcrypto_PROVIDER *provider)
     if (provider->version != 1) {
         return false;
     }
-    if (provider->v.v1.sign && provider->v.v1.verify_signature == NULL) {
+    if (provider->v.v1.sign && provider->v.v1.verify_signature == nullptr) {
         return false;
     }
     return provider->v.v1.encrypt && provider->v.v1.decrypt && provider->v.v1.get_key_id;
 }
 
-#define PROVIDER_NEED_SIGN(provider) (provider)->v.v1.sign != NULL
+#define PROVIDER_NEED_SIGN(provider) (provider)->v.v1.sign != nullptr
 #define PROVIDER_SIGN(provider, parts, nparts, sig, nsig)                                                              \
     (provider)->v.v1.sign((provider), (parts), (nparts), (sig), (nsig));
 #define PROVIDER_VERIFY_SIGNATURE(provider, parts, nparts, sig, nsig)                                                  \
     (provider)->v.v1.verify_signature((provider), (parts), (nparts), (sig), (nsig));
 
-#define PROVIDER_NEED_IV(provider) (provider)->v.v1.generate_iv != NULL
+#define PROVIDER_NEED_IV(provider) (provider)->v.v1.generate_iv != nullptr
 #define PROVIDER_GENERATE_IV(provider, iv, niv) (provider)->v.v1.generate_iv((provider), (iv), (niv))
 
 #define PROVIDER_ENCRYPT(provider, ptext, nptext, iv, niv, ctext, nctext)                                              \
@@ -94,12 +94,12 @@ static bool lcbcrypto_is_valid(lcbcrypto_PROVIDER *provider)
 static lcbcrypto_PROVIDER *lcb_get_provider(const lcb_st *instance, const std::string &alg)
 {
     const lcb_st::lcb_ProviderMap::iterator provider_iterator = (*instance->crypto).find(alg);
-    return provider_iterator != (*instance->crypto).end() ? provider_iterator->second : NULL;
+    return provider_iterator != (*instance->crypto).end() ? provider_iterator->second : nullptr;
 }
 
 lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT *cmd)
 {
-    cmd->out = NULL;
+    cmd->out = nullptr;
     cmd->nout = 0;
 
     Json::Value jdoc;
@@ -107,13 +107,13 @@ lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT
         return LCB_ERR_INVALID_ARGUMENT;
     }
     bool changed = false;
-    std::string prefix = (cmd->prefix == NULL) ? LCBCRYPTO_DEFAULT_FIELD_PREFIX : cmd->prefix;
+    std::string prefix = (cmd->prefix == nullptr) ? LCBCRYPTO_DEFAULT_FIELD_PREFIX : cmd->prefix;
     for (size_t ii = 0; ii < cmd->nfields; ii++) {
         lcbcrypto_FIELDSPEC *field = cmd->fields + ii;
         lcb_STATUS rc;
 
-        if (field->name == NULL) {
-            lcb_log(LOGARGS(instance, WARN), "field name cannot be NULL");
+        if (field->name == nullptr) {
+            lcb_log(LOGARGS(instance, WARN), "field name cannot be nullptr");
             return LCB_ERR_INVALID_ARGUMENT;
         }
 
@@ -127,10 +127,10 @@ lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT
             Json::Value encrypted;
             int ret;
 
-            uint8_t *iv = NULL;
-            char *biv = NULL;
+            std::uint8_t *iv = nullptr;
+            char *biv = nullptr;
             size_t niv = 0;
-            lcb_SIZE nbiv = 0;
+            std::size_t nbiv = 0;
             if (PROVIDER_NEED_IV(provider)) {
                 rc = PROVIDER_GENERATE_IV(provider, &iv, &niv);
                 if (rc != LCB_SUCCESS) {
@@ -138,7 +138,7 @@ lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT
                     lcb_log(LOGARGS(instance, WARN), "Unable to generate IV");
                     return rc;
                 }
-                ret = lcb_base64_encode2(reinterpret_cast< char * >(iv), niv, &biv, &nbiv);
+                ret = lcb_base64_encode2(reinterpret_cast<char *>(iv), niv, &biv, &nbiv);
                 if (ret < 0) {
                     free(biv);
                     PROVIDER_RELEASE_BYTES(provider, iv);
@@ -149,8 +149,8 @@ lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT
             }
 
             std::string contents = Json::FastWriter().write(jdoc[field->name]);
-            const uint8_t *ptext = reinterpret_cast< const uint8_t * >(contents.c_str());
-            uint8_t *ctext = NULL;
+            const std::uint8_t *ptext = reinterpret_cast<const std::uint8_t *>(contents.c_str());
+            std::uint8_t *ctext = nullptr;
             size_t nptext = contents.size(), nctext = 0;
             rc = PROVIDER_ENCRYPT(provider, ptext, nptext, iv, niv, &ctext, &nctext);
             PROVIDER_RELEASE_BYTES(provider, iv);
@@ -159,9 +159,9 @@ lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT
                 lcb_log(LOGARGS(instance, WARN), "Unable to encrypt field");
                 return rc;
             }
-            char *btext = NULL;
-            lcb_SIZE nbtext = 0;
-            ret = lcb_base64_encode2(reinterpret_cast< char * >(ctext), nctext, &btext, &nbtext);
+            char *btext = nullptr;
+            std::size_t nbtext = 0;
+            ret = lcb_base64_encode2(reinterpret_cast<char *>(ctext), nctext, &btext, &nbtext);
             PROVIDER_RELEASE_BYTES(provider, ctext);
             if (ret < 0) {
                 free(btext);
@@ -175,21 +175,21 @@ lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT
             if (PROVIDER_NEED_SIGN(provider)) {
                 lcbcrypto_SIGV parts[4] = {};
                 size_t nparts = 0;
-                uint8_t *sig = NULL;
+                std::uint8_t *sig = nullptr;
                 size_t nsig = 0;
 
-                parts[nparts].data = reinterpret_cast< const uint8_t * >(kid.c_str());
+                parts[nparts].data = reinterpret_cast<const std::uint8_t *>(kid.c_str());
                 parts[nparts].len = kid.size();
                 nparts++;
-                parts[nparts].data = reinterpret_cast< const uint8_t * >(field->alg);
+                parts[nparts].data = reinterpret_cast<const std::uint8_t *>(field->alg);
                 parts[nparts].len = strlen(field->alg);
                 nparts++;
                 if (biv) {
-                    parts[nparts].data = reinterpret_cast< const uint8_t * >(biv);
+                    parts[nparts].data = reinterpret_cast<const std::uint8_t *>(biv);
                     parts[nparts].len = nbiv;
                     nparts++;
                 }
-                parts[nparts].data = reinterpret_cast< const uint8_t * >(btext);
+                parts[nparts].data = reinterpret_cast<const std::uint8_t *>(btext);
                 parts[nparts].len = nbtext;
                 nparts++;
 
@@ -199,9 +199,9 @@ lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT
                     lcb_log(LOGARGS(instance, WARN), "Unable to sign encrypted field");
                     return rc;
                 }
-                char *bsig = NULL;
-                lcb_SIZE nbsig = 0;
-                ret = lcb_base64_encode2(reinterpret_cast< char * >(sig), nsig, &bsig, &nbsig);
+                char *bsig = nullptr;
+                std::size_t nbsig = 0;
+                ret = lcb_base64_encode2(reinterpret_cast<char *>(sig), nsig, &bsig, &nbsig);
                 PROVIDER_RELEASE_BYTES(provider, sig);
                 if (ret < 0) {
                     free(bsig);
@@ -229,7 +229,7 @@ lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT
 
 lcb_STATUS lcbcrypto_decrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDDECRYPT *cmd)
 {
-    cmd->out = NULL;
+    cmd->out = nullptr;
     cmd->nout = 0;
 
     Json::Value jdoc;
@@ -242,13 +242,13 @@ lcb_STATUS lcbcrypto_decrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDDECRYPT
     }
 
     bool changed = false;
-    std::string prefix = (cmd->prefix == NULL) ? LCBCRYPTO_DEFAULT_FIELD_PREFIX : cmd->prefix;
+    std::string prefix = (cmd->prefix == nullptr) ? LCBCRYPTO_DEFAULT_FIELD_PREFIX : cmd->prefix;
 
     for (size_t ii = 0; ii < cmd->nfields; ii++) {
         lcbcrypto_FIELDSPEC *field = cmd->fields + ii;
 
-        if (field->name == NULL) {
-            lcb_log(LOGARGS(instance, WARN), "field name cannot be NULL");
+        if (field->name == nullptr) {
+            lcb_log(LOGARGS(instance, WARN), "field name cannot be nullptr");
             return LCB_ERR_INVALID_ARGUMENT;
         }
         lcbcrypto_PROVIDER *provider = lcb_get_provider(instance, field->alg);
@@ -282,7 +282,7 @@ lcb_STATUS lcbcrypto_decrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDDECRYPT
         const std::string &alg = jalg.asString();
 
         Json::Value &jiv = encrypted["iv"];
-        const char *biv = NULL;
+        const char *biv = nullptr;
         size_t nbiv = 0;
         if (jiv.isString()) {
             biv = jiv.asCString();
@@ -305,10 +305,10 @@ lcb_STATUS lcbcrypto_decrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDDECRYPT
                 lcb_log(LOGARGS(instance, WARN), "Expected signature field \"sig\" to be a JSON string");
                 return LCB_ERR_INVALID_ARGUMENT;
             }
-            uint8_t *sig = NULL;
-            lcb_SIZE nsig = 0;
+            std::uint8_t *sig = nullptr;
+            std::size_t nsig = 0;
             const std::string &bsig = jsig.asString();
-            ret = lcb_base64_decode2(bsig.c_str(), bsig.size(), reinterpret_cast< char ** >(&sig), &nsig);
+            ret = lcb_base64_decode2(bsig.c_str(), bsig.size(), reinterpret_cast<char **>(&sig), &nsig);
             if (ret < 0) {
                 PROVIDER_RELEASE_BYTES(provider, sig);
                 lcb_log(LOGARGS(instance, WARN), "Unable to decode signature as Base64 string");
@@ -318,18 +318,18 @@ lcb_STATUS lcbcrypto_decrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDDECRYPT
             lcbcrypto_SIGV parts[4] = {};
             size_t nparts = 0;
 
-            parts[nparts].data = reinterpret_cast< const uint8_t * >(kid.c_str());
+            parts[nparts].data = reinterpret_cast<const std::uint8_t *>(kid.c_str());
             parts[nparts].len = kid.size();
             nparts++;
-            parts[nparts].data = reinterpret_cast< const uint8_t * >(alg.c_str());
+            parts[nparts].data = reinterpret_cast<const std::uint8_t *>(alg.c_str());
             parts[nparts].len = alg.size();
             nparts++;
             if (biv) {
-                parts[nparts].data = reinterpret_cast< const uint8_t * >(biv);
+                parts[nparts].data = reinterpret_cast<const std::uint8_t *>(biv);
                 parts[nparts].len = nbiv;
                 nparts++;
             }
-            parts[nparts].data = reinterpret_cast< const uint8_t * >(btext.c_str());
+            parts[nparts].data = reinterpret_cast<const std::uint8_t *>(btext.c_str());
             parts[nparts].len = btext.size();
             nparts++;
 
@@ -341,18 +341,18 @@ lcb_STATUS lcbcrypto_decrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDDECRYPT
             }
         }
 
-        uint8_t *ctext = NULL;
-        lcb_SIZE nctext = 0;
-        ret = lcb_base64_decode2(btext.c_str(), btext.size(), reinterpret_cast< char ** >(&ctext), &nctext);
+        std::uint8_t *ctext = nullptr;
+        std::size_t nctext = 0;
+        ret = lcb_base64_decode2(btext.c_str(), btext.size(), reinterpret_cast<char **>(&ctext), &nctext);
         if (ret < 0) {
             lcb_log(LOGARGS(instance, WARN), "Unable to decode encrypted field \"ciphertext\" as Base64 string");
             return LCB_ERR_INVALID_ARGUMENT;
         }
 
-        uint8_t *iv = NULL;
-        lcb_SIZE niv = 0;
+        std::uint8_t *iv = nullptr;
+        std::size_t niv = 0;
         if (biv) {
-            ret = lcb_base64_decode2(biv, nbiv, reinterpret_cast< char ** >(&iv), &niv);
+            ret = lcb_base64_decode2(biv, nbiv, reinterpret_cast<char **>(&iv), &niv);
             if (ret < 0) {
                 free(ctext);
                 lcb_log(LOGARGS(instance, WARN), "Unable to decode IV field \"iv\" as Base64 string");
@@ -360,7 +360,7 @@ lcb_STATUS lcbcrypto_decrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDDECRYPT
             }
         }
 
-        uint8_t *ptext = NULL;
+        std::uint8_t *ptext = nullptr;
         size_t nptext = 0;
         rc = PROVIDER_DECRYPT(provider, ctext, nctext, iv, niv, &ptext, &nptext);
         free(ctext);
@@ -370,7 +370,7 @@ lcb_STATUS lcbcrypto_decrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDDECRYPT
             return rc;
         }
         Json::Value frag;
-        char *json = reinterpret_cast< char * >(ptext);
+        char *json = reinterpret_cast<char *>(ptext);
         bool valid_json = Json::Reader().parse(json, json + nptext, frag);
         PROVIDER_RELEASE_BYTES(provider, ptext);
         if (!valid_json) {
