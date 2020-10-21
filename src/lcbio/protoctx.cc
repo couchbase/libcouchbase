@@ -32,7 +32,7 @@ lcbio_PROTOCTX *lcbio_protoctx_get(const lcbio_SOCKET *sock, lcbio_PROTOID id)
             return cur;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 #define DEL_BY_ID 1
@@ -54,17 +54,17 @@ static lcbio_PROTOCTX *del_common(lcbio_SOCKET *sock, int mode, lcbio_PROTOID id
         }
         return cur;
     }
-    return NULL;
+    return nullptr;
 }
 
 lcbio_PROTOCTX *lcbio_protoctx_delid(lcbio_SOCKET *s, lcbio_PROTOID id, int dtor)
 {
-    return del_common(s, DEL_BY_ID, id, NULL, dtor);
+    return del_common(s, DEL_BY_ID, id, nullptr, dtor);
 }
 
 void lcbio_protoctx_delptr(lcbio_SOCKET *s, lcbio_PROTOCTX *ctx, int dtor)
 {
-    del_common(s, DEL_BY_PTR, 0, ctx, dtor);
+    del_common(s, DEL_BY_PTR, LCBIO_PROTOCTX_UNSPECIFIED, ctx, dtor);
 }
 
 void lcbio__protoctx_delall(lcbio_SOCKET *s)

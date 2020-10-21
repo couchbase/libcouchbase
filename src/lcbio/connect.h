@@ -236,6 +236,7 @@ void lcbio_shutdown(lcbio_SOCKET *);
  */
 
 typedef enum {
+    LCBIO_PROTOCTX_UNSPECIFIED = 0,
     LCBIO_PROTOCTX_SESSINFO = 1,
     LCBIO_PROTOCTX_POOL,
     LCBIO_PROTOCTX_HOSTINFO,
