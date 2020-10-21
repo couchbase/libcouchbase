@@ -40,7 +40,8 @@ using namespace lcb::jsparse;
 #define JOBJ_RESPONSE_ROOT (void *)1
 #define JOBJ_ROWSET (void *)2
 
-template < typename T > void NORMALIZE_OFFSETS(const char *&buf, T &len)
+template <typename T>
+void NORMALIZE_OFFSETS(const char *&buf, T &len)
 {
     buf++;
     len--;
@@ -95,7 +96,7 @@ void Parser::combine_meta()
 
 static Parser *get_ctx(jsonsl_t jsn)
 {
-    return reinterpret_cast< Parser * >(jsn->data);
+    return reinterpret_cast<Parser *>(jsn->data);
 }
 
 static void meta_header_complete_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_state_st *state,
@@ -122,22 +123,6 @@ static void row_pop_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_state_
     ctx->last_row_endpos = jsn->pos;
 
     if (state->data == JOBJ_ROWSET) {
-        /** The closing ] of "rows" : [ ... ] */
-        if (ctx->mode == Parser::MODE_ANALYTICS_DEFERRED) {
-            if (ctx->keep_pos > ctx->min_pos) {
-                ctx->current_buf.erase(0, ctx->keep_pos - ctx->min_pos);
-                ctx->min_pos = ctx->keep_pos;
-            }
-            ctx->meta_buf.append(ctx->current_buf);
-            ctx->header_len = jsn->pos;
-            ctx->meta_complete = 1;
-            if (ctx->actions) {
-                ctx->actions->JSPARSE_on_complete(ctx->meta_buf);
-                ctx->actions = NULL;
-            }
-            return;
-        }
-
         jsn->action_callback_POP = trailer_pop_callback;
         jsn->action_callback_PUSH = NULL;
         if (ctx->rowcount == 0) {
@@ -229,10 +214,6 @@ static void initial_push_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_s
     }
     ctx->last_hk.clear();
 
-    if (ctx->mode == Parser::MODE_ANALYTICS_DEFERRED) {
-        ctx->initialized = 1;
-    }
-
     if (ctx->initialized == 0) {
         if (state->type != JSONSL_T_OBJECT) {
             ctx->have_error = 1;
@@ -279,8 +260,6 @@ const char *Parser::jprstr_for_mode(Mode mode)
         case MODE_N1QL:
         case MODE_ANALYTICS:
             return "/results/^";
-        case MODE_ANALYTICS_DEFERRED:
-            return "/^";
         case MODE_FTS:
             return "/hits/^";
         default:
@@ -307,11 +286,7 @@ Parser::Parser(Mode mode_, Parser::Actions *actions_)
     jsn->action_callback_POP = initial_pop_callback;
     jsn->action_callback_PUSH = initial_push_callback;
     jsn->error_callback = parse_error_callback;
-    if (mode == MODE_ANALYTICS_DEFERRED) {
-        jsn->max_callback_level = 3;
-    } else {
-        jsn->max_callback_level = 4;
-    }
+    jsn->max_callback_level = 4;
     jsn->data = this;
     jsonsl_enable_all_callbacks(jsn);
 }
@@ -319,10 +294,10 @@ Parser::Parser(Mode mode_, Parser::Actions *actions_)
 void Parser::get_postmortem(lcb_IOV &out) const
 {
     if (meta_complete) {
-        out.iov_base = const_cast< char * >(meta_buf.c_str());
+        out.iov_base = const_cast<char *>(meta_buf.c_str());
         out.iov_len = meta_buf.size();
     } else {
-        out.iov_base = const_cast< char * >(current_buf.c_str());
+        out.iov_base = const_cast<char *>(current_buf.c_str());
         out.iov_len = current_buf.size();
     }
 }
@@ -345,7 +320,7 @@ typedef struct {
 static void parse_json_docid(lcb_IOV *iov, Parser *parent)
 {
     Json::Reader r;
-    const char *s = static_cast< char * >(iov->iov_base);
+    const char *s = static_cast<char *>(iov->iov_base);
     const char *s_end = s + iov->iov_len;
     Json::Value &jvp = parent->cxx_data;
     bool rv = r.parse(s, s_end, jvp);
@@ -365,13 +340,13 @@ static void parse_json_docid(lcb_IOV *iov, Parser *parent)
         iov->iov_base = NULL;
         iov->iov_len = 0;
     }
-    iov->iov_base = const_cast< char * >(s);
+    iov->iov_base = const_cast<char *>(s);
     iov->iov_len = s_end - s;
 }
 
 static void miniparse_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_state_st *state, const jsonsl_char_t *at)
 {
-    miniparse_ctx *ctx = reinterpret_cast< miniparse_ctx * >(jsn->data);
+    miniparse_ctx *ctx = reinterpret_cast<miniparse_ctx *>(jsn->data);
     lcb_IOV *iov;
 
     if (state->level == 1) {
@@ -435,7 +410,7 @@ void Parser::parse_viewrow(Row &vr)
 {
     miniparse_ctx ctx = {NULL};
     ctx.datum = &vr;
-    ctx.root = static_cast< const char * >(vr.row.iov_base);
+    ctx.root = static_cast<const char *>(vr.row.iov_base);
     ctx.parent = this;
 
     jsonsl_reset(jsn_rdetails);
@@ -445,5 +420,5 @@ void Parser::parse_viewrow(Row &vr)
     jsn_rdetails->action_callback_POP = miniparse_callback;
     jsn_rdetails->data = &ctx;
 
-    jsonsl_feed(jsn_rdetails, static_cast< const char * >(vr.row.iov_base), vr.row.iov_len);
+    jsonsl_feed(jsn_rdetails, static_cast<const char *>(vr.row.iov_base), vr.row.iov_len);
 }

@@ -38,7 +38,7 @@ struct Row {
 };
 
 struct Parser {
-    enum Mode { MODE_VIEWS, MODE_N1QL, MODE_FTS, MODE_ANALYTICS, MODE_ANALYTICS_DEFERRED };
+    enum Mode { MODE_VIEWS, MODE_N1QL, MODE_FTS, MODE_ANALYTICS };
 
     struct Actions {
         /**
