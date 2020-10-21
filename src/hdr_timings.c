@@ -65,14 +65,12 @@ void lcb_histogram_read(const lcb_HISTOGRAM *hg, const void *cookie, lcb_HISTOGR
 }
 
 LCB_INTERNAL_API
-lcb_STATUS lcb_histogram_print(lcb_HISTOGRAM *hg, FILE *stream)
+void lcb_histogram_print(lcb_HISTOGRAM *hg, FILE *stream)
 {
     hdr_percentiles_print(hg->hdr_histogram, stream,
                           5,        // Granularity of printed values
                           1.0,      // Multiplier for results
                           CLASSIC); // Format CLASSIC/CSV supported.
-
-    return LCB_SUCCESS;
 }
 
 LCB_INTERNAL_API
