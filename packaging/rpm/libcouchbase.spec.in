@@ -59,7 +59,7 @@ Development files for the Couchbase Client & Protocol Library
 
 %prep
 %autosetup -p1 -n@TARREDAS@
-%cmake -DLCB_NO_MOCK=1 -DLCB_BUILD_LIBUV=OFF
+%cmake3 -DLCB_NO_MOCK=1 -DLCB_BUILD_LIBUV=OFF
 
 %build
 %make_build
