@@ -14,9 +14,6 @@ SET(LCB_UTILS_SRC
 FILE(GLOB LCB_IO_SRC src/lcbio/*.c)
 FILE(GLOB LCB_IO_CXXSRC src/lcbio/*.cc)
 
-# common memcached operations
-FILE(GLOB LCB_OP_SRC src/operations/*.c)
-
 # memcached packets
 FILE(GLOB LCB_MC_SRC src/mc/*.c)
 FILE(GLOB LCB_MC_CXXSRC src/mc/*.cc)
@@ -34,7 +31,6 @@ LIST(APPEND LCB_HT_SRC "contrib/http_parser/http_parser.c")
 FILE(GLOB LCB_BCONF_SRC src/bucketconfig/*.c)
 
 SET(LCB_CORE_SRC
-    ${LCB_OP_SRC}
     ${LCB_BCONF_SRC}
     ${LCB_N1QL_SRC}
     src/callbacks.c
