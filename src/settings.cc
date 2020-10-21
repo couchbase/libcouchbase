@@ -85,7 +85,7 @@ void lcb_default_settings(lcb_settings *settings)
 LCB_INTERNAL_API
 lcb_settings *lcb_settings_new(void)
 {
-    lcb_settings *settings = calloc(1, sizeof(*settings));
+    auto *settings = new lcb_settings{};
     lcb_default_settings(settings);
     settings->refcount = 1;
     settings->auth = lcbauth_new();
@@ -118,5 +118,5 @@ void lcb_settings_unref(lcb_settings *settings)
     if (settings->dtorcb) {
         settings->dtorcb(settings->dtorarg);
     }
-    free(settings);
+    delete settings;
 }

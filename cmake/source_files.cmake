@@ -29,20 +29,15 @@ FILE(GLOB LCB_NETBUF_SRC src/netbuf/*.c)
 # HTTP protocol management
 LIST(APPEND LCB_HT_SRC "contrib/http_parser/http_parser.c")
 
-# bucket config ("confmon")
-FILE(GLOB LCB_BCONF_SRC src/bucketconfig/*.c)
-
 SET(LCB_CORE_SRC
-    ${LCB_BCONF_SRC}
-    ${LCB_N1QL_SRC}
     src/callbacks.c
-    src/iofactory.c
-    src/settings.c)
+    src/iofactory.c)
 
 FILE(GLOB LCB_TRACING_SRC src/tracing/*.cc)
 
 SET(LCB_CORE_CXXSRC
     src/instance.cc
+    src/settings.cc
     src/analytics/analytics.cc
     src/auth.cc
     src/bootstrap.cc
