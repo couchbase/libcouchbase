@@ -1,5 +1,17 @@
 # Release Notes
 
+## 3.0.6 (2020-10-21)
+
+* CCBC-1311: Implement `create_as_deleted` subdoc feature.
+* CCBC-1263: Update ping to report analytics as analytics service instead of query
+* CCBC-1175: Allow to specify timeout for `lcb_ping`
+* CCBC-1262: Add accessor for `report_id` in ping report
+* CCBC-1176: Rename "scope" to "namespace" in ping report (also deprecate `lcb_respping_result_scope` in favour to `lcb_respping_result_namespace`)
+* CCBC-1261: Set namespace length of service in ping report to zero if not applicable
+* CCBC-1194: Add extra checks for socket state in `lcb_diag` to avoid invalid access issues
+* CCBC-1314: Extra checks for socket state in `lcb_ping` to avoid invalid access issues
+* CCBC-1316: Fix two-step bootstrap (`lcb_connect` + `lcb_open`) for memcached bucket.
+
 ## 3.0.5 (2020-09-21)
 
 * CCBC-1307: allow to select any mechanisms for SASL regardless network protocol being used.
