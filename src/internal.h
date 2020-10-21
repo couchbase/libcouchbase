@@ -41,7 +41,6 @@
 #include "mcserver/mcserver.h"
 #include "mc/mcreq.h"
 #include "settings.h"
-#include "contrib/genhash/genhash.h"
 
 #include "internalstructs.h"
 
@@ -213,11 +212,6 @@ LCB_INTERNAL_API
 void lcb_maybe_breakout(lcb_INSTANCE *instance);
 
 void lcb_update_vbconfig(lcb_INSTANCE *instance, lcb_pCONFIGINFO config);
-/**
- * Hashtable wrappers
- */
-genhash_t *lcb_hashtable_nc_new(lcb_size_t est);
-genhash_t *lcb_hashtable_szt_new(lcb_size_t est);
 
 lcb_STATUS lcb_iops_cntl_handler(int mode, lcb_INSTANCE *instance, int cmd, void *arg);
 

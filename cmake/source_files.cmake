@@ -4,10 +4,8 @@
 
 # couchbase_utils
 SET(LCB_UTILS_SRC
-    contrib/genhash/genhash.c
     src/strcodecs/base64.c
     src/gethrtime.c
-    src/hashtable.c
     src/list.c
     src/logging.c
     src/ringbuffer.c)
