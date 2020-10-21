@@ -45,7 +45,8 @@ IF(CMAKE_C_COMPILER_ID STREQUAL "Clang")
 ELSE()
     LIST(APPEND LCB_GNUC_CPP_WARNINGS
             -Wlogical-op # warn about logical operations being used where bitwise were probably wanted
-            -Wuseless-cast # warn if you perform a cast to the same type
+            # TODO: re-enable
+            # -Wuseless-cast # warn if you perform a cast to the same type
             )
 ENDIF()
 

@@ -115,27 +115,6 @@ struct lcb_VIEW_ERROR_CONTEXT_ {
 /**
  * @private
  */
-struct lcb_SEARCH_ERROR_CONTEXT_ {
-    lcb_STATUS rc;
-    int has_top_level_error;
-    const char *error_message;
-    size_t error_message_len;
-    const char *index;
-    size_t index_len;
-    const char *search_query;
-    size_t search_query_len;
-    const char *search_params;
-    size_t search_params_len;
-    uint32_t http_response_code;
-    const char *http_response_body;
-    size_t http_response_body_len;
-    const char *endpoint;
-    size_t endpoint_len;
-};
-
-/**
- * @private
- */
 struct lcb_HTTP_ERROR_CONTEXT_ {
     lcb_STATUS rc;
     uint32_t response_code;
@@ -1235,44 +1214,6 @@ struct lcb_RESPHTTP_ {
 
     /**@internal*/
     lcb_HTTP_HANDLE *_htreq;
-};
-
-/**
- * Response structure for full-text searches.
- */
-struct lcb_RESPSEARCH_ {
-    lcb_SEARCH_ERROR_CONTEXT ctx;
-    void *cookie;
-    lcb_U16 rflags;
-    /**
-     * A query hit, or response metadta
-     * (if #rflags contains @ref LCB_RESP_F_FINAL). The format of the row will
-     * be JSON, and should be decoded by a JSON decoded in your application.
-     */
-    const char *row;
-    /** Length of #row */
-    size_t nrow;
-    /** Original HTTP response obejct */
-    const lcb_RESPHTTP *htresp;
-    lcb_SEARCH_HANDLE *handle;
-};
-
-/**
- * @brief Search Command
- */
-struct lcb_CMDSEARCH_ {
-    LCB_CMD_BASE;
-    /** Encoded JSON query */
-    const char *query;
-    /** Length of JSON query */
-    size_t nquery;
-    /** Callback to be invoked. This must be supplied */
-    lcb_SEARCH_CALLBACK callback;
-    /**
-     * Optional pointer to store the handle. The handle may then be
-     * used for query cancellation via lcb_search_cancel()
-     */
-    lcb_SEARCH_HANDLE **handle;
 };
 
 /**

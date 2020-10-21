@@ -35,6 +35,8 @@ SET(LCB_CORE_SRC
 
 FILE(GLOB LCB_TRACING_SRC src/tracing/*.cc)
 
+FILE(GLOB LCB_CAPI_SRC src/capi/*.cc)
+
 SET(LCB_CORE_CXXSRC
     src/instance.cc
     src/settings.cc
@@ -90,4 +92,5 @@ SET(LCB_CORE_CXXSRC
     src/cntl.cc
     src/wait.cc
     ${LCB_TRACING_SRC}
+    ${LCB_CAPI_SRC}
     )

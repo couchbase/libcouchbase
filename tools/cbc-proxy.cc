@@ -284,7 +284,48 @@ extern "C" {
     }
 
 DEFINE_ROW_CALLBACK(n1ql_callback, lcb_RESPQUERY)
-DEFINE_ROW_CALLBACK(fts_callback, lcb_RESPSEARCH)
+
+static void fts_callback(lcb_INSTANCE *, int, const lcb_RESPSEARCH *resp)
+{
+    char key[100] = {0};
+    size_t nkey;
+    struct client *cl = nullptr;
+    lcb_respsearch_cookie(resp, (void **)&cl);
+
+    protocol_binary_response_header header = {};
+    header.response.magic = PROTOCOL_BINARY_RES;
+    header.response.opcode = PROTOCOL_BINARY_CMD_STAT;
+
+    struct evbuffer *output = bufferevent_get_output(cl->bev);
+
+    if (lcb_respsearch_is_final(resp)) {
+        memcpy(key, "meta", 4);
+    } else {
+        snprintf(key, sizeof(key), "row-%ld", cl->cnt++);
+    }
+    nkey = strlen(key);
+    const char *row = nullptr;
+    size_t nrow = 0;
+    lcb_respsearch_row(resp, &row, &nrow);
+    header.response.keylen = htons(nkey);
+    header.response.bodylen = htonl(nrow + nkey);
+
+    evbuffer_expand(output, nrow + sizeof(header.bytes));
+    dump_bytes(cl, "response", header.bytes, sizeof(header.bytes));
+    evbuffer_add(output, header.bytes, sizeof(header.bytes));
+    dump_bytes(cl, "response", key, nkey);
+    evbuffer_add(output, key, nkey);
+    dump_bytes(cl, "response", row, nrow);
+    evbuffer_add(output, row, nrow);
+
+    if (lcb_respsearch_is_final(resp)) {
+        header.response.keylen = 0;
+        header.response.bodylen = 0;
+        evbuffer_expand(output, sizeof(header.bytes));
+        dump_bytes(cl, "response", header.bytes, sizeof(header.bytes));
+        evbuffer_add(output, header.bytes, sizeof(header.bytes));
+    }
+}
 }
 
 static void conn_readcb(struct bufferevent *bev, void *cookie)
