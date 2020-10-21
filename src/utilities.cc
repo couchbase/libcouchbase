@@ -22,11 +22,11 @@
  * to call home
  */
 
-extern lcb_uint64_t lcb_byteswap64(lcb_uint64_t val)
+extern std::uint64_t lcb_byteswap64(std::uint64_t val)
 {
     lcb_size_t ii;
-    lcb_uint64_t ret = 0;
-    for (ii = 0; ii < sizeof(lcb_uint64_t); ii++) {
+    std::uint64_t ret = 0;
+    for (ii = 0; ii < sizeof(std::uint64_t); ii++) {
         ret <<= 8;
         ret |= val & 0xff;
         val >>= 8;
@@ -34,7 +34,7 @@ extern lcb_uint64_t lcb_byteswap64(lcb_uint64_t val)
     return ret;
 }
 
-extern lcb_uint16_t lcb_byteswap16(lcb_uint16_t val)
+extern std::uint16_t lcb_byteswap16(std::uint16_t val)
 {
     return ((val & 0xff) << 8) | ((val >> 8) & 0xff);
 }

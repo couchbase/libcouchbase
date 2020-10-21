@@ -37,8 +37,7 @@ SET(LCB_CORE_SRC
     ${LCB_N1QL_SRC}
     src/callbacks.c
     src/iofactory.c
-    src/settings.c
-    src/utilities.c)
+    src/settings.c)
 
 FILE(GLOB LCB_TRACING_SRC src/tracing/*.cc)
 
@@ -52,6 +51,7 @@ SET(LCB_CORE_CXXSRC
     src/bucketconfig/bc_file.cc
     src/bucketconfig/bc_static.cc
     src/bucketconfig/confmon.cc
+    src/utilities.cc
     src/collections.cc
     src/connspec.cc
     src/crypto.cc
