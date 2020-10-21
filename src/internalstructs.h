@@ -19,6 +19,7 @@
 #define LIBCOUCHBASE_couchbase_internalstructs_h__
 
 #include <libcouchbase/utils.h>
+#include "mutation_token.hh"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,27 +46,6 @@ struct lcb_KEY_VALUE_ERROR_CONTEXT_ {
     const char *context;
     size_t context_len;
     char endpoint[NI_MAXHOST + NI_MAXSERV + 4];
-    size_t endpoint_len;
-};
-
-/**
- * @private
- */
-struct lcb_QUERY_ERROR_CONTEXT_ {
-    lcb_STATUS rc;
-    uint32_t first_error_code;
-    const char *first_error_message;
-    size_t first_error_message_len;
-    const char *statement;
-    size_t statement_len;
-    const char *client_context_id;
-    size_t client_context_id_len;
-    const char *query_params;
-    size_t query_params_len;
-    uint32_t http_response_code;
-    const char *http_response_message;
-    size_t http_response_message_len;
-    const char *endpoint;
     size_t endpoint_len;
 };
 
@@ -1216,45 +1196,6 @@ struct lcb_RESPHTTP_ {
     lcb_HTTP_HANDLE *_htreq;
 };
 
-/**
- * Prepare and cache the query if required. This may be used on frequently
- * issued queries, so they perform better.
- */
-#define LCB_CMDN1QL_F_PREPCACHE (1u << 16u)
-
-/** The lcb_CMDQUERY::query member is an internal JSON structure. @internal */
-#define LCB_CMDN1QL_F_JSONQUERY (1u << 17u)
-
-/**
- * This is an Analytics query.
- *
- * @committed
- */
-#define LCB_CMDN1QL_F_ANALYTICSQUERY (1u << 18u)
-
-/**
- * Response for a N1QL query. This is delivered in the @ref lcb_N1QLCALLBACK
- * callback function for each result row received. The callback is also called
- * one last time when all
- */
-struct lcb_RESPQUERY_ {
-    lcb_QUERY_ERROR_CONTEXT ctx;
-    void *cookie;
-    lcb_U16 rflags;
-
-    /**Current result row. If #rflags has the ::LCB_RESP_F_FINAL bit set, then
-     * this field does not contain the actual row, but the remainder of the
-     * data not included with the resultset; e.g. the JSON surrounding
-     * the "results" field with any errors or metadata for the response.
-     */
-    const char *row;
-    /** Length of the row */
-    size_t nrow;
-    /** Raw HTTP response, if applicable */
-    const lcb_RESPHTTP *htresp;
-    lcb_QUERY_HANDLE *handle;
-};
-
 /** Set this flag to execute an actual get with each response */
 #define LCB_CMDVIEWQUERY_F_INCLUDE_DOCS (1u << 16u)
 
@@ -1698,70 +1639,6 @@ typedef struct {
     LCB_CMD_BASE;
 } lcb_CMDNOOP;
 typedef lcb_RESPSERVERBASE lcb_RESPNOOP;
-
-/**
- * Retrieves the mutation token from the response structure
- * @param cbtype the type of callback invoked
- * @param rb the pointer to the response
- * @return The embedded mutation token, or NULL if the response does not have a
- *         mutation token. This may be either because the command does not support
- *         mutation tokens, or because they have been disabled at the connection
- *         level.
- */
-LIBCOUCHBASE_API
-const lcb_MUTATION_TOKEN *lcb_resp_get_mutation_token(int cbtype, const lcb_RESPBASE *rb);
-
-/**
- * @volatile
- *
- * Retrieves the last mutation token for a given key.
- * This relies on the @ref LCB_CNTL_DURABILITY_MUTATION_TOKENS option, and will
- * check the instance-level log to determine the latest MUTATION_TOKEN for
- * the given vBucket ID which the key maps to.
- *
- * @param instance the instance
- * @param kb The buffer representing the key. The type of the buffer (see
- * lcb_KEYBUF::type) may either be ::LCB_KV_COPY or ::LCB_KV_VBID
- * @param[out] errp Set to an error if this function returns NULL
- * @return The mutation token if successful, otherwise NULL.
- *
- * Getting the latest mutation token for a key:
- *
- * @code{.c}
- * lcb_KEYBUF kb;
- * kb.type = LCB_KV_COPY;
- * kb.contig.bytes = "Hello";
- * kv.config.nbytes = 5;
- * mt = lcb_get_mutation_token(instance, &kb, &rc);
- * @endcode
- *
- * Getting the latest mutation token for a vbucket:
- * @code{.c}
- * lcb_KEYBUF kb;
- * kv.type = LCB_KV_VBID;
- * kv.contig.nbytes = 543;
- * kv.config.bytes = NULL;
- * mt = lcb_get_mutation_token(instance, &kb, &rc);
- * @endcode
- *
- * Getting the mutation token for each vbucket
- * @code{.c}
- * size_t ii, nvb;
- * lcbvb_CONFIG *vbc;
- * lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBCONFIG, &vbc);
- * nvb = vbucket_get_num_vbuckets(vbc);
- * for (ii = 0; ii < nvb; ii++) {
- *   lcb_KEYBUF kb;
- *   const lcb_MUTATION_TOKEN *mt;
- *   kb.type = LCB_KV_VBID;
- *   kb.contig.nbytes = ii;
- *   kb.config.bytes = NULL;
- *   mt = lcb_get_mutation_token(instance, &kb, &rc);
- * }
- * @endcode
- */
-LIBCOUCHBASE_API
-const lcb_MUTATION_TOKEN *lcb_get_mutation_token(lcb_INSTANCE *instance, const lcb_KEYBUF *kb, lcb_STATUS *errp);
 
 /**@} (Group: Durability) */
 

@@ -244,46 +244,46 @@ static void pktfwd_callback(lcb_INSTANCE *, const void *cookie, lcb_STATUS err, 
 }
 
 extern "C" {
-#define DEFINE_ROW_CALLBACK(cbname, resptype)                                                                          \
-    static void cbname(lcb_INSTANCE *, int, const resptype *resp)                                                      \
-    {                                                                                                                  \
-        char key[100] = {0};                                                                                           \
-        size_t nkey;                                                                                                   \
-        struct client *cl = (struct client *)resp->cookie;                                                             \
-                                                                                                                       \
-        protocol_binary_response_header header = {};                                                                   \
-        header.response.magic = PROTOCOL_BINARY_RES;                                                                   \
-        header.response.opcode = PROTOCOL_BINARY_CMD_STAT;                                                             \
-                                                                                                                       \
-        struct evbuffer *output = bufferevent_get_output(cl->bev);                                                     \
-                                                                                                                       \
-        if (resp->rflags & LCB_RESP_F_FINAL) {                                                                         \
-            memcpy(key, "meta", 4);                                                                                    \
-        } else {                                                                                                       \
-            snprintf(key, sizeof(key), "row-%ld", cl->cnt++);                                                          \
-        }                                                                                                              \
-        nkey = strlen(key);                                                                                            \
-        header.response.keylen = htons(nkey);                                                                          \
-        header.response.bodylen = htonl(resp->nrow + nkey);                                                            \
-                                                                                                                       \
-        evbuffer_expand(output, resp->nrow + sizeof(header.bytes));                                                    \
-        dump_bytes(cl, "response", header.bytes, sizeof(header.bytes));                                                \
-        evbuffer_add(output, header.bytes, sizeof(header.bytes));                                                      \
-        dump_bytes(cl, "response", key, nkey);                                                                         \
-        evbuffer_add(output, key, nkey);                                                                               \
-        dump_bytes(cl, "response", resp->row, resp->nrow);                                                             \
-        evbuffer_add(output, resp->row, resp->nrow);                                                                   \
-                                                                                                                       \
-        if (resp->rflags & LCB_RESP_F_FINAL) {                                                                         \
-            header.response.keylen = 0;                                                                                \
-            header.response.bodylen = 0;                                                                               \
-            evbuffer_expand(output, sizeof(header.bytes));                                                             \
-            dump_bytes(cl, "response", header.bytes, sizeof(header.bytes));                                            \
-            evbuffer_add(output, header.bytes, sizeof(header.bytes));                                                  \
-        }                                                                                                              \
-    }
+static void n1ql_callback(lcb_INSTANCE *, int, const lcb_RESPQUERY *resp)
+{
+    char key[100] = {0};
+    size_t nkey;
+    struct client *cl = nullptr;
+    lcb_respquery_cookie(resp, (void **)&cl);
 
-DEFINE_ROW_CALLBACK(n1ql_callback, lcb_RESPQUERY)
+    protocol_binary_response_header header = {};
+    header.response.magic = PROTOCOL_BINARY_RES;
+    header.response.opcode = PROTOCOL_BINARY_CMD_STAT;
+
+    struct evbuffer *output = bufferevent_get_output(cl->bev);
+
+    if (lcb_respquery_is_final(resp)) {
+        memcpy(key, "meta", 4);
+    } else {
+        snprintf(key, sizeof(key), "row-%ld", cl->cnt++);
+    }
+    nkey = strlen(key);
+    header.response.keylen = htons(nkey);
+    const char *row = nullptr;
+    size_t nrow = 0;
+    lcb_respquery_row(resp, &row, &nrow);
+
+    evbuffer_expand(output, nrow + sizeof(header.bytes));
+    dump_bytes(cl, "response", header.bytes, sizeof(header.bytes));
+    evbuffer_add(output, header.bytes, sizeof(header.bytes));
+    dump_bytes(cl, "response", key, nkey);
+    evbuffer_add(output, key, nkey);
+    dump_bytes(cl, "response", row, nrow);
+    evbuffer_add(output, row, nrow);
+
+    if (lcb_respquery_is_final(resp)) {
+        header.response.keylen = 0;
+        header.response.bodylen = 0;
+        evbuffer_expand(output, sizeof(header.bytes));
+        dump_bytes(cl, "response", header.bytes, sizeof(header.bytes));
+        evbuffer_add(output, header.bytes, sizeof(header.bytes));
+    }
+}
 
 static void fts_callback(lcb_INSTANCE *, int, const lcb_RESPSEARCH *resp)
 {

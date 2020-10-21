@@ -26,8 +26,10 @@
 #include "settings.h"
 #include "internal.h"
 
+#include "capi/query.hh"
+
 #define LOGFMT "(mgreq=%p) "
-#define LOGID(req) static_cast< const void * >(req)
+#define LOGID(req) static_cast<const void *>(req)
 #define LOGARGS(req, lvl) (req)->m_instance->settings, "ixmgmt", LCB_LOG_##lvl, __FILE__, __LINE__
 
 using std::string;
@@ -54,12 +56,14 @@ struct ErrorSpec {
     unsigned code;
 };
 
-template < typename T > void my_delete(T p)
+template <typename T>
+void my_delete(T p)
 {
     delete p;
 }
 
-template < typename T > lcb_STATUS extract_n1ql_errors(const char *s, size_t n, T &err_out)
+template <typename T>
+lcb_STATUS extract_n1ql_errors(const char *s, size_t n, T &err_out)
 {
     Json::Value jresp;
     if (!Json::Reader().parse(s, s + n, jresp)) {
@@ -95,7 +99,7 @@ template < typename T > lcb_STATUS extract_n1ql_errors(const char *s, size_t n, 
 
 static lcb_STATUS get_n1ql_error(const char *s, size_t n)
 {
-    std::vector< ErrorSpec > dummy;
+    std::vector<ErrorSpec> dummy;
     return extract_n1ql_errors(s, n, dummy);
 }
 
@@ -107,7 +111,7 @@ static void cb_generic(lcb_INSTANCE *instance, int, const lcb_RESPQUERY *resp)
         return;
     }
 
-    IndexOpCtx *ctx = reinterpret_cast< IndexOpCtx * >(resp->cookie);
+    IndexOpCtx *ctx = reinterpret_cast<IndexOpCtx *>(resp->cookie);
     lcb_RESPN1XMGMT w_resp{};
     w_resp.cookie = ctx->cookie;
 
@@ -116,7 +120,7 @@ static void cb_generic(lcb_INSTANCE *instance, int, const lcb_RESPQUERY *resp)
         // descend to determine additional errors. This is primarily
         // required to support EEXIST for GSI primary indexes
 
-        vector< ErrorSpec > errors;
+        vector<ErrorSpec> errors;
         lcb_STATUS rc = extract_n1ql_errors(resp->row, resp->nrow, errors);
         if (rc == LCB_ERR_GENERIC) {
             w_resp.rc = LCB_ERR_QUERY;
@@ -174,7 +178,7 @@ lcb_STATUS dispatch_common(lcb_INSTANCE *instance, const void *cookie, lcb_N1XMG
         goto GT_ERROR;
     }
 
-    obj->cookie = const_cast< void * >(cookie);
+    obj->cookie = const_cast<void *>(cookie);
 
     lcb_CMDQUERY *cmd;
     lcb_cmdquery_create(&cmd);
@@ -198,8 +202,8 @@ lcb_STATUS dispatch_common(lcb_INSTANCE *instance, const void *cookie, lcb_N1XMG
     Json::Value root;
     root["statement"] = ss;
     string reqbuf = Json::FastWriter().write(root);
-    return dispatch_common< T >(instance, cookie, u_callback, i_callback, reqbuf.c_str(), reqbuf.size() - 1 /*newline*/,
-                                obj);
+    return dispatch_common<T>(instance, cookie, u_callback, i_callback, reqbuf.c_str(), reqbuf.size() - 1 /*newline*/,
+                              obj);
 }
 
 // Class to back the storage for the actual lcb_IXSPEC without doing too much
@@ -341,13 +345,13 @@ lcb_STATUS lcb_n1x_create(lcb_INSTANCE *instance, const void *cookie, const lcb_
         ss.append(" WITH {\"defer_build\": true}");
     }
 
-    return dispatch_common< IndexOpCtx >(instance, cookie, cmd->callback, cb_generic, ss);
+    return dispatch_common<IndexOpCtx>(instance, cookie, cmd->callback, cb_generic, ss);
 }
 
 class ListIndexCtx : public IndexOpCtx
 {
   public:
-    vector< IndexSpec * > specs;
+    vector<IndexSpec *> specs;
 
     virtual void invoke(lcb_INSTANCE *instance, lcb_RESPN1XMGMT *resp)
     {
@@ -362,7 +366,7 @@ class ListIndexCtx : public IndexOpCtx
             resp->rc = LCB_SUCCESS;
         }
         resp->cookie = cookie;
-        lcb_N1XSPEC **speclist = reinterpret_cast< lcb_N1XSPEC ** >(&specs[0]);
+        lcb_N1XSPEC **speclist = reinterpret_cast<lcb_N1XSPEC **>(&specs[0]);
         resp->specs = speclist;
         resp->nspecs = specs.size();
         callback(instance, LCB_CALLBACK_IXMGMT, resp);
@@ -380,7 +384,7 @@ class ListIndexCtx : public IndexOpCtx
 
 static void cb_index_list(lcb_INSTANCE *instance, int, const lcb_RESPQUERY *resp)
 {
-    ListIndexCtx *ctx = reinterpret_cast< ListIndexCtx * >(resp->cookie);
+    ListIndexCtx *ctx = reinterpret_cast<ListIndexCtx *>(resp->cookie);
     if (!(resp->rflags & LCB_RESP_F_FINAL)) {
         ctx->specs.push_back(new IndexSpec(resp->row, resp->nrow));
         return;
@@ -425,7 +429,7 @@ static lcb_STATUS do_index_list(lcb_INSTANCE *instance, const void *cookie, cons
     ss.append(" true");
     ss.append(" ORDER BY is_primary DESC, name ASC");
 
-    return dispatch_common< ListIndexCtx >(instance, cookie, cmd->callback, cb_index_list, ss, ctx);
+    return dispatch_common<ListIndexCtx>(instance, cookie, cmd->callback, cb_index_list, ss, ctx);
 }
 
 LIBCOUCHBASE_API
@@ -460,7 +464,7 @@ lcb_STATUS lcb_n1x_drop(lcb_INSTANCE *instance, const void *cookie, const lcb_CM
         ss.append(" USING ").append(stype);
     }
 
-    return dispatch_common< IndexOpCtx >(instance, cookie, cmd->callback, cb_generic, ss);
+    return dispatch_common<IndexOpCtx>(instance, cookie, cmd->callback, cb_generic, ss);
 }
 
 class ListIndexCtx_BuildIndex : public ListIndexCtx
@@ -472,7 +476,7 @@ class ListIndexCtx_BuildIndex : public ListIndexCtx
 
 static void cb_build_submitted(lcb_INSTANCE *instance, int, const lcb_RESPQUERY *resp)
 {
-    ListIndexCtx *ctx = reinterpret_cast< ListIndexCtx * >(resp->cookie);
+    ListIndexCtx *ctx = reinterpret_cast<ListIndexCtx *>(resp->cookie);
 
     if (resp->rflags & LCB_RESP_F_FINAL) {
         lcb_RESPN1XMGMT w_resp{};
@@ -485,7 +489,7 @@ static void cb_build_submitted(lcb_INSTANCE *instance, int, const lcb_RESPQUERY 
 
 lcb_STATUS ListIndexCtx_BuildIndex::try_build(lcb_INSTANCE *instance)
 {
-    vector< IndexSpec * > pending;
+    vector<IndexSpec *> pending;
     for (size_t ii = 0; ii < specs.size(); ++ii) {
         IndexSpec *spec = specs[ii];
         if (strncmp(spec->state, "pending", spec->nstate) == 0 || strncmp(spec->state, "deferred", spec->nstate) == 0) {
@@ -512,16 +516,15 @@ lcb_STATUS ListIndexCtx_BuildIndex::try_build(lcb_INSTANCE *instance)
     }
     ss += ')';
 
-    lcb_STATUS rc =
-        dispatch_common< ListIndexCtx_BuildIndex >(instance, cookie, callback, cb_build_submitted, ss, this);
+    lcb_STATUS rc = dispatch_common<ListIndexCtx_BuildIndex>(instance, cookie, callback, cb_build_submitted, ss, this);
 
     if (rc == LCB_SUCCESS) {
-        std::set< IndexSpec * > to_remove(specs.begin(), specs.end());
+        std::set<IndexSpec *> to_remove(specs.begin(), specs.end());
         for (size_t ii = 0; ii < pending.size(); ++ii) {
             to_remove.erase(pending[ii]);
         }
 
-        std::for_each(to_remove.begin(), to_remove.end(), my_delete< IndexSpec * >);
+        std::for_each(to_remove.begin(), to_remove.end(), my_delete<IndexSpec *>);
 
         specs = pending;
     }
@@ -553,8 +556,8 @@ struct WatchIndexCtx : public IndexOpCtx {
     uint32_t m_interval;
     uint64_t m_tsend;
     lcb_INSTANCE *m_instance;
-    std::map< std::string, IndexSpec * > m_defspend;
-    std::vector< IndexSpec * > m_defsok;
+    std::map<std::string, IndexSpec *> m_defspend;
+    std::vector<IndexSpec *> m_defsok;
 
     inline void read_state(const lcb_RESPN1XMGMT *resp);
     inline void reschedule();
@@ -567,7 +570,7 @@ struct WatchIndexCtx : public IndexOpCtx {
 
 static void cb_watchix_tm(void *arg)
 {
-    WatchIndexCtx *ctx = reinterpret_cast< WatchIndexCtx * >(arg);
+    WatchIndexCtx *ctx = reinterpret_cast<WatchIndexCtx *>(arg);
     uint64_t now = lcb_nstime();
     if (now >= ctx->m_tsend) {
         ctx->finish(LCB_ERR_TIMEOUT, NULL);
@@ -589,7 +592,7 @@ WatchIndexCtx::WatchIndexCtx(lcb_INSTANCE *instance, const void *cookie_, const 
     m_tsend = now + LCB_US2NS(timeout);
 
     this->callback = cmd->callback;
-    this->cookie = const_cast< void * >(cookie_);
+    this->cookie = const_cast<void *>(cookie_);
 
     m_timer = lcbio_timer_new(instance->iotable, this, cb_watchix_tm);
     lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
@@ -605,8 +608,8 @@ WatchIndexCtx::~WatchIndexCtx()
         lcb_maybe_breakout(m_instance);
     }
 
-    std::for_each(m_defsok.begin(), m_defsok.end(), my_delete< IndexSpec * >);
-    for (std::map< string, IndexSpec * >::iterator ii = m_defspend.begin(); ii != m_defspend.end(); ++ii) {
+    std::for_each(m_defsok.begin(), m_defsok.end(), my_delete<IndexSpec *>);
+    for (std::map<string, IndexSpec *>::iterator ii = m_defspend.begin(); ii != m_defspend.end(); ++ii) {
         delete ii->second;
     }
 }
@@ -635,17 +638,17 @@ void WatchIndexCtx::read_state(const lcb_RESPN1XMGMT *resp)
         return;
     }
 
-    std::map< std::string, const lcb_N1XSPEC * > in_specs;
+    std::map<std::string, const lcb_N1XSPEC *> in_specs;
     for (size_t ii = 0; ii < resp->nspecs; ++ii) {
         std::string key;
         IndexSpec::to_key(resp->specs[ii], key);
         in_specs[key] = resp->specs[ii];
     }
 
-    std::map< std::string, IndexSpec * >::iterator it_remain = m_defspend.begin();
+    std::map<std::string, IndexSpec *>::iterator it_remain = m_defspend.begin();
     while (it_remain != m_defspend.end()) {
         // See if the index is 'online' yet!
-        std::map< std::string, const lcb_N1XSPEC * >::iterator res;
+        std::map<std::string, const lcb_N1XSPEC *>::iterator res;
         res = in_specs.find(it_remain->first);
         if (res == in_specs.end()) {
             lcb_log(LOGARGS(this, INFO), LOGFMT "Index [%s] not in cluster", LOGID(this), it_remain->first.c_str());
@@ -695,7 +698,7 @@ void WatchIndexCtx::finish(lcb_STATUS rc, const lcb_RESPN1XMGMT *resp)
         my_resp.inner = resp->inner;
     }
 
-    lcb_N1XSPEC **speclist = reinterpret_cast< lcb_N1XSPEC ** >(&m_defsok[0]);
+    lcb_N1XSPEC **speclist = reinterpret_cast<lcb_N1XSPEC **>(&m_defsok[0]);
     my_resp.specs = speclist;
     my_resp.nspecs = m_defsok.size();
     callback(m_instance, LCB_CALLBACK_IXMGMT, &my_resp);
@@ -715,7 +718,7 @@ void WatchIndexCtx::reschedule()
 
 static void cb_watch_gotlist(lcb_INSTANCE *, int, const lcb_RESPN1XMGMT *resp)
 {
-    WatchIndexCtx *ctx = reinterpret_cast< WatchIndexCtx * >(resp->cookie);
+    WatchIndexCtx *ctx = reinterpret_cast<WatchIndexCtx *>(resp->cookie);
     ctx->read_state(resp);
 }
 
@@ -779,7 +782,7 @@ void IndexSpec::load_json(const char *s, size_t n)
 // IndexSpec stuff
 IndexSpec::IndexSpec(const lcb_N1XSPEC *spec)
 {
-    *static_cast< lcb_N1XSPEC * >(this) = *spec;
+    *static_cast<lcb_N1XSPEC *>(this) = *spec;
     if (spec->nrawjson) {
         load_json(spec->rawjson, spec->nrawjson);
         return;
