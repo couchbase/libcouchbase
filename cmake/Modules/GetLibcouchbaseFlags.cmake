@@ -28,17 +28,25 @@ LIST(APPEND LCB_GNUC_CPP_WARNINGS
         -Wextra
         -pedantic
         -fdiagnostics-show-option
-        -Wshadow
         -Wformat
         -Wno-strict-aliasing
         -Winit-self
         -Wno-missing-field-initializers
-        -Wno-variadic-macros)
+        -Wno-variadic-macros
+        -Wshadow # warn the user if a variable declaration shadows one from a parent context
+        -Wunused # warn on anything being unused
+        -Wpedantic # warn if non-standard C++ is used
+        )
 
 IF(CMAKE_C_COMPILER_ID STREQUAL "Clang")
     LIST(APPEND LCB_GNUC_CPP_WARNINGS
             -Wno-cast-align
             -Wno-dollar-in-identifier-extension)
+ELSE()
+    LIST(APPEND LCB_GNUC_CPP_WARNINGS
+            -Wlogical-op # warn about logical operations being used where bitwise were probably wanted
+            -Wuseless-cast # warn if you perform a cast to the same type
+            )
 ENDIF()
 
 IF(LCB_USE_ASAN)
