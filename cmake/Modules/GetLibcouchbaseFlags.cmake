@@ -15,18 +15,30 @@
 # Note that global flags will still be modified for debug settings and the
 # like.
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
+
 MACRO(list2args VAR)
     STRING(REPLACE ";" " " _tmp "${${VAR}}")
     SET("${VAR}" "${_tmp}")
 ENDMACRO(list2args)
 
 LIST(APPEND LCB_GNUC_CPP_WARNINGS
-    -Wall -pedantic -Wshadow -fdiagnostics-show-option -Wformat
-    -Wno-strict-aliasing -Wextra -Winit-self -Wno-missing-field-initializers
-    -Wno-variadic-macros)
+        -Wall
+        -Wextra
+        -pedantic
+        -fdiagnostics-show-option
+        -Wshadow
+        -Wformat
+        -Wno-strict-aliasing
+        -Winit-self
+        -Wno-missing-field-initializers
+        -Wno-variadic-macros)
 
 IF(CMAKE_C_COMPILER_ID STREQUAL "Clang")
-    LIST(APPEND LCB_GNUC_CPP_WARNINGS -Wno-cast-align -Wno-dollar-in-identifier-extension)
+    LIST(APPEND LCB_GNUC_CPP_WARNINGS
+            -Wno-cast-align
+            -Wno-dollar-in-identifier-extension)
 ENDIF()
 
 IF(LCB_USE_ASAN)
@@ -50,17 +62,21 @@ ENDIF()
 list2args(LCB_GNUC_CPP_WARNINGS)
 
 LIST(APPEND LCB_GNUC_C_WARNINGS
-    ${LCB_GNUC_CPP_WARNINGS}
-    -std=gnu99
-    -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wredundant-decls
-    -Wmissing-declarations)
+        ${LCB_GNUC_CPP_WARNINGS}
+        -Wundef
+        -Wstrict-prototypes
+        -Wmissing-prototypes
+        -Wredundant-decls
+        -Wmissing-declarations)
 list2args(LCB_GNUC_C_WARNINGS)
 
 LIST(APPEND LCB_GNUC_CXX_WARNINGS
-    ${LCB_GNUC_CPP_WARNINGS}
-    -std=c++11
-    -Woverloaded-virtual -Wnon-virtual-dtor -Wctor-dtor-privacy
-    -Wno-long-long -Wredundant-decls)
+        ${LCB_GNUC_CPP_WARNINGS}
+        -Woverloaded-virtual
+        -Wnon-virtual-dtor
+        -Wctor-dtor-privacy
+        -Wno-long-long
+        -Wredundant-decls)
 
 list2args(LCB_GNUC_CXX_WARNINGS)
 
@@ -97,7 +113,7 @@ IF(MSVC)
     ADD_DEFINITIONS(-D_VARIADIC_MAX=10)
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /TC ${LCB_CL_CPPFLAGS}")
     # We do not support anything below VS 2015
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ${LCB_CL_CPPFLAGS}")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LCB_CL_CPPFLAGS}")
     SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${LCB_CL_CPPFLAGS_DEBUG}")
     SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${LCB_CL_CPPFLAGS_DEBUG}")
     SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${LCB_CL_CPPFLAGS_REL}")
