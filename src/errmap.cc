@@ -42,7 +42,7 @@ RetrySpec *Error::getRetrySpec() const
 RetrySpec *RetrySpec::parse(const Json::Value &retryJson, std::string &emsg)
 {
 
-    RetrySpec *spec = new RetrySpec();
+    auto *spec = new RetrySpec();
     spec->refcount = 1;
 
 #define FAIL_RETRY(s)                                                                                                  \
@@ -170,7 +170,7 @@ ErrorMap::ParseStatus ErrorMap::parse(const char *s, size_t n, std::string &errm
                 errmsg = "Need `retry` specification for `auto-retry` attribute";
                 return PARSE_ERROR;
             }
-            if ((error.retry.specptr = RetrySpec::parse(retryJson, errmsg)) == NULL) {
+            if ((error.retry.specptr = RetrySpec::parse(retryJson, errmsg)) == nullptr) {
                 return PARSE_ERROR;
             }
         }
@@ -183,7 +183,7 @@ ErrorMap::ParseStatus ErrorMap::parse(const char *s, size_t n, std::string &errm
 const Error &ErrorMap::getError(uint16_t code) const
 {
     static const Error invalid;
-    MapType::const_iterator it = errors.find(code);
+    auto it = errors.find(code);
 
     if (it != errors.end()) {
         return it->second;
@@ -335,72 +335,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_kv_ref(const lcb_KEY_VALUE_ERROR_CONTEXT 
 
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_kv_endpoint(const lcb_KEY_VALUE_ERROR_CONTEXT *ctx, const char **endpoint,
                                                    size_t *endpoint_len)
-{
-    *endpoint = ctx->endpoint;
-    *endpoint_len = ctx->endpoint_len;
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_rc(const lcb_VIEW_ERROR_CONTEXT *ctx)
-{
-    return ctx->rc;
-}
-
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_first_error_code(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **code,
-                                                             size_t *code_len)
-{
-    *code = ctx->first_error_code;
-    *code_len = ctx->first_error_code_len;
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_first_error_message(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **message,
-                                                                size_t *message_len)
-{
-    *message = ctx->first_error_message;
-    *message_len = ctx->first_error_message_len;
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_design_document(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **name,
-                                                            size_t *name_len)
-{
-    *name = ctx->design_document;
-    *name_len = ctx->design_document_len;
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_view(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **name, size_t *name_len)
-{
-    *name = ctx->view;
-    *name_len = ctx->view_len;
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_query_params(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **params,
-                                                         size_t *params_len)
-{
-    *params = ctx->query_params;
-    *params_len = ctx->query_params_len;
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_http_response_code(const lcb_VIEW_ERROR_CONTEXT *ctx, uint32_t *code)
-{
-    *code = ctx->http_response_code;
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_http_response_body(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **body,
-                                                               size_t *body_len)
-{
-    *body = ctx->http_response_body;
-    *body_len = ctx->http_response_body_len;
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_endpoint(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **endpoint,
-                                                     size_t *endpoint_len)
 {
     *endpoint = ctx->endpoint;
     *endpoint_len = ctx->endpoint_len;
