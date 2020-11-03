@@ -110,11 +110,14 @@ IF(LCB_USE_PROFILER)
     INCLUDE(cmake/Modules/FindProfiler.cmake)
 ENDIF()
 IF(LCB_USE_HDR_HISTOGRAM)
-    INCLUDE(cmake/Modules/FindCouchbaseHdrHistogram.cmake)
-ENDIF()
-IF(HDR_HISTOGRAM_FOUND)
-    INCLUDE_DIRECTORIES(${HDR_HISTOGRAM_INCLUDES})
-    SET(LCB_HDR_HISTOGRAM_LINK "${HDR_HISTOGRAM_LIBRARIES}")
+    ADD_SUBDIRECTORY(contrib/HdrHistogram_c)
+    # Given we are linking hdr_histogram_static into libcouchbase.so, need
+    # -fPIC set also on hdr_histogram_static.
+    SET_TARGET_PROPERTIES(hdr_histogram_static
+            PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+
+    INCLUDE_DIRECTORIES(contrib/HdrHistogram_c/src)
+    SET(LCB_HDR_HISTOGRAM_LINK hdr_histogram_static)
     LIST(APPEND LCB_CORE_SRC "src/hdr_timings.c")
 ELSE()
     SET(LCB_HDR_HISTOGRAM_LINK "")

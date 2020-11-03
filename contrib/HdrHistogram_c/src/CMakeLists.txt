@@ -62,8 +62,8 @@ function(hdr_histogram_add_library NAME LIBRARY_TYPE DO_INSTALL)
     endif()
 endfunction()
 
-option(HDR_HISTOGRAM_BUILD_SHARED "Build shared library" ON)
-option(HDR_HISTOGRAM_INSTALL_SHARED "Install shared library" ON)
+option(HDR_HISTOGRAM_BUILD_SHARED "Build shared library" OFF)
+option(HDR_HISTOGRAM_INSTALL_SHARED "Install shared library" OFF)
 if(HDR_HISTOGRAM_BUILD_SHARED)
     hdr_histogram_add_library(hdr_histogram SHARED ${HDR_HISTOGRAM_INSTALL_SHARED})
     set_target_properties(hdr_histogram PROPERTIES
@@ -72,11 +72,13 @@ if(HDR_HISTOGRAM_BUILD_SHARED)
 endif()
 
 option(HDR_HISTOGRAM_BUILD_STATIC "Build static library" ON)
-option(HDR_HISTOGRAM_INSTALL_STATIC "Install static library" ON)
+option(HDR_HISTOGRAM_INSTALL_STATIC "Install static library" OFF)
 if(HDR_HISTOGRAM_BUILD_STATIC)
     hdr_histogram_add_library(hdr_histogram_static STATIC ${HDR_HISTOGRAM_INSTALL_STATIC})
 endif()
 
+if(HDR_HISTOGRAM_INSTALL_SHARED)
 install(
     FILES ${HDR_HISTOGRAM_PUBLIC_HEADERS}
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/hdr)
+endif()

@@ -19,7 +19,7 @@ set(HDR_SOVERSION_REVISION  0)
 
 set(HDR_VERSION ${HDR_SOVERSION_CURRENT}.${HDR_SOVERSION_AGE}.${HDR_SOVERSION_REVISION})
 set(HDR_SOVERSION ${HDR_SOVERSION_CURRENT})
-option(HDR_LOG_REQUIRED "HDR Logging component required" ON)
+option(HDR_LOG_REQUIRED "HDR Logging component required" OFF)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -52,7 +52,7 @@ endif()
 
 add_subdirectory(src)
 
-option(HDR_HISTOGRAM_BUILD_PROGRAMS "Build tests and examples" ON)
+option(HDR_HISTOGRAM_BUILD_PROGRAMS "Build tests and examples" OFF)
 if(HDR_HISTOGRAM_BUILD_PROGRAMS)
     include(CTest)
 
@@ -63,6 +63,7 @@ if(HDR_HISTOGRAM_BUILD_PROGRAMS)
     add_subdirectory(examples)
 endif()
 
+if(HDR_HISTOGRAM_INSTALL_SHARED)
 write_basic_package_version_file(
     ${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake
     VERSION ${PROJECT_VERSION}
@@ -83,3 +84,4 @@ install(
 
 set(CPACK_GENERATOR "TGZ")
 include(CPack)
+endif()

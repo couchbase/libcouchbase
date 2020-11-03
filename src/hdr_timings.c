@@ -19,7 +19,7 @@
  * (http://hdrhistogram.github.io/HdrHistogram/), specifically the
  * C implementation (https://github.com/HdrHistogram/HdrHistogram_c)
  *
- * hdr_timings.c is a rrop-in replacment for timings.c - you only want one of
+ * hdr_timings.c is a drop-in replacment for timings.c - you only want one of
  * the two files.
  */
 
@@ -39,7 +39,7 @@ lcb_HISTOGRAM *lcb_histogram_create(void)
     if (histo != NULL) {
         hdr_init(/* minimum - 1 ns*/ 1,
                  /* maximum - 30 s*/ 30e9,
-                 /* s   ignificant figures */ 3, &histo->hdr_histogram);
+                 /* significant figures */ 3, &histo->hdr_histogram);
     }
 
     return histo;
@@ -67,9 +67,10 @@ void lcb_histogram_read(const lcb_HISTOGRAM *hg, const void *cookie, lcb_HISTOGR
 LCB_INTERNAL_API
 void lcb_histogram_print(lcb_HISTOGRAM *hg, FILE *stream)
 {
+    fprintf(stream, "Values in microseconds (us)\n\n");
     hdr_percentiles_print(hg->hdr_histogram, stream,
                           5,        // Granularity of printed values
-                          1.0,      // Multiplier for results
+                          1000.0,   // Multiplier for results
                           CLASSIC); // Format CLASSIC/CSV supported.
 }
 
