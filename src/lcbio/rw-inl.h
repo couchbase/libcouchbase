@@ -18,6 +18,7 @@
 /**
  * Inline routines for reading and writing socket buffers
  */
+#include <cerrno>
 #include <climits> /* For IOV_MAX */
 #include "ctx-log-inl.h"
 
