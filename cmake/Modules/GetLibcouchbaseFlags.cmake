@@ -38,7 +38,7 @@ LIST(APPEND LCB_GNUC_CPP_WARNINGS
         -Wpedantic # warn if non-standard C++ is used
         )
 
-IF(CMAKE_C_COMPILER_ID STREQUAL "Clang")
+IF(CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
     LIST(APPEND LCB_GNUC_CPP_WARNINGS
             -Wno-cast-align
             -Wno-dollar-in-identifier-extension)
