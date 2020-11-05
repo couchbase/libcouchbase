@@ -48,7 +48,7 @@ lcb_HISTOGRAM *lcb_histogram_create(void)
 LCB_INTERNAL_API
 void lcb_histogram_destroy(lcb_HISTOGRAM *hg)
 {
-    free(hg->hdr_histogram);
+    hdr_close(hg->hdr_histogram);
     free(hg);
 }
 
