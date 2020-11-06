@@ -46,8 +46,8 @@ struct lcb_SEARCH_HANDLE_ : lcb::jsparse::Parser::Actions {
     void invoke_last();
 
     lcb_SEARCH_HANDLE_(lcb_INSTANCE *, const void *, const lcb_CMDSEARCH *);
-    ~lcb_SEARCH_HANDLE_();
-    void JSPARSE_on_row(const lcb::jsparse::Row &datum)
+    ~lcb_SEARCH_HANDLE_() override;
+    void JSPARSE_on_row(const lcb::jsparse::Row &datum) override
     {
         lcb_RESPSEARCH resp{};
         resp.row = static_cast<const char *>(datum.row.iov_base);
@@ -55,11 +55,11 @@ struct lcb_SEARCH_HANDLE_ : lcb::jsparse::Parser::Actions {
         nrows++;
         invoke_row(&resp);
     }
-    void JSPARSE_on_error(const std::string &)
+    void JSPARSE_on_error(const std::string &) override
     {
         lasterr = LCB_ERR_PROTOCOL_ERROR;
     }
-    void JSPARSE_on_complete(const std::string &)
+    void JSPARSE_on_complete(const std::string &) override
     {
         // Nothing
     }

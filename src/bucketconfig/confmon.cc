@@ -28,10 +28,10 @@ using namespace lcb::clconfig;
 
 Provider *Confmon::next_active(Provider *cur)
 {
-    ProviderList::iterator ii = std::find(active_providers.begin(), active_providers.end(), cur);
+    auto ii = std::find(active_providers.begin(), active_providers.end(), cur);
 
     if (ii == active_providers.end() || (++ii) == active_providers.end()) {
-        return NULL;
+        return nullptr;
     } else {
         return *ii;
     }
@@ -40,7 +40,7 @@ Provider *Confmon::next_active(Provider *cur)
 Provider *Confmon::first_active()
 {
     if (active_providers.empty()) {
-        return NULL;
+        return nullptr;
     } else {
         return active_providers.front();
     }
@@ -67,8 +67,9 @@ const char *provider_string(Method type)
 }
 
 Confmon::Confmon(lcb_settings *settings_, lcbio_pTABLE iot_, lcb_INSTANCE *instance_)
-    : cur_provider(NULL), config(NULL), settings(settings_), last_error(LCB_SUCCESS), iot(iot_), as_start(iot_, this),
-      as_stop(iot_, this), state(0), last_stop_us(0), instance(instance_), active_provider_list_id(0)
+    : cur_provider(nullptr), config(nullptr), settings(settings_), last_error(LCB_SUCCESS), iot(iot_),
+      as_start(iot_, this), as_stop(iot_, this), state(0), last_stop_us(0), instance(instance_),
+      active_provider_list_id(0)
 {
 
     lcbio_table_ref(iot);
@@ -80,8 +81,8 @@ Confmon::Confmon(lcb_settings *settings_, lcbio_pTABLE iot_, lcb_INSTANCE *insta
     all_providers[CLCONFIG_MCRAW] = new_mcraw_provider(this);
     all_providers[CLCONFIG_CLADMIN] = new_cladmin_provider(this);
 
-    for (size_t ii = 0; ii < CLCONFIG_MAX; ii++) {
-        all_providers[ii]->parent = this;
+    for (auto &provider : all_providers) {
+        provider->parent = this;
     }
 }
 
@@ -91,8 +92,7 @@ void Confmon::prepare()
     active_providers.clear();
     lcb_log(LOGARGS(this, DEBUG), "Preparing providers (this may be called multiple times)");
 
-    for (size_t ii = 0; ii < CLCONFIG_MAX; ii++) {
-        Provider *cur = all_providers[ii];
+    for (auto cur : all_providers) {
         if (cur) {
             if (cur->enabled) {
                 active_providers.push_back(cur);
@@ -114,16 +114,15 @@ Confmon::~Confmon()
 
     if (config) {
         config->decref();
-        config = NULL;
+        config = nullptr;
     }
 
-    for (size_t ii = 0; ii < CLCONFIG_MAX; ii++) {
-        Provider *provider = all_providers[ii];
-        if (provider == NULL) {
+    for (auto &provider : all_providers) {
+        if (provider == nullptr) {
             continue;
         }
         delete provider;
-        all_providers[ii] = NULL;
+        provider = nullptr;
     }
 
     lcbio_table_unref(iot);
@@ -244,7 +243,7 @@ void Confmon::provider_failed(Provider *provider, lcb_STATUS reason)
         LOG(this, TRACE, "Maximum provider reached. Resetting index");
     }
 
-    invoke_listeners(CLCONFIG_EVENT_PROVIDERS_CYCLED, NULL);
+    invoke_listeners(CLCONFIG_EVENT_PROVIDERS_CYCLED, nullptr);
     cur_provider = first_active();
     stop();
 }
@@ -320,7 +319,7 @@ void Confmon::stop_real()
     }
 
     last_stop_us = LCB_NS2US(gethrtime());
-    invoke_listeners(CLCONFIG_EVENT_MONITOR_STOPPED, NULL);
+    invoke_listeners(CLCONFIG_EVENT_MONITOR_STOPPED, nullptr);
 }
 
 void Confmon::stop()
@@ -337,7 +336,7 @@ Provider::Provider(Confmon *parent_, Method type_) : type(type_), enabled(false)
 
 Provider::~Provider()
 {
-    parent = NULL;
+    parent = nullptr;
 }
 
 ConfigInfo::~ConfigInfo()
@@ -347,10 +346,10 @@ ConfigInfo::~ConfigInfo()
     }
 }
 
-int ConfigInfo::compare(const ConfigInfo &other)
+int ConfigInfo::compare(const ConfigInfo &other) const
 {
     /** First check if new config has bucket name */
-    if (vbc->bname == NULL && other.vbc->bname != NULL) {
+    if (vbc->bname == nullptr && other.vbc->bname != nullptr) {
         return -1; /* we want to upgrade config after opening bucket */
     }
     /** Then check if both have revisions */
@@ -388,9 +387,9 @@ void Confmon::remove_listener(Listener *lsn)
 
 void Confmon::invoke_listeners(EventType event, ConfigInfo *info)
 {
-    ListenerList::iterator ii = listeners.begin();
+    auto ii = listeners.begin();
     while (ii != listeners.end()) {
-        ListenerList::iterator cur = ii++;
+        auto cur = ii++;
         (*cur)->clconfig_lsn(event, info);
     }
 }
@@ -422,8 +421,7 @@ void Confmon::dump(FILE *fp)
     fprintf(fp, "\n");
     fprintf(fp, "LAST ERROR: 0x%x\n", last_error);
 
-    for (size_t ii = 0; ii < CLCONFIG_MAX; ii++) {
-        Provider *cur = all_providers[ii];
+    for (auto cur : all_providers) {
         if (!cur) {
             continue;
         }

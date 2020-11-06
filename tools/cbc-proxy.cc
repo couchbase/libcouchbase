@@ -16,7 +16,6 @@
  */
 
 #include "config.h"
-#include <sys/types.h>
 #include <libcouchbase/couchbase.h>
 #include <libcouchbase/vbucket.h>
 #include <libcouchbase/pktfwd.h>
@@ -25,8 +24,7 @@
 #include <iomanip>
 #include <cstdio>
 #include <cerrno>
-#include <sstream>
-#include <signal.h>
+#include <csignal>
 #include "common/options.h"
 #include "common/histogram.h"
 
@@ -54,8 +52,8 @@ static void good_or_die(lcb_STATUS rc, const char *msg = "")
     }
 }
 
-static lcb_INSTANCE *instance = NULL;
-static struct event_base *evbase = NULL;
+static lcb_INSTANCE *instance = nullptr;
+static struct event_base *evbase = nullptr;
 static Histogram hg;
 
 static char app_client_string[] = "cbc-proxy";
@@ -73,7 +71,7 @@ class Configuration
         o_port.abbrev('p').description("Port for proxy").setDefault(11211);
     }
 
-    ~Configuration() {}
+    ~Configuration() = default;
 
     void addToParser(Parser &parser)
     {
@@ -119,7 +117,7 @@ class Configuration
 
 static Configuration config;
 
-static struct evconnlistener *listener = NULL;
+static struct evconnlistener *listener = nullptr;
 
 static void cleanup()
 {
@@ -156,8 +154,8 @@ static void dump_bytes(const struct client *cl, const char *msg, const void *ptr
         return;
     }
 
-    int width = 16;
-    const unsigned char *buf = (const unsigned char *)ptr;
+    size_t width = 16;
+    const auto *buf = (const unsigned char *)ptr;
     size_t full_rows = len / width;
     size_t remainder = len % width;
     std::stringstream ss;
@@ -168,14 +166,14 @@ static void dump_bytes(const struct client *cl, const char *msg, const void *ptr
           "             |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |\n"
           "    +--------+-------------------------------------------------+----------------+";
 
-    unsigned int row = 0;
+    size_t row = 0;
     while (row < full_rows) {
-        int row_start_index = row * width;
+        size_t row_start_index = row * width;
         // prefix
         ss << "\n    |" << std::setw(8) << std::setfill('0') << std::hex << row_start_index << "|";
-        int row_end_index = row_start_index + width;
+        size_t row_end_index = row_start_index + width;
         // hex
-        int i = row_start_index;
+        size_t i = row_start_index;
         while (i < row_end_index) {
             ss << " " << std::setw(2) << std::setfill('0') << std::hex << (unsigned int)buf[i++];
         }
@@ -194,12 +192,12 @@ static void dump_bytes(const struct client *cl, const char *msg, const void *ptr
         row++;
     }
     if (remainder != 0) {
-        int row_start_index = full_rows * width;
+        size_t row_start_index = full_rows * width;
         // prefix
         ss << "\n    |" << std::setw(8) << std::setfill('0') << std::hex << row_start_index << "|";
-        int row_end_index = row_start_index + remainder;
+        size_t row_end_index = row_start_index + remainder;
         // hex
-        int i = row_start_index;
+        size_t i = row_start_index;
         while (i < row_end_index) {
             ss << " " << std::setw(2) << std::setfill('0') << std::hex << (unsigned int)buf[i++];
         }
@@ -234,7 +232,7 @@ static void pktfwd_callback(lcb_INSTANCE *, const void *cookie, lcb_STATUS err, 
 {
     good_or_die(err, "Failed to forward a packet");
 
-    struct client *cl = (struct client *)cookie;
+    auto *cl = (struct client *)cookie;
     struct evbuffer *output = bufferevent_get_output(cl->bev);
     for (unsigned ii = 0; ii < resp->nitems; ii++) {
         dump_bytes(cl, "response", resp->iovs[ii].iov_base, resp->iovs[ii].iov_len);
@@ -258,7 +256,7 @@ static void n1ql_callback(lcb_INSTANCE *, int, const lcb_RESPQUERY *resp)
     struct evbuffer *output = bufferevent_get_output(cl->bev);
 
     if (lcb_respquery_is_final(resp)) {
-        memcpy(key, "meta", 4);
+        strcpy(key, "meta");
     } else {
         snprintf(key, sizeof(key), "row-%ld", cl->cnt++);
     }
@@ -299,7 +297,7 @@ static void fts_callback(lcb_INSTANCE *, int, const lcb_RESPSEARCH *resp)
     struct evbuffer *output = bufferevent_get_output(cl->bev);
 
     if (lcb_respsearch_is_final(resp)) {
-        memcpy(key, "meta", 4);
+        strcpy(key, "meta");
     } else {
         snprintf(key, sizeof(key), "row-%ld", cl->cnt++);
     }
@@ -330,7 +328,7 @@ static void fts_callback(lcb_INSTANCE *, int, const lcb_RESPSEARCH *resp)
 
 static void conn_readcb(struct bufferevent *bev, void *cookie)
 {
-    struct client *cl = (struct client *)cookie;
+    auto *cl = (client *)cookie;
     struct evbuffer *input;
     size_t len;
 
@@ -352,7 +350,7 @@ static void conn_readcb(struct bufferevent *bev, void *cookie)
         return;
     }
     void *pkt = malloc(pktlen);
-    if (pkt == NULL) {
+    if (pkt == nullptr) {
         lcb_log(LOGARGS(ERROR), CL_LOGFMT "unable allocate buffer for the packet", CL_LOGID(cl));
         return;
     }
@@ -414,7 +412,7 @@ DONE:
 
 static void conn_eventcb(struct bufferevent *bev, short events, void *cookie)
 {
-    struct client *cl = (struct client *)cookie;
+    auto *cl = (client *)cookie;
 
     if (events & BEV_EVENT_EOF) {
         lcb_log(LOGARGS(INFO), CL_LOGFMT "connection closed", CL_LOGID(cl));
@@ -438,24 +436,25 @@ static void listener_cb(struct evconnlistener *, evutil_socket_t fd, struct sock
         die("Error constructing bufferevent");
     }
 
-    struct client *cl = new client();
+    auto *cl = new client();
     cl->fd = fd;
     cl->bev = bev;
     getnameinfo(addr, naddr, cl->host, sizeof(cl->host), cl->port, sizeof(cl->port), NI_NUMERICHOST | NI_NUMERICSERV);
-    bufferevent_setcb(bev, conn_readcb, NULL, conn_eventcb, cl);
+    bufferevent_setcb(bev, conn_readcb, nullptr, conn_eventcb, cl);
     bufferevent_enable(bev, EV_READ | EV_WRITE);
     lcb_log(LOGARGS(INFO), CL_LOGFMT "new client connection", CL_LOGID(cl));
 }
 
 static void setup_listener()
 {
-    struct sockaddr_in sin;
+    struct sockaddr_in sin {
+    };
 
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_port = htons(config.port());
 
-    listener = evconnlistener_new_bind(evbase, listener_cb, NULL, LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE, -1,
+    listener = evconnlistener_new_bind(evbase, listener_cb, nullptr, LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE, -1,
                                        (struct sockaddr *)&sin, sizeof(sin));
     if (!listener) {
         die("Failed to create proxy listener");
@@ -482,7 +481,7 @@ static void sigint_handler(int)
 
 static void diag_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
 {
-    const lcb_RESPDIAG *resp = (const lcb_RESPDIAG *)rb;
+    const auto *resp = (const lcb_RESPDIAG *)rb;
     if (resp->ctx.rc != LCB_SUCCESS) {
         fprintf(stderr, "failed: %s\n", lcb_strerror_short(resp->ctx.rc));
     } else {
@@ -497,7 +496,7 @@ static void sigquit_handler(int)
     lcb_CMDDIAG req = {};
     req.options = LCB_PINGOPT_F_JSONPRETTY;
     req.id = app_client_string;
-    lcb_diag(instance, NULL, &req);
+    lcb_diag(instance, nullptr, &req);
 }
 
 static void real_main(int argc, char **argv)
@@ -508,15 +507,16 @@ static void real_main(int argc, char **argv)
     parser.parse(argc, argv);
     config.processOptions();
 
-    lcb_CREATEOPTS *cropts = NULL;
+    lcb_CREATEOPTS *cropts = nullptr;
     config.fillCropts(cropts);
 
     /* bind to external libevent loop */
     evbase = event_base_new();
-    struct lcb_create_io_ops_st ciops;
+    struct lcb_create_io_ops_st ciops {
+    };
     ciops.v.v0.type = LCB_IO_OPS_LIBEVENT;
     ciops.v.v0.cookie = evbase;
-    lcb_io_opt_t ioops = NULL;
+    lcb_io_opt_t ioops = nullptr;
     good_or_die(lcb_create_io_ops(&ioops, &ciops), "Failed to create and IO ops strucutre for libevent");
     lcb_createopts_io(cropts, ioops);
 
@@ -535,17 +535,18 @@ static void real_main(int argc, char **argv)
     std::atexit(cleanup);
 
     /* setup CTRL-C handler */
-    struct sigaction action;
+    struct sigaction action {
+    };
     sigemptyset(&action.sa_mask);
     action.sa_handler = sigint_handler;
     action.sa_flags = 0;
-    sigaction(SIGINT, &action, NULL);
+    sigaction(SIGINT, &action, nullptr);
 
     /* setup CTRL-\ handler */
     sigemptyset(&action.sa_mask);
     action.sa_handler = sigquit_handler;
     action.sa_flags = 0;
-    sigaction(SIGQUIT, &action, NULL);
+    sigaction(SIGQUIT, &action, nullptr);
 
     event_base_dispatch(evbase);
 }

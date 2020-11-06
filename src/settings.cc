@@ -65,7 +65,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->use_collections = 1;
     settings->log_redaction = 0;
     settings->use_tracing = 1;
-    settings->network = NULL;
+    settings->network = nullptr;
     settings->allow_static_config = 0;
     settings->tracer_orphaned_queue_flush_interval = LCBTRACE_DEFAULT_ORPHANED_QUEUE_FLUSH_INTERVAL;
     settings->tracer_orphaned_queue_size = LCBTRACE_DEFAULT_ORPHANED_QUEUE_SIZE;

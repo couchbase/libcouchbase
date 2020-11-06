@@ -63,7 +63,7 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info)
     if (info->get_origin() == CLCONFIG_CCCP) {
         /* Disable HTTP provider if we've received something via CCCP */
 
-        if (instance->cur_configinfo == NULL || instance->cur_configinfo->get_origin() != CLCONFIG_HTTP) {
+        if (instance->cur_configinfo == nullptr || instance->cur_configinfo->get_origin() != CLCONFIG_HTTP) {
             /* Never disable HTTP if it's still being used */
             instance->confmon->set_active(CLCONFIG_HTTP, false);
         }
@@ -71,7 +71,7 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info)
 
     if (instance->settings->conntype == LCB_TYPE_CLUSTER && info->get_origin() == CLCONFIG_CLADMIN) {
         /* Disable HTTP provider for management operations, and fallback to static */
-        if (instance->cur_configinfo == NULL || instance->cur_configinfo->get_origin() != CLCONFIG_HTTP) {
+        if (instance->cur_configinfo == nullptr || instance->cur_configinfo->get_origin() != CLCONFIG_HTTP) {
             instance->confmon->set_active(CLCONFIG_HTTP, false);
         }
     }
@@ -86,7 +86,7 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info)
 
     if (state < S_BOOTSTRAPPED) {
         state = S_BOOTSTRAPPED;
-        lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
+        lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, nullptr);
 
         lcb_log(LOGARGS(instance, INFO), "Selected network configuration: \"%s\"", LCBT_SETTING(instance, network));
         if (instance->settings->conntype == LCB_TYPE_BUCKET) {
@@ -127,11 +127,11 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info)
         }
         if (instance->callbacks.bootstrap) {
             instance->callbacks.bootstrap(instance, LCB_SUCCESS);
-            instance->callbacks.bootstrap = NULL;
+            instance->callbacks.bootstrap = nullptr;
         }
         if (instance->callbacks.open && LCBT_VBCONFIG(instance)->bname) {
             instance->callbacks.open(instance, LCB_SUCCESS);
-            instance->callbacks.open = NULL;
+            instance->callbacks.open = nullptr;
         }
 
         // See if we can enable background polling.
@@ -156,7 +156,7 @@ void Bootstrap::clconfig_lsn(EventType e, ConfigInfo *i)
 
 void Bootstrap::check_bgpoll()
 {
-    if (parent->cur_configinfo == NULL || parent->cur_configinfo->get_origin() != lcb::clconfig::CLCONFIG_CCCP ||
+    if (parent->cur_configinfo == nullptr || parent->cur_configinfo->get_origin() != lcb::clconfig::CLCONFIG_CCCP ||
         LCBT_SETTING(parent, config_poll_interval) == 0) {
         tmpoll.cancel();
     } else {
@@ -198,14 +198,14 @@ void Bootstrap::initial_error(lcb_STATUS err, const char *errinfo)
 
     if (parent->callbacks.bootstrap) {
         parent->callbacks.bootstrap(parent, err);
-        parent->callbacks.bootstrap = NULL;
+        parent->callbacks.bootstrap = nullptr;
     }
     if (parent->callbacks.open) {
         parent->callbacks.open(parent, err);
-        parent->callbacks.open = NULL;
+        parent->callbacks.open = nullptr;
     }
 
-    lcb_aspend_del(&parent->pendops, LCB_PENDTYPE_COUNTER, NULL);
+    lcb_aspend_del(&parent->pendops, LCB_PENDTYPE_COUNTER, nullptr);
     lcb_maybe_breakout(parent);
 }
 
@@ -234,7 +234,7 @@ lcb_STATUS Bootstrap::bootstrap(unsigned options)
         parent->confmon->prepare();
         state = S_INITIAL_PRE;
         tm.rearm(LCBT_SETTING(parent, config_timeout));
-        lcb_aspend_add(&parent->pendops, LCB_PENDTYPE_COUNTER, NULL);
+        lcb_aspend_add(&parent->pendops, LCB_PENDTYPE_COUNTER, nullptr);
     }
 
     if (options & BS_REFRESH_THROTTLE) {
@@ -267,7 +267,7 @@ lcb_STATUS Bootstrap::bootstrap(unsigned options)
         state = S_INITIAL_PRE;
         parent->confmon->prepare();
         tm.rearm(LCBT_SETTING(parent, config_timeout));
-        lcb_aspend_add(&parent->pendops, LCB_PENDTYPE_COUNTER, NULL);
+        lcb_aspend_add(&parent->pendops, LCB_PENDTYPE_COUNTER, nullptr);
     }
 
     /* Reset the counters */
@@ -297,7 +297,7 @@ lcb_STATUS lcb_get_bootstrap_status(lcb_INSTANCE *instance)
             case LCB_TYPE_CLUSTER:
                 return LCB_SUCCESS;
             case LCB_TYPE_BUCKET:
-                if (instance->cur_configinfo->vbc->bname != NULL) {
+                if (instance->cur_configinfo->vbc->bname != nullptr) {
                     return LCB_SUCCESS;
                 }
                 /* fall through */
@@ -309,7 +309,7 @@ lcb_STATUS lcb_get_bootstrap_status(lcb_INSTANCE *instance)
         return instance->last_error;
     }
     if (LCBT_SETTING(instance, conntype) == LCB_TYPE_CLUSTER) {
-        if (lcb::clconfig::http_get_conn(instance->confmon) != NULL || instance->confmon->get_config() != NULL) {
+        if (lcb::clconfig::http_get_conn(instance->confmon) != nullptr || instance->confmon->get_config() != nullptr) {
             return LCB_SUCCESS;
         }
     }

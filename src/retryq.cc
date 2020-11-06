@@ -42,10 +42,10 @@ struct lcb::RetryOp : mc_EPKTDATUM, SchedNode, TmoNode {
     mc_PACKET *pkt;
     lcb_STATUS origerr;
     errmap::RetrySpec *spec;
-    RetryOp(errmap::RetrySpec *spec);
+    explicit RetryOp(errmap::RetrySpec *spec);
     ~RetryOp()
     {
-        if (spec != NULL) {
+        if (spec != nullptr) {
             spec->unref();
         }
     }
@@ -303,12 +303,12 @@ static void op_dtorfn(mc_EPKTDATUM *d)
 }
 
 RetryOp::RetryOp(errmap::RetrySpec *spec_)
-    : mc_EPKTDATUM(), start(0), deadline(0), trytime(0), pkt(NULL), origerr(LCB_SUCCESS), spec(spec_)
+    : mc_EPKTDATUM(), start(0), deadline(0), trytime(0), pkt(nullptr), origerr(LCB_SUCCESS), spec(spec_)
 {
     mc_EPKTDATUM::dtorfn = op_dtorfn;
     mc_EPKTDATUM::key = RETRY_PKT_KEY;
 
-    if (spec != NULL) {
+    if (spec != nullptr) {
         spec->ref();
     }
 }
@@ -320,7 +320,7 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, errmap::RetrySpec *
     if (d) {
         op = static_cast<RetryOp *>(d);
     } else {
-        op = new RetryOp(NULL);
+        op = new RetryOp(nullptr);
         op->start = MCREQ_PKT_RDATA(&pkt->base)->start;
         op->deadline = MCREQ_PKT_RDATA(&pkt->base)->deadline;
         if (spec) {
@@ -346,8 +346,8 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, errmap::RetrySpec *
          */
         for (size_t ii = 0; ii < cq->npipelines; ii++) {
             sllist_iterator iter;
-            lcb::Server *server = static_cast<lcb::Server *>(cq->pipelines[ii]);
-            if (server == NULL) {
+            auto *server = static_cast<lcb::Server *>(cq->pipelines[ii]);
+            if (server == nullptr) {
                 continue;
             }
             /* check pending queue */
@@ -421,24 +421,24 @@ void RetryQueue::nmvadd(mc_EXPACKET *detchpkt)
     if (settings->nmv_retry_imm) {
         flags = RETRY_SCHED_IMM;
     }
-    add(detchpkt, LCB_ERR_NOT_MY_VBUCKET, NULL, flags);
+    add(detchpkt, LCB_ERR_NOT_MY_VBUCKET, nullptr, flags);
 }
 
 void RetryQueue::ucadd(mc_EXPACKET *pkt, lcb_STATUS orig_err)
 {
-    add(pkt, orig_err, NULL, 0);
+    add(pkt, orig_err, nullptr, 0);
 }
 
 static void fallback_handler(mc_CMDQUEUE *cq, mc_PACKET *pkt)
 {
-    lcb_INSTANCE *instance = reinterpret_cast<lcb_INSTANCE *>(cq->cqdata);
+    auto *instance = reinterpret_cast<lcb_INSTANCE *>(cq->cqdata);
     instance->retryq->add_fallback(pkt);
 }
 
 void RetryQueue::add_fallback(mc_PACKET *pkt)
 {
     mc_PACKET *copy = mcreq_renew_packet(pkt);
-    add((mc_EXPACKET *)copy, LCB_ERR_NO_MATCHING_SERVER, NULL, RETRY_SCHED_IMM);
+    add((mc_EXPACKET *)copy, LCB_ERR_NO_MATCHING_SERVER, nullptr, RETRY_SCHED_IMM);
 }
 
 void RetryQueue::reset_timeouts(lcb_U64 now)

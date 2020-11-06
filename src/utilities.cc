@@ -73,7 +73,7 @@ int lcb_getenv_nonempty(const char *key, char *buf, lcb_size_t len)
 int lcb_getenv_nonempty(const char *key, char *buf, lcb_size_t len)
 {
     const char *cur = getenv(key);
-    if (cur == NULL || *cur == '\0') {
+    if (cur == nullptr || *cur == '\0') {
         return 0;
     }
 
@@ -159,7 +159,7 @@ const char *lcb_get_tmpdir(void)
     return buf;
 #else
     const char *ret;
-    if ((ret = getenv("TMPDIR")) != NULL) {
+    if ((ret = getenv("TMPDIR")) != nullptr) {
         return ret;
     } else {
 

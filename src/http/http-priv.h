@@ -167,7 +167,7 @@ struct Request {
     void close_io();
 
     // Helper functions for parsing response data from network
-    inline int handle_parse_chunked(const char *buf, unsigned nbuf);
+    inline unsigned handle_parse_chunked(const char *buf, unsigned nbuf);
     inline void assign_response_headers(const lcb::htparse::Response &);
 
     /**

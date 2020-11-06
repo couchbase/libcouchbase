@@ -36,7 +36,7 @@
 using namespace lcb;
 
 struct IngestRequest : docreq::DocRequest {
-    lcb_ANALYTICS_HANDLE *parent;
+    lcb_ANALYTICS_HANDLE *parent{};
     std::string row;
 };
 
@@ -64,7 +64,7 @@ typedef struct lcb_ANALYTICS_HANDLE_ : lcb::jsparse::Parser::Actions {
     std::string query_params;
     std::string client_context_id;
     std::string first_error_message;
-    uint32_t first_error_code;
+    uint32_t first_error_code{};
 
     /** Whether we're retrying this */
     bool was_retried;
@@ -95,7 +95,7 @@ typedef struct lcb_ANALYTICS_HANDLE_ : lcb::jsparse::Parser::Actions {
      * @param payload The body to send
      * @return Error code from lcb's http subsystem
      */
-    inline lcb_STATUS issue_htreq(const std::string &payload);
+    inline lcb_STATUS issue_htreq(const std::string &body);
 
     lcb_STATUS issue_htreq()
     {
@@ -127,10 +127,10 @@ typedef struct lcb_ANALYTICS_HANDLE_ : lcb::jsparse::Parser::Actions {
 
     inline lcb_ANALYTICS_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, const lcb_CMDANALYTICS *cmd);
     inline lcb_ANALYTICS_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, lcb_DEFERRED_HANDLE *handle);
-    inline ~lcb_ANALYTICS_HANDLE_();
+    inline ~lcb_ANALYTICS_HANDLE_() override;
 
     // Parser overrides:
-    void JSPARSE_on_row(const lcb::jsparse::Row &row)
+    void JSPARSE_on_row(const lcb::jsparse::Row &row) override
     {
         lcb_RESPANALYTICS resp{};
         resp.handle = this;
@@ -138,7 +138,7 @@ typedef struct lcb_ANALYTICS_HANDLE_ : lcb::jsparse::Parser::Actions {
         resp.nrow = row.row.iov_len;
         nrows++;
         if (ingest && ingest->method != LCB_INGEST_METHOD_NONE) {
-            IngestRequest *req = new IngestRequest();
+            auto *req = new IngestRequest();
             req->parent = this;
             req->row.assign(static_cast<const char *>(row.row.iov_base), row.row.iov_len);
             docq->add(req);
@@ -146,11 +146,11 @@ typedef struct lcb_ANALYTICS_HANDLE_ : lcb::jsparse::Parser::Actions {
         }
         invoke_row(&resp, false);
     }
-    void JSPARSE_on_error(const std::string &)
+    void JSPARSE_on_error(const std::string &) override
     {
         lasterr = LCB_ERR_PROTOCOL_ERROR;
     }
-    void JSPARSE_on_complete(const std::string &)
+    void JSPARSE_on_complete(const std::string &) override
     {
         // Nothing
     }
@@ -178,9 +178,8 @@ bool ANALYTICSREQ::has_retriable_error(const Json::Value &root)
             continue; // eh?
         }
         const Json::Value &jcode = cur["code"];
-        unsigned code = 0;
         if (jcode.isNumeric()) {
-            code = jcode.asUInt();
+            unsigned code = jcode.asUInt();
             switch (code) {
                 case 23000:
                 case 23003:
@@ -334,7 +333,7 @@ lcb_ANALYTICS_HANDLE_::~lcb_ANALYTICS_HANDLE_()
 
     if (callback) {
         lcb_RESPANALYTICS resp{};
-        invoke_row(&resp, 1);
+        invoke_row(&resp, true);
     }
 
     if (span) {
@@ -508,10 +507,8 @@ static lcb_STATUS cb_op_schedule(lcb::docreq::Queue *q, lcb::docreq::DocRequest 
         case LCB_INGEST_STATUS_IGNORE:
             /* assume that the user hasn't allocated anything */
             return LCB_SUCCESS;
-            break;
         default:
             return LCB_ERR_SDK_INTERNAL;
-            break;
     }
     lcb_CMDSTORE *cmd;
     lcb_cmdstore_create(&cmd, op);
@@ -563,7 +560,7 @@ static void cb_docq_throttle(lcb::docreq::Queue *q, int enabled)
 lcb_ANALYTICS_HANDLE_::lcb_ANALYTICS_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, const lcb_CMDANALYTICS *cmd)
     : cur_htresp(nullptr), htreq(nullptr), parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_ANALYTICS, this)),
       cookie(user_cookie), callback(cmd->callback), instance(obj), lasterr(LCB_SUCCESS), timeout(0), nrows(0),
-      was_retried(false), deferred_handle(""), ingest(cmd->ingest), docq(nullptr), refcount(1), span(nullptr)
+      was_retried(false), deferred_handle{}, ingest(cmd->ingest), docq(nullptr), refcount(1), span(nullptr)
 {
 
     if (cmd->handle) {
@@ -652,13 +649,12 @@ LIBCOUCHBASE_API
 lcb_STATUS lcb_analytics(lcb_INSTANCE *instance, void *cookie, const lcb_CMDANALYTICS *cmd)
 {
     lcb_STATUS err;
-    ANALYTICSREQ *req = nullptr;
 
     if (cmd->callback == nullptr) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
 
-    req = new lcb_ANALYTICS_HANDLE_(instance, cookie, cmd);
+    auto *req = new lcb_ANALYTICS_HANDLE_(instance, cookie, cmd);
     if ((err = req->lasterr) != LCB_SUCCESS) {
         goto GT_DESTROY;
     }

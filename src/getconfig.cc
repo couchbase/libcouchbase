@@ -21,8 +21,8 @@
 
 static void ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_STATUS rc, const void *resdata)
 {
-    lcb::Server *server = static_cast<lcb::Server *>(pl);
-    const lcb::MemcachedResponse *res = reinterpret_cast<const lcb::MemcachedResponse *>(resdata);
+    auto *server = static_cast<lcb::Server *>(pl);
+    const auto *res = reinterpret_cast<const lcb::MemcachedResponse *>(resdata);
 
     mc_REQDATAEX *rd = req->u_rdata.exdata;
     switch (res->opcode()) {
@@ -34,18 +34,18 @@ static void ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_STATUS rc, c
             break;
         case PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG:
             lcb::clconfig::cccp_update(rd->cookie, rc, res->value(), res->vallen(),
-                                       server->has_valid_host() ? &server->get_host() : NULL);
+                                       server->has_valid_host() ? &server->get_host() : nullptr);
             break;
     }
     free(rd);
-    req->u_rdata.exdata = NULL;
+    req->u_rdata.exdata = nullptr;
 }
 
 static void ext_callback_dtor(mc_PACKET *pkt)
 {
     mc_REQDATAEX *rd = pkt->u_rdata.exdata;
     free(rd);
-    pkt->u_rdata.exdata = NULL;
+    pkt->u_rdata.exdata = nullptr;
 }
 
 static mc_REQDATAPROCS procs = {ext_callback_proxy, ext_callback_dtor};

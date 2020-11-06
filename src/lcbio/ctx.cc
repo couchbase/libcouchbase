@@ -98,8 +98,8 @@ lcbio_CTX *lcbio_ctx_new(lcbio_SOCKET *sock, void *data, const lcbio_CTXPROCS *p
 static void free_ctx(lcbio_CTX *ctx)
 {
     rdb_cleanup(&ctx->ior);
-    lcbio_unref(ctx->sock);
-    if (ctx->output) {
+    lcbio_unref(ctx->sock) if (ctx->output)
+    {
         ringbuffer_destruct(&ctx->output->rb);
         delete ctx->output;
     }
@@ -150,7 +150,7 @@ void lcbio_ctx_close_ex(lcbio_CTX *ctx, lcbio_CTXCLOSE_cb cb, void *arg, lcbio_C
 
     ctx->sock->ctx = nullptr;
     if (oldrc == ctx->sock->refcount) {
-        lcbio_unref(ctx->sock);
+        lcbio_unref(ctx->sock)
     }
 
     if (ctx->output) {

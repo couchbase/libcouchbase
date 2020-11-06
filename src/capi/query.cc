@@ -72,9 +72,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_create(lcb_CMDQUERY **cmd)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_destroy(lcb_CMDQUERY *cmd)
 {
-    if (cmd) {
-        delete cmd;
-    }
+    delete cmd;
     return LCB_SUCCESS;
 }
 
@@ -150,8 +148,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_encoded_payload(lcb_CMDQUERY *cmd, cons
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_payload(lcb_CMDQUERY *cmd, const char *query, size_t query_len)
 {
-    fix_strlen(query, query_len);
-    Json::Value value;
+    fix_strlen(query, query_len) Json::Value value;
     if (!Json::Reader().parse(query, query + query_len, value)) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
@@ -161,8 +158,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_payload(lcb_CMDQUERY *cmd, const char *
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_statement(lcb_CMDQUERY *cmd, const char *statement, size_t statement_len)
 {
-    fix_strlen(statement, statement_len);
-    cmd->root["statement"] = std::string(statement, statement_len);
+    fix_strlen(statement, statement_len) cmd->root["statement"] = std::string(statement, statement_len);
     return LCB_SUCCESS;
 }
 
@@ -175,8 +171,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_named_param(lcb_CMDQUERY *cmd, const ch
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_positional_param(lcb_CMDQUERY *cmd, const char *value, size_t value_len)
 {
-    fix_strlen(value, value_len);
-    Json::Value jval;
+    fix_strlen(value, value_len) Json::Value jval;
     if (!Json::Reader().parse(value, value + value_len, jval)) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
@@ -208,13 +203,13 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_pretty(lcb_CMDQUERY *cmd, int pretty)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_readonly(lcb_CMDQUERY *cmd, int readonly)
 {
-    cmd->root["readonly"] = readonly ? true : false;
+    cmd->root["readonly"] = readonly != 0;
     return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_metrics(lcb_CMDQUERY *cmd, int metrics)
 {
-    cmd->root["metrics"] = metrics ? true : false;
+    cmd->root["metrics"] = metrics != 0;
     return LCB_SUCCESS;
 }
 
@@ -353,9 +348,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_max_parallelism(lcb_CMDQUERY *cmd, int 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_option(lcb_CMDQUERY *cmd, const char *name, size_t name_len, const char *value,
                                                 size_t value_len)
 {
-    fix_strlen(name, name_len);
-    fix_strlen(value, value_len);
-    Json::Reader rdr;
+    fix_strlen(name, name_len) fix_strlen(value, value_len) Json::Reader rdr;
     Json::Value jsonValue;
     bool rv = rdr.parse(value, value + value_len, jsonValue);
     if (!rv) {

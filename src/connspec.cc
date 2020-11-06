@@ -19,13 +19,12 @@
 #include "hostlist.h"
 #include "strcodecs/strcodecs.h"
 #include "internalstructs.h"
-#include <stdio.h>
-#include <ctype.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cctype>
 
 #define SET_ERROR(msg)                                                                                                 \
     *errmsg = msg;                                                                                                     \
-    return LCB_ERR_INVALID_ARGUMENT;
+    return LCB_ERR_INVALID_ARGUMENT
 
 #define F_HASBUCKET (1u << 0u)
 #define F_HASPASSWD (1u << 1u)
@@ -94,8 +93,8 @@ lcb_STATUS Connspec::parse_hosts(const char *hostbegin, const char *hostend, con
             SET_ERROR("Detected '://' inside hostname");
         }
 
-        size_t colonpos = scratch.find(":");
-        size_t rcolonpos = scratch.rfind(":");
+        size_t colonpos = scratch.find(':');
+        size_t rcolonpos = scratch.rfind(':');
         std::string port;
 
         hoststart = 0;
@@ -177,7 +176,7 @@ lcb_STATUS Connspec::parse_hosts(const char *hostbegin, const char *hostend, con
 
 lcb_STATUS Connspec::parse_options(const char *options_, const char *specend, const char **errmsg)
 {
-    while (options_ != NULL && options_ < specend) {
+    while (options_ != nullptr && options_ < specend) {
         unsigned curlen;
         const char *curend;
 
@@ -263,30 +262,41 @@ lcb_STATUS Connspec::parse_options(const char *options_, const char *specend, co
             }
             m_keypath = value;
         } else if (!strcmp(key, "console_log_level")) {
-            if (sscanf(value, "%d", &m_loglevel) != 1) {
+            char *end = nullptr;
+            long val = std::strtol(value, &end, 10);
+            if (errno == ERANGE || end == value) {
                 SET_ERROR("console_log_level must be a numeric value");
             }
+            m_loglevel = static_cast<int>(val);
         } else if (!strcmp(key, "log_redaction")) {
-            int btmp = 0;
+            int btmp;
             if (!strcmp(value, "on") || !strcmp(value, "true")) {
                 btmp = 1;
             } else if (!strcmp(value, "off") || !strcmp(value, "false")) {
                 btmp = 0;
-            } else if (sscanf(value, "%d", &btmp) != 1) {
-                SET_ERROR("log_redaction must have numeric (boolean) value");
+            } else {
+                char *end = nullptr;
+                btmp = static_cast<int>(std::strtol(value, &end, 10));
+                if (errno == ERANGE || end == value) {
+                    SET_ERROR("log_redaction must have numeric (boolean) value");
+                }
             }
             m_logredact = btmp != 0;
         } else if (!strcmp(key, "dnssrv")) {
             if ((m_flags & F_DNSSRV_EXPLICIT) == F_DNSSRV_EXPLICIT) {
                 SET_ERROR("Cannot use dnssrv scheme with dnssrv option");
             }
-            int btmp = 0;
+            int btmp;
             if (!strcmp(value, "on") || !strcmp(value, "true")) {
                 btmp = 1;
             } else if (!strcmp(value, "off") || !strcmp(value, "false")) {
                 btmp = 0;
-            } else if (sscanf(value, "%d", &btmp) != 1) {
-                SET_ERROR("dnssrv must have numeric (boolean) value");
+            } else {
+                char *end = nullptr;
+                btmp = static_cast<int>(std::strtol(value, &end, 10));
+                if (errno == ERANGE || end == value) {
+                    SET_ERROR("dnssrv must have numeric (boolean) value");
+                }
             }
             if (btmp) {
                 m_flags |= F_DNSSRV;
@@ -316,14 +326,9 @@ lcb_STATUS Connspec::parse_options(const char *options_, const char *specend, co
 
 lcb_STATUS Connspec::parse(const char *connstr_ptr, size_t connstr_len, const char **errmsg)
 {
-    lcb_STATUS err = LCB_SUCCESS;
-    const char *errmsg_s;        /* stack based error message pointer */
-    const char *hlend;           /* end of hosts list */
-    const char *bucket_s = NULL; /* beginning of bucket (path) string */
-    const char *options_ = NULL; /* beginning of options (query) string */
-    const char *specend = NULL;  /* end of spec */
-    unsigned speclen;            /* length of spec string */
-    const char *found_scheme = NULL;
+    const char *errmsg_s;           /* stack based error message pointer */
+    const char *bucket_s = nullptr; /* beginning of bucket (path) string */
+    const char *options_ = nullptr; /* beginning of options (query) string */
 
     if (!errmsg) {
         errmsg = &errmsg_s;
@@ -334,6 +339,7 @@ lcb_STATUS Connspec::parse(const char *connstr_ptr, size_t connstr_len, const ch
         connstr_len = strlen(connstr_ptr);
     }
     m_connstr = std::string(connstr_ptr, connstr_len);
+    const char *found_scheme;
     if (m_connstr.find(LCB_SPECSCHEME_MCD_SSL) == 0) {
         m_implicit_port = LCB_CONFIG_MCD_SSL_PORT;
         m_sslopts |= LCB_SSL_ENABLED;
@@ -376,11 +382,12 @@ lcb_STATUS Connspec::parse(const char *connstr_ptr, size_t connstr_len, const ch
     }
 
     connstr_ptr += strlen(found_scheme);
-    speclen = strlen(connstr_ptr);
-    specend = connstr_ptr + speclen;
+    unsigned speclen = strlen(connstr_ptr);
+    const char *specend = connstr_ptr + speclen;
 
     /* Hosts end where either options or the bucket itself begin */
-    if ((hlend = strpbrk(connstr_ptr, "?/"))) {
+    const char *hlend = strpbrk(connstr_ptr, "?/"); /* end of hosts list */
+    if (hlend != nullptr) {
         if (*hlend == '?') {
             /* Options first */
             options_ = hlend + 1;
@@ -396,7 +403,7 @@ lcb_STATUS Connspec::parse(const char *connstr_ptr, size_t connstr_len, const ch
         hlend = specend;
     }
 
-    if (bucket_s != NULL) {
+    if (bucket_s != nullptr) {
         unsigned blen;
         const char *b_end = options_ ? options_ - 1 : specend;
         /* scan each of the options */
@@ -413,7 +420,8 @@ lcb_STATUS Connspec::parse(const char *connstr_ptr, size_t connstr_len, const ch
         }
     }
 
-    if ((err = parse_hosts(connstr_ptr, hlend, errmsg)) != LCB_SUCCESS) {
+    lcb_STATUS err = parse_hosts(connstr_ptr, hlend, errmsg);
+    if (err != LCB_SUCCESS) {
         goto GT_DONE;
     }
 
@@ -424,7 +432,7 @@ lcb_STATUS Connspec::parse(const char *connstr_ptr, size_t connstr_len, const ch
         m_flags |= F_DNSSRV;
     }
 
-    if (options_ != NULL) {
+    if (options_ != nullptr) {
         if ((err = parse_options(options_, specend, errmsg)) != LCB_SUCCESS) {
             goto GT_DONE;
         }
@@ -433,7 +441,6 @@ GT_DONE:
     return err;
 }
 
-#define TRYDUP(s) (s) ? strdup(s) : NULL
 lcb_STATUS Connspec::load(const lcb_CREATEOPTS &opts)
 {
     if (opts.bucket && opts.bucket_len) {
@@ -451,7 +458,7 @@ lcb_STATUS Connspec::load(const lcb_CREATEOPTS &opts)
     if (opts.logger) {
         m_logger = opts.logger;
     }
-    return parse(opts.connstr, opts.connstr_len, NULL);
+    return parse(opts.connstr, opts.connstr_len, nullptr);
 }
 
 bool Connspec::can_dnssrv() const

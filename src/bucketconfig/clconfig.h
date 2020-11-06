@@ -172,16 +172,16 @@ struct Confmon {
     ~Confmon();
 
     /**
-     * Get the provider following the current provider, or NULL if this is
+     * Get the provider following the current provider, or nullptr if this is
      * the last provider in the list.
      * @param cur The current provider.
-     * @return The next provider, or NULL if no more providers remain.
+     * @return The next provider, or nullptr if no more providers remain.
      */
     Provider *next_active(Provider *cur);
 
     /**
      * Gets the first active provider.
-     * @return the first provider, or NULL if no providers exist.
+     * @return the first provider, or nullptr if no providers exist.
      */
     Provider *first_active();
 
@@ -304,7 +304,7 @@ struct Confmon {
      * Indicates that the provider has fetched a new configuration from the network
      * and that confmon should attempt to propagate it. It has similar semantics
      * to lcb_confmon_provider_failed() except that the second argument is a config
-     * object rather than an error code. The second argument must not be `NULL`
+     * object rather than an error code. The second argument must not be `nullptr`
      *
      * The monitor will compare the new config against the current config.
      * If the new config does not feature any changes from the current config then
@@ -360,13 +360,13 @@ struct Confmon {
     Provider *cur_provider;
 
     /** All providers we know about. Currently this means the 'builtin' providers */
-    Provider *all_providers[CLCONFIG_MAX];
+    Provider *all_providers[CLCONFIG_MAX]{};
 
     /** The current configuration pointer. This contains the most recent accepted
      * configuration */
     ConfigInfo *config;
 
-    typedef std::list< Listener * > ListenerList;
+    typedef std::list<Listener *> ListenerList;
     /**  List of listeners for events */
     ListenerList listeners;
 
@@ -375,10 +375,10 @@ struct Confmon {
     lcbio_pTABLE iot;
 
     /** This is the async handle for a reentrant start */
-    lcb::io::Timer< Confmon, &Confmon::do_next_provider > as_start;
+    lcb::io::Timer<Confmon, &Confmon::do_next_provider> as_start;
 
     /** Async handle for a reentrant stop */
-    lcb::io::Timer< Confmon, &Confmon::stop_real > as_stop;
+    lcb::io::Timer<Confmon, &Confmon::stop_real> as_stop;
 
     /* CONFMON_S_* values. Used internally */
     int state;
@@ -386,7 +386,7 @@ struct Confmon {
     /** Last time the provider was stopped. As a microsecond timestamp */
     lcb_uint64_t last_stop_us;
 
-    typedef std::list< Provider * > ProviderList;
+    typedef std::list<Provider *> ProviderList;
     ProviderList active_providers;
 
     lcb_INSTANCE *instance;
@@ -458,11 +458,11 @@ struct Provider {
     /**
      * Retrieve the list of nodes from this provider, if applicable
      *
-     * @return A list of nodes, or NULL if the provider does not have a list
+     * @return A list of nodes, or nullptr if the provider does not have a list
      */
     virtual const lcb::Hostlist *get_nodes() const
     {
-        return NULL;
+        return nullptr;
     }
 
     /**
@@ -487,7 +487,7 @@ struct Provider {
 
     void enable()
     {
-        enabled = 1;
+        enabled = true;
     }
 
     virtual void enable(void *)
@@ -544,7 +544,7 @@ class ConfigInfo
      * @see lcbvb_get_revision
      * @see ConfigInfo::cmpclock
      */
-    int compare(const ConfigInfo &config);
+    int compare(const ConfigInfo &config) const;
 
     /**
      * @brief Increment the refcount on a config object
@@ -566,7 +566,7 @@ class ConfigInfo
         }
     }
 
-    operator lcbvb_CONFIG *() const
+    explicit operator lcbvb_CONFIG *() const
     {
         return vbc;
     }
@@ -601,17 +601,17 @@ class ConfigInfo
  * for a variety of events the listener can know.
  */
 struct Listener {
-    virtual ~Listener() {}
+    virtual ~Listener() = default;
 
     /** Linked list node */
-    lcb_list_t ll;
+    lcb_list_t ll{};
 
     /**
      * Callback invoked for significant events
      *
      * @param event the event which took place
      * @param config the configuration associated with the event. Note that
-     * `config` may also be NULL
+     * `config` may also be nullptr
      */
     virtual void clconfig_lsn(EventType event, ConfigInfo *config) = 0;
 };
@@ -627,7 +627,7 @@ struct Listener {
  * Sets the input/output filename for the file provider. This also enables
  * the file provider.
  * @param p the provider
- * @param f the filename (if NULL, a temporary filename will be created)
+ * @param f the filename (if nullptr, a temporary filename will be created)
  * @param ro whether the client will never modify the file
  * @return true on success, false on failure.
  */

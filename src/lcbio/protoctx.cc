@@ -43,9 +43,7 @@ static lcbio_PROTOCTX *del_common(lcbio_SOCKET *sock, int mode, lcbio_PROTOID id
     LCB_LIST_SAFE_FOR(ll, next, &sock->protos)
     {
         lcbio_PROTOCTX *cur = LCB_LIST_ITEM(ll, lcbio_PROTOCTX, ll);
-        if (mode == DEL_BY_ID && cur->id != id) {
-            continue;
-        } else if (cur != ctx) {
+        if ((mode == DEL_BY_ID && cur->id != id) || cur != ctx) {
             continue;
         }
         lcb_list_delete(&cur->ll);

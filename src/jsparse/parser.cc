@@ -52,7 +52,7 @@ void NORMALIZE_OFFSETS(const char *&buf, T &len)
  * It will try to get a buffer of size desired. The actual size is
  * returned in 'actual' (and may be less than desired, maybe even 0)
  */
-const char *Parser::get_buffer_region(size_t pos, size_t desired, size_t *actual)
+const char *Parser::get_buffer_region(size_t pos, size_t desired, size_t *actual) const
 {
     const char *ret = current_buf.c_str() + pos - min_pos;
     const char *end = current_buf.c_str() + current_buf.size();
@@ -61,7 +61,7 @@ const char *Parser::get_buffer_region(size_t pos, size_t desired, size_t *actual
     if (min_pos > pos) {
         /* swallowed */
         *actual = 0;
-        return NULL;
+        return nullptr;
     }
 
     lcb_assert(ret < end);
@@ -106,7 +106,7 @@ static void meta_header_complete_callback(jsonsl_t jsn, jsonsl_action_t, struct 
     ctx->meta_buf.append(ctx->current_buf.c_str(), state->pos_begin);
 
     ctx->header_len = state->pos_begin;
-    jsn->action_callback_PUSH = NULL;
+    jsn->action_callback_PUSH = nullptr;
 }
 
 static void row_pop_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_state_st *state, const jsonsl_char_t *)
@@ -124,7 +124,7 @@ static void row_pop_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_state_
 
     if (state->data == JOBJ_ROWSET) {
         jsn->action_callback_POP = trailer_pop_callback;
-        jsn->action_callback_PUSH = NULL;
+        jsn->action_callback_PUSH = nullptr;
         if (ctx->rowcount == 0) {
             /* Emulate what meta_header_complete callback does. */
 
@@ -142,7 +142,7 @@ static void row_pop_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_state_
     }
 
     rowbuf = ctx->get_buffer_region(state->pos_begin, -1, &szdummy);
-    Row dt = {{0}};
+    Row dt{};
     dt.row.iov_base = (void *)rowbuf;
     dt.row.iov_len = jsn->pos - state->pos_begin + 1;
     ctx->actions->JSPARSE_on_row(dt);
@@ -156,7 +156,7 @@ static int parse_error_callback(jsonsl_t jsn, jsonsl_error_t, struct jsonsl_stat
     /* invoke the callback */
     if (ctx->actions) {
         ctx->actions->JSPARSE_on_error(ctx->current_buf);
-        ctx->actions = NULL;
+        ctx->actions = nullptr;
     }
     return 0;
 }
@@ -171,7 +171,7 @@ static void trailer_pop_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_st
     ctx->combine_meta();
     if (ctx->actions) {
         ctx->actions->JSPARSE_on_complete(ctx->meta_buf);
-        ctx->actions = NULL;
+        ctx->actions = nullptr;
     }
 }
 
@@ -202,7 +202,7 @@ static void initial_pop_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_st
  */
 static void initial_push_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_state_st *state, const jsonsl_char_t *)
 {
-    Parser *ctx = (Parser *)jsn->data;
+    auto *ctx = (Parser *)jsn->data;
     jsonsl_jpr_match_t match = JSONSL_MATCH_UNKNOWN;
 
     if (ctx->have_error) {
@@ -264,12 +264,11 @@ const char *Parser::jprstr_for_mode(Mode mode)
             return "/hits/^";
         default:
             lcb_assert(0 && "Invalid mode passed!");
-            return "/";
     }
 }
 
 Parser::Parser(Mode mode_, Parser::Actions *actions_)
-    : jsn(jsonsl_new(512)), jsn_rdetails(jsonsl_new(32)), jpr(jsonsl_jpr_new(jprstr_for_mode(mode_), NULL)),
+    : jsn(jsonsl_new(512)), jsn_rdetails(jsonsl_new(32)), jpr(jsonsl_jpr_new(jprstr_for_mode(mode_), nullptr)),
       mode(mode_), have_error(0), initialized(0), meta_complete(0), rowcount(0), min_pos(0), keep_pos(0), header_len(0),
       last_row_endpos(0), cxx_data(), actions(actions_)
 {
@@ -329,15 +328,15 @@ static void parse_json_docid(lcb_IOV *iov, Parser *parent)
         return;
     }
 
-    s = NULL;
-    s_end = NULL;
+    s = nullptr;
+    s_end = nullptr;
 
     lcb_assert(jvp.isString());
 
     // Re-use s and s_end values for the string value itself
     if (!jvp.getString(&s, &s_end)) {
         // fprintf(stderr, "libcouchbase: couldn't get string value!\n");
-        iov->iov_base = NULL;
+        iov->iov_base = nullptr;
         iov->iov_len = 0;
     }
     iov->iov_base = const_cast<char *>(s);
@@ -346,7 +345,7 @@ static void parse_json_docid(lcb_IOV *iov, Parser *parent)
 
 static void miniparse_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_state_st *state, const jsonsl_char_t *at)
 {
-    miniparse_ctx *ctx = reinterpret_cast<miniparse_ctx *>(jsn->data);
+    auto *ctx = reinterpret_cast<miniparse_ctx *>(jsn->data);
     lcb_IOV *iov;
 
     if (state->level == 1) {
@@ -373,13 +372,13 @@ static void miniparse_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_stat
         } else if (IS_ROWFIELD("geometry")) {
             ctx->next_iov = &ctx->datum->geo;
         } else {
-            ctx->next_iov = NULL;
+            ctx->next_iov = nullptr;
         }
 #undef IS_ROWFIELD
         return;
     }
 
-    if (ctx->next_iov == NULL) {
+    if (ctx->next_iov == nullptr) {
         return;
     }
 
@@ -408,7 +407,7 @@ static void miniparse_callback(jsonsl_t jsn, jsonsl_action_t, struct jsonsl_stat
 
 void Parser::parse_viewrow(Row &vr)
 {
-    miniparse_ctx ctx = {NULL};
+    miniparse_ctx ctx = {nullptr};
     ctx.datum = &vr;
     ctx.root = static_cast<const char *>(vr.row.iov_base);
     ctx.parent = this;

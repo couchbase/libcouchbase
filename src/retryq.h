@@ -143,7 +143,7 @@ class RetryQueue
     inline void add_fallback(mc_PACKET *pkt);
 
   private:
-    void erase(RetryOp *);
+    static void erase(RetryOp *);
     void fail(RetryOp *, lcb_STATUS);
     void schedule(hrtime_t now = 0);
     void flush(bool throttle);
@@ -158,9 +158,9 @@ class RetryQueue
     void add(mc_EXPACKET *pkt, lcb_STATUS, errmap::RetrySpec *, int options);
 
     /** List of operations in retry ordering. Sorted by 'crtime' */
-    lcb_list_t schedops;
+    lcb_list_t schedops{};
     /** List of operations in timeout ordering. Ordered by 'start_time' */
-    lcb_list_t tmoops;
+    lcb_list_t tmoops{};
     /** Parent command queue */
     mc_CMDQUEUE *cq;
     lcb_settings *settings;

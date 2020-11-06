@@ -230,10 +230,10 @@ class Server : public mc_PIPELINE
     short new_durability;
 
     /** Whether bucket has been selected */
-    short selected_bucket;
+    short selected_bucket{};
 
     lcbio_CTX *connctx;
-    lcb::io::ConnectionRequest *connreq;
+    lcb::io::ConnectionRequest *connreq{};
 
     /** Request for current connection */
     lcb_host_t *curhost;

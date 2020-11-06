@@ -228,7 +228,8 @@ void Request::finish_or_retry(lcb_STATUS rc)
         finish(rc);
         return;
     }
-    struct http_parser_url next_info;
+    struct http_parser_url next_info {
+    };
     if (_lcb_http_parser_parse_url(nextnode, strlen(nextnode), 0, &next_info)) {
         lcb_log(LOGARGS(this, WARN), LOGFMT "Not retrying. Invalid API endpoint", LOGID(this));
         finish(LCB_ERR_INVALID_ARGUMENT);
@@ -245,7 +246,7 @@ void Request::finish_or_retry(lcb_STATUS rc)
                 nextnode + next_info.field_data[UF_HOST].off, next_info.field_data[UF_HOST].len);
 
     lcb_STATUS newrc;
-    newrc = assign_url(NULL, 0, NULL, 0);
+    newrc = assign_url(nullptr, 0, nullptr, 0);
     if (newrc != LCB_SUCCESS) {
         lcb_log(LOGARGS(this, ERR), LOGFMT "Failed to assign URL for retry request on next endpoint (%s): 0x%02x (%s)",
                 LOGID(this), nextnode, newrc, lcb_strerror_short(newrc));
@@ -474,7 +475,7 @@ GT_REPARSE:
     }
 
     if ((url_info.field_set & required_fields) != required_fields) {
-        if (base == NULL && path == NULL && !redir_checked) {
+        if (base == nullptr && path == nullptr && !redir_checked) {
             redir_checked = true;
             std::string first_part(htscheme, schemsize);
             first_part += host;
@@ -512,7 +513,7 @@ void Request::redirect()
     url = pending_redirect;
     pending_redirect.clear();
 
-    if ((rc = assign_url(NULL, 0, NULL, 0)) != LCB_SUCCESS) {
+    if ((rc = assign_url(nullptr, 0, nullptr, 0)) != LCB_SUCCESS) {
         lcb_log(LOGARGS(this, ERR), LOGFMT "Failed to add redirect URL (%s)", LOGID(this), url.c_str());
         finish(rc);
         return;
@@ -547,7 +548,7 @@ const char *Request::get_api_node(lcb_STATUS &rc)
 
     if (!LCBT_VBCONFIG(instance)) {
         rc = LCB_ERR_NO_CONFIGURATION;
-        return NULL;
+        return nullptr;
     }
 
     const lcbvb_SVCTYPE svc = httype2svctype(reqtype);
@@ -564,7 +565,7 @@ const char *Request::get_api_node(lcb_STATUS &rc)
     int ix = lcbvb_get_randhost_ex(vbc, svc, mode, &used_nodes[0]);
     if (ix < 0) {
         rc = LCB_ERR_UNSUPPORTED_OPERATION;
-        return NULL;
+        return nullptr;
     }
     used_nodes[ix] = 1;
     return lcbvb_get_resturl(vbc, ix, svc, mode);
@@ -573,7 +574,7 @@ const char *Request::get_api_node(lcb_STATUS &rc)
 lcb_STATUS Request::setup_inputs(const lcb_CMDHTTP *cmd)
 {
     std::string username, password;
-    const char *base = NULL;
+    const char *base = nullptr;
     size_t nbase = 0;
     lcb_STATUS rc = LCB_SUCCESS;
 
@@ -589,7 +590,7 @@ lcb_STATUS Request::setup_inputs(const lcb_CMDHTTP *cmd)
     }
 
     if (reqtype == LCB_HTTP_TYPE_RAW) {
-        if ((base = cmd->host) == NULL) {
+        if ((base = cmd->host) == nullptr) {
             return LCB_ERR_INVALID_ARGUMENT;
         }
     } else {
@@ -601,10 +602,10 @@ lcb_STATUS Request::setup_inputs(const lcb_CMDHTTP *cmd)
                 return LCB_ERR_INVALID_ARGUMENT;
             }
         }
-        if (base == NULL) {
+        if (base == nullptr) {
             base = get_api_node(rc);
         }
-        if (base == NULL || *base == '\0') {
+        if (base == nullptr || *base == '\0') {
             if (rc == LCB_SUCCESS) {
                 return LCB_ERR_SDK_INTERNAL;
             } else {
@@ -634,8 +635,8 @@ lcb_STATUS Request::setup_inputs(const lcb_CMDHTTP *cmd)
                     username = auth.username_for(hh.c_str(), pp.c_str(), LCBT_SETTING(instance, bucket));
                     password = auth.password_for(hh.c_str(), pp.c_str(), LCBT_SETTING(instance, bucket));
                 } else {
-                    username = auth.username_for(NULL, NULL, LCBT_SETTING(instance, bucket));
-                    password = auth.password_for(NULL, NULL, LCBT_SETTING(instance, bucket));
+                    username = auth.username_for(nullptr, nullptr, LCBT_SETTING(instance, bucket));
+                    password = auth.password_for(nullptr, nullptr, LCBT_SETTING(instance, bucket));
                 }
             }
         }
@@ -687,8 +688,8 @@ Request::Request(lcb_INSTANCE *instance_, const void *cookie, const lcb_CMDHTTP 
     : instance(instance_), body(cmd->body, cmd->body + cmd->nbody), method(cmd->method),
       chunked(cmd->cmdflags & LCB_CMDHTTP_F_STREAM), paused(false), command_cookie(cookie), refcount(1), redircount(0),
       passed_data(false), last_vbcrev(-1), reqtype(cmd->type), status(ONGOING),
-      callback(lcb_find_callback(instance, LCB_CALLBACK_HTTP)), io(instance->iotable), ioctx(NULL), timer(NULL),
-      parser(NULL), user_timeout(cmd->cmdflags & LCB_CMDHTTP_F_CASTMO ? cmd->cas : 0)
+      callback(lcb_find_callback(instance, LCB_CALLBACK_HTTP)), io(instance->iotable), ioctx(nullptr), timer(nullptr),
+      parser(nullptr), user_timeout(cmd->cmdflags & LCB_CMDHTTP_F_CASTMO ? cmd->cas : 0)
 {
     memset(&creq, 0, sizeof creq);
 }
@@ -697,13 +698,11 @@ Request::~Request()
 {
     close_io();
 
-    if (parser) {
-        delete parser;
-    }
+    delete parser;
 
     if (timer) {
         lcbio_timer_destroy(timer);
-        timer = NULL;
+        timer = nullptr;
     }
 }
 
@@ -725,13 +724,13 @@ uint32_t Request::timeout() const
 
 Request *Request::create(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDHTTP *cmd, lcb_STATUS *rc)
 {
-    Request *req = new Request(instance, cookie, cmd);
+    auto *req = new Request(instance, cookie, cmd);
     req->start = gethrtime();
 
     *rc = req->setup_inputs(cmd);
     if (*rc != LCB_SUCCESS) {
         delete req;
-        return NULL;
+        return nullptr;
     }
 
     *rc = req->submit();
@@ -744,7 +743,7 @@ Request *Request::create(lcb_INSTANCE *instance, const void *cookie, const lcb_C
     } else {
         // Do not call finish() as we don't want a callback
         req->decref();
-        return NULL;
+        return nullptr;
     }
 }
 

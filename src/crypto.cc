@@ -39,7 +39,7 @@ void lcbcrypto_register(lcb_INSTANCE *instance, const char *name, lcbcrypto_PROV
         lcb_log(LOGARGS(instance, ERROR), "Unsupported version for \"%s\" crypto provider, ignoring", name);
         return;
     }
-    std::map<std::string, lcbcrypto_PROVIDER *>::iterator old = instance->crypto->find(name);
+    auto old = instance->crypto->find(name);
     if (old != instance->crypto->end()) {
         lcbcrypto_unref(old->second);
     }
@@ -49,7 +49,7 @@ void lcbcrypto_register(lcb_INSTANCE *instance, const char *name, lcbcrypto_PROV
 
 void lcbcrypto_unregister(lcb_INSTANCE *instance, const char *name)
 {
-    std::map<std::string, lcbcrypto_PROVIDER *>::iterator old = instance->crypto->find(name);
+    auto old = instance->crypto->find(name);
     if (old != instance->crypto->end()) {
         lcbcrypto_unref(old->second);
         instance->crypto->erase(old);
@@ -72,19 +72,19 @@ static bool lcbcrypto_is_valid(lcbcrypto_PROVIDER *provider)
 
 #define PROVIDER_NEED_SIGN(provider) (provider)->v.v1.sign != nullptr
 #define PROVIDER_SIGN(provider, parts, nparts, sig, nsig)                                                              \
-    (provider)->v.v1.sign((provider), (parts), (nparts), (sig), (nsig));
+    (provider)->v.v1.sign((provider), (parts), (nparts), (sig), (nsig))
 #define PROVIDER_VERIFY_SIGNATURE(provider, parts, nparts, sig, nsig)                                                  \
-    (provider)->v.v1.verify_signature((provider), (parts), (nparts), (sig), (nsig));
+    (provider)->v.v1.verify_signature((provider), (parts), (nparts), (sig), (nsig))
 
 #define PROVIDER_NEED_IV(provider) (provider)->v.v1.generate_iv != nullptr
 #define PROVIDER_GENERATE_IV(provider, iv, niv) (provider)->v.v1.generate_iv((provider), (iv), (niv))
 
 #define PROVIDER_ENCRYPT(provider, ptext, nptext, iv, niv, ctext, nctext)                                              \
-    (provider)->v.v1.encrypt((provider), (ptext), (nptext), (iv), (niv), (ctext), (nctext));
+    (provider)->v.v1.encrypt((provider), (ptext), (nptext), (iv), (niv), (ctext), (nctext))
 #define PROVIDER_DECRYPT(provider, ctext, nctext, iv, niv, ptext, nptext)                                              \
-    (provider)->v.v1.decrypt((provider), (ctext), (nctext), (iv), (niv), (ptext), (nptext));
+    (provider)->v.v1.decrypt((provider), (ctext), (nctext), (iv), (niv), (ptext), (nptext))
 
-#define PROVIDER_GET_KEY_ID(provider) (provider)->v.v1.get_key_id((provider));
+#define PROVIDER_GET_KEY_ID(provider) (provider)->v.v1.get_key_id((provider))
 
 #define PROVIDER_RELEASE_BYTES(provider, bytes)                                                                        \
     if ((bytes) && (provider)->v.v1.release_bytes) {                                                                   \
@@ -134,14 +134,14 @@ lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT
             if (PROVIDER_NEED_IV(provider)) {
                 rc = PROVIDER_GENERATE_IV(provider, &iv, &niv);
                 if (rc != LCB_SUCCESS) {
-                    PROVIDER_RELEASE_BYTES(provider, iv);
+                    PROVIDER_RELEASE_BYTES(provider, iv)
                     lcb_log(LOGARGS(instance, WARN), "Unable to generate IV");
                     return rc;
                 }
                 ret = lcb_base64_encode2(reinterpret_cast<char *>(iv), niv, &biv, &nbiv);
                 if (ret < 0) {
                     free(biv);
-                    PROVIDER_RELEASE_BYTES(provider, iv);
+                    PROVIDER_RELEASE_BYTES(provider, iv)
                     lcb_log(LOGARGS(instance, WARN), "Unable to encode IV as Base64 string");
                     return LCB_ERR_INVALID_ARGUMENT;
                 }
@@ -149,20 +149,20 @@ lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT
             }
 
             std::string contents = Json::FastWriter().write(jdoc[field->name]);
-            const std::uint8_t *ptext = reinterpret_cast<const std::uint8_t *>(contents.c_str());
+            const auto *ptext = reinterpret_cast<const std::uint8_t *>(contents.c_str());
             std::uint8_t *ctext = nullptr;
             size_t nptext = contents.size(), nctext = 0;
             rc = PROVIDER_ENCRYPT(provider, ptext, nptext, iv, niv, &ctext, &nctext);
-            PROVIDER_RELEASE_BYTES(provider, iv);
+            PROVIDER_RELEASE_BYTES(provider, iv)
             if (rc != LCB_SUCCESS) {
-                PROVIDER_RELEASE_BYTES(provider, ctext);
+                PROVIDER_RELEASE_BYTES(provider, ctext)
                 lcb_log(LOGARGS(instance, WARN), "Unable to encrypt field");
                 return rc;
             }
             char *btext = nullptr;
             std::size_t nbtext = 0;
             ret = lcb_base64_encode2(reinterpret_cast<char *>(ctext), nctext, &btext, &nbtext);
-            PROVIDER_RELEASE_BYTES(provider, ctext);
+            PROVIDER_RELEASE_BYTES(provider, ctext)
             if (ret < 0) {
                 free(btext);
                 lcb_log(LOGARGS(instance, WARN), "Unable to encode encrypted field as Base64 string");
@@ -195,14 +195,14 @@ lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT
 
                 rc = PROVIDER_SIGN(provider, parts, nparts, &sig, &nsig);
                 if (rc != LCB_SUCCESS) {
-                    PROVIDER_RELEASE_BYTES(provider, sig);
+                    PROVIDER_RELEASE_BYTES(provider, sig)
                     lcb_log(LOGARGS(instance, WARN), "Unable to sign encrypted field");
                     return rc;
                 }
                 char *bsig = nullptr;
                 std::size_t nbsig = 0;
                 ret = lcb_base64_encode2(reinterpret_cast<char *>(sig), nsig, &bsig, &nbsig);
-                PROVIDER_RELEASE_BYTES(provider, sig);
+                PROVIDER_RELEASE_BYTES(provider, sig)
                 if (ret < 0) {
                     free(bsig);
                     lcb_log(LOGARGS(instance, WARN), "Unable to encode signature as Base64 string");
@@ -310,7 +310,7 @@ lcb_STATUS lcbcrypto_decrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDDECRYPT
             const std::string &bsig = jsig.asString();
             ret = lcb_base64_decode2(bsig.c_str(), bsig.size(), reinterpret_cast<char **>(&sig), &nsig);
             if (ret < 0) {
-                PROVIDER_RELEASE_BYTES(provider, sig);
+                PROVIDER_RELEASE_BYTES(provider, sig)
                 lcb_log(LOGARGS(instance, WARN), "Unable to decode signature as Base64 string");
                 return LCB_ERR_INVALID_ARGUMENT;
             }
@@ -365,14 +365,14 @@ lcb_STATUS lcbcrypto_decrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDDECRYPT
         rc = PROVIDER_DECRYPT(provider, ctext, nctext, iv, niv, &ptext, &nptext);
         free(ctext);
         if (rc != LCB_SUCCESS) {
-            PROVIDER_RELEASE_BYTES(provider, ptext);
+            PROVIDER_RELEASE_BYTES(provider, ptext)
             lcb_log(LOGARGS(instance, WARN), "Unable to decrypt encrypted field");
             return rc;
         }
         Json::Value frag;
         char *json = reinterpret_cast<char *>(ptext);
         bool valid_json = Json::Reader().parse(json, json + nptext, frag);
-        PROVIDER_RELEASE_BYTES(provider, ptext);
+        PROVIDER_RELEASE_BYTES(provider, ptext)
         if (!valid_json) {
             lcb_log(LOGARGS(instance, WARN), "Result of decryption is not valid JSON");
             return LCB_ERR_INVALID_ARGUMENT;

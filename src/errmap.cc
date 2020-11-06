@@ -48,7 +48,7 @@ RetrySpec *RetrySpec::parse(const Json::Value &retryJson, std::string &emsg)
 #define FAIL_RETRY(s)                                                                                                  \
     emsg = s;                                                                                                          \
     delete spec;                                                                                                       \
-    return NULL;
+    return nullptr
 
     if (!retryJson.isObject()) {
         FAIL_RETRY("Missing retry specification");
@@ -70,7 +70,7 @@ RetrySpec *RetrySpec::parse(const Json::Value &retryJson, std::string &emsg)
     }
 
 #define GET_TIMEFLD(srcname, dstname, required)                                                                        \
-    {                                                                                                                  \
+    do {                                                                                                               \
         Json::Value dstname##Json = retryJson[srcname];                                                                \
         if (dstname##Json.isNumeric()) {                                                                               \
             spec->dstname = (dstname##Json).asUInt() * 1000;                                                           \
@@ -79,7 +79,7 @@ RetrySpec *RetrySpec::parse(const Json::Value &retryJson, std::string &emsg)
         } else {                                                                                                       \
             spec->dstname = 0;                                                                                         \
         }                                                                                                              \
-    }
+    } while (0)
 
     GET_TIMEFLD("interval", interval, true);
     GET_TIMEFLD("after", after, true);
@@ -257,7 +257,7 @@ lcb_RETRY_ACTION lcb_retry_strategy_fail_fast(lcb_RETRY_REQUEST *, lcb_RETRY_REA
 
 LIBCOUCHBASE_API lcb_STATUS lcb_retry_strategy(lcb_INSTANCE *instance, lcb_RETRY_STRATEGY strategy)
 {
-    if (strategy == NULL || instance == NULL) {
+    if (strategy == nullptr || instance == nullptr) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
     instance->settings->retry_strategy = strategy;
