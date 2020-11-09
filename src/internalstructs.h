@@ -136,17 +136,6 @@ typedef struct {
     LCB_RESP_SERVER_FIELDS
 } lcb_RESPSERVERBASE;
 
-#define RESET_CMD_BASE(__me)                                                                                           \
-    (__me)->cmdflags = 0;                                                                                              \
-    (__me)->exptime = 0;                                                                                               \
-    (__me)->cas = 0;                                                                                                   \
-    (__me)->cid = 0;                                                                                                   \
-    (__me)->key.type = LCB_KV_COPY;                                                                                    \
-    (__me)->key.contig.bytes = NULL;                                                                                   \
-    (__me)->key.contig.nbytes = 0;                                                                                     \
-    (__me)->timeout = 0;                                                                                               \
-    (__me)->pspan = NULL
-
 #define LCB_CMD_DURABILITY                                                                                             \
     /**                                                                                                                \
      * @uncommitted                                                                                                    \
@@ -1552,55 +1541,6 @@ LIBCOUCHBASE_API
 lcb_STATUS lcb_stats3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS *cmd);
 /**@} (Name: Stats) */
 
-/**@name Server Versions
- * @warning This does not return the actual _Couchbase_ version but rather
- * the internal version of the memcached server.
- * @{
- */
-
-typedef struct {
-    LCB_CMD_BASE;
-} lcb_CMDVERSIONS;
-
-/**@brief Response structure for the version command */
-typedef struct {
-    LCB_RESP_BASE
-    LCB_RESP_SERVER_FIELDS
-    const char *mcversion; /**< The version string */
-    lcb_SIZE nversion;     /**< Length of the version string */
-} lcb_RESPMCVERSION;
-
-/**
- * @volatile
- */
-LIBCOUCHBASE_API
-lcb_STATUS lcb_server_versions3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDVERSIONS *cmd);
-/**@} (Name: MCversion) */
-
-/**
- * @name Server Log Verbosity
- * @{
- */
-
-/** @brief `level` field for lcb_server_verbosity3 () */
-typedef enum {
-    LCB_VERBOSITY_DETAIL = 0x00,
-    LCB_VERBOSITY_DEBUG = 0x01,
-    LCB_VERBOSITY_INFO = 0x02,
-    LCB_VERBOSITY_WARNING = 0x03
-} lcb_verbosity_level_t;
-
-typedef struct {
-    /* unused */
-    LCB_CMD_BASE;
-    const char *server;
-    lcb_verbosity_level_t level;
-} lcb_CMDVERBOSITY;
-typedef lcb_RESPSERVERBASE lcb_RESPVERBOSITY;
-/**@volatile*/
-LIBCOUCHBASE_API
-lcb_STATUS lcb_server_verbosity3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDVERBOSITY *cmd);
-/**@} (Name: Verbosity) */
 /**@} (Group: Misc) */
 
 /**

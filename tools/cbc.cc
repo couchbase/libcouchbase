@@ -422,27 +422,6 @@ static void watch_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTAT
     }
 }
 
-static void common_server_callback(lcb_INSTANCE *, int cbtype, const lcb_RESPSERVERBASE *sbase)
-{
-    string msg;
-    if (cbtype == LCB_CALLBACK_VERBOSITY) {
-        msg = "Set verbosity";
-    } else if (cbtype == LCB_CALLBACK_VERSIONS) {
-        const auto *resp = (const lcb_RESPMCVERSION *)sbase;
-        msg = string(resp->mcversion, resp->nversion);
-    } else {
-        msg = "";
-    }
-    if (!sbase->server) {
-        return;
-    }
-    if (sbase->ctx.rc != LCB_SUCCESS) {
-        fprintf(stderr, "%s failed for server %s: %s\n", msg.c_str(), sbase->server, lcb_strerror_short(sbase->ctx.rc));
-    } else {
-        fprintf(stderr, "%s: %s\n", msg.c_str(), sbase->server);
-    }
-}
-
 static void ping_callback(lcb_INSTANCE *, int, const lcb_RESPPING *resp)
 {
     lcb_STATUS rc = lcb_respping_status(resp);
@@ -1248,53 +1227,6 @@ void WatchHandler::run()
         prev = entry;
         sleep(interval);
     }
-}
-
-void VerbosityHandler::run()
-{
-    Handler::run();
-
-    const string &slevel = getRequiredArg();
-    lcb_verbosity_level_t level;
-    if (slevel == "detail") {
-        level = LCB_VERBOSITY_DETAIL;
-    } else if (slevel == "debug") {
-        level = LCB_VERBOSITY_DEBUG;
-    } else if (slevel == "info") {
-        level = LCB_VERBOSITY_INFO;
-    } else if (slevel == "warning") {
-        level = LCB_VERBOSITY_WARNING;
-    } else {
-        throw BadArg("Verbosity level must be {detail,debug,info,warning}");
-    }
-
-    lcb_install_callback(instance, LCB_CALLBACK_VERBOSITY, (lcb_RESPCALLBACK)common_server_callback);
-    lcb_CMDVERBOSITY cmd = {0};
-    cmd.level = level;
-    lcb_STATUS err;
-    lcb_sched_enter(instance);
-    err = lcb_server_verbosity3(instance, nullptr, &cmd);
-    if (err != LCB_SUCCESS) {
-        throw LcbError(err);
-    }
-    lcb_sched_leave(instance);
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
-}
-
-void McVersionHandler::run()
-{
-    Handler::run();
-
-    lcb_install_callback(instance, LCB_CALLBACK_VERSIONS, (lcb_RESPCALLBACK)common_server_callback);
-    lcb_CMDVERSIONS cmd = {0};
-    lcb_STATUS err;
-    lcb_sched_enter(instance);
-    err = lcb_server_versions3(instance, nullptr, &cmd);
-    if (err != LCB_SUCCESS) {
-        throw LcbError(err);
-    }
-    lcb_sched_leave(instance);
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 static void collection_dump_manifest_callback(lcb_INSTANCE *, int, const lcb_RESPGETMANIFEST *resp)
@@ -2176,7 +2108,6 @@ static const char *optionsOrder[] = {"help",
                                      "rm",
                                      "stats",
                                      "version",
-                                     "verbosity",
                                      "view",
                                      "query",
                                      "analytics",
@@ -2269,7 +2200,6 @@ static void setupHandlers()
     handlers_s["cp"] = new SetHandler("cp");
     handlers_s["stats"] = new StatsHandler();
     handlers_s["watch"] = new WatchHandler();
-    handlers_s["verbosity"] = new VerbosityHandler();
     handlers_s["ping"] = new PingHandler();
     handlers_s["incr"] = new IncrHandler();
     handlers_s["decr"] = new DecrHandler();
@@ -2290,7 +2220,6 @@ static void setupHandlers()
     handlers_s["user-list"] = new UserListHandler();
     handlers_s["user-upsert"] = new UserUpsertHandler();
     handlers_s["user-delete"] = new UserDeleteHandler();
-    handlers_s["mcversion"] = new McVersionHandler();
     handlers_s["keygen"] = new KeygenHandler();
     handlers_s["collection-manifest"] = new CollectionGetManifestHandler();
     handlers_s["collection-id"] = new CollectionGetCIDHandler();

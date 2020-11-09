@@ -942,32 +942,6 @@ static void H_collections_get_cid(mc_PIPELINE *pipeline, mc_PACKET *request, Mem
     }
 }
 
-static void H_verbosity(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response, lcb_STATUS immerr)
-{
-    lcb_INSTANCE *root = get_instance(pipeline);
-    lcb_RESPBASE dummy{};
-    mc_REQDATAEX *exdata = request->u_rdata.exdata;
-    make_error(root, &dummy, response, immerr);
-
-    exdata->procs->handler(pipeline, request, dummy.ctx.rc, nullptr);
-}
-
-static void H_version(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response, lcb_STATUS immerr)
-{
-    lcb_INSTANCE *root = get_instance(pipeline);
-    lcb_RESPMCVERSION resp{};
-    mc_REQDATAEX *exdata = request->u_rdata.exdata;
-
-    make_error(root, &resp, response, immerr);
-
-    if (response->vallen()) {
-        resp.mcversion = response->value();
-        resp.nversion = response->vallen();
-    }
-
-    exdata->procs->handler(pipeline, request, resp.ctx.rc, &resp);
-}
-
 static void H_noop(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response, lcb_STATUS immerr)
 {
     lcb_INSTANCE *root = get_instance(pipeline);
@@ -1116,12 +1090,6 @@ int mcreq_dispatch_response(mc_PIPELINE *pipeline, mc_PACKET *req, MemcachedResp
 
         case PROTOCOL_BINARY_CMD_STAT:
             INVOKE_OP(H_stats);
-
-        case PROTOCOL_BINARY_CMD_VERSION:
-            INVOKE_OP(H_version);
-
-        case PROTOCOL_BINARY_CMD_VERBOSITY:
-            INVOKE_OP(H_verbosity);
 
         case PROTOCOL_BINARY_CMD_NOOP:
             INVOKE_OP(H_noop);

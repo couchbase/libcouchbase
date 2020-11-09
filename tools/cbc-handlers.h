@@ -341,28 +341,6 @@ class WatchHandler : public Handler
     cliopts::UIntOption o_interval;
 };
 
-class VerbosityHandler : public Handler
-{
-  public:
-    HANDLER_DESCRIPTION("Modify the memcached logging level")
-    HANDLER_USAGE("<detail|debug|info|warning> [OPTIONS ...]")
-    VerbosityHandler() : Handler("verbosity") {}
-
-  protected:
-    void run() override;
-};
-
-class McVersionHandler : public Handler
-{
-  public:
-    HANDLER_DESCRIPTION("Query server versions using the memcached command")
-    HANDLER_USAGE("[OPTIONS ...]")
-    McVersionHandler() : Handler("mcversion") {}
-
-  protected:
-    void run() override;
-};
-
 class KeygenHandler : public Handler
 {
   public:
