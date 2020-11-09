@@ -535,6 +535,8 @@ static lcbvb_SVCTYPE httype2svctype(unsigned httype)
             return LCBVB_SVCTYPE_SEARCH;
         case LCB_HTTP_TYPE_ANALYTICS:
             return LCBVB_SVCTYPE_ANALYTICS;
+        case LCB_HTTP_TYPE_EVENTING:
+            return LCBVB_SVCTYPE_EVENTING;
         default:
             return LCBVB_SVCTYPE__MAX;
     }

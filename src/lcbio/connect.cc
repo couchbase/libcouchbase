@@ -574,6 +574,8 @@ const char *lcbio_svcstr(lcbio_SERVICE service)
             return "fts";
         case LCBIO_SERVICE_ANALYTICS:
             return "cbas";
+        case LCBIO_SERVICE_EVENTING:
+            return "eventing";
         case LCBIO_SERVICE_UNSPEC:
             /* fallthrough */
         default:

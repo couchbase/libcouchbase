@@ -237,6 +237,9 @@ static void on_connected(lcbio_SOCKET *sock, void *arg, lcb_STATUS err, lcbio_OS
         case LCB_HTTP_TYPE_ANALYTICS:
             sock->service = LCBIO_SERVICE_ANALYTICS;
             break;
+        case LCB_HTTP_TYPE_EVENTING:
+            sock->service = LCBIO_SERVICE_EVENTING;
+            break;
         default:
             sock->service = LCBIO_SERVICE_MGMT;
             break;
