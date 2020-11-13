@@ -78,7 +78,7 @@ TEST_F(CtlTest, testStringCtls)
 
     for (PairMap *cur = ctlMap; cur->key; cur++) {
         err = lcb_cntl_string(instance, cur->key, "50");
-        ASSERT_EQ(LCB_SUCCESS, err);
+        ASSERT_EQ(LCB_SUCCESS, err) << "key: " << cur->key << ", error: " << lcb_strerror_short(err);
         ASSERT_EQ(50000000, lcb_cntl_getu32(instance, cur->opval));
     }
 

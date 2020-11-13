@@ -264,6 +264,7 @@ lcb_STATUS Connspec::parse_options(const char *options_, const char *specend, co
             m_keypath = value;
         } else if (!strcmp(key, "console_log_level")) {
             char *end = nullptr;
+            errno = 0;
             long val = std::strtol(value, &end, 10);
             if (errno == ERANGE || end == value) {
                 SET_ERROR("console_log_level must be a numeric value");
@@ -277,6 +278,7 @@ lcb_STATUS Connspec::parse_options(const char *options_, const char *specend, co
                 btmp = 0;
             } else {
                 char *end = nullptr;
+                errno = 0;
                 btmp = static_cast<int>(std::strtol(value, &end, 10));
                 if (errno == ERANGE || end == value) {
                     SET_ERROR("log_redaction must have numeric (boolean) value");
@@ -294,6 +296,7 @@ lcb_STATUS Connspec::parse_options(const char *options_, const char *specend, co
                 btmp = 0;
             } else {
                 char *end = nullptr;
+                errno = 0;
                 btmp = static_cast<int>(std::strtol(value, &end, 10));
                 if (errno == ERANGE || end == value) {
                     SET_ERROR("dnssrv must have numeric (boolean) value");

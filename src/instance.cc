@@ -207,6 +207,7 @@ lcb_STATUS lcb_st::process_dns_srv(Connspec &spec)
         Spechost sh;
         sh.hostname = src.host;
         char *end = nullptr;
+        errno = 0;
         long val = std::strtol(src.port, &end, 10);
         if (errno == ERANGE || end == src.port) {
             sh.port = 0;
@@ -314,6 +315,7 @@ static lcb_STATUS setup_ssl(lcb_INSTANCE *obj, const Connspec &params)
 
     if (lcb_getenv_nonempty("LCB_SSL_MODE", optbuf, sizeof optbuf)) {
         char *end = nullptr;
+        errno = 0;
         env_policy = std::strtol(optbuf, &end, 10);
         if (errno == ERANGE || optbuf == end) {
             lcb_log(LOGARGS(obj, ERR), "Invalid value for environment LCB_SSL. (%s)", optbuf);

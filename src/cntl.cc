@@ -80,7 +80,7 @@ static const STR_u32MAP *u32_from_map(const char *s, const STR_u32MAP *lookup)
         }                                                                                                              \
     }
 
-static lcb_uint32_t *get_timeout_field(lcb_INSTANCE *instance, int cmd)
+static std::uint32_t *get_timeout_field(lcb_INSTANCE *instance, int cmd)
 {
     lcb_settings *settings = instance->settings;
     switch (cmd) {
@@ -861,6 +861,7 @@ static lcb_STATUS convert_intbool(const char *arg, u_STRCONVERT *u)
         u->i = 0;
     } else {
         char *end = nullptr;
+        errno = 0;
         long val = std::strtol(arg, &end, 10);
         if (errno == ERANGE || end == arg) {
             return LCB_ERR_CONTROL_INVALID_ARGUMENT;
@@ -879,6 +880,7 @@ static lcb_STATUS convert_passthru(const char *arg, u_STRCONVERT *u)
 static lcb_STATUS convert_int(const char *arg, u_STRCONVERT *u)
 {
     char *end = nullptr;
+    errno = 0;
     long val = std::strtol(arg, &end, 10);
     if (errno == ERANGE || end == arg) {
         return LCB_ERR_CONTROL_INVALID_ARGUMENT;
@@ -890,8 +892,9 @@ static lcb_STATUS convert_int(const char *arg, u_STRCONVERT *u)
 static lcb_STATUS convert_u32(const char *arg, u_STRCONVERT *u)
 {
     char *end = nullptr;
+    errno = 0;
     unsigned long val = std::strtoul(arg, &end, 10);
-    if (errno == ERANGE) {
+    if (errno == ERANGE || end == arg) {
         return LCB_ERR_CONTROL_INVALID_ARGUMENT;
     }
     u->u32 = static_cast<std::uint32_t>(val);
@@ -901,6 +904,7 @@ static lcb_STATUS convert_u32(const char *arg, u_STRCONVERT *u)
 static lcb_STATUS convert_float(const char *arg, u_STRCONVERT *u)
 {
     char *end = nullptr;
+    errno = 0;
     double val = std::strtod(arg, &end);
     if (errno == ERANGE || end == arg) {
         return LCB_ERR_CONTROL_INVALID_ARGUMENT;
@@ -912,6 +916,7 @@ static lcb_STATUS convert_float(const char *arg, u_STRCONVERT *u)
 static lcb_STATUS convert_SIZE(const char *arg, u_STRCONVERT *u)
 {
     char *end = nullptr;
+    errno = 0;
     unsigned long long val = std::strtoll(arg, &end, 10);
     if (errno == ERANGE || end == arg) {
         return LCB_ERR_CONTROL_INVALID_ARGUMENT;
@@ -1122,15 +1127,15 @@ int lcb_cntl_exists(int ctl)
 }
 
 LIBCOUCHBASE_API
-lcb_STATUS lcb_cntl_setu32(lcb_INSTANCE *instance, int cmd, lcb_uint32_t arg)
+lcb_STATUS lcb_cntl_setu32(lcb_INSTANCE *instance, int cmd, std::uint32_t arg)
 {
     return lcb_cntl(instance, LCB_CNTL_SET, cmd, &arg);
 }
 
 LIBCOUCHBASE_API
-lcb_uint32_t lcb_cntl_getu32(lcb_INSTANCE *instance, int cmd)
+std::uint32_t lcb_cntl_getu32(lcb_INSTANCE *instance, int cmd)
 {
-    lcb_uint32_t ret = 0;
+    std::uint32_t ret = 0;
     lcb_cntl(instance, LCB_CNTL_GET, cmd, &ret);
     return ret;
 }
