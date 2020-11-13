@@ -19,6 +19,7 @@
 #include <lcbio/timer-cxx.h>
 #include <libcouchbase/vbucket.h>
 #include "clconfig.h"
+#include <cerrno>
 
 #define LOGARGS(mcr, lvlbase) mcr->parent->settings, "bc_static", LCB_LOG_##lvlbase, __FILE__, __LINE__
 #define LOGFMT "(STATIC=%p)> "

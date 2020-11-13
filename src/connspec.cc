@@ -21,6 +21,7 @@
 #include "internalstructs.h"
 #include <cstdio>
 #include <cctype>
+#include <cerrno>
 
 #define SET_ERROR(msg)                                                                                                 \
     *errmsg = msg;                                                                                                     \
