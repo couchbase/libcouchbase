@@ -898,7 +898,7 @@ static bool is_valid_collection_char(char ch)
 
 static bool is_valid_collection_element(const char *element, size_t element_len)
 {
-    if (element_len == 0 && element == nullptr) {
+    if (element_len == 0 || element == nullptr) {
         /* nullptr/0 for collection is mapped to default collection */
         return true;
     }
