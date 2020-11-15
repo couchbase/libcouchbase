@@ -197,11 +197,11 @@ void Bootstrap::initial_error(lcb_STATUS err, const char *errinfo)
     tm.cancel();
 
     if (parent->callbacks.bootstrap) {
-        parent->callbacks.bootstrap(parent, err);
+        parent->callbacks.bootstrap(parent, parent->last_error);
         parent->callbacks.bootstrap = nullptr;
     }
     if (parent->callbacks.open) {
-        parent->callbacks.open(parent, err);
+        parent->callbacks.open(parent, parent->last_error);
         parent->callbacks.open = nullptr;
     }
 

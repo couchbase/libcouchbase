@@ -122,6 +122,13 @@ struct rvbuf {
 };
 
 extern "C" {
+
+static void bootstrap_callback(lcb_INSTANCE *instance, lcb_STATUS err)
+{
+    EXPECT_TRUE(err == LCB_SUCCESS || err == LCB_ERR_BUCKET_NOT_FOUND || err == LCB_ERR_AUTHENTICATION_FAILURE);
+    EXPECT_NE(err, LCB_ERR_NO_MATCHING_SERVER);
+}
+
 static void store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
 {
     rvbuf *rv;
@@ -387,7 +394,7 @@ lcb_STATUS SmokeTest::testMissingBucket()
     lcb_createopts_destroy(cropts);
     EXPECT_EQ(LCB_SUCCESS, err);
     mock->postCreate(session);
-
+    lcb_set_bootstrap_callback(session, bootstrap_callback);
     err = lcb_connect(session);
     EXPECT_EQ(LCB_SUCCESS, err);
     lcb_wait(session, LCB_WAIT_DEFAULT);
@@ -448,6 +455,7 @@ void SmokeTest::connectCommon(const char *bucket, const char *password, lcb_STAT
     EXPECT_EQ(LCB_SUCCESS, err);
 
     mock->postCreate(session);
+    lcb_set_bootstrap_callback(session, bootstrap_callback);
     err = lcb_connect(session);
     EXPECT_EQ(LCB_SUCCESS, err);
     lcb_wait(session, LCB_WAIT_DEFAULT);
