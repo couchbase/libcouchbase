@@ -133,9 +133,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_expiry(lcb_CMDGET *cmd, uint32_t expirati
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_locktime(lcb_CMDGET *cmd, uint32_t duration)
 {
-    if (duration == 0) {
-        return LCB_ERR_INVALID_ARGUMENT;
-    }
     cmd->exptime = duration;
     cmd->lock = 1;
     return LCB_SUCCESS;
