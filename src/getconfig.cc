@@ -72,7 +72,7 @@ lcb_STATUS lcb_st::request_config(const void *cookie_, lcb::Server *server)
     rd->cookie = cookie_;
     rd->start = gethrtime();
     rd->deadline =
-        rd->start + LCB_US2NS(LCBT_SETTING(reinterpret_cast<lcb_INSTANCE *>(cmdq.cqdata), config_node_timeout));
+        rd->start + LCB_US2NS(LCBT_SETTING(reinterpret_cast<lcb_INSTANCE *>(cmdq.cqdata), operation_timeout));
     packet->u_rdata.exdata = rd;
     packet->flags |= MCREQ_F_REQEXT;
 
@@ -108,7 +108,7 @@ lcb_STATUS lcb_st::select_bucket(const void *cookie_, lcb::Server *server)
     rd->cookie = cookie_;
     rd->start = gethrtime();
     rd->deadline =
-        rd->start + LCB_US2NS(LCBT_SETTING(reinterpret_cast<lcb_INSTANCE *>(cmdq.cqdata), config_node_timeout));
+        rd->start + LCB_US2NS(LCBT_SETTING(reinterpret_cast<lcb_INSTANCE *>(cmdq.cqdata), operation_timeout));
     packet->u_rdata.exdata = rd;
     packet->flags |= MCREQ_F_REQEXT;
 
