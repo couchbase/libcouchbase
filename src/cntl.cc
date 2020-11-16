@@ -845,6 +845,7 @@ static lcb_STATUS convert_timevalue(const char *arg, u_STRCONVERT *u)
 {
     double dtmp;
     char *end = nullptr;
+    errno = 0;
     dtmp = std::strtod(arg, &end);
     if (errno == ERANGE || end == arg) {
         return LCB_ERR_CONTROL_INVALID_ARGUMENT;
