@@ -77,8 +77,8 @@ struct lcb_CMDQUERY_ {
     const char *collection;
     std::size_t ncollection;
     lcb_KEYBUF key;
-    std::uint32_t timeout;
-    lcbtrace_SPAN *pspan;
+    std::uint32_t timeout{0};
+    lcbtrace_SPAN *pspan{nullptr};
 
     Json::Value root{};
     /**Query to be placed in the POST request. The library will not perform

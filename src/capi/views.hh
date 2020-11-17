@@ -64,18 +64,18 @@ struct lcb_CMDVIEW_ {
     const char *collection;
     std::size_t ncollection;
     lcb_KEYBUF key;
-    std::uint32_t timeout;
-    lcbtrace_SPAN *pspan;
+    std::uint32_t timeout{0};
+    lcbtrace_SPAN *pspan{nullptr};
 
     /** The design document as a string; e.g. `"beer"` */
-    const char *ddoc;
+    const char *ddoc{nullptr};
     /** Length of design document name */
-    std::size_t nddoc;
+    std::size_t nddoc{0};
 
     /** The name of the view as a string; e.g. `"brewery_beers"` */
-    const char *view;
+    const char *view{nullptr};
     /** Length of the view name */
-    std::size_t nview;
+    std::size_t nview{0};
 
     /**Any URL parameters to be passed to the view should be specified here.
      * The library will internally insert a `?` character before the options
@@ -84,16 +84,16 @@ struct lcb_CMDVIEW_ {
      * The format of the options follows the standard for passing parameters
      * via HTTP requests; thus e.g. `key1=value1&key2=value2`. This string
      * is itself not parsed by the library but simply appended to the URL. */
-    const char *optstr;
+    const char *optstr{nullptr};
 
     /** Length of the option string */
-    std::size_t noptstr;
+    std::size_t noptstr{0};
 
     /**Some query parameters (in particular; 'keys') may be send via a POST
      * request within the request body, since it might be too long for the
      * URI itself. If you have such data, place it here. */
-    const char *postdata;
-    std::size_t npostdata;
+    const char *postdata{nullptr};
+    std::size_t npostdata{0};
 
     /**
      * The maximum number of internal get requests to issue concurrently for
@@ -105,15 +105,15 @@ struct lcb_CMDVIEW_ {
      * so that no more than this number of requests will be in progress at any
      * given time.
      */
-    unsigned docs_concurrent_max;
+    unsigned docs_concurrent_max{0};
 
     /**Callback to invoke for each row. If not provided, @ref LCB_ERR_INVALID_ARGUMENT will
      * be returned from lcb_view_query() */
-    lcb_VIEW_CALLBACK callback;
+    lcb_VIEW_CALLBACK callback{nullptr};
 
     /**If not NULL, this will be set to a handle which may be passed to
      * lcb_view_cancel(). See that function for more details */
-    lcb_VIEW_HANDLE **handle;
+    lcb_VIEW_HANDLE **handle{nullptr};
 };
 
 /**@brief Response structure representing a row.

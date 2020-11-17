@@ -96,11 +96,11 @@ struct lcb_CMDANALYTICS_ {
     const char *collection;
     std::size_t ncollection;
     lcb_KEYBUF key;
-    std::uint32_t timeout;
-    lcbtrace_SPAN *pspan;
+    std::uint32_t timeout{0};
+    lcbtrace_SPAN *pspan{nullptr};
 
     Json::Value root{Json::objectValue};
-    std::string query;
+    std::string query{};
     lcb_ANALYTICS_CALLBACK callback{nullptr};
     lcb_ANALYTICS_HANDLE **handle{nullptr};
     lcb_INGEST_OPTIONS *ingest{nullptr};

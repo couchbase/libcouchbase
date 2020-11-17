@@ -77,12 +77,12 @@ struct lcb_CMDSEARCH_ {
     const char *collection;
     std::size_t ncollection;
     lcb_KEYBUF key;
-    std::uint32_t timeout;
-    lcbtrace_SPAN *pspan;
-    const char *query;
-    std::size_t nquery;
-    lcb_SEARCH_CALLBACK callback;
-    lcb_SEARCH_HANDLE **handle;
+    std::uint32_t timeout{0};
+    lcbtrace_SPAN *pspan{nullptr};
+    const char *query{nullptr};
+    std::size_t nquery{0};
+    lcb_SEARCH_CALLBACK callback{nullptr};
+    lcb_SEARCH_HANDLE **handle{nullptr};
 };
 
 #endif // LIBCOUCHBASE_CAPI_SEARCH_HH
