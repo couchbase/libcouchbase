@@ -300,7 +300,7 @@ SessionRequestImpl::MechStatus SessionRequestImpl::set_chosen_mech(std::string &
             /* do not allow to downgrade SASL mechanism to PLAIN on non-TLS connections,
              * unless user explicitly asks for it */
             if (!tls && !user_specified && strncmp(chosenmech, MECH_PLAIN, sizeof(MECH_PLAIN)) == 0) {
-#ifdef LCB_NO_SSL
+#if defined(LCB_NO_SSL) || !defined(HAVE_PKCS5_PBKDF2_HMAC)
                 lcb_log(LOGARGS(this, ERROR),
                         LOGFMT
                         "SASL PLAIN authentication is not allowed on non-TLS connections. But this libcouchbase "
