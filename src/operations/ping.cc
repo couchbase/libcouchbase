@@ -618,7 +618,7 @@ lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const lcb_CMDPING *cmd
             PING_HTTP(LCBVB_SVCTYPE_VIEWS, "/", views_timeout, handle_views);
         }
         if (cmd->services & LCB_PINGSVC_F_FTS) {
-            PING_HTTP(LCBVB_SVCTYPE_SEARCH, "/api/ping", http_timeout, handle_fts);
+            PING_HTTP(LCBVB_SVCTYPE_SEARCH, "/api/ping", search_timeout, handle_fts);
         }
         if (cmd->services & LCB_PINGSVC_F_ANALYTICS) {
             PING_HTTP(LCBVB_SVCTYPE_ANALYTICS, "/admin/ping", analytics_timeout, handle_analytics);

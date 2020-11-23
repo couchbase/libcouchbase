@@ -201,7 +201,7 @@ lcb_SEARCH_HANDLE_::lcb_SEARCH_HANDLE_(lcb_INSTANCE *instance_, const void *cook
     // Making a copy here to ensure that we don't accidentally create a new
     // 'ctl' field.
     const Json::Value &ctl = constRoot["value"];
-    uint32_t timeout = cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, n1ql_timeout);
+    uint32_t timeout = cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, search_timeout);
     if (ctl.isObject()) {
         const Json::Value &tmo = ctl["timeout"];
         if (tmo.isNumeric()) {

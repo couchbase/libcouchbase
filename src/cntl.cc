@@ -92,6 +92,8 @@ static std::uint32_t *get_timeout_field(lcb_INSTANCE *instance, int cmd)
             return &settings->n1ql_timeout;
         case LCB_CNTL_ANALYTICS_TIMEOUT:
             return &settings->analytics_timeout;
+        case LCB_CNTL_SEARCH_TIMEOUT:
+            return &settings->search_timeout;
         case LCB_CNTL_DURABILITY_INTERVAL:
             return &settings->durability_interval;
         case LCB_CNTL_DURABILITY_TIMEOUT:
@@ -816,6 +818,7 @@ static ctl_handler handlers[] = {
     allow_static_config_handler,          /* LCB_CNTL_ALLOW_STATIC_CONFIG */
     timeout_common,                       /* LCB_CNTL_ANALYTICS_TIMEOUT */
     unordered_execution_handler,          /* LCB_CNTL_ENABLE_UNORDERED_EXECUTION */
+    timeout_common,                       /* LCB_CNTL_SEARCH_TIMEOUT */
     nullptr
 };
 /* clang-format on */
@@ -1047,6 +1050,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"allow_static_config", LCB_CNTL_ALLOW_STATIC_CONFIG, convert_intbool},
     {"analytics_timeout", LCB_CNTL_ANALYTICS_TIMEOUT, convert_timevalue},
     {"enable_unordered_execution", LCB_CNTL_ENABLE_UNORDERED_EXECUTION, convert_intbool},
+    {"search_timeout", LCB_CNTL_SEARCH_TIMEOUT, convert_timevalue},
     {nullptr, -1}};
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))

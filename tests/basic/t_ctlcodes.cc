@@ -45,7 +45,7 @@ TEST_F(CtlTest, testExists)
                 ASSERT_FALSE(lcb_cntl_exists(ii));
                 break;
             default:
-                ASSERT_TRUE(lcb_cntl_exists(ii));
+                ASSERT_TRUE(lcb_cntl_exists(ii)) << "expected 0x" << std::hex << ii << " to exist";
         }
     }
     ASSERT_EQ(0, lcb_cntl_exists(-1));
