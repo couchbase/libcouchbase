@@ -194,6 +194,10 @@ static int iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, v
     auto *instance = (lcb_INSTANCE *)cq->cqdata;
 
     mcreq_read_hdr(oldpkt, &hdr);
+    /* we should not relocate GET_WITH_REPLICA packets */
+    if (hdr.request.opcode == PROTOCOL_BINARY_CMD_GET_REPLICA) {
+        return MCREQ_KEEP_PACKET;
+    }
 
     lcb_RETRY_ACTION retry = lcb_kv_should_retry(srv->get_settings(), oldpkt, LCB_ERR_TOPOLOGY_CHANGE);
     if (!retry.should_retry) {

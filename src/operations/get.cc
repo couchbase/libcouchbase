@@ -649,7 +649,8 @@ static lcb_STATUS getreplica_validate(lcb_INSTANCE *instance, const lcb_CMDGETRE
     mcreq_map_key(cq, &cmd->key, MCREQ_PKT_BASESIZE, &vbid, &ixtmp);
     if (cmd->strategy == LCB_REPLICA_SELECT) {
         r0 = r1 = cmd->index;
-        if (lcbvb_vbreplica(cq->config, vbid, r0) < 0) {
+        int idx = lcbvb_vbreplica(cq->config, vbid, r0);
+        if (idx < 0) {
             return LCB_ERR_NO_MATCHING_SERVER;
         }
 
