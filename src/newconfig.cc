@@ -279,9 +279,6 @@ static void replace_config(lcb_INSTANCE *instance, lcbvb_CONFIG *oldconfig, lcbv
      * transfer the new config along with the new list over to the CQ structure.
      */
     mcreq_queue_add_pipelines(cq, ppnew, nnew, newconfig);
-    for (ii = 0; ii < nnew; ii++) {
-        mcreq_iterwipe(cq, ppnew[ii], iterwipe_cb, nullptr);
-    }
 
     /**
      * Go through all the servers that are to be removed and relocate commands

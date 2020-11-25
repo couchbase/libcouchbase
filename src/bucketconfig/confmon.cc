@@ -171,6 +171,7 @@ int Confmon::do_set_next(ConfigInfo *new_config, bool notify_miss)
     if (config) {
         /** DECREF the old one */
         config->decref();
+        config = nullptr;
     }
 
     for (ii = 0; ii < CLCONFIG_MAX; ii++) {
@@ -184,7 +185,7 @@ int Confmon::do_set_next(ConfigInfo *new_config, bool notify_miss)
     config = new_config;
     stop();
 
-    invoke_listeners(CLCONFIG_EVENT_GOT_NEW_CONFIG, new_config);
+    invoke_listeners(CLCONFIG_EVENT_GOT_NEW_CONFIG, config);
 
     return 1;
 }

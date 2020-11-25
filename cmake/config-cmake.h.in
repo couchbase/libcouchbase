@@ -77,3 +77,5 @@
 #cmakedefine LCB_DUMP_PACKETS
 
 #cmakedefine LCB_TLS_LOG_KEYS
+
+#cmakedefine LCB_USE_ASAN

@@ -179,7 +179,10 @@ void Bootstrap::bgpoll()
 void Bootstrap::timer_dispatch()
 {
     if (state > S_INITIAL_PRE) {
-        config_callback(clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG, parent->confmon->get_config());
+        auto *config = parent->confmon->get_config();
+        if (config != nullptr) {
+            config_callback(clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG, config);
+        }
     } else {
         // Not yet bootstrapped!
         initial_error(LCB_ERR_TIMEOUT, "Failed to bootstrap in time");

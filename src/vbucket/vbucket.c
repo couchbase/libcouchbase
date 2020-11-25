@@ -834,7 +834,7 @@ void lcbvb_replace_host(lcbvb_CONFIG *cfg, const char *hoststr)
 lcbvb_CONFIG *lcbvb_parse_json(const char *js)
 {
     int rv;
-    lcbvb_CONFIG *cfg = calloc(1, sizeof(*cfg));
+    lcbvb_CONFIG *cfg = lcbvb_create();
     rv = lcbvb_load_json(cfg, js);
     if (rv) {
         lcbvb_destroy(cfg);
@@ -846,7 +846,8 @@ lcbvb_CONFIG *lcbvb_parse_json(const char *js)
 LIBCOUCHBASE_API
 lcbvb_CONFIG *lcbvb_create(void)
 {
-    return calloc(1, sizeof(lcbvb_CONFIG));
+    lcbvb_CONFIG *ptr = calloc(1, sizeof(lcbvb_CONFIG));
+    return ptr;
 }
 
 static void free_service_strs(lcbvb_SERVICES *svc)
@@ -1226,8 +1227,10 @@ static void compute_vb_list_diff(lcbvb_CONFIG *from, lcbvb_CONFIG *to, char **ou
     for (ii = 0; ii < to->nsrv; ii++) {
         int found = 0;
         lcbvb_SERVER *newsrv = to->servers + ii;
+        lcb_assert(newsrv != NULL);
         for (jj = 0; !found && jj < from->nsrv; jj++) {
             lcbvb_SERVER *oldsrv = from->servers + jj;
+            lcb_assert(oldsrv != NULL);
             found |= (strcmp(newsrv->authority, oldsrv->authority) == 0);
         }
         if (!found) {
@@ -1243,7 +1246,7 @@ static void compute_vb_list_diff(lcbvb_CONFIG *from, lcbvb_CONFIG *to, char **ou
 
 lcbvb_CONFIGDIFF *lcbvb_compare(lcbvb_CONFIG *from, lcbvb_CONFIG *to)
 {
-    int nservers;
+    unsigned nservers;
     lcbvb_CONFIGDIFF *ret;
     unsigned ii;
 
