@@ -144,7 +144,7 @@ class RetryQueue
 
   private:
     static void erase(RetryOp *);
-    void fail(RetryOp *, lcb_STATUS);
+    void fail(RetryOp *, lcb_STATUS, hrtime_t);
     void schedule(hrtime_t now = 0);
     void flush(bool throttle);
     void update_trytime(RetryOp *op, hrtime_t now = 0);

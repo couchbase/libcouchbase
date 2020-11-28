@@ -436,6 +436,11 @@ int Server::handle_unknown_error(const mc_PACKET *request, const MemcachedRespon
 
 lcb_STATUS lcb_map_error(lcb_INSTANCE *instance, int in);
 
+static bool is_warmup_issue(uint16_t status)
+{
+    return status == PROTOCOL_BINARY_RESPONSE_NO_BUCKET || status == PROTOCOL_BINARY_RESPONSE_NOT_INITIALIZED;
+}
+
 /* This function is called within a loop to process a single packet.
  *
  * If a full packet is available, it will process the packet and return
@@ -505,14 +510,20 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     ReadState rdstate = PKT_READ_COMPLETE;
     int unknown_err_rv;
 
-    /* Check if the status code is one which must be handled carefully by the
-     * client */
-    if (is_fastpath_error(mcresp.status())) {
-        lcb_STATUS err = lcb_map_error(instance, mcresp.status());
+    uint16_t status = mcresp.status();
+    if (is_warmup_issue(status)) {
+        mc_PACKET *newpkt = mcreq_renew_packet(request);
+        newpkt->flags &= ~MCREQ_STATE_FLAGS;
+        instance->retryq->add((mc_EXPACKET *)newpkt, lcb_map_error(instance, status), nullptr);
+        rdstate = PKT_READ_ABORT;
+        goto GT_DONE;
+    } else if (is_fastpath_error(status)) {
+        /* Check if the status code is one which must be handled carefully by the client */
+        lcb_STATUS err = lcb_map_error(instance, status);
         if (err != LCB_SUCCESS && maybe_retry_packet(request, err)) {
             goto GT_DONE;
         }
-    } else if (mcresp.status() == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
+    } else if (status == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
         /* consume the header */
         DO_ASSIGN_PAYLOAD()
         if (!handle_nmv(mcresp, request)) {
@@ -520,8 +531,8 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
         }
         DO_SWALLOW_PAYLOAD()
         goto GT_DONE;
-    } else if (mcresp.status() == PROTOCOL_BINARY_RESPONSE_UNKNOWN_COLLECTION ||
-               mcresp.status() == PROTOCOL_BINARY_RESPONSE_UNKNOWN_SCOPE) {
+    } else if (status == PROTOCOL_BINARY_RESPONSE_UNKNOWN_COLLECTION ||
+               status == PROTOCOL_BINARY_RESPONSE_UNKNOWN_SCOPE) {
         /* consume the header */
         DO_ASSIGN_PAYLOAD()
         if (!handle_unknown_collection(mcresp, request)) {

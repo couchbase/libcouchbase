@@ -147,7 +147,7 @@ void RetryQueue::erase(RetryOp *op)
     lcb_list_delete(static_cast<TmoNode *>(op));
 }
 
-void RetryQueue::fail(RetryOp *op, lcb_STATUS err)
+void RetryQueue::fail(RetryOp *op, lcb_STATUS err, hrtime_t now)
 {
     protocol_binary_request_header hdr;
 
@@ -160,8 +160,9 @@ void RetryQueue::fail(RetryOp *op, lcb_STATUS err)
                            PROTOCOL_BINARY_RESPONSE_EINVAL);
 
     assign_error(op, err);
-    lcb_log(LOGARGS(this, WARN), "Failing command (seq=%u) from retry queue: %s", op->pkt->opaque,
-            lcb_strerror_short(op->origerr));
+    lcb_log(LOGARGS(this, WARN),
+            "Failing command (pkt=%p, opaque=%u, retries=%d, time=%" PRIu64 "us) from retry queue: %s", (void *)op->pkt,
+            op->pkt->opaque, (int)op->pkt->retries, LCB_NS2US(now - op->start), lcb_strerror_short(op->origerr));
 
     mcreq_dispatch_response(&tmpsrv, op->pkt, &resp, op->origerr);
     op->pkt->flags |= MCREQ_F_FLUSHED | MCREQ_F_INVOKED;
@@ -221,7 +222,7 @@ void RetryQueue::flush(bool throttle)
         hrtime_t curtmo = op->deadline;
 
         if (curtmo <= now) {
-            fail(op, LCB_ERR_TIMEOUT);
+            fail(op, LCB_ERR_TIMEOUT, now);
         } else {
             break;
         }
@@ -262,7 +263,7 @@ void RetryQueue::flush(bool throttle)
                 op->pkt->retries++;
                 update_trytime(op, now);
             } else {
-                fail(op, LCB_ERR_NO_MATCHING_SERVER);
+                fail(op, LCB_ERR_NO_MATCHING_SERVER, now);
             }
         } else {
             mc_PIPELINE *newpl = cq->pipelines[srvix];
@@ -385,7 +386,8 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, errmap::RetrySpec *
     lcb_list_add_sorted(&schedops, static_cast<SchedNode *>(op), cmpfn_retry);
     lcb_list_add_sorted(&tmoops, static_cast<TmoNode *>(op), cmpfn_tmo);
 
-    lcb_log(LOGARGS(this, DEBUG), "Adding PKT=%p to retry queue. Try count=%u", (void *)pkt, pkt->base.retries);
+    lcb_log(LOGARGS(this, DEBUG), "Adding PKT=%p to retry queue. Try count=%u, SEQ=%u", (void *)pkt, pkt->base.retries,
+            pkt->base.opaque);
     schedule();
 
     if (settings->metrics) {
@@ -467,11 +469,12 @@ RetryQueue::RetryQueue(mc_CMDQUEUE *cq_, lcbio_pTABLE table, lcb_settings *setti
 RetryQueue::~RetryQueue()
 {
     lcb_list_t *llcur, *llnext;
+    hrtime_t now = gethrtime();
 
     LCB_LIST_SAFE_FOR(llcur, llnext, &schedops)
     {
         RetryOp *op = from_schednode(llcur);
-        fail(op, LCB_ERR_GENERIC);
+        fail(op, LCB_ERR_GENERIC, now);
     }
 
     lcbio_timer_destroy(timer);
