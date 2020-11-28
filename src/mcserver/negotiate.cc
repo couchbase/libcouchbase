@@ -656,6 +656,8 @@ GT_NEXT_PACKET:
             } else if (status == PROTOCOL_BINARY_RESPONSE_EACCESS) {
                 set_error(LCB_ERR_BUCKET_NOT_FOUND,
                           "Provided credentials not allowed for bucket or bucket does not exist", &resp);
+            } else if (status == PROTOCOL_BINARY_RESPONSE_KEY_ENOENT) {
+                set_error(LCB_ERR_BUCKET_NOT_FOUND, "Key/Value service is not configured for given node", &resp);
             } else {
                 lcb_log(LOGARGS(this, ERROR), LOGFMT "Unexpected status 0x%x received for SELECT_BUCKET", LOGID(this),
                         status);
