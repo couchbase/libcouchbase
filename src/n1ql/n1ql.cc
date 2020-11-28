@@ -491,6 +491,7 @@ void N1QLREQ::invoke_row(lcb_RESPQUERY *resp, bool is_last)
                             resp->ctx.rc = LCB_ERR_PREPARED_STATEMENT_FAILURE;
                             break;
                         case 4300:
+                            resp->ctx.rc = LCB_ERR_PLANNING_FAILURE;
                             if (!first_error_message.empty()) {
                                 std::regex already_exists("index.+already exists");
                                 if (std::regex_search(first_error_message, already_exists)) {
@@ -499,6 +500,7 @@ void N1QLREQ::invoke_row(lcb_RESPQUERY *resp, bool is_last)
                             }
                             break;
                         case 5000:
+                            resp->ctx.rc = LCB_ERR_INTERNAL_SERVER_FAILURE;
                             if (!first_error_message.empty()) {
                                 std::regex already_exists("Index.+already exists"); /* NOTE: case sensitive */
                                 if (std::regex_search(first_error_message, already_exists)) {
