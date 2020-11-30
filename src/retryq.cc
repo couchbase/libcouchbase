@@ -266,6 +266,8 @@ void RetryQueue::flush(bool throttle)
                 fail(op, LCB_ERR_NO_MATCHING_SERVER, now);
             }
         } else {
+            lcb_log(LOGARGS(this, TRACE), "Flush PKT=%p to network. retries=%u, opaque=%u, IX=%d, time=%" PRIu64 "us",
+                    (void *)op->pkt, op->pkt->retries, op->pkt->opaque, srvix, LCB_NS2US(now - op->start));
             mc_PIPELINE *newpl = cq->pipelines[srvix];
             mcreq_enqueue_packet(newpl, op->pkt);
             newpl->flush_start(newpl);
@@ -375,10 +377,11 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, errmap::RetrySpec *
     op->pkt = &pkt->base;
     pkt->base.retries++;
     assign_error(op, err);
+    hrtime_t now = gethrtime();
     if (options & RETRY_SCHED_IMM) {
-        op->trytime = gethrtime(); /* now */
+        op->trytime = now;
     } else if (err == LCB_ERR_NOT_MY_VBUCKET) {
-        op->trytime = gethrtime() + LCB_US2NS(settings->retry_nmv_interval);
+        op->trytime = now + LCB_US2NS(settings->retry_nmv_interval);
     } else {
         update_trytime(op);
     }
@@ -386,8 +389,8 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, errmap::RetrySpec *
     lcb_list_add_sorted(&schedops, static_cast<SchedNode *>(op), cmpfn_retry);
     lcb_list_add_sorted(&tmoops, static_cast<TmoNode *>(op), cmpfn_tmo);
 
-    lcb_log(LOGARGS(this, DEBUG), "Adding PKT=%p to retry queue. Try count=%u, SEQ=%u", (void *)pkt, pkt->base.retries,
-            pkt->base.opaque);
+    lcb_log(LOGARGS(this, DEBUG), "Adding PKT=%p to retry queue. retries=%u, opaque=%u, time=%" PRIu64 "us",
+            (void *)pkt, pkt->base.retries, pkt->base.opaque, LCB_NS2US(now - op->start));
     schedule();
 
     if (settings->metrics) {

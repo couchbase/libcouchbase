@@ -538,7 +538,7 @@ TEST_F(MockUnitTest, testCtls)
 
     // Test default for nmv retry
     int itmp = ctlGetInt(instance, LCB_CNTL_RETRY_NMV_IMM);
-    ASSERT_NE(0, itmp);
+    ASSERT_NE(1, itmp);
 
     err = lcb_cntl_string(instance, "retry_nmv_imm", "0");
     ASSERT_EQ(LCB_SUCCESS, err);
