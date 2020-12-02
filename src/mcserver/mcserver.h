@@ -170,7 +170,7 @@ class Server : public mc_PIPELINE
 
     static Server *get(lcbio_CTX *ctx)
     {
-        return reinterpret_cast< Server * >(lcbio_ctx_data(ctx));
+        return reinterpret_cast<Server *>(lcbio_ctx_data(ctx));
     }
 
     uint32_t default_timeout() const
@@ -201,7 +201,7 @@ class Server : public mc_PIPELINE
     bool handle_nmv(MemcachedResponse &resinfo, mc_PACKET *oldpkt);
     bool handle_unknown_collection(MemcachedResponse &resinfo, mc_PACKET *oldpkt);
 
-    bool maybe_retry_packet(mc_PACKET *pkt, lcb_STATUS err);
+    bool maybe_retry_packet(mc_PACKET *pkt, lcb_STATUS err, protocol_binary_response_status status);
     bool maybe_reconnect_on_fake_timeout(lcb_STATUS received_error);
 
     /** Disable */

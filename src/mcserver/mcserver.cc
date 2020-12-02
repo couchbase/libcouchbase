@@ -247,6 +247,7 @@ static lcb_STATUS reschedule_destroy(packet_wrapper *wrapper)
 
 bool Server::handle_unknown_collection(MemcachedResponse &resp, mc_PACKET *oldpkt)
 {
+    auto orig_status = static_cast<protocol_binary_response_status>(resp.status());
     lcb_STATUS orig_err = resp.status() == PROTOCOL_BINARY_RESPONSE_UNKNOWN_SCOPE ? LCB_ERR_SCOPE_NOT_FOUND
                                                                                   : LCB_ERR_COLLECTION_NOT_FOUND;
     protocol_binary_request_header req;
@@ -265,7 +266,7 @@ bool Server::handle_unknown_collection(MemcachedResponse &resp, mc_PACKET *oldpk
     if (req.request.opcode == PROTOCOL_BINARY_CMD_COLLECTIONS_GET_CID) {
         mc_PACKET *newpkt = mcreq_renew_packet(oldpkt);
         newpkt->flags &= ~MCREQ_STATE_FLAGS;
-        instance->retryq->ucadd((mc_EXPACKET *)newpkt, orig_err);
+        instance->retryq->ucadd((mc_EXPACKET *)newpkt, orig_err, orig_status);
         return true;
     }
 
@@ -280,13 +281,13 @@ bool Server::handle_unknown_collection(MemcachedResponse &resp, mc_PACKET *oldpk
     wrapper.pkt = mcreq_renew_packet(oldpkt);
     wrapper.instance = instance;
     wrapper.timeout = LCB_NS2US(MCREQ_PKT_RDATA(wrapper.pkt)->deadline - now);
-    auto operation = [this, orig_err](const lcb_RESPGETCID *, packet_wrapper *wrp) {
+    auto operation = [this, orig_err, orig_status](const lcb_RESPGETCID *, packet_wrapper *wrp) {
         if ((wrp->pkt->flags & MCREQ_F_NOCID) == 0) {
             mcreq_set_cid(this, wrp->pkt, wrp->cid);
         }
         /** Reschedule the packet again .. */
         wrp->pkt->flags &= ~MCREQ_STATE_FLAGS;
-        wrp->instance->retryq->ucadd((mc_EXPACKET *)wrp->pkt, orig_err);
+        wrp->instance->retryq->ucadd((mc_EXPACKET *)wrp->pkt, orig_err, orig_status);
         return LCB_SUCCESS;
     };
 
@@ -419,7 +420,8 @@ int Server::handle_unknown_error(const mc_PACKET *request, const MemcachedRespon
 
         mc_PACKET *newpkt = mcreq_renew_packet(request);
         newpkt->flags &= ~MCREQ_STATE_FLAGS;
-        instance->retryq->add((mc_EXPACKET *)newpkt, newerr ? newerr : LCB_ERR_GENERIC, spec);
+        instance->retryq->add((mc_EXPACKET *)newpkt, newerr ? newerr : LCB_ERR_GENERIC,
+                              static_cast<protocol_binary_response_status>(mcresp.status()), spec);
         rv |= ERRMAP_HANDLE_RETRY;
     }
 
@@ -510,17 +512,17 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     ReadState rdstate = PKT_READ_COMPLETE;
     int unknown_err_rv;
 
-    uint16_t status = mcresp.status();
+    auto status = static_cast<protocol_binary_response_status>(mcresp.status());
     if (is_warmup_issue(status)) {
         mc_PACKET *newpkt = mcreq_renew_packet(request);
         newpkt->flags &= ~MCREQ_STATE_FLAGS;
-        instance->retryq->add((mc_EXPACKET *)newpkt, lcb_map_error(instance, status), nullptr);
+        instance->retryq->add((mc_EXPACKET *)newpkt, lcb_map_error(instance, status), status, nullptr);
         rdstate = PKT_READ_ABORT;
         goto GT_DONE;
     } else if (is_fastpath_error(status)) {
         /* Check if the status code is one which must be handled carefully by the client */
         lcb_STATUS err = lcb_map_error(instance, status);
-        if (err != LCB_SUCCESS && maybe_retry_packet(request, err)) {
+        if (err != LCB_SUCCESS && maybe_retry_packet(request, err, status)) {
             DO_ASSIGN_PAYLOAD()
             DO_SWALLOW_PAYLOAD()
             goto GT_DONE;
@@ -612,7 +614,7 @@ static void server_connect(Server *server)
     server->connect();
 }
 
-bool Server::maybe_retry_packet(mc_PACKET *pkt, lcb_STATUS err)
+bool Server::maybe_retry_packet(mc_PACKET *pkt, lcb_STATUS err, protocol_binary_response_status status)
 {
     lcbvb_DISTMODE dist_t = lcbvb_get_distmode(parent->config);
 
@@ -628,7 +630,7 @@ bool Server::maybe_retry_packet(mc_PACKET *pkt, lcb_STATUS err)
     mc_PACKET *newpkt = mcreq_renew_packet(pkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
     // TODO: Load the 4th argument from the error map
-    instance->retryq->add((mc_EXPACKET *)newpkt, err, nullptr);
+    instance->retryq->add((mc_EXPACKET *)newpkt, err, status, nullptr);
     return true;
 }
 
@@ -733,7 +735,7 @@ static const char *opcode_name(uint8_t code)
 
 void Server::purge_single(mc_PACKET *pkt, lcb_STATUS err)
 {
-    if (maybe_retry_packet(pkt, err)) {
+    if (maybe_retry_packet(pkt, err, PROTOCOL_BINARY_RESPONSE_EINTERNAL)) {
         return;
     }
 
