@@ -389,8 +389,8 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, errmap::RetrySpec *
     lcb_list_add_sorted(&schedops, static_cast<SchedNode *>(op), cmpfn_retry);
     lcb_list_add_sorted(&tmoops, static_cast<TmoNode *>(op), cmpfn_tmo);
 
-    lcb_log(LOGARGS(this, DEBUG), "Adding PKT=%p to retry queue. retries=%u, opaque=%u, time=%" PRIu64 "us",
-            (void *)pkt, pkt->base.retries, pkt->base.opaque, LCB_NS2US(now - op->start));
+    lcb_log(LOGARGS(this, DEBUG), "Adding PKT=%p to retry queue. retries=%u, opaque=%u, time=%" PRIu64 "us, rc=%s",
+            (void *)pkt, pkt->base.retries, pkt->base.opaque, LCB_NS2US(now - op->start), lcb_strerror_short(err));
     schedule();
 
     if (settings->metrics) {

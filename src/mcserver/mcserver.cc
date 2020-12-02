@@ -521,6 +521,8 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
         /* Check if the status code is one which must be handled carefully by the client */
         lcb_STATUS err = lcb_map_error(instance, status);
         if (err != LCB_SUCCESS && maybe_retry_packet(request, err)) {
+            DO_ASSIGN_PAYLOAD()
+            DO_SWALLOW_PAYLOAD()
             goto GT_DONE;
         }
     } else if (status == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
