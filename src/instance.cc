@@ -913,10 +913,16 @@ static bool is_valid_collection_element(const char *element, size_t element_len)
     return true;
 }
 
-LCB_INTERNAL_API int lcb_is_collection_valid(const char *scope, size_t scope_len, const char *collection,
-                                             size_t collection_len)
+LCB_INTERNAL_API lcb_STATUS lcb_is_collection_valid(lcb_INSTANCE *instance, const char *scope, size_t scope_len,
+                                                    const char *collection, size_t collection_len)
 {
-    return is_valid_collection_element(scope, scope_len) && is_valid_collection_element(collection, collection_len);
+    if (!LCBT_SETTING(instance, use_collections) && (scope_len || collection_len)) {
+        return LCB_ERR_SDK_FEATURE_UNAVAILABLE;
+    }
+    if (is_valid_collection_element(scope, scope_len) && is_valid_collection_element(collection, collection_len)) {
+        return LCB_SUCCESS;
+    }
+    return LCB_ERR_INVALID_ARGUMENT;
 }
 
 LIBCOUCHBASE_API

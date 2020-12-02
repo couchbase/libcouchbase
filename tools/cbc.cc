@@ -817,10 +817,10 @@ void SetHandler::storeItem(const string &key, const char *value, size_t nvalue)
         lcb_cmdstore_durability(cmd, durability());
     }
     err = lcb_store(instance, nullptr, cmd);
+    lcb_cmdstore_destroy(cmd);
     if (err != LCB_SUCCESS) {
         throw LcbError(err);
     }
-    lcb_cmdstore_destroy(cmd);
 }
 
 void SetHandler::storeItem(const string &key, FILE *input)
