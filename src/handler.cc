@@ -202,6 +202,8 @@ lcb_STATUS lcb_map_error(lcb_INSTANCE *instance, int in)
             return LCB_ERR_DURABLE_WRITE_RE_COMMIT_IN_PROGRESS;
         case PROTOCOL_BINARY_RESPONSE_SYNC_WRITE_AMBIGUOUS:
             return LCB_ERR_DURABILITY_AMBIGUOUS;
+        case PROTOCOL_BINARY_RESPONSE_LOCKED:
+            return LCB_ERR_DOCUMENT_LOCKED;
         default:
             if (instance != nullptr) {
                 return instance->callbacks.errmap(instance, in);
