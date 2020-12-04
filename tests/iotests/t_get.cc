@@ -593,6 +593,7 @@ TEST_F(GetUnitTest, testFailoverAndGetReplica)
     mock->failoverNode(nodeThirdReplica, "default", false);
     lcb_log(LOGARGS(instance, INFO), "Failover node %d (3rd replica)...", nodeThirdReplica);
 
+    usleep(LCB_MS2US(300));
     {
         lcb_CMDGETREPLICA *rcmd;
         lcb_cmdgetreplica_create(&rcmd, LCB_REPLICA_MODE_IDX2); // third replica
@@ -626,6 +627,7 @@ TEST_F(GetUnitTest, testFailoverAndGetReplica)
             EXPECT_EQ(0, rck.remaining);
         }
     }
+    lcb_tick_nowait(instance);
     {
         lcb_CMDGETREPLICA *rcmd;
         lcb_cmdgetreplica_create(&rcmd, LCB_REPLICA_MODE_IDX0); // first replica
