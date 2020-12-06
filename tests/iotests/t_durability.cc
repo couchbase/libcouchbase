@@ -968,7 +968,7 @@ TEST_F(DurabilityUnitTest, testDurStore)
     ASSERT_EQ(LCB_SUCCESS, rc);
     lcb_sched_leave(instance);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
-    ASSERT_EQ(LCB_ERR_DOCUMENT_EXISTS, res.rc);
+    ASSERT_EQ(LCB_ERR_CAS_MISMATCH, res.rc);
     ASSERT_EQ(0, res.store_ok);
 
     // Make storage succeed, but let durability fail.

@@ -261,6 +261,9 @@ void make_error(lcb_INSTANCE *instance, T *resp, const MemcachedResponse *respon
     } else {
         resp->ctx.rc = lcb_map_error(instance, response->status());
     }
+    if (resp->ctx.rc == LCB_ERR_DOCUMENT_EXISTS && response->opcode() != PROTOCOL_BINARY_CMD_ADD) {
+        resp->ctx.rc = LCB_ERR_CAS_MISMATCH;
+    }
 }
 
 template <typename T>
