@@ -540,7 +540,8 @@ bool SessionRequestImpl::maybe_select_bucket()
     lcb::MemcachedRequest req(PROTOCOL_BINARY_CMD_SELECT_BUCKET);
     req.sizes(0, strlen(settings->bucket), 0);
     lcbio_ctx_put(ctx, req.data(), req.size());
-    lcbio_ctx_put(ctx, settings->bucket, strlen(settings->bucket));
+    info->bucket_name_.assign(settings->bucket);
+    lcbio_ctx_put(ctx, info->bucket_name_.data(), info->bucket_name_.size());
     LCBIO_CTX_RSCHEDULE(ctx, 24);
     return true;
 }
@@ -766,6 +767,11 @@ SessionInfo *SessionInfo::get(lcbio_SOCKET *sock)
 bool SessionInfo::selected_bucket() const
 {
     return selected;
+}
+
+const std::string &SessionInfo::bucket_name() const
+{
+    return bucket_name_;
 }
 
 bool SessionInfo::has_feature(uint16_t feature) const

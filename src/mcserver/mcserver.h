@@ -107,7 +107,7 @@ class Server : public mc_PIPELINE
     }
     bool has_valid_host() const
     {
-        return curhost != NULL;
+        return curhost != nullptr;
     }
 
     const lcb_host_t &get_host() const
@@ -137,7 +137,7 @@ class Server : public mc_PIPELINE
 
     bool is_connected() const
     {
-        return connctx != NULL;
+        return connctx != nullptr;
     }
 
     /** "Temporary" constructor. Only for use in retry queue */
@@ -237,6 +237,7 @@ class Server : public mc_PIPELINE
 
     /** Request for current connection */
     lcb_host_t *curhost;
+    std::string bucket{}; /** non-empty if bucket has been selected */
 };
 } // namespace lcb
 #endif /* __cplusplus */

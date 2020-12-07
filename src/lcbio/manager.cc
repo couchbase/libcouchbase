@@ -21,6 +21,7 @@
 #include "hostlist.h"
 #include "iotable.h"
 #include "internal.h"
+#include "mcserver/negotiate.h"
 
 #define LOGARGS(mgr, lvl) mgr->settings, "lcbio_mgr", LCB_LOG_##lvl, __FILE__, __LINE__
 
@@ -277,12 +278,18 @@ static void endpointToJSON(hrtime_t now, Json::Value &node, const PoolHost *host
     }
     Json::Value endpoint;
     char id[20] = {0};
-    snprintf(id, sizeof(id), "%p", (void *)info->sock);
+    snprintf(id, sizeof(id), "%016" PRIx64, info->sock ? info->sock->id : (lcb_U64)0);
     endpoint["id"] = id;
     endpoint["remote"] = get_hehost(host);
     if (info->sock->info) {
         endpoint["local"] = info->sock->info->ep_local;
         endpoint["last_activity_us"] = (Json::Value::UInt64)(now - info->sock->atime);
+    }
+    auto *session = lcb::SessionInfo::get(info->sock);
+    if (session) {
+        if (session->selected_bucket() && !session->bucket_name().empty()) {
+            endpoint["namespace"] = session->bucket_name();
+        }
     }
     switch (info->state) {
         case PoolConnInfo::PENDING:

@@ -963,6 +963,9 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
         new_durability = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_SYNC_REPLICATION) &&
                          sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_ALT_REQUEST_SUPPORT);
         selected_bucket = sessinfo->selected_bucket();
+        if (selected_bucket) {
+            bucket = sessinfo->bucket_name();
+        }
     }
 
     lcbio_CTXPROCS procs{};

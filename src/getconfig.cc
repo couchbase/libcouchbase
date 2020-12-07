@@ -30,6 +30,7 @@ static void ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_STATUS rc, c
             lcb::clconfig::select_status(rd->cookie, rc);
             if (rc == LCB_SUCCESS) {
                 server->selected_bucket = 1;
+                server->bucket.assign(server->settings->bucket, strlen(server->settings->bucket));
             }
             break;
         case PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG:
