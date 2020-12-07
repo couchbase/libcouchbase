@@ -102,7 +102,21 @@ struct CccpCookie {
     CccpProvider *parent;
     bool active;
     lcb_STATUS select_rc;
+    int refcnt{0};
     explicit CccpCookie(CccpProvider *parent_) : parent(parent_), active(true), select_rc(LCB_SUCCESS) {}
+
+    void incref()
+    {
+        ++refcnt;
+    }
+
+    void decref()
+    {
+        --refcnt;
+        if (refcnt <= 0) {
+            delete this;
+        }
+    }
 };
 
 static void io_error_handler(lcbio_CTX *, lcb_STATUS);
@@ -151,8 +165,10 @@ lcb_STATUS CccpProvider::schedule_next_request(lcb_STATUS err, bool can_rollover
                 LCB_HOST_ARG(this->parent->settings, next_host));
         timer.rearm(settings().config_node_timeout);
         if (settings().bucket && settings().bucket[0] != '\0' && !server->selected_bucket) {
+            cmdcookie->incref();
             instance->select_bucket(cmdcookie, server);
         }
+        cmdcookie->incref();
         instance->request_config(cmdcookie, server);
 
     } else {
@@ -229,6 +245,7 @@ void lcb::clconfig::select_status(const void *cookie_, lcb_STATUS err)
 {
     auto *cookie = reinterpret_cast<CccpCookie *>(const_cast<void *>(cookie_));
     cookie->select_rc = err;
+    cookie->decref();
 }
 
 void lcb::clconfig::cccp_update(const void *cookie_, lcb_STATUS err, const void *bytes, size_t nbytes,
@@ -244,7 +261,7 @@ void lcb::clconfig::cccp_update(const void *cookie_, lcb_STATUS err, const void 
         cccp->timer.cancel();
         cccp->cmdcookie = nullptr;
     }
-    delete cookie;
+    cookie->decref();
 
     if (select_rc != LCB_SUCCESS) {
         cccp->mcio_error(select_rc);

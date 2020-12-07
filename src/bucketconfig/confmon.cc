@@ -164,8 +164,10 @@ int Confmon::do_set_next(ConfigInfo *new_config, bool notify_miss)
         }
     }
 
-    lcb_log(LOGARGS(this, INFO), "Setting new configuration. Received via %s",
-            provider_string(new_config->get_origin()));
+    lcb_log(LOGARGS(this, INFO), "Setting new configuration. Received via %s (bucket=%.*s, rev=%d)",
+            provider_string(new_config->get_origin()), (int)new_config->vbc->bname_len, new_config->vbc->bname,
+            new_config->vbc->revid);
+
     TRACE_NEW_CONFIG(instance, new_config);
 
     if (config) {

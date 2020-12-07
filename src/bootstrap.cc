@@ -222,9 +222,6 @@ Bootstrap::Bootstrap(lcb_INSTANCE *instance)
 lcb_STATUS Bootstrap::bootstrap(unsigned options)
 {
     hrtime_t now = gethrtime();
-    if (parent->confmon->is_refreshing()) {
-        return LCB_SUCCESS;
-    }
 
     if (options == BS_REFRESH_OPEN_BUCKET) {
         clconfig::Provider *http = parent->confmon->get_provider(clconfig::CLCONFIG_HTTP);
@@ -233,11 +230,16 @@ lcb_STATUS Bootstrap::bootstrap(unsigned options)
                     parent->settings->bucket);
             http->enable();
         }
+        if (parent->confmon->is_refreshing()) {
+            parent->confmon->stop();
+        }
         parent->confmon->active_provider_list_id = 0;
         parent->confmon->prepare();
         state = S_INITIAL_PRE;
         tm.rearm(LCBT_SETTING(parent, config_timeout));
         lcb_aspend_add(&parent->pendops, LCB_PENDTYPE_COUNTER, nullptr);
+    } else if (parent->confmon->is_refreshing()) {
+        return LCB_SUCCESS;
     }
 
     if (options & BS_REFRESH_THROTTLE) {

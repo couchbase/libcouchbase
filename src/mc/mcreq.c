@@ -316,6 +316,7 @@ mc_PACKET *mcreq_allocate_packet(mc_PIPELINE *pipeline)
     ret->retries = 0;
     ret->opaque = pipeline->parent->seq++;
     ret->u_rdata.reqdata.span = NULL;
+    ret->u_rdata.reqdata.deadline = 0;
     return ret;
 }
 

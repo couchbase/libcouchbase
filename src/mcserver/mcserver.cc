@@ -501,6 +501,25 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     }
 
     if (!request) {
+        if (mcresp.opcode() == PROTOCOL_BINARY_CMD_SELECT_BUCKET) {
+            rdb_consumed(ior, pktsize);
+            switch (mcresp.status()) {
+                case PROTOCOL_BINARY_RESPONSE_EACCESS:
+                case PROTOCOL_BINARY_RESPONSE_KEY_ENOENT:
+                    lcb_log(LOGARGS_T(WARN),
+                            LOGFMT "unable to select bucket with SELECT_BUCKET (OP=0x%x, RC=0x%x, SEQ=%u)", LOGID_T(),
+                            mcresp.opcode(), mcresp.status(), mcresp.opaque());
+                    return PKT_READ_ABORT;
+                case PROTOCOL_BINARY_RESPONSE_SUCCESS:
+                    return PKT_READ_COMPLETE;
+                default:
+                    lcb_log(LOGARGS_T(DEBUG),
+                            LOGFMT "unexpected status received for SELECT_BUCKET (OP=0x%x, RC=0x%x, SEQ=%u)", LOGID_T(),
+                            mcresp.opcode(), mcresp.status(), mcresp.opaque());
+                    return PKT_READ_COMPLETE;
+            }
+        }
+
         MC_INCR_METRIC(this, packets_ownerless, 1);
         lcb_log(LOGARGS_T(DEBUG), LOGFMT "Server sent us reply for a timed-out command. (OP=0x%x, RC=0x%x, SEQ=%u)",
                 LOGID_T(), mcresp.opcode(), mcresp.status(), mcresp.opaque());

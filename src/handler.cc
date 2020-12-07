@@ -996,8 +996,10 @@ static void H_select_bucket(mc_PIPELINE *pipeline, mc_PACKET *request, Memcached
 {
     lcb_RESPBASE dummy{};
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
-    make_error(get_instance(pipeline), &dummy, response, immerr);
-    exdata->procs->handler(pipeline, request, dummy.ctx.rc, response);
+    if (exdata) {
+        make_error(get_instance(pipeline), &dummy, response, immerr);
+        exdata->procs->handler(pipeline, request, dummy.ctx.rc, response);
+    }
 }
 
 static void record_metrics(mc_PIPELINE *pipeline, mc_PACKET *req, MemcachedResponse *)

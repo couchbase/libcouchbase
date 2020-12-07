@@ -756,6 +756,18 @@ lcb_STATUS lcb_open(lcb_INSTANCE *instance, const char *bucket, size_t bucket_le
     instance->settings->conntype = LCB_TYPE_BUCKET;
     instance->settings->bucket = (char *)calloc(bucket_len + 1, sizeof(char));
     memcpy(instance->settings->bucket, bucket, bucket_len);
+    for (unsigned ii = 0; ii < instance->cmdq.npipelines; ii++) {
+        auto *server = static_cast<lcb::Server *>(instance->cmdq.pipelines[ii]);
+        if (!server->selected_bucket && server->connctx) {
+            lcb::MemcachedRequest req(PROTOCOL_BINARY_CMD_SELECT_BUCKET);
+            req.sizes(0, bucket_len, 0);
+            lcbio_ctx_put(server->connctx, req.data(), req.size());
+            server->bucket.assign(bucket, bucket_len);
+            lcbio_ctx_put(server->connctx, bucket, bucket_len);
+            server->flush();
+        }
+    }
+
     return instance->bootstrap(BS_REFRESH_OPEN_BUCKET);
 }
 
