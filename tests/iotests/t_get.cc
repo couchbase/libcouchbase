@@ -658,7 +658,7 @@ TEST_F(GetUnitTest, testFailoverAndMultiGet)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
-    size_t nbCallbacks = 20;
+    size_t nbCallbacks = 50;
     std::vector<std::string> keys;
     keys.resize(nbCallbacks);
 
