@@ -66,7 +66,7 @@ class StaticProvider : public Provider
                 config->decref();
                 config = nullptr;
             }
-            config = ConfigInfo::create(vbc, type);
+            config = ConfigInfo::create(vbc, type, "<static>");
         }
     }
 

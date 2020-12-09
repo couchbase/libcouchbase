@@ -20,6 +20,7 @@
 
 #include "hostlist.h"
 #include <list>
+#include <utility>
 #include <lcbio/timer-ng.h>
 #include <lcbio/timer-cxx.h>
 
@@ -529,9 +530,9 @@ class ConfigInfo
      * @return a new ConfigInfo object. This should be incref()'d/decref()'d
      * as needed.
      */
-    static ConfigInfo *create(lcbvb_CONFIG *vbc, Method origin)
+    static ConfigInfo *create(lcbvb_CONFIG *vbc, Method origin, std::string address)
     {
-        return new ConfigInfo(vbc, origin);
+        return new ConfigInfo(vbc, origin, std::move(address));
     }
     /**
      * @brief Compares two info structures and determine which one is newer
@@ -544,7 +545,7 @@ class ConfigInfo
      * @see lcbvb_get_revision
      * @see ConfigInfo::cmpclock
      */
-    int compare(const ConfigInfo &config) const;
+    int compare(const ConfigInfo &config, lcbvb_CHANGETYPE chstatus) const;
 
     /**
      * @brief Increment the refcount on a config object
@@ -576,11 +577,16 @@ class ConfigInfo
         return origin;
     }
 
+    const std::string &get_address() const
+    {
+        return address;
+    }
+
     /** Actual configuration */
     lcbvb_CONFIG *vbc;
 
   private:
-    ConfigInfo(lcbvb_CONFIG *vbc, Method origin);
+    ConfigInfo(lcbvb_CONFIG *vbc, Method origin, std::string address);
 
     ~ConfigInfo();
 
@@ -592,6 +598,8 @@ class ConfigInfo
 
     /** Origin provider type which produced this config */
     Method origin;
+    /** The address of the node, that sent this config */
+    std::string address{};
 };
 
 /**

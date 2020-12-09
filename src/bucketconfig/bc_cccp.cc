@@ -224,7 +224,7 @@ lcb_STATUS CccpProvider::update(const char *host, const char *data)
     }
 
     lcbvb_replace_host(vbc, host);
-    new_config = ConfigInfo::create(vbc, CLCONFIG_CCCP);
+    new_config = ConfigInfo::create(vbc, CLCONFIG_CCCP, host);
 
     if (!new_config) {
         lcbvb_destroy(vbc);
@@ -395,8 +395,12 @@ void CccpProvider::on_io_read()
     }
 
     if (resp.status() != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-        lcb_log(LOGARGS(this, WARN), LOGFMT "CCCP Packet responded with 0x%x; nkey=%d, nbytes=%lu, cmd=0x%x, seq=0x%x",
-                LOGID(this), resp.status(), resp.keylen(), (unsigned long)resp.bodylen(), resp.opcode(), resp.opaque());
+        std::string value{};
+        if (resp.vallen()) {
+            value.assign(resp.value(), resp.vallen());
+        }
+        lcb_log(LOGARGS(this, WARN), LOGFMT "CCCP Packet responded with 0x%02x; nkey=%d, cmd=0x%x, seq=0x%x, value=%s",
+                LOGID(this), resp.status(), resp.keylen(), resp.opcode(), resp.opaque(), value.c_str());
 
         if (settings().bucket == nullptr) {
             switch (resp.status()) {

@@ -504,14 +504,16 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
         if (mcresp.opcode() == PROTOCOL_BINARY_CMD_SELECT_BUCKET) {
             rdb_consumed(ior, pktsize);
             switch (mcresp.status()) {
+                case PROTOCOL_BINARY_RESPONSE_SUCCESS:
+                    lcb_log(LOGARGS_T(TRACE), R"(<%s:%s> (SRV=%p) Selected bucket "%.*s" (SEQ=0x%02x))", curhost->host,
+                            curhost->port, (void *)this, (int)bucket.size(), bucket.c_str(), mcresp.opaque());
+                    return PKT_READ_COMPLETE;
                 case PROTOCOL_BINARY_RESPONSE_EACCESS:
                 case PROTOCOL_BINARY_RESPONSE_KEY_ENOENT:
                     lcb_log(LOGARGS_T(WARN),
                             LOGFMT "unable to select bucket with SELECT_BUCKET (OP=0x%x, RC=0x%x, SEQ=%u)", LOGID_T(),
                             mcresp.opcode(), mcresp.status(), mcresp.opaque());
                     return PKT_READ_ABORT;
-                case PROTOCOL_BINARY_RESPONSE_SUCCESS:
-                    return PKT_READ_COMPLETE;
                 default:
                     lcb_log(LOGARGS_T(DEBUG),
                             LOGFMT "unexpected status received for SELECT_BUCKET (OP=0x%x, RC=0x%x, SEQ=%u)", LOGID_T(),
@@ -533,9 +535,11 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
 
     auto status = static_cast<protocol_binary_response_status>(mcresp.status());
     if (is_warmup_issue(status)) {
+        DO_ASSIGN_PAYLOAD()
         mc_PACKET *newpkt = mcreq_renew_packet(request);
         newpkt->flags &= ~MCREQ_STATE_FLAGS;
         instance->retryq->add((mc_EXPACKET *)newpkt, lcb_map_error(instance, status), status, nullptr);
+        DO_SWALLOW_PAYLOAD()
         rdstate = PKT_READ_ABORT;
         goto GT_DONE;
     } else if (is_fastpath_error(status)) {
@@ -967,6 +971,7 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
     if (metrics) {
         lcbio_set_metrics(sock, &metrics->iometrics);
     }
+    bool try_to_select_bucket = false;
 
     /** Do we need sasl? */
     SessionInfo *sessinfo = SessionInfo::get(sock);
@@ -984,7 +989,16 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
         selected_bucket = sessinfo->selected_bucket();
         if (selected_bucket) {
             bucket = sessinfo->bucket_name();
+        } else if (settings->conntype == LCB_TYPE_BUCKET && settings->bucket) {
+            try_to_select_bucket = true;
         }
+        lcb_log(
+            LOGARGS_T(TRACE),
+            R"(<%s:%s> (SRV=%p) Got new KV connection (json=%s, snappy=%s, mt=%s, durability=%s, bucket=%s "%s"%s%s))",
+            curhost->host, curhost->port, (void *)this, jsonsupport ? "yes" : "no", compsupport ? "yes" : "no",
+            mutation_tokens ? "yes" : "no", new_durability ? "yes" : "no", selected_bucket ? "yes" : "no",
+            selected_bucket ? bucket.c_str() : "-", try_to_select_bucket ? " selecting " : "",
+            try_to_select_bucket ? settings->bucket : "");
     }
 
     lcbio_CTXPROCS procs{};
@@ -996,7 +1010,14 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
     connctx->subsys = "memcached";
     sock->service = LCBIO_SERVICE_KV;
     flush_start = (mcreq_flushstart_fn)mcserver_flush;
-
+    if (try_to_select_bucket) {
+        bucket.assign(settings->bucket, strlen(settings->bucket));
+        lcb::MemcachedRequest req(PROTOCOL_BINARY_CMD_SELECT_BUCKET);
+        req.opaque(0xbebe);
+        req.sizes(0, bucket.size(), 0);
+        lcbio_ctx_put(connctx, req.data(), req.size());
+        lcbio_ctx_put(connctx, bucket.c_str(), bucket.size());
+    }
     uint32_t tmo = next_timeout();
     lcbio_timer_rearm(io_timer, tmo);
     flush();

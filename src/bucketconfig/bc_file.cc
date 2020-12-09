@@ -137,7 +137,7 @@ FileProvider::Status FileProvider::load_cache()
         config->decref();
     }
 
-    config = ConfigInfo::create(vbc, CLCONFIG_FILE);
+    config = ConfigInfo::create(vbc, CLCONFIG_FILE, filename);
     last_mtime = st.st_mtime;
 
     status = UPDATED;

@@ -760,6 +760,7 @@ lcb_STATUS lcb_open(lcb_INSTANCE *instance, const char *bucket, size_t bucket_le
         auto *server = static_cast<lcb::Server *>(instance->cmdq.pipelines[ii]);
         if (!server->selected_bucket && server->connctx) {
             lcb::MemcachedRequest req(PROTOCOL_BINARY_CMD_SELECT_BUCKET);
+            req.opaque(0xcafe);
             req.sizes(0, bucket_len, 0);
             lcbio_ctx_put(server->connctx, req.data(), req.size());
             server->bucket.assign(bucket, bucket_len);

@@ -193,7 +193,7 @@ GT_CHECKDONE:
     if (http->last_parsed) {
         http->last_parsed->decref();
     }
-    http->last_parsed = ConfigInfo::create(cfgh, CLCONFIG_HTTP);
+    http->last_parsed = ConfigInfo::create(cfgh, CLCONFIG_HTTP, host->host);
     http->generation++;
 
     /** Relocate the stream */
