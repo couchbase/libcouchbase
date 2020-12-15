@@ -35,6 +35,7 @@
 #endif
 #include "common/options.h"
 #include "common/histogram.h"
+#include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
 
 using namespace cbc;
 using namespace cliopts;
@@ -55,6 +56,11 @@ static void do_or_die(lcb_STATUS rc)
         throw std::runtime_error(lcb_strerror_long(rc));
     }
 }
+
+struct Query {
+    std::string payload{};
+    bool prepare{false};
+};
 
 class Metrics
 {
@@ -237,7 +243,22 @@ class Configuration
         while (ifs.good()) {
             std::getline(ifs, curline);
             if (!curline.empty()) {
-                m_queries.push_back(curline);
+                Json::Value json;
+                if (!Json::Reader().parse(curline, json)) {
+                    std::cerr << "Failed to parse query \"" << curline << "\" as JSON, skipping" << std::endl;
+                    continue;
+                }
+                Query query{};
+                Json::Value options = json.get("n1qlback", Json::nullValue);
+                if (options.isObject()) {
+                    Json::Value should_prepare = options.get("prepare", Json::nullValue);
+                    if (should_prepare.isBool()) {
+                        query.prepare = should_prepare.asBool();
+                    }
+                }
+                json.removeMember("n1qlback");
+                query.payload = Json::FastWriter().write(json);
+                m_queries.emplace_back(query);
             }
         }
         std::cerr << "Loaded " << m_queries.size() << " queries "
@@ -255,14 +276,15 @@ class Configuration
                 errstr += strerror(ec_save);
                 throw std::runtime_error(errstr);
             }
+            std::cerr << "Errors will be logged in \"" << o_errlog.const_result() << "\"" << std::endl;
         }
     }
 
-    void set_cropts(lcb_CREATEOPTS *opts)
+    void set_cropts(lcb_CREATEOPTS *&opts)
     {
         m_params.fillCropts(opts);
     }
-    const vector<string> &queries() const
+    const vector<Query> &queries() const
     {
         return m_queries;
     }
@@ -281,7 +303,7 @@ class Configuration
     }
 
   private:
-    vector<string> m_queries;
+    vector<Query> m_queries;
     StringOption o_file;
     UIntOption o_threads;
     ConnParams m_params;
@@ -312,9 +334,8 @@ class ThreadContext
     void run()
     {
         while (!m_cancelled) {
-            vector<string>::const_iterator ii = m_queries.begin();
-            for (; ii != m_queries.end(); ++ii) {
-                run_one_query(*ii);
+            for (const auto &query : m_queries) {
+                run_one_query(query);
             }
         }
     }
@@ -388,8 +409,7 @@ class ThreadContext
         }
     }
 
-    ThreadContext(Metrics &metrics, lcb_INSTANCE *instance, const vector<string> &initial_queries,
-                  std::ofstream *errlog)
+    ThreadContext(Metrics &metrics, lcb_INSTANCE *instance, const vector<Query> &initial_queries, std::ofstream *errlog)
         : m_instance(instance), last_nrow(0), m_cmd(nullptr), m_metrics(metrics), m_cancelled(false), m_thr(nullptr),
           m_errlog(errlog)
     {
@@ -424,19 +444,20 @@ class ThreadContext
         }
     }
 
-    void run_one_query(const string &txt)
+    void run_one_query(const Query &query)
     {
         // Reset counters
         last_nrow = 0;
 
-        lcb_cmdquery_payload(m_cmd, txt.c_str(), txt.size());
+        lcb_cmdquery_payload(m_cmd, query.payload.c_str(), query.payload.size());
+        lcb_cmdquery_adhoc(m_cmd, !query.prepare);
 
         // Set up our context
         QueryContext qctx(this);
 
         lcb_STATUS rc = lcb_query(m_instance, &qctx, m_cmd);
         if (rc != LCB_SUCCESS) {
-            log_error(rc, txt.c_str(), txt.size());
+            log_error(rc, query.payload.c_str(), query.payload.size());
         } else {
             lcb_wait(m_instance, LCB_WAIT_DEFAULT);
             m_metrics.lock();
@@ -447,7 +468,7 @@ class ThreadContext
     }
 
     lcb_INSTANCE *m_instance;
-    vector<string> m_queries;
+    vector<Query> m_queries;
     size_t last_nrow;
     lcb_CMDQUERY *m_cmd;
     Metrics &m_metrics;
