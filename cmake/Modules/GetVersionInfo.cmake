@@ -48,7 +48,9 @@ IF (NOT LCB_VERSION_CHANGESET)
     SET(LCB_VERSION_CHANGESET "0xdeadbeef")
 ENDIF()
 IF (NOT LCB_VERSION_HEX)
-    SET(LCB_VERSION_HEX "0x0${libcouchbase_VERSION_MAJOR}0${libcouchbase_VERSION_MINOR}0${libcouchbase_VERSION_PATCH}")
+    MATH(EXPR LCB_VERSION_HEX
+         "${libcouchbase_VERSION_MAJOR} * 0x10000 + ${libcouchbase_VERSION_MINOR} * 0x100 + ${libcouchbase_VERSION_PATCH}"
+         OUTPUT_FORMAT HEXADECIMAL)
 ENDIF()
 
 # Now parse the version string
