@@ -480,7 +480,7 @@ static void ping_table_callback(lcb_INSTANCE *, int, const lcb_RESPPING *resp)
         }
         Json::Value services = report.get("services", Json::nullValue);
         if (services.isObject() && !services.empty()) {
-            std::array<std::string, 6> column_headers{"type", "id", "status", "latency, us", "remote", "local"};
+            std::array<std::string, 6> column_headers{{"type", "id", "status", "latency, us", "remote", "local"}};
             std::array<std::size_t, 6> column_widths{};
             std::size_t col_idx = 0;
             for (const auto &header : column_headers) {
