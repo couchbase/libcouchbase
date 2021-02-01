@@ -218,7 +218,6 @@ TEST_F(LockUnitTest, testStorageLockContention)
 
     lcb_INSTANCE *instance;
     HandleWrap hw;
-    lcb_STATUS err;
 
     createConnection(hw, &instance);
     Item itm;
@@ -297,7 +296,7 @@ TEST_F(LockUnitTest, testUnlLockContention)
 
     lcb_INSTANCE *instance;
     HandleWrap hw;
-    lcb_STATUS err, reserr = LCB_ERR_GENERIC;
+    lcb_STATUS reserr = LCB_ERR_GENERIC;
     createConnection(hw, &instance);
 
     std::string key = "lockedKey2", value = "lockedValue2";

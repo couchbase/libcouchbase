@@ -52,7 +52,7 @@ static void testGetMissGetCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_
  *
  * @post
  * Responses for both keys are received with error code
- * @c KEY_ENOENT; response structure is not NULL, and the keys match their
+ * @c KEY_ENOENT; response structure is not nullptr, and the keys match their
  * expected value
  *
  * @todo (maybe check the values too?)
@@ -285,10 +285,10 @@ TEST_F(GetUnitTest, testFlags)
 }
 
 struct RGetCookie {
-    unsigned remaining;
-    lcb_STATUS expectrc;
+    unsigned remaining{};
+    lcb_STATUS expectrc{};
     std::string value;
-    lcb_U64 cas;
+    lcb_U64 cas{};
 };
 
 extern "C" {
@@ -319,7 +319,7 @@ static void rget_noop_callback(lcb_INSTANCE *, int, const lcb_RESPGETREPLICA *) 
 
 TEST_F(GetUnitTest, testGetReplica)
 {
-    SKIP_UNLESS_MOCK();
+    SKIP_UNLESS_MOCK()
     MockEnvironment *mock = MockEnvironment::getInstance();
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -333,11 +333,11 @@ TEST_F(GetUnitTest, testGetReplica)
     RGetCookie rck;
     rck.remaining = 1;
     rck.expectrc = LCB_SUCCESS;
-    unsigned nreplicas = lcb_get_num_replicas(instance);
+    int nreplicas = lcb_get_num_replicas(instance);
 
-    for (unsigned ii = 0; ii < nreplicas; ii++) {
+    for (int ii = 0; ii < nreplicas; ii++) {
         MockMutationCommand mcCmd(MockCommand::CACHE, key);
-        mcCmd.cas = ii + 100;
+        mcCmd.cas = static_cast<uint64_t>(ii) + 100;
         rck.cas = mcCmd.cas;
         mcCmd.replicaList.clear();
         mcCmd.replicaList.push_back(ii);
@@ -433,9 +433,9 @@ TEST_F(GetUnitTest, testGetReplica)
     ASSERT_EQ(0, rck.remaining);
 
     // Test with an invalid index
-    rcmd = NULL;
+    rcmd = nullptr;
     ASSERT_EQ(LCB_ERR_INVALID_ARGUMENT, lcb_cmdgetreplica_create(&rcmd, (lcb_REPLICA_MODE)42));
-    ASSERT_EQ((lcb_CMDGETREPLICA *)NULL, rcmd);
+    ASSERT_EQ((lcb_CMDGETREPLICA *)nullptr, rcmd);
 
     // If no crash, it's good.
     if (lcb_get_num_replicas(instance) > 1) {
@@ -467,7 +467,7 @@ TEST_F(GetUnitTest, testGetReplica)
         lcb_cmdgetreplica_create(&rcmd, LCB_REPLICA_MODE_ALL);
         lcb_cmdgetreplica_key(rcmd, key.c_str(), key.size());
         lcb_sched_enter(instance);
-        err = lcb_getreplica(instance, NULL, rcmd);
+        err = lcb_getreplica(instance, nullptr, rcmd);
         lcb_cmdgetreplica_destroy(rcmd);
         ASSERT_EQ(LCB_ERR_NO_MATCHING_SERVER, err);
         lcb_sched_leave(instance);
@@ -483,7 +483,7 @@ TEST_F(GetUnitTest, testGetReplica)
     lcb_cmdgetreplica_create(&rcmd, LCB_REPLICA_MODE_ANY);
     lcb_cmdgetreplica_key(rcmd, key.c_str(), key.size());
     lcb_sched_enter(instance);
-    err = lcb_getreplica(instance, NULL, rcmd);
+    err = lcb_getreplica(instance, nullptr, rcmd);
     lcb_cmdgetreplica_destroy(rcmd);
     lcb_sched_leave(instance);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
@@ -514,7 +514,7 @@ static void get_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RE
 }
 
 struct ReplicaGetCookie {
-    unsigned remaining;
+    unsigned remaining{};
     std::set<lcb_STATUS> expectrc;
 };
 
@@ -532,8 +532,8 @@ static void replicaget_callback(lcb_INSTANCE *instance, int, const lcb_RESPGETRE
 
 TEST_F(GetUnitTest, testFailoverAndGetReplica)
 {
-    SKIP_UNLESS_MOCK();
-    const char *argv[] = {"--replicas", "3", "--nodes", "4", NULL};
+    SKIP_UNLESS_MOCK()
+    const char *argv[] = {"--replicas", "3", "--nodes", "4", nullptr};
     MockEnvironment mock_o(argv), *mock = &mock_o;
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -653,7 +653,7 @@ TEST_F(GetUnitTest, testFailoverAndGetReplica)
 
 TEST_F(GetUnitTest, testFailoverAndMultiGet)
 {
-    SKIP_UNLESS_MOCK();
+    SKIP_UNLESS_MOCK()
     MockEnvironment *mock = MockEnvironment::getInstance();
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -674,7 +674,7 @@ TEST_F(GetUnitTest, testFailoverAndMultiGet)
         lcb_CMDSTORE *scmd;
         lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
         char key[6];
-        sprintf(key, "key%lu", ii);
+        sprintf(key, "key%zu", ii);
         keys[ii] = std::string(key);
         lcb_cmdstore_key(scmd, key, strlen(key));
         lcb_cmdstore_value(scmd, "val", 3);
@@ -813,7 +813,7 @@ static void pl_unlock_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const 
 
 TEST_F(GetUnitTest, testPessimisticLock)
 {
-    SKIP_IF_MOCK();
+    SKIP_IF_MOCK()
     MockEnvironment *mock = MockEnvironment::getInstance();
     HandleWrap hw;
     lcb_INSTANCE *instance;
