@@ -517,6 +517,12 @@ void N1QLREQ::invoke_row(lcb_RESPQUERY *resp, bool is_last)
                         case 12016:
                             resp->ctx.rc = LCB_ERR_INDEX_NOT_FOUND;
                             break;
+                        case 12003:
+                            resp->ctx.rc = LCB_ERR_KEYSPACE_NOT_FOUND;
+                            break;
+                        case 12021:
+                            resp->ctx.rc = LCB_ERR_SCOPE_NOT_FOUND;
+                            break;
                         default:
                             if (first_error_code >= 4000 && first_error_code < 5000) {
                                 resp->ctx.rc = LCB_ERR_PLANNING_FAILURE;

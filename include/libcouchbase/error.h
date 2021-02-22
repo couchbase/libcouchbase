@@ -121,6 +121,7 @@ X(LCB_ERR_SUBDOC_XATTR_INVALID_ORDER,                   329, LCB_ERROR_TYPE_KEYV
 X(LCB_ERR_PLANNING_FAILURE,             401, LCB_ERROR_TYPE_QUERY, 0, "Planning failed") \
 X(LCB_ERR_INDEX_FAILURE,                402, LCB_ERROR_TYPE_QUERY, 0, "Query index failure") \
 X(LCB_ERR_PREPARED_STATEMENT_FAILURE,   403, LCB_ERROR_TYPE_QUERY, 0, "Prepared statement failure") \
+X(LCB_ERR_KEYSPACE_NOT_FOUND,           404, LCB_ERROR_TYPE_QUERY, 0, "Keyspace is not found (collection or bucket does not exist)") \
 \
 /* Analytics Error Definitions */ \
 X(LCB_ERR_COMPILATION_FAILED,           501, LCB_ERROR_TYPE_ANALYTICS, 0, "Compilation failed") \
