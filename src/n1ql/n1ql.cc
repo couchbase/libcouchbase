@@ -694,6 +694,9 @@ lcb_STATUS N1QLREQ::request_plan()
 {
     Json::Value newbody(Json::objectValue);
     newbody["statement"] = "PREPARE " + statement;
+    if (json["query_context"].isString()) {
+        newbody["query_context"] = json["query_context"];
+    }
     lcb_CMDQUERY newcmd;
     newcmd.callback = prepare_rowcb;
     newcmd.cmdflags = LCB_CMDN1QL_F_JSONQUERY;
