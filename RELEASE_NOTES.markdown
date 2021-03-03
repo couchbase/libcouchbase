@@ -1,5 +1,9 @@
 # Release Notes
 
+## 2.10.9 (March 03 2021)
+
+* CCBC-1130: Do not wipe new/reused pipelines. Fixes invalid memory access error.
+
 ## 2.10.8 (September 22 2020)
 
 * CCBC-1298: allow to adjust TCP keepalive settings
