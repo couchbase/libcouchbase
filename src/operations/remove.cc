@@ -199,6 +199,7 @@ lcb_STATUS lcb_remove(lcb_INSTANCE *instance, void *cookie, const lcb_CMDREMOVE 
             req.message.body.alt.timeout = lcb_durability_timeout(instance, cmd->timeout);
         }
 
+        pkt->flags |= MCREQ_F_REPLACE_SEMANTICS;
         pkt->u_rdata.reqdata.cookie = cookie;
         pkt->u_rdata.reqdata.start = gethrtime();
         pkt->u_rdata.reqdata.deadline =
