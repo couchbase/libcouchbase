@@ -480,7 +480,12 @@ void N1QLREQ::invoke_row(lcb_RESPQUERY *resp, bool is_last)
                             resp->ctx.rc = LCB_ERR_PARSING_FAILURE;
                             break;
                         case 12009:
-                            resp->ctx.rc = LCB_ERR_CAS_MISMATCH;
+                            resp->ctx.rc = LCB_ERR_DML_FAILURE;
+                            if (!first_error_message.empty()) {
+                                if (first_error_message.find("CAS mismatch") != std::string::npos) {
+                                    resp->ctx.rc = LCB_ERR_CAS_MISMATCH;
+                                }
+                            }
                             break;
                         case 4040:
                         case 4050:
