@@ -369,31 +369,39 @@ bool N1QLREQ::has_retriable_error(const Json::Value &root)
         const Json::Value &jcode = cur["code"];
         if (jcode.isNumeric()) {
             unsigned int code = jcode.asUInt();
+            const char *msg = nullptr;
+            if (jmsg.isString()) {
+                msg = jmsg.asCString();
+            }
             switch (code) {
                     /* n1ql */
-                case 4050:  // plan.build_prepared.unrecognized_prepared
-                case 4070:  // plan.build_prepared.decoding
-                case 12009: // datastore.couchbase.DML_error
+                case 4040: // plan.build_prepared.no_such_name
+                case 4050: // plan.build_prepared.unrecognized_prepared
+                case 4070: // plan.build_prepared.decoding
                     /* analytics */
                 case 23000:
                 case 23003:
                 case 23007:
-                    lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d", LOGID(this), code);
+                    lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d, msg: %s", LOGID(this), code,
+                            msg);
                     return true;
                 case 13014: // datastore.couchbase.insufficient_credentials
                     if (LCBT_SETTING(instance, auth)->mode() == LCBAUTH_MODE_DYNAMIC) {
                         invalidate_credentials = true;
+                        lcb_log(LOGARGS(this, TRACE),
+                                LOGFMT "Invalidate credentials and retry request. code: %d, msg: %s", LOGID(this), code,
+                                msg);
                         return true;
-                        default:
-                            break;
                     }
+                    break;
+                default:
+                    break;
             }
-            if (jmsg.isString()) {
-                const char *jmstr = jmsg.asCString();
+            if (msg != nullptr) {
                 for (const char **curs = wtf_magic_strings; *curs; curs++) {
-                    if (!strstr(jmstr, *curs)) {
+                    if (strstr(msg, *curs) == nullptr) {
                         lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d, msg: %s", LOGID(this), code,
-                                jmstr);
+                                msg);
                         return true;
                     }
                 }
