@@ -82,6 +82,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->enable_durable_write = 0;
     settings->retry_strategy = lcb_retry_strategy_best_effort;
     settings->enable_unordered_execution = 1;
+    settings->use_errmap = 1;
 }
 
 LCB_INTERNAL_API

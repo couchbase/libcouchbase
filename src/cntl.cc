@@ -238,6 +238,8 @@ HANDLER(log_redaction_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, log_re
 
 HANDLER(enable_tracing_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, use_tracing))}
 
+HANDLER(enable_errmap_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, use_errmap))}
+
 HANDLER(tracing_orphaned_queue_size_handler){
     RETURN_GET_SET(std::uint32_t, LCBT_SETTING(instance, tracer_orphaned_queue_size))}
 
@@ -822,6 +824,7 @@ static ctl_handler handlers[] = {
     unordered_execution_handler,          /* LCB_CNTL_ENABLE_UNORDERED_EXECUTION */
     timeout_common,                       /* LCB_CNTL_SEARCH_TIMEOUT */
     timeout_common,                       /* LCB_CNTL_QUERY_GRACE_PERIOD */
+    enable_errmap_handler,                /* LCB_CNTL_ENABLE_ERRMAP */
     nullptr
 };
 /* clang-format on */
@@ -1055,6 +1058,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"enable_unordered_execution", LCB_CNTL_ENABLE_UNORDERED_EXECUTION, convert_intbool},
     {"search_timeout", LCB_CNTL_SEARCH_TIMEOUT, convert_timevalue},
     {"query_grace_period", LCB_CNTL_QUERY_GRACE_PERIOD, convert_timevalue},
+    {"enable_errmap", LCB_CNTL_ENABLE_ERRMAP, convert_intbool},
     {nullptr, -1}};
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))
