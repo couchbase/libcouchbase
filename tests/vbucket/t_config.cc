@@ -424,23 +424,20 @@ TEST_F(ConfigTest, testLargeRevision)
         val = cJSON_GetObjectItem(json, "max_int64");
         ASSERT_TRUE(val != nullptr);
         ASSERT_TRUE(val->type == cJSON_Number);
-        ASSERT_NE(9223372036854775807, val->valueint);
+        ASSERT_EQ(9223372036854775807, val->valueint);
         ASSERT_DOUBLE_EQ(9.2233720368547779e+18, val->valuedouble);
-        ASSERT_EQ(-2147483648, val->valueint);
 
         val = cJSON_GetObjectItem(json, "min_int64");
         ASSERT_TRUE(val != nullptr);
         ASSERT_TRUE(val->type == cJSON_Number);
-        ASSERT_NE(-9223372036854775807, val->valueint);
+        ASSERT_EQ(-9223372036854775807, val->valueint);
         ASSERT_DOUBLE_EQ(-9.2233720368547779e+18, val->valuedouble);
-        ASSERT_EQ(-2147483648, val->valueint);
 
         val = cJSON_GetObjectItem(json, "max_uint64");
         ASSERT_TRUE(val != nullptr);
         ASSERT_TRUE(val->type == cJSON_Number);
-        ASSERT_NE(18446744073709551615UL, val->valueint);
+        ASSERT_EQ(18446744073709551615UL, val->valueint);
         ASSERT_DOUBLE_EQ(1.8446744073709552e+19, val->valuedouble);
-        ASSERT_EQ(-2147483648, val->valueint);
 
         cJSON_Delete(json);
     }
