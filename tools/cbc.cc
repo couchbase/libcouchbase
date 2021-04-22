@@ -1200,6 +1200,9 @@ void VersionHandler::run()
     printf("  Runtime: Version=%s, Changeset=%s\n", lcb_get_version(nullptr), changeset);
     printf("  Headers: Version=%s, Changeset=%s\n", LCB_VERSION_STRING, LCB_VERSION_CHANGESET);
     printf("  Build Timestamp: %s\n", LCB_BUILD_TIMESTAMP);
+#ifdef CMAKE_BUILD_TYPE
+    printf("  CMake Build Type: %s\n", CMAKE_BUILD_TYPE);
+#endif
 
     if (LCB_LIBDIR[0] == '/') {
         printf("  Default plugin directory: %s\n", LCB_LIBDIR);
