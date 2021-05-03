@@ -175,6 +175,7 @@ TEST_F(QueryUnitTest, testQueryError)
     }
     N1QLResult res;
     makeCommand("SELECT blahblah FROM blahblah");
+    lcb_cmdquery_timeout(cmd, LCB_MS2US(200));
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
@@ -274,9 +275,11 @@ TEST_F(QueryUnitTest, testPrepareStale)
     ASSERT_EQ(LCB_SUCCESS, lcb_cmdquery_payload(cmd, raw.c_str(), raw.size()));
 
     res.reset();
+    lcb_cmdquery_timeout(cmd, LCB_MS2US(200));
     rc = lcb_query(instance, &res, cmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_TRUE(res.called);
     ASSERT_TRUE(res.rows.empty());
     ASSERT_FALSE(res.meta.empty());
     ASSERT_NE(string::npos, res.meta.find("indexNotFound"));
@@ -300,6 +303,7 @@ TEST_F(QueryUnitTest, testPrepareFailure)
     }
     N1QLResult res;
     makeCommand("SELECT blahblah", true);
+    lcb_cmdquery_timeout(cmd, LCB_MS2US(200));
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);

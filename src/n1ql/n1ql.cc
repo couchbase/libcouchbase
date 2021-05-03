@@ -250,6 +250,12 @@ typedef struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
         return issue_htreq(s);
     }
 
+    void backoff_and_issue_htreq(uint32_t interval)
+    {
+        lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_COUNTER, nullptr);
+        btimer.rearm(interval);
+    }
+
     /**
      * Attempt to retry the query. This will inspect the meta (if present)
      * for any errors indicating that a failure might be a result of a stale
@@ -261,7 +267,7 @@ typedef struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
     /**
      * Returns true if payload matches retry conditions.
      */
-    inline bool has_retriable_error(lcb_STATUS &rc);
+    inline lcb_RETRY_ACTION has_retriable_error(lcb_STATUS &rc);
 
     void request_credentials();
     lcb_STATUS request_address();
@@ -322,6 +328,14 @@ typedef struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
         delete this;
     }
     lcb::io::Timer<lcb_QUERY_HANDLE_, &lcb_QUERY_HANDLE_::on_timeout> timer;
+
+    void on_backoff()
+    {
+        lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, nullptr);
+        btimer.cancel();
+        lasterr = issue_htreq();
+    }
+    lcb::io::Timer<lcb_QUERY_HANDLE_, &lcb_QUERY_HANDLE_::on_backoff> btimer;
 } N1QLREQ;
 
 static bool parse_json(const char *s, size_t n, Json::Value &res)
@@ -397,19 +411,20 @@ static const char *wtf_magic_strings[] = {
     "index deleted or node hosting the index is down - cause: queryport.indexNotFound",
     "Index Not Found - cause: queryport.indexNotFound", nullptr};
 
-bool N1QLREQ::has_retriable_error(lcb_STATUS &rc)
+lcb_RETRY_ACTION N1QLREQ::has_retriable_error(lcb_STATUS &rc)
 {
+    const uint32_t default_backoff = 100 /* ms */;
     if (rc == LCB_ERR_PREPARED_STATEMENT_FAILURE) {
         lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. rc: %s, code: %d, msg: %s", LOGID(this),
                 lcb_strerror_short(rc), first_error_code, first_error_message.c_str());
-        return true;
+        return {1, default_backoff};
     }
     if (first_error_code == 13014 &&
         LCBT_SETTING(instance, auth)->mode() == LCBAUTH_MODE_DYNAMIC) { // datastore.couchbase.insufficient_credentials
         request_credentials();
         lcb_log(LOGARGS(this, TRACE), LOGFMT "Invalidate credentials and retry request. rc: %s, code: %d, msg: %s",
                 LOGID(this), lcb_strerror_short(rc), first_error_code, first_error_message.c_str());
-        return true;
+        return {1, default_backoff};
     }
     if (!first_error_message.empty()) {
         for (const char **curs = wtf_magic_strings; *curs; curs++) {
@@ -420,12 +435,11 @@ bool N1QLREQ::has_retriable_error(lcb_STATUS &rc)
                         LOGID(this), lcb_strerror_short(rc), lcb_strerror_short(LCB_ERR_PREPARED_STATEMENT_FAILURE),
                         first_error_code, first_error_message.c_str());
                 rc = LCB_ERR_PREPARED_STATEMENT_FAILURE;
-                return true;
+                return {1, default_backoff};
             }
         }
     }
-    lcb_RETRY_ACTION retry = lcb_query_should_retry(instance->settings, this, rc);
-    return retry.should_retry;
+    return lcb_query_should_retry(instance->settings, this, rc);
 }
 
 bool N1QLREQ::maybe_retry()
@@ -449,7 +463,8 @@ bool N1QLREQ::maybe_retry()
         return false; // Not JSON
     }
 
-    if (!has_retriable_error(rc)) {
+    lcb_RETRY_ACTION action = has_retriable_error(rc);
+    if (!action.should_retry) {
         return false;
     }
     retries++;
@@ -463,7 +478,8 @@ bool N1QLREQ::maybe_retry()
         lasterr = request_plan();
     } else {
         // re-issue original request body
-        lasterr = issue_htreq();
+        backoff_and_issue_htreq(LCB_MS2US(action.retry_after_ms));
+        return true;
     }
 
     if (lasterr == LCB_SUCCESS) {
@@ -609,9 +625,11 @@ void N1QLREQ::invoke_row(lcb_RESPQUERY *resp, bool is_last)
     resp->htresp = cur_htresp;
     resp->handle = this;
 
-    resp->ctx.http_response_code = cur_htresp->ctx.response_code;
-    resp->ctx.endpoint = resp->htresp->ctx.endpoint;
-    resp->ctx.endpoint_len = resp->htresp->ctx.endpoint_len;
+    if (resp->htresp) {
+        resp->ctx.http_response_code = cur_htresp->ctx.response_code;
+        resp->ctx.endpoint = resp->htresp->ctx.endpoint;
+        resp->ctx.endpoint_len = resp->htresp->ctx.endpoint_len;
+    }
     resp->ctx.client_context_id = client_context_id.c_str();
     resp->ctx.client_context_id_len = client_context_id.size();
     resp->ctx.statement = statement.c_str();
@@ -668,8 +686,14 @@ lcb_QUERY_HANDLE_::~lcb_QUERY_HANDLE_()
 
     if (prepare_req) {
         lcb_query_cancel(instance, prepare_req);
+        delete prepare_req;
     }
     timer.release();
+    if (btimer.is_armed()) {
+        lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, nullptr);
+    }
+    btimer.release();
+    lcb_maybe_breakout(instance);
 }
 
 static void chunk_callback(lcb_INSTANCE *instance, int ign, const lcb_RESPBASE *rb)
@@ -850,7 +874,8 @@ lcb_U32 lcb_n1qlreq_parsetmo(const std::string &s)
 lcb_QUERY_HANDLE_::lcb_QUERY_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, const lcb_CMDQUERY *cmd)
     : cur_htresp(nullptr), htreq(nullptr), parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this)),
       cookie(user_cookie), callback(cmd->callback), instance(obj), lasterr(LCB_SUCCESS), flags(cmd->cmdflags),
-      timeout(0), nrows(0), prepare_req(nullptr), span(nullptr), timer(instance->iotable, this)
+      timeout(0), nrows(0), prepare_req(nullptr), span(nullptr), timer(instance->iotable, this),
+      btimer(instance->iotable, this)
 {
     if (cmd->handle) {
         *cmd->handle = this;
@@ -1017,6 +1042,10 @@ LIBCOUCHBASE_API lcb_STATUS lcb_query_cancel(lcb_INSTANCE *instance, lcb_QUERY_H
     // bailout for unexpected destruction.
 
     if (handle) {
+        if (handle->btimer.is_armed()) {
+            lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, nullptr);
+            handle->btimer.cancel();
+        }
         if (handle->prepare_req) {
             lcb_query_cancel(instance, handle->prepare_req);
             handle->prepare_req = nullptr;
