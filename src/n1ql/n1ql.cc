@@ -261,7 +261,7 @@ typedef struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
     /**
      * Returns true if payload matches retry conditions.
      */
-    inline bool has_retriable_error(lcb_STATUS rc);
+    inline bool has_retriable_error(lcb_STATUS &rc);
 
     void request_credentials();
     lcb_STATUS request_address();
@@ -397,7 +397,7 @@ static const char *wtf_magic_strings[] = {
     "index deleted or node hosting the index is down - cause: queryport.indexNotFound",
     "Index Not Found - cause: queryport.indexNotFound", nullptr};
 
-bool N1QLREQ::has_retriable_error(lcb_STATUS rc)
+bool N1QLREQ::has_retriable_error(lcb_STATUS &rc)
 {
     if (rc == LCB_ERR_PREPARED_STATEMENT_FAILURE) {
         lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. rc: %s, code: %d, msg: %s", LOGID(this),
@@ -415,8 +415,11 @@ bool N1QLREQ::has_retriable_error(lcb_STATUS rc)
         for (const char **curs = wtf_magic_strings; *curs; curs++) {
             if (first_error_message.find(*curs)) {
                 lcb_log(LOGARGS(this, TRACE),
-                        LOGFMT "Special error message detected. Will retry request. rc: %s, code: %d, msg: %s",
-                        LOGID(this), lcb_strerror_short(rc), first_error_code, first_error_message.c_str());
+                        LOGFMT
+                        "Special error message detected. Will retry request. rc: %s (update to %s), code: %d, msg: %s",
+                        LOGID(this), lcb_strerror_short(rc), lcb_strerror_short(LCB_ERR_PREPARED_STATEMENT_FAILURE),
+                        first_error_code, first_error_message.c_str());
+                rc = LCB_ERR_PREPARED_STATEMENT_FAILURE;
                 return true;
             }
         }
