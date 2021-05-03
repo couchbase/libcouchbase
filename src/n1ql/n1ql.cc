@@ -387,7 +387,20 @@ lcb_STATUS N1QLREQ::request_address()
 
     int ix = lcbvb_get_randhost_ex(vbc, LCBVB_SVCTYPE_QUERY, mode, &used_nodes[0]);
     if (ix < 0) {
-        return LCB_ERR_UNSUPPORTED_OPERATION;
+        /* check if we can reset list of used nodes for this request and start over */
+        bool reset_and_retry = false;
+        for (auto used : used_nodes) {
+            if (used) {
+                reset_and_retry = true;
+                break;
+            }
+        }
+        if (!reset_and_retry) {
+            return LCB_ERR_UNSUPPORTED_OPERATION;
+        }
+        used_nodes.clear();
+        used_nodes.resize(LCBVB_NSERVERS(vbc));
+        return request_address();
     }
     const char *rest_url = lcbvb_get_resturl(vbc, ix, LCBVB_SVCTYPE_QUERY, mode);
     if (rest_url == nullptr) {
