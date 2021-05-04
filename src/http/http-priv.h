@@ -277,7 +277,7 @@ struct Request {
      * Last revision ID of vBucket config. If the current revision does not
      * match this number, the ::used_nodes field is cleared
      */
-    int last_vbcrev;
+    int64_t last_vbcrev;
 
     const lcb_HTTP_TYPE reqtype; /**< HTTP API type */
 

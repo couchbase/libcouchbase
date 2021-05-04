@@ -212,7 +212,7 @@ typedef struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
     std::string port{};
     std::string endpoint{};
     std::vector<int> used_nodes{};
-    int last_vbcrev{0};
+    int64_t last_vbcrev{0};
     bool idempotent{false};
 
     lcbtrace_SPAN *span;

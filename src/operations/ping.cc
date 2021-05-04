@@ -363,12 +363,12 @@ static void build_ping_json(lcb_INSTANCE *instance, lcb_RESPPING &ping, Json::Va
     root["sdk"] = sdk.c_str();
     root["id"] = ck->id;
 
-    int config_rev = -1;
+    int64_t config_rev = -1;
     if (instance->cur_configinfo) {
         lcb::clconfig::ConfigInfo *cfg = instance->cur_configinfo;
         config_rev = cfg->vbc->revid;
     }
-    root["config_rev"] = config_rev;
+    root["config_rev"] = (Json::Int64)config_rev;
 }
 
 static void invoke_ping_callback(lcb_INSTANCE *instance, PingCookie *ck)

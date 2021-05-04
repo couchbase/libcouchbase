@@ -1577,7 +1577,7 @@ const char *lcbvb_get_capibase(lcbvb_CONFIG *cfg, unsigned ix, lcbvb_SVCMODE mod
 
 LIBCOUCHBASE_API int lcbvb_get_revision(const lcbvb_CONFIG *cfg)
 {
-    return cfg->revid;
+    return (int)cfg->revid;
 }
 LIBCOUCHBASE_API unsigned lcbvb_get_nservers(const lcbvb_CONFIG *cfg)
 {
