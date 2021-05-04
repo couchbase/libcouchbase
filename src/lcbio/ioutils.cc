@@ -104,8 +104,8 @@ static lcb_STATUS ioerr2lcberr(lcbio_OSERR in, const lcb_settings *settings)
 lcb_STATUS lcbio_mklcberr(lcbio_OSERR in, const lcb_settings *settings)
 {
     if (settings->detailed_neterr == 0) {
-        lcb_log(settings, "lcbio", LCB_LOG_WARN, __FILE__, __LINE__, "Translating errno=%d, lcb=0x%x to NETWORK_ERROR",
-                in, ioerr2lcberr(in, settings));
+        lcb_log(settings, "lcbio", LCB_LOG_WARN, __FILE__, __LINE__, "Translating errno=%d (%s), %s to LCB_ERR_NETWORK",
+                in, strerror(in), lcb_strerror_short(ioerr2lcberr(in, settings)));
         return LCB_ERR_NETWORK;
     }
 
