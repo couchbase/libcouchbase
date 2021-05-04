@@ -696,7 +696,6 @@ Request::Request(lcb_INSTANCE *instance_, const void *cookie, const lcb_CMDHTTP 
       callback(lcb_find_callback(instance, LCB_CALLBACK_HTTP)), io(instance->iotable), ioctx(nullptr), timer(nullptr),
       parser(nullptr), user_timeout(cmd->cmdflags & LCB_CMDHTTP_F_CASTMO ? cmd->cas : 0)
 {
-    memset(&creq, 0, sizeof creq);
 }
 
 Request::~Request()
@@ -729,7 +728,7 @@ uint32_t Request::timeout() const
 
 Request *Request::create(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDHTTP *cmd, lcb_STATUS *rc)
 {
-    auto *req = new Request(instance, cookie, cmd);
+    auto *req = new lcb_HTTP_HANDLE_(instance, cookie, cmd);
     req->start = gethrtime();
 
     *rc = req->setup_inputs(cmd);
