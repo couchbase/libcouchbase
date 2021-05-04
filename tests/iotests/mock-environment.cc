@@ -485,6 +485,9 @@ void MockEnvironment::clearAndReset()
         lcb_wait(innerClient, LCB_WAIT_DEFAULT);
         EXPECT_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(innerClient));
         lcb_install_callback(innerClient, LCB_CALLBACK_CBFLUSH, mock_flush_callback);
+    } else {
+        /* ensure that inner client is in a good shape (e.g. update internal timers, check dead sockets etc.) */
+        lcb_tick_nowait(innerClient);
     }
 
     lcb_CMDCBFLUSH fcmd = {0};
