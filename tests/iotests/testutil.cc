@@ -246,9 +246,12 @@ static void http_callback(lcb_INSTANCE * /* instance */, int /* cbtype */, const
     const char *body = nullptr;
     size_t nbody = 0;
     lcb_resphttp_body(resp, &body, &nbody);
+    const char *path = nullptr;
+    size_t npath = 0;
+    lcb_resphttp_path(resp, &path, &npath);
     uint16_t status;
     lcb_resphttp_http_status(resp, &status);
-    EXPECT_EQ(200, status) << std::string(body, nbody);
+    EXPECT_EQ(200, status) << std::string(path, npath) << ": " << std::string(body, nbody);
     const char *const *headers;
     EXPECT_EQ(LCB_SUCCESS, lcb_resphttp_headers(resp, &headers));
     EXPECT_EQ(LCB_SUCCESS, lcb_resphttp_status(resp));
@@ -261,7 +264,7 @@ lcb_STATUS create_scope(lcb_INSTANCE *instance, const std::string &scope)
 
     lcb_CMDHTTP *cmd;
     lcb_STATUS err;
-    std::string path = "/pools/default/buckets/default/collections";
+    std::string path = "/pools/default/buckets/" + MockEnvironment::getInstance()->getBucket() + "/scopes";
     std::string body = "name=" + scope;
     std::string content_type = "application/x-www-form-urlencoded";
 
@@ -283,7 +286,8 @@ lcb_STATUS create_collection(lcb_INSTANCE *instance, const std::string &scope, c
 
     lcb_CMDHTTP *cmd;
     lcb_STATUS err;
-    std::string path = "/pools/default/buckets/default/collections/" + scope + "/";
+    std::string path =
+        "/pools/default/buckets/" + MockEnvironment::getInstance()->getBucket() + "/scopes/" + scope + "/collections";
     std::string body = "name=" + collection;
     std::string content_type = "application/x-www-form-urlencoded";
 

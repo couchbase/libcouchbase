@@ -22,6 +22,7 @@
 #include "internal.h"
 #include "bucketconfig/clconfig.h"
 #include "sllist-inl.h"
+#include "mc/mcreq.h"
 
 #define LOGARGS(rq, lvl) (rq)->settings, "retryq", LCB_LOG_##lvl, __FILE__, __LINE__
 #define RETRY_PKT_KEY "retry_queue"
@@ -272,8 +273,10 @@ void RetryQueue::flush(bool throttle)
                 fail(op, LCB_ERR_NO_MATCHING_SERVER, now);
             }
         } else {
-            lcb_log(LOGARGS(this, TRACE), "Flush PKT=%p to network. retries=%u, opaque=%u, IX=%d, time=%" PRIu64 "us",
-                    (void *)op->pkt, op->pkt->retries, op->pkt->opaque, srvix, LCB_NS2US(now - op->start));
+            uint32_t cid = mcreq_get_cid(get_instance(), op->pkt);
+            lcb_log(LOGARGS(this, TRACE),
+                    "Flush PKT=%p to network. retries=%u, cid=%u, opaque=%u, IX=%d, time=%" PRIu64 "us",
+                    (void *)op->pkt, op->pkt->retries, cid, op->pkt->opaque, srvix, LCB_NS2US(now - op->start));
             mc_PIPELINE *newpl = cq->pipelines[srvix];
             mcreq_enqueue_packet(newpl, op->pkt);
             newpl->flush_start(newpl);
@@ -398,9 +401,10 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, protocol_binary_res
     lcb_list_add_sorted(&schedops, static_cast<SchedNode *>(op), cmpfn_retry);
     lcb_list_add_sorted(&tmoops, static_cast<TmoNode *>(op), cmpfn_tmo);
 
+    uint32_t cid = mcreq_get_cid(get_instance(), &pkt->base);
     lcb_log(LOGARGS(this, DEBUG),
-            "Adding PKT=%p to retry queue. retries=%u, opaque=%u, time=%" PRIu64 "us, status=0x%02x, rc=%s",
-            (void *)pkt, pkt->base.retries, pkt->base.opaque, LCB_NS2US(now - op->start), status,
+            "Adding PKT=%p to retry queue. retries=%u, cid=%u, opaque=%u, time=%" PRIu64 "us, status=0x%02x, rc=%s",
+            (void *)pkt, pkt->base.retries, cid, pkt->base.opaque, LCB_NS2US(now - op->start), status,
             lcb_strerror_short(err));
     schedule();
 

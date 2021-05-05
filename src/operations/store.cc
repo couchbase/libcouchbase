@@ -503,7 +503,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_store(lcb_INSTANCE *instance, void *cookie, cons
                 return err;
             }
 
-            DurStoreCtx *dctx = new DurStoreCtx(instance, persist_u, replicate_u, cookie);
+            auto *dctx = new DurStoreCtx(instance, persist_u, replicate_u, cookie);
             dctx->start = gethrtime();
             dctx->deadline =
                 dctx->start + LCB_US2NS(cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, operation_timeout));

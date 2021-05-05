@@ -248,7 +248,7 @@ void MockEnvironment::getResponse(MockResponse &ret)
     std::string rbuf;
     do {
         char c;
-        int rv = recv(mock->client, &c, 1, 0);
+        lcb_ssize_t rv = recv(mock->client, &c, 1, 0);
         assert(rv == 1);
         if (c == '\n') {
             break;
@@ -394,9 +394,9 @@ static void statsCallback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_R
         }
     }
     if (version == MockEnvironment::VERSION_UNKNOWN) {
-        lcb_log(LOGARGS(instance, ERROR), "Unable to determine version from string '%.*s', assuming 4.0",
+        lcb_log(LOGARGS(instance, ERROR), "Unable to determine version from string '%.*s', assuming 7.0",
                 (int)resp->nvalue, (const char *)resp->value);
-        version = MockEnvironment::VERSION_40;
+        version = MockEnvironment::VERSION_70;
     }
     me->setServerVersion(version);
     lcb_log(LOGARGS(instance, INFO), "Using real cluster version %.*s (id=%d)", (int)resp->nvalue,

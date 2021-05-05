@@ -15,6 +15,7 @@
  *   limitations under the License.
  */
 #include "config.h"
+#include "settings.h"
 #include "iotests.h"
 
 using std::string;
@@ -27,9 +28,9 @@ class CollectionUnitTest : public MockUnitTest
 // --- Utility create/drop scope/collection functions ----
 
 extern "C" {
-static void http_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPHTTP *resp)
+static void http_callback(lcb_INSTANCE * /* instance */, int /* cbtype */, const lcb_RESPHTTP *resp)
 {
-    const char *body = NULL;
+    const char *body = nullptr;
     size_t nbody = 0;
     lcb_resphttp_body(resp, &body, &nbody);
     uint16_t status;
@@ -47,13 +48,13 @@ lcb_STATUS drop_scope(lcb_INSTANCE *instance, const std::string &scope)
 
     lcb_CMDHTTP *cmd;
     lcb_STATUS err;
-    std::string path = "/pools/default/buckets/default/collections/" + scope;
+    std::string path = "/pools/default/buckets/default/scopes/" + scope;
 
     lcb_cmdhttp_create(&cmd, LCB_HTTP_TYPE_MANAGEMENT);
     lcb_cmdhttp_method(cmd, LCB_HTTP_METHOD_DELETE);
     lcb_cmdhttp_path(cmd, path.c_str(), path.size());
 
-    err = lcb_http(instance, NULL, cmd);
+    err = lcb_http(instance, nullptr, cmd);
     lcb_cmdhttp_destroy(cmd);
     EXPECT_EQ(LCB_SUCCESS, err);
     return lcb_wait(instance, LCB_WAIT_DEFAULT);
@@ -65,13 +66,13 @@ lcb_STATUS drop_collection(lcb_INSTANCE *instance, const std::string &scope, con
 
     lcb_CMDHTTP *cmd;
     lcb_STATUS err;
-    std::string path = "/pools/default/buckets/default/collections/" + scope + "/" + collection;
+    std::string path = "/pools/default/buckets/default/scopes/" + scope + "/collections/" + collection;
 
     lcb_cmdhttp_create(&cmd, LCB_HTTP_TYPE_MANAGEMENT);
     lcb_cmdhttp_method(cmd, LCB_HTTP_METHOD_DELETE);
     lcb_cmdhttp_path(cmd, path.c_str(), path.size());
 
-    err = lcb_http(instance, NULL, cmd);
+    err = lcb_http(instance, nullptr, cmd);
     lcb_cmdhttp_destroy(cmd);
     EXPECT_EQ(LCB_SUCCESS, err);
     return lcb_wait(instance, LCB_WAIT_DEFAULT);
@@ -83,13 +84,13 @@ lcb_STATUS list_collections(lcb_INSTANCE *instance, const std::string &bucket)
 
     lcb_CMDHTTP *cmd;
     lcb_STATUS err;
-    std::string path = "/pools/default/buckets/" + bucket + "/collections";
+    std::string path = "/pools/default/buckets/" + bucket + "/scopes";
 
     lcb_cmdhttp_create(&cmd, LCB_HTTP_TYPE_MANAGEMENT);
     lcb_cmdhttp_method(cmd, LCB_HTTP_METHOD_GET);
     lcb_cmdhttp_path(cmd, path.c_str(), path.size());
 
-    err = lcb_http(instance, NULL, cmd);
+    err = lcb_http(instance, nullptr, cmd);
     lcb_cmdhttp_destroy(cmd);
     EXPECT_EQ(LCB_SUCCESS, err);
     return lcb_wait(instance, LCB_WAIT_DEFAULT);
@@ -144,8 +145,8 @@ static void testGetScopeMissCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lc
  */
 TEST_F(CollectionUnitTest, testScopeMiss)
 {
-    SKIP_IF_MOCK();
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70);
+    SKIP_IF_MOCK()
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
@@ -239,8 +240,8 @@ static void testGetCollectionMissCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, con
  */
 TEST_F(CollectionUnitTest, testCollectionMiss)
 {
-    SKIP_IF_MOCK();
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70);
+    SKIP_IF_MOCK()
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
@@ -336,8 +337,8 @@ static void testGetHitCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESP
  */
 TEST_F(CollectionUnitTest, testCollectionSet)
 {
-    SKIP_IF_MOCK();
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70);
+    SKIP_IF_MOCK()
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
@@ -395,8 +396,8 @@ TEST_F(CollectionUnitTest, testCollectionSet)
  */
 TEST_F(CollectionUnitTest, testDroppedCollection)
 {
-    SKIP_IF_MOCK();
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70);
+    SKIP_IF_MOCK()
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
@@ -462,8 +463,8 @@ TEST_F(CollectionUnitTest, testDroppedCollection)
  */
 TEST_F(CollectionUnitTest, testFlushCollection)
 {
-    SKIP_IF_MOCK();
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70);
+    SKIP_IF_MOCK()
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
@@ -537,8 +538,8 @@ TEST_F(CollectionUnitTest, testFlushCollection)
  */
 TEST_F(CollectionUnitTest, testDroppedScope)
 {
-    SKIP_IF_MOCK();
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70);
+    SKIP_IF_MOCK()
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
@@ -601,8 +602,8 @@ TEST_F(CollectionUnitTest, testDroppedScope)
  */
 TEST_F(CollectionUnitTest, testMaxCollectionsPerScope)
 {
-    SKIP_IF_MOCK();
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70);
+    SKIP_IF_MOCK()
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
@@ -620,5 +621,146 @@ TEST_F(CollectionUnitTest, testMaxCollectionsPerScope)
         if (rc != LCB_SUCCESS) {
             fprintf(stderr, "Failed creating collection %d . Got error: %s\n", i, lcb_strerror_short(rc));
         }
+    }
+}
+
+struct operation_result {
+    bool called{false};
+    lcb_STATUS rc{LCB_SUCCESS};
+    std::string key{};
+    std::string value{};
+};
+
+extern "C" {
+static void store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
+{
+    const char *ptr;
+    size_t len;
+
+    operation_result *res = nullptr;
+    lcb_respstore_cookie(resp, (void **)&res);
+
+    res->called = true;
+    res->rc = lcb_respstore_status(resp);
+    lcb_respstore_key(resp, &ptr, &len);
+    res->key = std::string(ptr, len);
+}
+
+static void get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
+{
+    const char *ptr;
+    size_t len;
+
+    operation_result *res = nullptr;
+    lcb_respget_cookie(resp, (void **)&res);
+
+    res->called = true;
+    res->rc = lcb_respget_status(resp);
+    lcb_respget_key(resp, &ptr, &len);
+    res->key = std::string(ptr, len);
+    if (res->rc == LCB_SUCCESS) {
+        lcb_respget_value(resp, &ptr, &len);
+        res->value = std::string(ptr, len);
+    }
+}
+}
+
+TEST_F(CollectionUnitTest, testItDoesNotRouteKeysToDefaultCollectionOnScopeDrop)
+{
+    SKIP_IF_MOCK()
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70)
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
+
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
+
+    std::string key("ccbc1400");
+    std::string val("now_" + std::to_string(time(nullptr)));
+    std::string scope(unique_name("scope1400")), collection(unique_name("collection1400"));
+
+    // Create scope + collection, then drop scope
+    EXPECT_EQ(LCB_SUCCESS, create_scope(instance, scope));
+    EXPECT_EQ(LCB_SUCCESS, create_collection(instance, scope, collection));
+
+    {
+        // default scope does not have the key
+        operation_result res{};
+        lcb_CMDGET *cmd;
+        lcb_cmdget_create(&cmd);
+        lcb_cmdget_key(cmd, key.c_str(), key.size());
+        EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, &res, cmd));
+        lcb_cmdget_destroy(cmd);
+        EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+        ASSERT_TRUE(res.called);
+        ASSERT_EQ(LCB_ERR_DOCUMENT_NOT_FOUND, res.rc);
+        ASSERT_EQ(key, res.key);
+    }
+
+    {
+        // upsert new document to "scope1400.collection1400"
+        operation_result res{};
+        lcb_CMDSTORE *cmd;
+        lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
+        lcb_cmdstore_collection(cmd, scope.c_str(), scope.size(), collection.c_str(), collection.size());
+        lcb_cmdstore_key(cmd, key.c_str(), key.size());
+        lcb_cmdstore_value(cmd, val.c_str(), val.size());
+        EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &res, cmd));
+        lcb_cmdstore_destroy(cmd);
+        EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+        ASSERT_TRUE(res.called);
+        ASSERT_EQ(LCB_SUCCESS, res.rc);
+        ASSERT_EQ(key, res.key);
+    }
+
+    {
+        // "scope1400.collection1400" has the key
+        operation_result res{};
+        lcb_CMDGET *cmd;
+        lcb_cmdget_create(&cmd);
+        lcb_cmdget_collection(cmd, scope.c_str(), scope.size(), collection.c_str(), collection.size());
+        lcb_cmdget_key(cmd, key.c_str(), key.size());
+        EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, &res, cmd));
+        lcb_cmdget_destroy(cmd);
+        EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+        ASSERT_TRUE(res.called);
+        ASSERT_EQ(LCB_SUCCESS, res.rc);
+        ASSERT_EQ(key, res.key);
+        ASSERT_EQ(val, res.value);
+    }
+
+    EXPECT_EQ(LCB_SUCCESS, drop_scope(instance, scope));
+    sleep(1);
+
+    {
+        // try to upsert new document to "scope1400.collection1400", expected LCB_ERR_TIMEOUT
+        operation_result res{};
+        lcb_CMDSTORE *cmd;
+        lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
+        lcb_cmdstore_timeout(cmd, LCB_MS2US(500));
+        lcb_cmdstore_collection(cmd, scope.c_str(), scope.size(), collection.c_str(), collection.size());
+        lcb_cmdstore_key(cmd, key.c_str(), key.size());
+        lcb_cmdstore_value(cmd, val.c_str(), val.size());
+        EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &res, cmd));
+        lcb_cmdstore_destroy(cmd);
+        EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+        ASSERT_TRUE(res.called);
+        ASSERT_EQ(LCB_ERR_TIMEOUT, res.rc);
+        ASSERT_EQ(key, res.key);
+    }
+
+    {
+        // default scope still does not have the key
+        operation_result res{};
+        lcb_CMDGET *cmd;
+        lcb_cmdget_create(&cmd);
+        lcb_cmdget_key(cmd, key.c_str(), key.size());
+        EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, &res, cmd));
+        lcb_cmdget_destroy(cmd);
+        EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+        ASSERT_TRUE(res.called);
+        ASSERT_EQ(LCB_ERR_DOCUMENT_NOT_FOUND, res.rc);
+        ASSERT_EQ(key, res.key);
     }
 }
