@@ -972,3 +972,44 @@ TEST_F(GetUnitTest, testPessimisticLock)
         ASSERT_EQ(LCB_SUCCESS, res.status);
     }
 }
+
+extern "C" {
+static void test_canceled_callback(lcb_INSTANCE *, int, const lcb_RESPGET *resp)
+{
+    int *counter;
+    ASSERT_EQ(LCB_ERR_REQUEST_CANCELED, lcb_respget_status(resp));
+    counter = (int *)resp->cookie;
+    ++(*counter);
+}
+}
+
+TEST_F(GetUnitTest, testGetCanceled)
+{
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    std::string key("keyGetCanceled");
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    createConnection(hw, &instance);
+    lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)test_canceled_callback);
+    mock->hiccupNodes(2000, 1);
+    int numcallbacks = 0;
+    {
+        lcb_CMDGET *cmd = nullptr;
+        lcb_cmdget_create(&cmd);
+        lcb_cmdget_key(cmd, key.c_str(), key.size());
+        EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, &numcallbacks, cmd));
+        lcb_cmdget_destroy(cmd);
+    }
+    hw.destroy();
+
+    auto *io_plugin = getenv("LCB_IOPS_NAME");
+    if (io_plugin != nullptr && strcmp(io_plugin, "libuv") == 0) {
+        /* for libuv it is acceptable that the IO loop might outlive the instance,
+         * in this case the callback will not be invoked
+         * TODO: update this condition once KV operations will accept callbacks directly without lookup through instance
+         */
+        EXPECT_TRUE(numcallbacks == 1 || numcallbacks == 0);
+    } else {
+        EXPECT_EQ(1, numcallbacks);
+    }
+}

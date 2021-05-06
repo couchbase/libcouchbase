@@ -286,8 +286,10 @@ void init_resp(lcb_INSTANCE *instance, mc_PIPELINE *pipeline, const MemcachedRes
     resp->ctx.status_code = mc_resp->status();
     resp->ctx.cas = mc_resp->cas();
     resp->ctx.opaque = mc_resp->opaque();
-    resp->ctx.bucket = LCBT_VBCONFIG(instance)->bname;
-    resp->ctx.bucket_len = LCBT_VBCONFIG(instance)->bname_len;
+    if (instance) {
+        resp->ctx.bucket = LCBT_VBCONFIG(instance)->bname;
+        resp->ctx.bucket_len = LCBT_VBCONFIG(instance)->bname_len;
+    }
     resp->cookie = const_cast<void *>(MCREQ_PKT_COOKIE(req));
     mcreq_get_key(instance, req, &resp->ctx.key, &resp->ctx.key_len);
 
@@ -330,7 +332,7 @@ static void handle_mutation_token(lcb_INSTANCE *instance, const MemcachedRespons
         return; /* No extras */
     }
 
-    if (!instance->dcpinfo) {
+    if (instance != nullptr && instance->dcpinfo == nullptr) {
         size_t nvb = LCBT_VBCONFIG(instance)->nvb;
         if (nvb) {
             instance->dcpinfo = new lcb_MUTATION_TOKEN[nvb];
@@ -347,34 +349,42 @@ static void handle_mutation_token(lcb_INSTANCE *instance, const MemcachedRespons
     stok->uuid_ = lcb_ntohll(stok->uuid_);
     stok->seqno_ = lcb_ntohll(stok->seqno_);
 
-    if (instance->dcpinfo) {
+    if (instance != nullptr && instance->dcpinfo) {
         instance->dcpinfo[vbid] = *stok;
     }
 }
 
 static lcb_INSTANCE *get_instance(mc_PIPELINE *pipeline)
 {
-    return reinterpret_cast<lcb_INSTANCE *>(pipeline->parent->cqdata);
+    auto cq = pipeline->parent;
+    if (cq == nullptr) {
+        return nullptr;
+    }
+    return reinterpret_cast<lcb_INSTANCE *>(cq->cqdata);
 }
 
 template <typename T>
 void invoke_callback(const mc_PACKET *pkt, lcb_INSTANCE *instance, T *resp, lcb_CALLBACK_TYPE cbtype)
 {
-    std::string collection_path = instance->collcache->id_to_name(mcreq_get_cid(instance, pkt));
-    if (!collection_path.empty()) {
-        size_t dot = collection_path.find('.');
-        if (dot != std::string::npos) {
-            resp->ctx.scope = collection_path.c_str();
-            resp->ctx.scope_len = dot;
-            resp->ctx.collection = collection_path.c_str() + dot + 1;
-            resp->ctx.collection_len = collection_path.size() - (dot + 1);
+    if (instance != nullptr) {
+        std::string collection_path = instance->collcache->id_to_name(mcreq_get_cid(instance, pkt));
+        if (!collection_path.empty()) {
+            size_t dot = collection_path.find('.');
+            if (dot != std::string::npos) {
+                resp->ctx.scope = collection_path.c_str();
+                resp->ctx.scope_len = dot;
+                resp->ctx.collection = collection_path.c_str() + dot + 1;
+                resp->ctx.collection_len = collection_path.size() - (dot + 1);
+            }
         }
     }
     if (!(pkt->flags & MCREQ_F_INVOKED)) {
         resp->cookie = const_cast<void *>(MCREQ_PKT_COOKIE(pkt));
         const auto *base = reinterpret_cast<const lcb_RESPBASE *>(resp);
         if ((pkt->flags & MCREQ_F_PRIVCALLBACK) == 0) {
-            find_callback(instance, cbtype)(instance, cbtype, base);
+            if (instance != nullptr) {
+                find_callback(instance, cbtype)(instance, cbtype, base);
+            }
         } else {
             (*(lcb_RESPCALLBACK *)resp->cookie)(instance, cbtype, base);
         }
@@ -990,6 +1000,9 @@ static void H_unlock(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedRespons
 
 static void H_config(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response, lcb_STATUS immerr)
 {
+    if (pipeline->parent == nullptr) {
+        return;
+    }
     /** We just jump to the normal config handler */
     lcb_RESPBASE dummy{};
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
@@ -1011,6 +1024,9 @@ static void H_select_bucket(mc_PIPELINE *pipeline, mc_PACKET *request, Memcached
 static void record_metrics(mc_PIPELINE *pipeline, mc_PACKET *req, MemcachedResponse *)
 {
     lcb_INSTANCE *instance = get_instance(pipeline);
+    if (instance == nullptr) {
+        return; /* the instance already destroyed */
+    }
     if (
 #ifdef HAVE_DTRACE
         1

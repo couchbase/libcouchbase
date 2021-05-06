@@ -616,15 +616,9 @@ void lcb_destroy(lcb_INSTANCE *instance)
     lcb_ASPEND_SETTYPE::iterator it;
     lcb_ASPEND_SETTYPE *pendq;
 
-    if (instance->cur_configinfo) {
-        instance->cur_configinfo->decref();
-        instance->cur_configinfo = nullptr;
-    }
-    instance->cmdq.config = nullptr;
     DESTROY(delete, bs_state)
     DESTROY(delete, ht_nodes)
     DESTROY(delete, mc_nodes)
-    DESTROY(delete, collcache)
 
     if ((pendq = po->items[LCB_PENDTYPE_DURABILITY])) {
         std::vector<void *> dsets(pendq->begin(), pendq->end());
@@ -659,10 +653,18 @@ void lcb_destroy(lcb_INSTANCE *instance)
             auto *server = static_cast<lcb::Server *>(instance->cmdq.pipelines[ii]);
             if (server) {
                 server->instance = nullptr;
+                server->parent = nullptr;
             }
         }
     }
     mcreq_queue_cleanup(&instance->cmdq);
+    DESTROY(delete, collcache)
+    if (instance->cur_configinfo) {
+        instance->cur_configinfo->decref();
+        instance->cur_configinfo = nullptr;
+    }
+    instance->cmdq.config = nullptr;
+    instance->cmdq.cqdata = nullptr;
     lcb_aspend_cleanup(po);
 
     if (instance->settings && instance->settings->tracer) {
