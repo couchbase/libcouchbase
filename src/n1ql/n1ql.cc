@@ -333,6 +333,8 @@ typedef struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
     {
         lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, nullptr);
         btimer.cancel();
+        delete parser;
+        parser = new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this);
         lasterr = issue_htreq();
     }
     lcb::io::Timer<lcb_QUERY_HANDLE_, &lcb_QUERY_HANDLE_::on_backoff> btimer;
