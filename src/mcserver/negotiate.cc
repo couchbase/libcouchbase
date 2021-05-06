@@ -412,7 +412,9 @@ bool SessionRequestImpl::send_hello()
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TLS;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XATTR;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_JSON;
-    features[nfeatures++] = PROTOCOL_BINARY_FEATURE_SELECT_BUCKET;
+    if (settings->select_bucket) {
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_SELECT_BUCKET;
+    }
     if (settings->use_errmap) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XERROR;
     }
