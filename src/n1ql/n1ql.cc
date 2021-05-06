@@ -325,6 +325,7 @@ typedef struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
         if (lasterr == LCB_SUCCESS) {
             lasterr = LCB_ERR_TIMEOUT;
         }
+        cur_htresp = nullptr;
         delete this;
     }
     lcb::io::Timer<lcb_QUERY_HANDLE_, &lcb_QUERY_HANDLE_::on_timeout> timer;
@@ -641,7 +642,7 @@ void N1QLREQ::invoke_row(lcb_RESPQUERY *resp, bool is_last)
     resp->handle = this;
 
     if (resp->htresp) {
-        resp->ctx.http_response_code = cur_htresp->ctx.response_code;
+        resp->ctx.http_response_code = resp->htresp->ctx.response_code;
         resp->ctx.endpoint = resp->htresp->ctx.endpoint;
         resp->ctx.endpoint_len = resp->htresp->ctx.endpoint_len;
     }
@@ -739,6 +740,7 @@ static void chunk_callback(lcb_INSTANCE *instance, int ign, const lcb_RESPBASE *
         return;
     }
     req->parser->feed(static_cast<const char *>(rh->ctx.body), rh->ctx.body_len);
+    req->cur_htresp = nullptr;
 }
 
 void N1QLREQ::fail_prepared(const lcb_RESPQUERY *orig, lcb_STATUS err)
