@@ -534,16 +534,20 @@ void MockEnvironment::SetUp()
     clearAndReset();
 }
 
-void MockEnvironment::TearDown() {}
-
-MockEnvironment::~MockEnvironment()
-{
-    shutdown_mock_server(mock);
-    mock = nullptr;
+void MockEnvironment::TearDown() {
+    if (mock != nullptr) {
+        shutdown_mock_server(mock);
+        mock = nullptr;
+    }
     if (innerClient != nullptr) {
         lcb_destroy(innerClient);
         innerClient = nullptr;
     }
+}
+
+MockEnvironment::~MockEnvironment()
+{
+    TearDown();
 }
 
 void HandleWrap::destroy()
