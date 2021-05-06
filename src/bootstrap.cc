@@ -148,9 +148,10 @@ void Bootstrap::clconfig_lsn(EventType e, ConfigInfo *i)
     if (state == S_INITIAL_PRE) {
         config_callback(e, i);
     } else if (e == clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG) {
-        lcb_log(LOGARGS(parent, INFO),
-                "Got new config (source=%s, bucket=%.*s, rev=%" PRId64 "). Will refresh asynchronously",
-                provider_string(i->get_origin()), (int)i->vbc->bname_len, i->vbc->bname, i->vbc->revid);
+        lcb_log(
+            LOGARGS(parent, INFO),
+            "Got new config (source=%s, bucket=%.*s, epoch=%" PRId64 ", rev=%" PRId64 "). Will refresh asynchronously",
+            provider_string(i->get_origin()), (int)i->vbc->bname_len, i->vbc->bname, i->vbc->revepoch, i->vbc->revid);
         tm.signal();
     }
 }
