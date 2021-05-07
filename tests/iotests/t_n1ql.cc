@@ -776,3 +776,18 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ASSERT_TRUE(res.errors.empty());
     }
 }
+
+TEST_F(QueryUnitTest, testInvalidQueryError)
+{
+    LCB_TEST_REQUIRE_CLUSTER_VERSION(MockEnvironment::VERSION_70)
+    lcb_INSTANCE *instance;
+    HandleWrap hw;
+    createConnection(hw, &instance);
+    N1QLResult res;
+    makeCommand("I'm not n1ql");
+    lcb_STATUS rc = lcb_query(instance, &res, cmd);
+    ASSERT_EQ(LCB_SUCCESS, rc);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(LCB_ERR_PARSING_FAILURE, res.rc);
+    ASSERT_TRUE(res.rows.empty());
+}

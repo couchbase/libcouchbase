@@ -444,7 +444,7 @@ lcb_RETRY_ACTION N1QLREQ::has_retriable_error(lcb_STATUS &rc)
     }
     if (!first_error_message.empty()) {
         for (const char **curs = wtf_magic_strings; *curs; curs++) {
-            if (first_error_message.find(*curs)) {
+            if (first_error_message.find(*curs) != std::string::npos) {
                 lcb_log(LOGARGS(this, TRACE),
                         LOGFMT
                         "Special error message detected. Will retry request. rc: %s (update to %s), code: %d, msg: %s",
