@@ -651,7 +651,8 @@ TEST_F(GetUnitTest, testFailoverAndGetReplica)
     }
 }
 
-TEST_F(GetUnitTest, testFailoverAndMultiGet)
+// FIXME: revisit the test, re-enable it after migration to caves
+TEST_F(GetUnitTest, DISABLED_testFailoverAndMultiGet)
 {
     SKIP_UNLESS_MOCK()
     MockEnvironment *mock = MockEnvironment::getInstance();
