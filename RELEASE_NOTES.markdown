@@ -1,5 +1,16 @@
 # Release Notes
 
+## 3.1.3 (2021-05-10)
+
+CCBC-1398: Parse and use `revEpoch` from configuration in order to allow the server to handle special cases of failover scenarious.
+CCBC-1399: Implement retry backoff for query requests. Instead of retrying requests immediately, use backoff period returned by retry strategy.
+CCBC-1400: Fill collection name when retrying collection resolution to avoid misrouting requests to default collection.
+CCBC-1397: Reset list of "used" nodes when retrying query to allow reusing endpoints.
+CCBC-1401: Fix special error message detection for Query requests. In addition to reacting on the error codes from query service, the library also scans error messages for particular sub-strings to decide whether retry is necessary.
+CCBC-861: Purge pipelines on `lcb_destroy`. In order to avoid resource leaks, the library purges all pending (or waiting) commands from the pipelines upon destruction.
+Fix `cbc-proxy` tool.
+Upgrade snappy to 1.1.8
+
 ## 3.1.2 (2021-04-26)
 
 * CCBC-1396: Fix recalculaton of key length for alt packets.
