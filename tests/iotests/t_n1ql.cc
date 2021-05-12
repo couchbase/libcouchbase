@@ -791,3 +791,24 @@ TEST_F(QueryUnitTest, testInvalidQueryError)
     ASSERT_EQ(LCB_ERR_PARSING_FAILURE, res.rc);
     ASSERT_TRUE(res.rows.empty());
 }
+
+TEST_F(QueryUnitTest, testRawQuery)
+{
+    LCB_TEST_REQUIRE_CLUSTER_VERSION(MockEnvironment::VERSION_70)
+    lcb_INSTANCE *instance;
+    HandleWrap hw;
+    createConnection(hw, &instance);
+    N1QLResult res;
+    makeCommand(
+        R"(SELECT RAW data.val FROM [{"val": true}, {"val": null}, {"val": 42}, {"val": "foo"}, {"val": false}] AS data)");
+    lcb_STATUS rc = lcb_query(instance, &res, cmd);
+    ASSERT_EQ(LCB_SUCCESS, rc);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(LCB_SUCCESS, res.rc);
+    ASSERT_EQ(5, res.rows.size());
+    ASSERT_EQ("true", res.rows[0]);
+    ASSERT_EQ("null", res.rows[1]);
+    ASSERT_EQ("42", res.rows[2]);
+    ASSERT_EQ("\"foo\"", res.rows[3]);
+    ASSERT_EQ("false", res.rows[4]);
+}
