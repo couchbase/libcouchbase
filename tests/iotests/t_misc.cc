@@ -25,6 +25,8 @@
 #include "bucketconfig/bc_http.h"
 #include "check_config.h"
 
+#include "capi/cmd_observe.hh"
+
 #define LOGARGS(instance, lvl) instance->settings, "tests-MUT", LCB_LOG_##lvl, __FILE__, __LINE__
 
 extern "C" {

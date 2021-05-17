@@ -122,7 +122,6 @@ struct lcb_CREATEOPTS_ {
     /** Response specific flags. see ::lcb_RESPFLAGS */                                                                \
     lcb_U16 rflags;
 
-
 /**@brief Common ABI header for all commands. _Any_ command may be safely
  * casted to this type.*/
 struct lcb_CMDBASE_ {
@@ -201,6 +200,8 @@ struct lcb_RESPBASE_ {
         (scmd)->value.u_buf.multi.niov = niovs;                                                                        \
     } while (0);
 
+typedef struct lcb_RESPOBSERVE_ lcb_RESPOBSERVE;
+typedef struct lcb_CMDOBSERVE_ lcb_CMDOBSERVE;
 
 /**
  * @ingroup lcb-kv-api
@@ -618,51 +619,6 @@ lcb_STATUS lcb_durability_validate(lcb_INSTANCE *instance, lcb_U16 *persist_to, 
  * @{
  */
 
-/**Set this bit in the cmdflags field to indicate that only the master node
- * should be contacted*/
-#define LCB_CMDOBSERVE_F_MASTER_ONLY (1 << 16)
-
-/**@brief Structure for an observe request.
- * To request the status from _only_ the master node of the key, set the
- * LCB_CMDOBSERVE_F_MASTERONLY bit inside the lcb_CMDOBSERVE::cmdflags field
- */
-typedef struct {
-    LCB_CMD_BASE;
-    /**For internal use: This determines the servers the command should be
-     * routed to. Each entry is an index within the server. */
-    const lcb_U16 *servers_;
-    size_t nservers_;
-} lcb_CMDOBSERVE;
-
-/**
- * @brief Possible statuses for keys in OBSERVE response
- */
-typedef enum {
-    /** The item found in the memory, but not yet on the disk */
-    LCB_OBSERVE_FOUND = 0x00,
-    /** The item hit the disk */
-    LCB_OBSERVE_PERSISTED = 0x01,
-    /** The item missing on the disk and the memory */
-    LCB_OBSERVE_NOT_FOUND = 0x80,
-    /** No knowledge of the key :) */
-    LCB_OBSERVE_LOGICALLY_DELETED = 0x81,
-
-    LCB_OBSERVE_MAX = 0x82
-} lcb_observe_t;
-
-/**@brief Response structure for an observe command.
- * Note that the lcb_RESPOBSERVE::cas contains the CAS of the item as it is
- * stored within that specific server. The CAS may be incorrect or stale
- * unless lcb_RESPOBSERVE::ismaster is true.
- */
-typedef struct {
-    LCB_RESP_BASE
-    lcb_U8 status;   /**<Bit set of flags */
-    lcb_U8 ismaster; /**< Set to true if this response came from the master node */
-    lcb_U32 ttp;     /**<Unused. For internal requests, contains the server index */
-    lcb_U32 ttr;     /**<Unused */
-} lcb_RESPOBSERVE;
-
 /**
  * @brief Create a new multi context for an observe operation
  * @param instance the instance
@@ -718,8 +674,6 @@ lcb_STATUS lcb_observe_seqno3(lcb_INSTANCE *instance, const void *cookie, const 
 
 typedef enum { LCB_DURABILITY_NONE = 0, LCB_DURABILITY_POLL = 1, LCB_DURABILITY_SYNC = 2 } lcb_DURABILITY_MODE;
 
-
-
 /**@ingroup lcb-public-api
  * @defgroup lcb-subdoc Sub-Document API
  * @brief Experimental in-document API access
@@ -742,7 +696,6 @@ typedef enum { LCB_DURABILITY_NONE = 0, LCB_DURABILITY_POLL = 1, LCB_DURABILITY_
 /**@} (Name: Stats) */
 
 /**@} (Group: Misc) */
-
 
 /**
  * @ingroup lcb-public-api

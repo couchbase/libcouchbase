@@ -20,6 +20,8 @@
 #include <map>
 #include <include/libcouchbase/utils.h>
 
+#include "capi/cmd_observe.hh"
+
 using namespace std;
 
 #define LOGARGS(instance, lvl) instance->settings, "tests-dur", LCB_LOG_##lvl, __FILE__, __LINE__

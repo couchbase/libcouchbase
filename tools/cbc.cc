@@ -47,7 +47,7 @@
 #include <snappy-stubs-public.h>
 #include "internalstructs.h"
 #include "internal.h"
-
+#include "capi/cmd_observe.hh"
 #include "capi/cmd_observe_seqno.hh"
 
 using namespace cbc;

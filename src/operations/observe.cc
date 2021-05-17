@@ -21,6 +21,8 @@
 #include "mctx-helper.h"
 #include "sllist-inl.h"
 
+#include "capi/cmd_observe.hh"
+
 struct ObserveCtx : lcb::MultiCmdContext {
     void clear_requests()
     {

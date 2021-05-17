@@ -34,6 +34,7 @@
 #include "capi/cmd_stats.hh"
 #include "capi/cmd_getmanifest.hh"
 #include "capi/cmd_observe_seqno.hh"
+#include "capi/cmd_observe.hh"
 
 #define LOGARGS(obj, lvl) (obj)->settings, "handler", LCB_LOG_##lvl, __FILE__, __LINE__
 
