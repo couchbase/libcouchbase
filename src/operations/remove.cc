@@ -19,6 +19,8 @@
 #include "collections.h"
 #include "trace.h"
 
+#include "capi/cmd_remove.hh"
+
 LIBCOUCHBASE_API lcb_STATUS lcb_respremove_status(const lcb_RESPREMOVE *resp)
 {
     return resp->ctx.rc;

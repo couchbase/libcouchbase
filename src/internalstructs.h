@@ -778,34 +778,6 @@ lcb_STATUS lcb_observe_seqno3(lcb_INSTANCE *instance, const void *cookie, const 
 typedef enum { LCB_DURABILITY_NONE = 0, LCB_DURABILITY_POLL = 1, LCB_DURABILITY_SYNC = 2 } lcb_DURABILITY_MODE;
 
 
-/**@brief
- * Command for removing an item from the server
- * @note The lcb_CMDREMOVE::exptime field here does nothing.
- *
- * The lcb_CMDREMOVE::cas field may be
- * set to the last CAS received from a previous operation if you wish to
- * ensure the item is removed only if it has not been mutated since the last
- * retrieval
- */
-struct lcb_CMDREMOVE_ {
-    LCB_CMD_BASE;
-    LCB_CMD_DURABILITY;
-};
-
-/**@brief
- * Response structure for removal operation. The lcb_RESPREMOVE::cas  field
- * may be used to check that it no longer exists on any node's storage
- * using the lcb_endure3_ctxnew() function. You can also use the
- * @ref lcb_MUTATION_TOKEN (via lcb_resp_get_mutation_token)
- *
- * The lcb_RESPREMOVE::rc field may be set to ::LCB_ERR_DOCUMENT_NOT_FOUND if the item does
- * not exist, or ::LCB_ERR_DOCUMENT_EXISTS if a CAS was specified and the item has since
- * been mutated.
- */
-struct lcb_RESPREMOVE_ {
-    LCB_RESP_BASE
-};
-
 /**
  * @brief Command structure for a touch request
  * @note The lcb_CMDTOUCH::cas field is ignored. The item's modification time
