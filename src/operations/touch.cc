@@ -19,6 +19,8 @@
 #include "collections.h"
 #include "trace.h"
 
+#include "capi/cmd_touch.hh"
+
 LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_status(const lcb_RESPTOUCH *resp)
 {
     return resp->ctx.rc;

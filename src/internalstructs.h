@@ -778,24 +778,6 @@ lcb_STATUS lcb_observe_seqno3(lcb_INSTANCE *instance, const void *cookie, const 
 typedef enum { LCB_DURABILITY_NONE = 0, LCB_DURABILITY_POLL = 1, LCB_DURABILITY_SYNC = 2 } lcb_DURABILITY_MODE;
 
 
-/**
- * @brief Command structure for a touch request
- * @note The lcb_CMDTOUCH::cas field is ignored. The item's modification time
- * is always updated regardless if the CAS on the server differs.
- * The #exptime field is always used. If 0 then the expiry on the server is
- * cleared.
- */
-struct lcb_CMDTOUCH_ {
-    LCB_CMD_BASE;
-    LCB_CMD_DURABILITY;
-};
-
-/**@brief Response structure for a touch request
- * @note the lcb_RESPTOUCH::cas field contains the current CAS of the item*/
-struct lcb_RESPTOUCH_ {
-    LCB_RESP_BASE
-};
-
 /**@brief Command for lcb_unlock3()
  * @attention lcb_CMDBASE::cas must be specified, or the operation will fail on
  * the server*/
