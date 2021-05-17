@@ -804,43 +804,6 @@ struct lcb_RESPEXISTS_ {
 };
 
 /**
- * @brief Command for counter operations.
- * @see lcb_counter3(), lcb_RESPCOUNTER.
- *
- * @warning You may only set the #exptime member if the #create member is set
- * to a true value. Setting `exptime` otherwise will cause the operation to
- * fail with @ref LCB_ERR_OPTIONS_CONFLICT
- *
- * @warning The #cas member should be set to 0 for this operation. As this
- * operation itself is atomic, specifying a CAS is not necessary.
- */
-struct lcb_CMDCOUNTER_ {
-    LCB_CMD_BASE;
-    /**Delta value. If this number is negative the item on the server is
-     * decremented. If this number is positive then the item on the server
-     * is incremented */
-    lcb_int64_t delta;
-    /**If the item does not exist on the server (and `create` is true) then
-     * this will be the initial value for the item. */
-    lcb_U64 initial;
-    /**Boolean value. Create the item and set it to `initial` if it does not
-     * already exist */
-    int create;
-
-    LCB_CMD_DURABILITY;
-};
-
-/**
- * @brief Response structure for counter operations
- * @see lcb_counter3()
- */
-struct lcb_RESPCOUNTER_ {
-    LCB_RESP_BASE
-    /** Contains the _current_ value after the operation was performed */
-    lcb_U64 value;
-};
-
-/**
  * Command flag for HTTP to indicate that the callback is to be invoked
  * multiple times for each new chunk of incoming data. Once the entire body
  * have been received, the callback will be invoked once more with the

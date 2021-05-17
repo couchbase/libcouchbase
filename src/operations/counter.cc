@@ -18,6 +18,8 @@
 #include "collections.h"
 #include "trace.h"
 
+#include "capi/cmd_counter.hh"
+
 LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_status(const lcb_RESPCOUNTER *resp)
 {
     return resp->ctx.rc;
