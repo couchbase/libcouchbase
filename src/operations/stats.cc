@@ -17,6 +17,8 @@
 
 #include "internal.h"
 
+#include "capi/cmd_noop.hh"
+
 struct BcastCookie : mc_REQDATAEX {
     int remaining;
 
@@ -189,7 +191,7 @@ static void handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS err, 
         return;
     }
 
-    lcb_RESPNOOP empty{};
+    lcb_RESPNOOP_ empty{};
     empty.server = nullptr;
     empty.ctx.rc = err;
     empty.rflags = LCB_RESP_F_CLIENTGEN | LCB_RESP_F_FINAL;
@@ -200,8 +202,44 @@ static void handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS err, 
 
 static mc_REQDATAPROCS bcast_procs = {handle_bcast, refcnt_dtor_common};
 
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdnoop_create(lcb_CMDNOOP **cmd)
+{
+    *cmd = (lcb_CMDNOOP *)calloc(1, sizeof(lcb_CMDNOOP));
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdnoop_destroy(lcb_CMDNOOP *cmd)
+{
+    free(cmd);
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdnoop_parent_span(lcb_CMDNOOP *cmd, lcbtrace_SPAN *span)
+{
+    cmd->pspan = span;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_respnoop_status(const lcb_RESPNOOP *resp)
+{
+    return resp->ctx.rc;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_respnoop_error_context(const lcb_RESPNOOP *resp,
+                                                       const lcb_KEY_VALUE_ERROR_CONTEXT **ctx)
+{
+    *ctx = &resp->ctx;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_respnoop_cookie(const lcb_RESPNOOP *resp, void **cookie)
+{
+    *cookie = resp->cookie;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API
-lcb_STATUS lcb_noop3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDNOOP *cmd)
+lcb_STATUS lcb_noop(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDNOOP *cmd)
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;

@@ -30,6 +30,7 @@
 #include "capi/cmd_unlock.hh"
 #include "capi/cmd_exists.hh"
 #include "capi/cmd_subdoc.hh"
+#include "capi/cmd_noop.hh"
 
 #define LOGARGS(obj, lvl) (obj)->settings, "handler", LCB_LOG_##lvl, __FILE__, __LINE__
 

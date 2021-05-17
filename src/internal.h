@@ -267,6 +267,31 @@ LCB_INTERNAL_API uint32_t lcb_durability_timeout(lcb_INSTANCE *instance, uint32_
 LCB_INTERNAL_API lcb_STATUS lcb_is_collection_valid(lcb_INSTANCE *instance, const char *scope, size_t scope_len,
                                                     const char *collection, size_t collection_len);
 
+typedef struct lcb_CMDNOOP_ lcb_CMDNOOP;
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdnoop_create(lcb_CMDNOOP **cmd);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdnoop_destroy(lcb_CMDNOOP *cmd);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdnoop_parent_span(lcb_CMDNOOP *cmd, lcbtrace_SPAN *span);
+
+typedef struct lcb_RESPNOOP_ lcb_RESPNOOP;
+LIBCOUCHBASE_API lcb_STATUS lcb_respnoop_status(const lcb_RESPNOOP *resp);
+LIBCOUCHBASE_API lcb_STATUS lcb_respnoop_error_context(const lcb_RESPNOOP *resp,
+                                                       const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);
+LIBCOUCHBASE_API lcb_STATUS lcb_respnoop_cookie(const lcb_RESPNOOP *resp, void **cookie);
+
+/**
+ * @uncommitted
+ *
+ * Send NOOP to the node
+ *
+ * @param instance the library handle
+ * @param cookie the cookie passed in the callback
+ * @param cmd empty command structure.
+ * @return status code for scheduling.
+ */
+LIBCOUCHBASE_API
+lcb_STATUS lcb_noop(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDNOOP *cmd);
+
+
 #ifdef __cplusplus
 }
 #endif

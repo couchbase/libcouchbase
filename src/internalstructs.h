@@ -126,15 +126,6 @@ struct lcb_CREATEOPTS_ {
     /** String containing the `host:port` of the server which sent this response */                                    \
     const char *server;
 
-/**
- * @brief Base structure for informational commands from servers
- * This contains an additional lcb_RESPSERVERBASE::server field containing the
- * server which emitted this response.
- */
-typedef struct {
-    LCB_RESP_BASE
-    LCB_RESP_SERVER_FIELDS
-} lcb_RESPSERVERBASE;
 
 /**@brief Common ABI header for all commands. _Any_ command may be safely
  * casted to this type.*/
@@ -867,21 +858,6 @@ struct lcb_RESPHTTP_ {
  * @{
  */
 
-/**
- * @ingroup lcb-public-api
- * @defgroup lcb-noop NOOP
- * @brief Send NOOP command to server
- *
- * @addtogroup lcb-noop
- * @{
- */
-typedef struct {
-    LCB_CMD_BASE;
-} lcb_CMDNOOP;
-typedef lcb_RESPSERVERBASE lcb_RESPNOOP;
-
-/**@} (Group: Durability) */
-
 /**@ingroup lcb-public-api
  * @defgroup lcb-misc-cmds Miscellaneous Commands
  * @brief Additional miscellaneous commands which can be executed on the server.
@@ -968,19 +944,6 @@ lcb_STATUS lcb_stats3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDS
 
 /**@} (Group: Misc) */
 
-/**
- * @committed
- *
- * Send NOOP to the node
- *
- * @param instance the library handle
- * @param cookie the cookie passed in the callback
- * @param cmd empty command structure.
- * @return status code for scheduling.
- */
-LIBCOUCHBASE_API
-lcb_STATUS lcb_noop3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDNOOP *cmd);
-/**@} (Group: NOOP) */
 
 /**
  * @ingroup lcb-public-api

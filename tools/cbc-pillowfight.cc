@@ -43,6 +43,7 @@
 #include "docgen/seqgen.h"
 #include "docgen/docgen.h"
 #include "internalstructs.h"
+#include "internal.h"
 
 using namespace std;
 using namespace cbc;
@@ -883,8 +884,10 @@ class ThreadContext
                 break;
             }
             case NextOp::NOOP: {
-                lcb_CMDNOOP ncmd = {0};
-                error = lcb_noop3(instance, nullptr, &ncmd);
+                lcb_CMDNOOP *ncmd;
+                lcb_cmdnoop_create(&ncmd);
+                error = lcb_noop(instance, nullptr, ncmd);
+                lcb_cmdnoop_destroy(ncmd);
                 break;
             }
         }
@@ -1028,8 +1031,9 @@ static void noopCallback(lcb_INSTANCE *instance, int, const lcb_RESPNOOP *resp)
 {
     InstanceCookie *cookie = InstanceCookie::get(instance);
     ThreadContext *tc = cookie->getContext();
-    tc->setError(resp->ctx.rc);
-    updateStats(cookie, resp->ctx.rc);
+    lcb_STATUS rc = lcb_respnoop_status(resp);
+    tc->setError(rc);
+    updateStats(cookie, rc);
     updateOpsPerSecDisplay();
 }
 
