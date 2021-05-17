@@ -20,6 +20,8 @@
 
 #ifdef __cplusplus
 
+#include "capi/cmd_getcid.hh"
+
 namespace lcb
 {
 class CollectionCache

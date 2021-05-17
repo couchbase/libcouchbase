@@ -21,6 +21,8 @@
 
 #include <string>
 
+#include "capi/cmd_getcid.hh"
+
 #define LOGARGS(instance, lvl) (instance)->settings, "c9smgmt", LCB_LOG_##lvl, __FILE__, __LINE__
 
 namespace lcb

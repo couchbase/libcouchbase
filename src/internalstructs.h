@@ -1032,16 +1032,6 @@ struct lcb_RESPGETMANIFEST_ {
     const char *value;
 };
 
-struct lcb_CMDGETCID_ {
-    LCB_CMD_BASE;
-};
-
-struct lcb_RESPGETCID_ {
-    LCB_RESP_BASE
-    lcb_U64 manifest_id;
-    lcb_U32 collection_id;
-};
-
 #define LCB_CMD_CLONE(TYPE, SRC, DST)                                                                                  \
     do {                                                                                                               \
         TYPE *ret = (TYPE *)calloc(1, sizeof(TYPE));                                                                   \
