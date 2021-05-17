@@ -21,6 +21,7 @@
 
 #include "capi/cmd_get.hh"
 #include "capi/cmd_get_replica.hh"
+#include "capi/cmd_unlock.hh"
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respget_status(const lcb_RESPGET *resp)
 {

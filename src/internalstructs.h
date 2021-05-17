@@ -778,19 +778,6 @@ lcb_STATUS lcb_observe_seqno3(lcb_INSTANCE *instance, const void *cookie, const 
 typedef enum { LCB_DURABILITY_NONE = 0, LCB_DURABILITY_POLL = 1, LCB_DURABILITY_SYNC = 2 } lcb_DURABILITY_MODE;
 
 
-/**@brief Command for lcb_unlock3()
- * @attention lcb_CMDBASE::cas must be specified, or the operation will fail on
- * the server*/
-struct lcb_CMDUNLOCK_ {
-    LCB_CMD_BASE;
-};
-
-/**@brief Response structure for an unlock command.
- * @note the lcb_RESPBASE::cas field does not contain the CAS of the item*/
-struct lcb_RESPUNLOCK_ {
-    LCB_RESP_BASE
-};
-
 struct lcb_CMDEXISTS_ {
     LCB_CMD_BASE;
 };

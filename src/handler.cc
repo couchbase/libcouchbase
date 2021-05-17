@@ -27,6 +27,7 @@
 #include "capi/cmd_remove.hh"
 #include "capi/cmd_touch.hh"
 #include "capi/cmd_counter.hh"
+#include "capi/cmd_unlock.hh"
 
 #define LOGARGS(obj, lvl) (obj)->settings, "handler", LCB_LOG_##lvl, __FILE__, __LINE__
 
