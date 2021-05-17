@@ -19,6 +19,8 @@
 #include "collections.h"
 #include "trace.h"
 
+#include "capi/cmd_get.hh"
+
 LIBCOUCHBASE_API lcb_STATUS lcb_respget_status(const lcb_RESPGET *resp)
 {
     return resp->ctx.rc;

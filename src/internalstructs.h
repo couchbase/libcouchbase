@@ -221,33 +221,6 @@ struct lcb_RESPBASE_ {
         (scmd)->value.u_buf.multi.niov = niovs;                                                                        \
     } while (0);
 
-/**
- * If this bit is set in lcb_CMDGET::cmdflags then the expiry time is cleared if
- * lcb_CMDGET::exptime is 0. This allows get-and-touch with an expiry of 0.
- */
-#define LCB_CMDGET_F_CLEAREXP (1 << 16)
-
-struct lcb_CMDGET_ {
-    LCB_CMD_BASE;
-    /**If set to true, the `exptime` field inside `options` will take to mean
-     * the time the lock should be held. While the lock is held, other operations
-     * trying to access the key will fail with an `LCB_ERR_TEMPORARY_FAILURE` error. The
-     * item may be unlocked either via `lcb_unlock3()` or via a mutation
-     * operation with a supplied CAS
-     */
-    int lock;
-};
-
-/** @brief Response structure when retrieving a single item */
-struct lcb_RESPGET_ {
-    LCB_RESP_BASE
-    const void *value; /**< Value buffer for the item */
-    lcb_SIZE nvalue;   /**< Length of value */
-    void *bufh;
-    uint8_t datatype; /**< @internal */
-    lcb_U32 itmflags; /**< User-defined flags for the item */
-};
-
 struct lcb_RESPGETREPLICA_ {
     LCB_RESP_BASE
     const void *value; /**< Value buffer for the item */

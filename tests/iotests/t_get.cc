@@ -978,7 +978,7 @@ static void test_canceled_callback(lcb_INSTANCE *, int, const lcb_RESPGET *resp)
 {
     int *counter;
     ASSERT_EQ(LCB_ERR_REQUEST_CANCELED, lcb_respget_status(resp));
-    counter = (int *)resp->cookie;
+    lcb_respget_cookie(resp, (void **)&counter);
     ++(*counter);
 }
 }

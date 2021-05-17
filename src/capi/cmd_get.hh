@@ -1,0 +1,97 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/*
+ *     Copyright 2016-2021 Couchbase, Inc.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
+#ifndef LIBCOUCHBASE_CAPI_GET_HH
+#define LIBCOUCHBASE_CAPI_GET_HH
+
+#include <cstddef>
+#include <cstdint>
+
+/**
+ * If this bit is set in lcb_CMDGET::cmdflags then the expiry time is cleared if
+ * lcb_CMDGET::exptime is 0. This allows get-and-touch with an expiry of 0.
+ */
+#define LCB_CMDGET_F_CLEAREXP (1 << 16)
+
+/**
+ * @private
+ */
+struct lcb_CMDGET_ {
+    /**Common flags for the command. These modify the command itself. Currently
+     the lower 16 bits of this field are reserved, and the higher 16 bits are
+     used for individual commands.*/
+    std::uint32_t cmdflags;
+
+    /**Specify the expiration time. This is either an absolute Unix time stamp
+     or a relative offset from now, in seconds. If the value of this number
+     is greater than the value of thirty days in seconds, then it is a Unix
+     timestamp.
+
+     This field is used in mutation operations (lcb_store3()) to indicate
+     the lifetime of the item. It is used in lcb_get3() with the lcb_CMDGET::lock
+     option to indicate the lock expiration itself. */
+    std::uint32_t exptime;
+
+    /**The known CAS of the item. This is passed to mutation to commands to
+     ensure the item is only changed if the server-side CAS value matches the
+     one specified here. For other operations (such as lcb_CMDENDURE) this
+     is used to ensure that the item has been persisted/replicated to a number
+     of servers with the value specified here. */
+    std::uint64_t cas;
+
+    /**< Collection ID */
+    std::uint32_t cid;
+    const char *scope;
+    std::size_t nscope;
+    const char *collection;
+    std::size_t ncollection;
+    /**The key for the document itself. This should be set via LCB_CMD_SET_KEY() */
+    lcb_KEYBUF key;
+
+    /** Operation timeout (in microseconds). When zero, the library will use default value. */
+    std::uint32_t timeout;
+    /** Parent tracing span */
+    lcbtrace_SPAN *pspan;
+
+    /**If set to true, the `exptime` field inside `options` will take to mean
+     * the time the lock should be held. While the lock is held, other operations
+     * trying to access the key will fail with an `LCB_ERR_TEMPORARY_FAILURE` error. The
+     * item may be unlocked either via `lcb_unlock3()` or via a mutation
+     * operation with a supplied CAS
+     */
+    int lock;
+};
+
+/** @private */
+struct lcb_RESPGET_ {
+    /**
+     Application-defined pointer passed as the `cookie` parameter when
+     scheduling the command.
+     */
+    lcb_KEY_VALUE_ERROR_CONTEXT ctx;
+    void *cookie;
+    /** Response specific flags. see ::lcb_RESPFLAGS */
+    std::uint16_t rflags;
+
+    const void *value;  /**< Value buffer for the item */
+    std::size_t nvalue; /**< Length of value */
+    void *bufh;
+    std::uint8_t datatype;  /**< @internal */
+    std::uint32_t itmflags; /**< User-defined flags for the item */
+};
+
+#endif // LIBCOUCHBASE_CAPI_GET_HH

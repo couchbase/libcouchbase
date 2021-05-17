@@ -27,6 +27,8 @@
 #include "sllist.h"
 #include "internalstructs.h"
 
+#include "capi/cmd_get.hh"
+
 namespace lcb
 {
 namespace docreq
