@@ -19,6 +19,8 @@
 #include "collections.h"
 #include "trace.h"
 
+#include "capi/cmd_exists.hh"
+
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_status(const lcb_RESPEXISTS *resp)
 {
     return resp->ctx.rc == LCB_ERR_DOCUMENT_NOT_FOUND ? LCB_SUCCESS : resp->ctx.rc;

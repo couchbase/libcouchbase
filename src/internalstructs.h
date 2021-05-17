@@ -778,18 +778,6 @@ lcb_STATUS lcb_observe_seqno3(lcb_INSTANCE *instance, const void *cookie, const 
 typedef enum { LCB_DURABILITY_NONE = 0, LCB_DURABILITY_POLL = 1, LCB_DURABILITY_SYNC = 2 } lcb_DURABILITY_MODE;
 
 
-struct lcb_CMDEXISTS_ {
-    LCB_CMD_BASE;
-};
-
-struct lcb_RESPEXISTS_ {
-    LCB_RESP_BASE
-    uint32_t deleted;
-    uint32_t flags;
-    uint32_t expiry;
-    uint64_t seqno;
-};
-
 /**
  * Command flag for HTTP to indicate that the callback is to be invoked
  * multiple times for each new chunk of incoming data. Once the entire body
