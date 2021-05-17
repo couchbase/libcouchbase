@@ -20,6 +20,7 @@
 #include "trace.h"
 
 #include "capi/cmd_get.hh"
+#include "capi/cmd_get_replica.hh"
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respget_status(const lcb_RESPGET *resp)
 {
