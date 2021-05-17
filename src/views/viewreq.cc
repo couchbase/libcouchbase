@@ -20,6 +20,8 @@
 #include "http/http.h"
 #include "internal.h"
 
+#include "capi/cmd_http.hh"
+
 #define MAX_GET_URI_LENGTH 2048
 
 static void chunk_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *);

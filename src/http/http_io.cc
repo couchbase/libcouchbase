@@ -22,6 +22,8 @@
 #include "ctx-log-inl.h"
 #include <lcbio/ssl.h>
 
+#include "capi/cmd_http.hh"
+
 #define LOGFMT CTX_LOGFMT
 #define LOGID(req) CTX_LOGID(req->ioctx)
 using namespace lcb::http;

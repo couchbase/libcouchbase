@@ -23,6 +23,8 @@
 #include "trace.h"
 #include "strcodecs/strcodecs.h"
 
+#include "../capi/cmd_http.hh"
+
 LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_status(const lcb_RESPHTTP *resp)
 {
     return resp->ctx.rc;

@@ -28,6 +28,7 @@
 #include "rnd.h"
 
 #include "capi/analytics.hh"
+#include "capi/cmd_http.hh"
 #include "capi/cmd_store.hh"
 
 #define LOGFMT "(NR=%p) "

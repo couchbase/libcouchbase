@@ -21,6 +21,7 @@
 
 #include "capi/cmd_diag.hh"
 #include "capi/cmd_ping.hh"
+#include "capi/cmd_http.hh"
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respping_status(const lcb_RESPPING *resp)
 {

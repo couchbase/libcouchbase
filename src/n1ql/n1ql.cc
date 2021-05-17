@@ -29,6 +29,7 @@
 #include <utility>
 
 #include "capi/query.hh"
+#include "capi/cmd_http.hh"
 
 #define LOGFMT "(NR=%p) "
 #define LOGID(req) static_cast<const void *>(req)

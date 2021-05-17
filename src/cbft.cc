@@ -24,6 +24,7 @@
 #include <string>
 
 #include "capi/search.hh"
+#include "capi/cmd_http.hh"
 
 #define LOGFMT "(FTR=%p) "
 #define LOGID(req) static_cast<const void *>(req)
