@@ -25,6 +25,8 @@
 #include <algorithm>
 #include <lcbio/iotable.h>
 
+#include "capi/cmd_store.hh"
+
 using namespace lcb::durability;
 
 #define LOGARGS(c, lvl) (c)->instance->settings, "endure", LCB_LOG_##lvl, __FILE__, __LINE__
@@ -289,7 +291,7 @@ lcb_STATUS lcb_durability_validate(lcb_INSTANCE *instance, lcb_U16 *persist_to, 
     }
 
     /* persist_max is always one more than replica_max */
-    if (static_cast< int >(*persist_to) > persist_max) {
+    if (static_cast<int>(*persist_to) > persist_max) {
         if (options & LCB_DURABILITY_VALIDATE_CAPMAX) {
             *persist_to = persist_max;
         } else {
@@ -306,7 +308,7 @@ lcb_STATUS lcb_durability_validate(lcb_INSTANCE *instance, lcb_U16 *persist_to, 
     }
 
     /* now, we need at least as many nodes as we have replicas */
-    if (static_cast< int >(*replicate_to) > replica_max) {
+    if (static_cast<int>(*replicate_to) > replica_max) {
         if (options & LCB_DURABILITY_VALIDATE_CAPMAX) {
             *replicate_to = replica_max;
         } else {
@@ -339,9 +341,9 @@ lcb_STATUS Durset::MCTX_addcmd(const lcb_CMDBASE *cmd)
     ent.parent = this;
     ent.vbid = vbid;
 
-    kvbufs.append(reinterpret_cast< const char * >(cmd->key.contig.bytes), cmd->key.contig.nbytes);
+    kvbufs.append(reinterpret_cast<const char *>(cmd->key.contig.bytes), cmd->key.contig.nbytes);
 
-    return after_add(ent, reinterpret_cast< const lcb_CMDENDURE * >(cmd));
+    return after_add(ent, reinterpret_cast<const lcb_CMDENDURE *>(cmd));
 }
 
 lcb_STATUS Durset::MCTX_done(const void *cookie_)
@@ -387,7 +389,7 @@ void Durset::MCTX_fail()
 
 void lcbdurctx_set_durstore(lcb_MULTICMD_CTX *mctx, int enabled)
 {
-    static_cast< Durset * >(mctx)->is_durstore = enabled;
+    static_cast<Durset *>(mctx)->is_durstore = enabled;
 }
 
 Durset::Durset(lcb_INSTANCE *instance_, const lcb_durability_opts_t *options)
@@ -465,7 +467,7 @@ lcb_MULTICMD_CTX *lcb_endure3_ctxnew(lcb_INSTANCE *instance, const lcb_durabilit
  */
 void lcbdur_destroy(void *dset)
 {
-    delete reinterpret_cast< Durset * >(dset);
+    delete reinterpret_cast<Durset *>(dset);
 }
 
 Durset::~Durset()
@@ -486,7 +488,7 @@ Durset::~Durset()
  */
 static void timer_callback(lcb_socket_t, short, void *arg)
 {
-    reinterpret_cast< Durset * >(arg)->tick();
+    reinterpret_cast<Durset *>(arg)->tick();
 }
 
 void Durset::tick()

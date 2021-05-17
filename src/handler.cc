@@ -22,6 +22,8 @@
 #include "trace.h"
 #include "collections.h"
 
+#include "capi/cmd_store.hh"
+
 #define LOGARGS(obj, lvl) (obj)->settings, "handler", LCB_LOG_##lvl, __FILE__, __LINE__
 
 using lcb::MemcachedResponse;

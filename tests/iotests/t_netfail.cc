@@ -129,7 +129,7 @@ static bool syncWithNodeCount_(lcb_INSTANCE *instance, size_t expCount)
 extern "C" {
 static void opFromCallback_storeCB(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
 {
-    ASSERT_EQ(LCB_SUCCESS, resp->ctx.rc);
+    ASSERT_EQ(LCB_SUCCESS, lcb_respstore_status(resp));
 }
 
 static void opFromCallback_statsCB(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
@@ -187,7 +187,7 @@ static void set_callback(lcb_INSTANCE * /* instance */, lcb_CALLBACK_TYPE, const
 
     lcb_respstore_cookie(resp, (void **)&tc);
     EXPECT_EQ(tc->expected, lcb_respstore_status(resp));
-    if (resp->ctx.rc == LCB_ERR_TIMEOUT) {
+    if (lcb_respstore_status(resp) == LCB_ERR_TIMEOUT) {
         // Remove the hiccup at the first timeout failure
         MockEnvironment::getInstance()->hiccupNodes(0, 0);
     }
@@ -336,11 +336,11 @@ static void io_close_wrap(lcb_io_opt_t, lcb_socket_t)
 
 static void store_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
 {
-    auto *rv = (struct rvbuf *)resp->cookie;
-    lcb_log(LOGARGS(instance, INFO), "Got storage callback for cookie %p with err=0x%x", (void *)resp->cookie,
-            (int)resp->ctx.rc);
+    struct rvbuf *rv = nullptr;
+    lcb_respstore_cookie(resp, (void **)(&rv));
+    rv->error = lcb_respstore_status(resp);
+    lcb_log(LOGARGS(instance, INFO), "Got storage callback for cookie %p with err=0x%x", (void *)rv, (int)rv->error);
 
-    rv->error = resp->ctx.rc;
     store_cnt++;
     if (!instance->wait) { /* do not touch IO if we are using lcb_wait() */
         lcb_stop_loop(instance);

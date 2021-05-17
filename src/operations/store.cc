@@ -20,6 +20,8 @@
 #include "trace.h"
 #include "durability_internal.h"
 
+#include "capi/cmd_store.hh"
+
 LIBCOUCHBASE_API int lcb_mutation_token_is_valid(const lcb_MUTATION_TOKEN *token)
 {
     return token && !(token->uuid_ == 0 && token->seqno_ == 0 && token->vbid_ == 0);
