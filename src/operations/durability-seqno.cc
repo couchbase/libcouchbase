@@ -19,6 +19,8 @@
 #include "internal.h"
 #include "durability_internal.h"
 
+#include "capi/cmd_observe_seqno.hh"
+
 using namespace lcb::durability;
 
 namespace

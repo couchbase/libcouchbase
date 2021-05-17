@@ -701,47 +701,8 @@ typedef struct {
 LIBCOUCHBASE_API
 lcb_MULTICMD_CTX *lcb_observe3_ctxnew(lcb_INSTANCE *instance);
 
-/**
- * @brief Command structure for lcb_observe_seqno3().
- * Note #key, #nkey, and #cas are not used in this command.
- */
-typedef struct {
-    LCB_CMD_BASE;
-    /**
-     * Server index to target. The server index must be valid and must also
-     * be either a master or a replica for the vBucket indicated in #vbid
-     */
-    lcb_U16 server_index;
-    lcb_U16 vbid; /**< vBucket ID to query */
-    lcb_U64 uuid; /**< UUID known to client which should be queried */
-} lcb_CMDOBSEQNO;
-
-/**
- * @brief Response structure for lcb_observe_seqno3()
- *
- * Note that #key, #nkey and #cas are empty because the operand is the relevant
- * mutation token fields in @ref lcb_CMDOBSEQNO
- */
-typedef struct {
-    LCB_RESP_BASE
-    lcb_U16 vbid;            /**< vBucket ID (for potential mapping) */
-    lcb_U16 server_index;    /**< Input server index */
-    lcb_U64 cur_uuid;        /**< UUID for this vBucket as known to the server */
-    lcb_U64 persisted_seqno; /**< Highest persisted sequence */
-    lcb_U64 mem_seqno;       /**< Highest known sequence */
-
-    /**
-     * In the case where the command's uuid is not the most current, this
-     * contains the last known UUID
-     */
-    lcb_U64 old_uuid;
-
-    /**
-     * If #old_uuid is nonzero, contains the highest sequence number persisted
-     * in the #old_uuid snapshot.
-     */
-    lcb_U64 old_seqno;
-} lcb_RESPOBSEQNO;
+typedef struct lcb_RESPOBSEQNO_ lcb_RESPOBSEQNO;
+typedef struct lcb_CMDOBSEQNO_ lcb_CMDOBSEQNO;
 
 /**
  * @volatile

@@ -48,6 +48,8 @@
 #include "internalstructs.h"
 #include "internal.h"
 
+#include "capi/cmd_observe_seqno.hh"
+
 using namespace cbc;
 
 using std::map;
