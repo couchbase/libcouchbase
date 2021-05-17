@@ -268,7 +268,7 @@ static void n1ql_callback(lcb_INSTANCE *, int, const lcb_RESPQUERY *resp)
     lcb_respquery_row(resp, &row, &nrow);
     header.response.bodylen = htonl(nkey + nrow);
 
-    evbuffer_expand(output,  nkey + nrow + sizeof(header.bytes));
+    evbuffer_expand(output, nkey + nrow + sizeof(header.bytes));
     dump_bytes(cl, "response", header.bytes, sizeof(header.bytes));
     evbuffer_add(output, header.bytes, sizeof(header.bytes));
     dump_bytes(cl, "response", key, nkey);
@@ -500,24 +500,29 @@ static void sigint_handler(int)
     }
 }
 
-static void diag_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
+static void diag_callback(lcb_INSTANCE *, int, const lcb_RESPDIAG *resp)
 {
-    const auto *resp = (const lcb_RESPDIAG *)rb;
-    if (resp->ctx.rc != LCB_SUCCESS) {
-        fprintf(stderr, "failed: %s\n", lcb_strerror_short(resp->ctx.rc));
+    lcb_STATUS rc = lcb_respdiag_status(resp);
+    if (rc != LCB_SUCCESS) {
+        fprintf(stderr, "failed: %s\n", lcb_strerror_short(rc));
     } else {
-        if (resp->njson) {
-            fprintf(stderr, "\n%.*s", (int)resp->njson, resp->json);
+        const char *json;
+        size_t json_len;
+        lcb_respdiag_value(resp, &json, &json_len);
+        if (json && json_len > 0) {
+            fprintf(stderr, "\n%.*s", (int)json_len, json);
         }
     }
 }
 
 static void sigquit_handler(int)
 {
-    lcb_CMDDIAG req = {};
-    req.options = LCB_PINGOPT_F_JSONPRETTY;
-    req.id = app_client_string;
-    lcb_diag(instance, nullptr, &req);
+    lcb_CMDDIAG *req;
+    lcb_cmddiag_create(&req);
+    lcb_cmddiag_prettify(req, true);
+    lcb_cmddiag_report_id(req, app_client_string, strlen(app_client_string));
+    lcb_diag(instance, nullptr, req);
+    lcb_cmddiag_destroy(req);
 }
 
 static void real_main(int argc, char **argv)
@@ -555,7 +560,7 @@ static void real_main(int argc, char **argv)
     lcb_cntl_string(instance, "enable_unordered_execution", "off");
     lcb_set_bootstrap_callback(instance, bootstrap_callback);
     lcb_set_pktfwd_callback(instance, pktfwd_callback);
-    lcb_install_callback(instance, LCB_CALLBACK_DIAG, diag_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_DIAG, (lcb_RESPCALLBACK)diag_callback);
 
     good_or_die(lcb_connect(instance), "Failed to connect to cluster");
     if (config.useTimings()) {

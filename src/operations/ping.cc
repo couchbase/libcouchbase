@@ -19,6 +19,8 @@
 #include "http/http.h"
 #include "auth-priv.h"
 
+#include "capi/cmd_diag.hh"
+
 LIBCOUCHBASE_API lcb_STATUS lcb_respping_status(const lcb_RESPPING *resp)
 {
     return resp->ctx.rc;

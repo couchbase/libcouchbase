@@ -1001,19 +1001,6 @@ struct lcb_RESPPING_ {
 #endif
 };
 
-struct lcb_CMDDIAG_ {
-    LCB_CMD_BASE;
-    int options;    /**< extra options, e.g. for result representation */
-    const char *id; /**< optional, zero-terminated string to identify the report */
-    size_t nid;
-};
-
-struct lcb_RESPDIAG_ {
-    LCB_RESP_BASE
-    lcb_SIZE njson;   /**< length of JSON string (when #LCB_PINGOPT_F_JSON was specified) */
-    const char *json; /**< pointer to JSON string */
-};
-
 #define LCB_CMD_CLONE(TYPE, SRC, DST)                                                                                  \
     do {                                                                                                               \
         TYPE *ret = (TYPE *)calloc(1, sizeof(TYPE));                                                                   \
