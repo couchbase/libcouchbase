@@ -683,7 +683,7 @@ static void view_callback(lcb_INSTANCE *, int, const lcb_RESPVIEW *resp)
 }
 }
 
-Handler::Handler(const char *name) : parser(name), instance(nullptr)
+Handler::Handler(const char *name) : parser(name)
 {
     if (name != nullptr) {
         cmdname = name;
@@ -2091,7 +2091,7 @@ void UserUpsertHandler::run()
     }
     std::vector<std::string> roles = o_roles.result();
     std::string roles_param;
-    for (auto &role : roles) {
+    for (const auto &role : roles) {
         if (roles_param.empty()) {
             roles_param += role;
         } else {
@@ -2113,15 +2113,10 @@ void UserUpsertHandler::run()
 struct HostEnt {
     string protostr;
     string hostname;
-    HostEnt(const std::string &host, const char *proto)
+    HostEnt(const std::string &host, const char *proto) : protostr(proto), hostname(host) {}
+
+    HostEnt(const std::string &host, const char *proto, int port) : protostr(proto), hostname(host)
     {
-        protostr = proto;
-        hostname = host;
-    }
-    HostEnt(const std::string &host, const char *proto, int port)
-    {
-        protostr = proto;
-        hostname = host;
         stringstream ss;
         ss << std::dec << port;
         hostname += ":";
@@ -2194,7 +2189,7 @@ void ConnstrHandler::run()
             }
         }
     }
-    for (auto &ent : hosts) {
+    for (const auto &ent : hosts) {
         string protostr = "[" + ent.protostr + "]";
         printf("  %-20s%s\n", protostr.c_str(), ent.hostname.c_str());
     }
@@ -2455,7 +2450,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Must provide an option name\n");
             try {
                 HelpHandler().execute(argc, argv);
-            } catch (std::exception &exc) {
+            } catch (const std::exception &exc) {
                 std::cerr << exc.what() << std::endl;
             }
             exit(EXIT_FAILURE);
@@ -2476,8 +2471,8 @@ int main(int argc, char *argv[])
     try {
         handler->execute(argc, argv);
 
-    } catch (std::exception &err) {
-        fprintf(stderr, "%s\n", err.what());
+    } catch (const std::exception &err) {
+        std::cerr << err.what() << std::endl;
         exit(EXIT_FAILURE);
     }
 }

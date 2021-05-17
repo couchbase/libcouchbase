@@ -56,7 +56,7 @@ class Handler
     virtual void run();
     cliopts::Parser parser;
     ConnParams params;
-    lcb_INSTANCE *instance;
+    lcb_INSTANCE *instance{nullptr};
     Histogram hg;
     std::string cmdname;
 };
