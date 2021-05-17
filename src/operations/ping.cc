@@ -20,6 +20,7 @@
 #include "auth-priv.h"
 
 #include "capi/cmd_diag.hh"
+#include "capi/cmd_ping.hh"
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respping_status(const lcb_RESPPING *resp)
 {

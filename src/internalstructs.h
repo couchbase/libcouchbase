@@ -122,10 +122,6 @@ struct lcb_CREATEOPTS_ {
     /** Response specific flags. see ::lcb_RESPFLAGS */                                                                \
     lcb_U16 rflags;
 
-#define LCB_RESP_SERVER_FIELDS                                                                                         \
-    /** String containing the `host:port` of the server which sent this response */                                    \
-    const char *server;
-
 
 /**@brief Common ABI header for all commands. _Any_ command may be safely
  * casted to this type.*/
@@ -902,104 +898,6 @@ struct lcb_RESPHTTP_ {
 #define LCB_MUTATION_TOKEN_ISVALID(p) (p && !((p)->uuid_ == 0 && (p)->seqno_ == 0 && (p)->vbid_ == 0))
 
 /**@} (Group: Mutation Tokens) */
-
-/**
- * Ping data (Key/Value) service. Used in lcb_CMDPING#services
- */
-#define LCB_PINGSVC_F_KV 0x01
-
-/**
- * Ping query (N1QL) service. Used in lcb_CMDPING#services
- */
-#define LCB_PINGSVC_F_N1QL 0x02
-
-/**
- * Ping views (Map/Reduce) service. Used in lcb_CMDPING#services
- */
-#define LCB_PINGSVC_F_VIEWS 0x04
-
-/**
- * Ping full text search (FTS) service. Used in lcb_CMDPING#services
- */
-#define LCB_PINGSVC_F_FTS 0x08
-
-/**
- * Ping Analytics for N1QL service. Used in lcb_CMDPING#services
- */
-#define LCB_PINGSVC_F_ANALYTICS 0x10
-
-/**
- * Do not record any metrics or status codes from ping responses.
- * This might be useful to reduce overhead, when user-space
- * keep-alive mechanism is not interested in actual latencies,
- * but rather need keep sockets active. Used in lcb_CMDPING#options
- */
-#define LCB_PINGOPT_F_NOMETRICS 0x01
-
-/**
- * Automatically encode PING result as JSON. See njson/json fields
- * of #lcb_RESPPING structure. Used in lcb_CMDPING#options
- */
-#define LCB_PINGOPT_F_JSON 0x02
-
-/**
- * Add extra details about service status into generated JSON.
- * Requires LCB_PINGOPT_F_JSON to be set. Used in lcb_CMDPING#options
- */
-#define LCB_PINGOPT_F_JSONDETAILS 0x04
-
-/**
- * Generate indented JSON, which is better for reading. Used in lcb_CMDPING#options
- */
-#define LCB_PINGOPT_F_JSONPRETTY 0x08
-
-/**
- * Structure for PING requests.
- *
- * @committed
- */
-struct lcb_CMDPING_ {
-    LCB_CMD_BASE;
-    uint32_t services; /**< bitmap for services to ping */
-    uint32_t options;  /**< extra options, e.g. for result representation */
-    const char *id;    /**< optional, zero-terminated string to identify the report */
-    size_t nid;
-};
-
-/**
- * Entry describing the status of the service in the cluster.
- * It is part of lcb_RESPING structure.
- *
- * @committed
- */
-typedef struct {
-    lcb_PING_SERVICE type; /**< type of the service */
-    /* TODO: rename to "remote" */
-    const char *server;     /**< server host:port */
-    lcb_U64 latency;        /**< latency in nanoseconds */
-    lcb_STATUS rc;          /**< raw return code of the operation */
-    const char *local;      /**< server host:port */
-    const char *id;         /**< service identifier (unique in scope of lcb_INSTANCE *connection instance) */
-    const char *scope;      /**< optional scope name (typically equals to the bucket name) */
-    lcb_PING_STATUS status; /**< status of the operation */
-} lcb_PINGSVC;
-
-/**
- * Structure for PING responses.
- *
- * @committed
- */
-struct lcb_RESPPING_ {
-    LCB_RESP_BASE
-    LCB_RESP_SERVER_FIELDS
-    lcb_SIZE nservices;    /**< number of the nodes, replied to ping */
-    lcb_PINGSVC *services; /**< the nodes, replied to ping, if any */
-    lcb_SIZE njson;        /**< length of JSON string (when #LCB_PINGOPT_F_JSON was specified) */
-    const char *json;      /**< pointer to JSON string */
-#ifdef __cplusplus
-    std::string id;
-#endif
-};
 
 #define LCB_CMD_CLONE(TYPE, SRC, DST)                                                                                  \
     do {                                                                                                               \
