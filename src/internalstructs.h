@@ -1014,24 +1014,6 @@ struct lcb_RESPDIAG_ {
     const char *json; /**< pointer to JSON string */
 };
 
-/**
- * Command to fetch collections manifest
- * @uncommitted
- */
-struct lcb_CMDGETMANIFEST_ {
-    LCB_CMD_BASE;
-};
-
-/**
- * Response structure for collection manifest
- * @uncommitted
- */
-struct lcb_RESPGETMANIFEST_ {
-    LCB_RESP_BASE
-    size_t nvalue;
-    const char *value;
-};
-
 #define LCB_CMD_CLONE(TYPE, SRC, DST)                                                                                  \
     do {                                                                                                               \
         TYPE *ret = (TYPE *)calloc(1, sizeof(TYPE));                                                                   \
