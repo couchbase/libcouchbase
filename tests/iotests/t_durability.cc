@@ -21,6 +21,7 @@
 #include <include/libcouchbase/utils.h>
 
 #include "capi/cmd_observe.hh"
+#include "capi/cmd_endure.hh"
 
 using namespace std;
 

@@ -20,6 +20,7 @@
 
 #ifdef __cplusplus
 #include "mctx-helper.h"
+#include "capi/cmd_endure.hh"
 
 extern "C" {
 #endif

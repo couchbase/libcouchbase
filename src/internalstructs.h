@@ -407,55 +407,8 @@ typedef struct lcb_durability_opts_st {
     } v;
 } lcb_durability_opts_t;
 
-/**Must specify this flag if using the 'mutation_token' field, as it was added in
- * a later version */
-#define LCB_CMDENDURE_F_MUTATION_TOKEN (1u << 16u)
-
-/**@brief Command structure for endure.
- * If the lcb_CMDENDURE::cas field is specified, the operation will check and
- * verify that the CAS found on each of the nodes matches the CAS specified
- * and only then consider the item to be replicated and/or persisted to the
- * nodes. If the item exists on the master's cache with a different CAS then
- * the operation will fail
- */
-typedef struct {
-    LCB_CMD_BASE;
-    const lcb_MUTATION_TOKEN *mutation_token;
-} lcb_CMDENDURE;
-
-/**@brief Response structure for endure */
-typedef struct {
-    LCB_RESP_BASE
-    /**
-     * Total number of polls (i.e. how many packets per server) did this
-     * operation require
-     */
-    lcb_U16 nresponses;
-
-    /**
-     * Whether this item exists in the master in its current form. This can be
-     * true even if #rc is not successful
-     */
-    lcb_U8 exists_master;
-
-    /**
-     * True if item was persisted on the master node. This may be true even if
-     * #rc is not successful.
-     */
-    lcb_U8 persisted_master;
-
-    /**
-     * Total number of nodes (including master) on which this mutation has
-     * been persisted. Valid even if #rc is not successful.
-     */
-    lcb_U8 npersisted;
-
-    /**
-     * Total number of replica nodes to which this mutation has been replicated.
-     * Valid even if #rc is not successful.
-     */
-    lcb_U8 nreplicated;
-} lcb_RESPENDURE;
+typedef struct lcb_RESPENDURE_ lcb_RESPENDURE;
+typedef struct lcb_CMDENDURE_ lcb_CMDENDURE;
 
 /**
  * @committed

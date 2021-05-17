@@ -26,6 +26,7 @@
 #include "check_config.h"
 
 #include "capi/cmd_observe.hh"
+#include "capi/cmd_endure.hh"
 
 #define LOGARGS(instance, lvl) instance->settings, "tests-MUT", LCB_LOG_##lvl, __FILE__, __LINE__
 
