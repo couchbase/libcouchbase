@@ -19,6 +19,8 @@
 #include <vector>
 #include <string>
 
+#include "capi/cmd_subdoc.hh"
+
 LIBCOUCHBASE_API size_t lcb_respsubdoc_result_size(const lcb_RESPSUBDOC *resp)
 {
     return resp->nres;
