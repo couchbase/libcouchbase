@@ -443,7 +443,6 @@ TEST_F(MockUnitTest, testEmptyKeys)
         lcb_CMDENDURE endure;
         lcb_CMDOBSERVE observe;
         lcb_CMDBASE base;
-        lcb_CMDSTATS stats;
     } u{};
     memset(&u, 0, sizeof u);
 
@@ -493,7 +492,10 @@ TEST_F(MockUnitTest, testEmptyKeys)
     ASSERT_EQ(LCB_ERR_EMPTY_KEY, ctx->addcmd(ctx, (lcb_CMDBASE *)&u.endure));
     ctx->fail(ctx);
 
-    ASSERT_EQ(LCB_SUCCESS, lcb_stats3(instance, nullptr, &u.stats));
+    lcb_CMDSTATS *stats;
+    lcb_cmdstats_create(&stats);
+    ASSERT_EQ(LCB_SUCCESS, lcb_stats(instance, nullptr, stats));
+    lcb_cmdstats_destroy(stats);
     lcb_sched_fail(instance);
 }
 

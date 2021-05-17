@@ -46,6 +46,7 @@
 #endif
 #include <snappy-stubs-public.h>
 #include "internalstructs.h"
+#include "internal.h"
 
 using namespace cbc;
 
@@ -367,31 +368,40 @@ static void obseqno_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPOB
 
 static void stats_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
 {
-    if (resp->ctx.rc != LCB_SUCCESS) {
-        fprintf(stderr, "ERROR %s\n", lcb_strerror_long(resp->ctx.rc));
+    lcb_STATUS rc = lcb_respstats_status(resp);
+    if (rc != LCB_SUCCESS) {
+        fprintf(stderr, "ERROR %s\n", lcb_strerror_short(rc));
         return;
     }
-    if (resp->server == nullptr || resp->ctx.key == nullptr) {
+    const char *server;
+    size_t server_len;
+    lcb_respstats_server(resp, &server, &server_len);
+
+    const char *key;
+    size_t key_len;
+    lcb_respstats_key(resp, &key, &key_len);
+
+    if (server == nullptr || server_len == 0 || key == nullptr || key_len == 0) {
         return;
     }
 
-    string server = resp->server;
-    string key((const char *)resp->ctx.key, resp->ctx.key_len);
-    string value;
-    if (resp->nvalue > 0) {
-        value.assign((const char *)resp->value, resp->nvalue);
-    }
-    fprintf(stdout, "%s\t%s", server.c_str(), key.c_str());
-    if (!value.empty()) {
-        if (*static_cast<bool *>(resp->cookie) && key == "key_flags") {
+    const char *value;
+    size_t value_len;
+    lcb_respstats_value(resp, &value, &value_len);
+
+    fprintf(stdout, "%.*s\t%.*s", (int)server_len, server, (int)key_len, key);
+    if (value && value_len > 0) {
+        bool *is_keystats;
+        lcb_respstats_cookie(resp, (void **)&is_keystats);
+        if (*is_keystats && key_len == 9 && strncmp(key, "key_flags", key_len) == 0) {
             // Is keystats
             // Flip the bits so the display formats correctly
             unsigned flags_u = 0;
-            sscanf(value.c_str(), "%u", &flags_u);
+            sscanf(value, "%u", &flags_u);
             flags_u = htonl(flags_u);
             fprintf(stdout, "\t%u (cbc: converted via htonl)", flags_u);
         } else {
-            fprintf(stdout, "\t%s", value.c_str());
+            fprintf(stdout, "\t%.*s", (int)value_len, value);
         }
     }
     fprintf(stdout, "\n");
@@ -399,16 +409,30 @@ static void stats_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTAT
 
 static void watch_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
 {
-    if (resp->ctx.rc != LCB_SUCCESS) {
-        fprintf(stderr, "ERROR %s\n", lcb_strerror_long(resp->ctx.rc));
+    lcb_STATUS rc = lcb_respstats_status(resp);
+    if (rc != LCB_SUCCESS) {
+        fprintf(stderr, "ERROR %s\n", lcb_strerror_short(rc));
         return;
     }
-    if (resp->server == nullptr || resp->ctx.key == nullptr) {
+    const char *server;
+    size_t server_len;
+    lcb_respstats_server(resp, &server, &server_len);
+
+    const char *key;
+    size_t key_len;
+    lcb_respstats_key(resp, &key, &key_len);
+
+    if (server == nullptr || server_len == 0 || key == nullptr || key_len == 0) {
         return;
     }
 
-    string key((const char *)resp->ctx.key, resp->ctx.key_len);
-    if (resp->nvalue > 0) {
+    const char *value;
+    size_t value_len;
+    lcb_respstats_value(resp, &value, &value_len);
+
+    string key_str(key, key_len);
+
+    if (value && value_len > 0) {
         char *nptr = nullptr;
         uint64_t val =
 #ifdef _WIN32
@@ -416,10 +440,11 @@ static void watch_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTAT
 #else
             strtoll
 #endif
-            ((const char *)resp->value, &nptr, 10);
-        if (nptr != (const char *)resp->value) {
-            auto *entry = reinterpret_cast<map<string, int64_t> *>(resp->cookie);
-            (*entry)[key] += val;
+            (value, &nptr, 10);
+        if (nptr != value) {
+            map<string, int64_t> *entry;
+            lcb_respstats_cookie(resp, (void **)&entry);
+            (*entry)[key_str] += val;
         }
     }
 }
@@ -1296,16 +1321,18 @@ void StatsHandler::run()
         keys.emplace_back("");
     }
     lcb_sched_enter(instance);
-    for (auto &key : keys) {
-        lcb_CMDSTATS cmd = {0};
+    for (const auto &key : keys) {
+        lcb_CMDSTATS *cmd;
+        lcb_cmdstats_create(&cmd);
         if (!key.empty()) {
-            LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
+            lcb_cmdstats_key(cmd, key.c_str(), key.size());
             if (o_keystats.result()) {
-                cmd.cmdflags = LCB_CMDSTATS_F_KV;
+                lcb_cmdstats_is_keystats(cmd, true);
             }
         }
         bool is_keystats = o_keystats.result();
-        lcb_STATUS err = lcb_stats3(instance, &is_keystats, &cmd);
+        lcb_STATUS err = lcb_stats(instance, &is_keystats, cmd);
+        lcb_cmdstats_destroy(cmd);
         if (err != LCB_SUCCESS) {
             throw LcbError(err);
         }
@@ -1332,15 +1359,17 @@ void WatchHandler::run()
     while (true) {
         map<string, int64_t> entry;
         lcb_sched_enter(instance);
-        lcb_CMDSTATS cmd = {0};
-        lcb_STATUS err = lcb_stats3(instance, (void *)&entry, &cmd);
+        lcb_CMDSTATS *cmd;
+        lcb_cmdstats_create(&cmd);
+        lcb_STATUS err = lcb_stats(instance, (void *)&entry, cmd);
+        lcb_cmdstats_destroy(cmd);
         if (err != LCB_SUCCESS) {
             throw LcbError(err);
         }
         lcb_sched_leave(instance);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         if (first) {
-            for (auto &key : keys) {
+            for (const auto &key : keys) {
                 fprintf(stderr, "%s: %" PRId64 "\n", key.c_str(), entry[key]);
             }
             first = false;
@@ -1350,7 +1379,7 @@ void WatchHandler::run()
                 fprintf(stderr, "\033[%dA", (int)keys.size());
             }
 #endif
-            for (auto &key : keys) {
+            for (const auto &key : keys) {
                 fprintf(stderr, "%s: %" PRId64 "%20s\n", key.c_str(), (entry[key] - prev[key]) / interval, "");
             }
         }

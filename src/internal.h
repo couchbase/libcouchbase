@@ -291,6 +291,27 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respnoop_cookie(const lcb_RESPNOOP *resp, void *
 LIBCOUCHBASE_API
 lcb_STATUS lcb_noop(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDNOOP *cmd);
 
+typedef struct lcb_CMDSTATS_ lcb_CMDSTATS;
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstats_create(lcb_CMDSTATS **cmd);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstats_destroy(lcb_CMDSTATS *cmd);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstats_parent_span(lcb_CMDSTATS *cmd, lcbtrace_SPAN *span);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstats_key(lcb_CMDSTATS *cmd, const char *key, size_t key_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstats_is_keystats(lcb_CMDSTATS *cmd, int val);
+
+typedef struct lcb_RESPSTATS_ lcb_RESPSTATS;
+LIBCOUCHBASE_API lcb_STATUS lcb_respstats_status(const lcb_RESPSTATS *resp);
+LIBCOUCHBASE_API lcb_STATUS lcb_respstats_error_context(const lcb_RESPSTATS *resp,
+                                                        const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);
+LIBCOUCHBASE_API lcb_STATUS lcb_respstats_cookie(const lcb_RESPSTATS *resp, void **cookie);
+LIBCOUCHBASE_API lcb_STATUS lcb_respstats_key(const lcb_RESPSTATS *resp, const char **key, size_t *key_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respstats_value(const lcb_RESPSTATS *resp, const char **value, size_t *value_len);
+LIBCOUCHBASE_API lcb_STATUS lcb_respstats_server(const lcb_RESPSTATS *resp, const char **server, size_t *server_len);
+
+/**
+ * @uncommitted
+ */
+LIBCOUCHBASE_API
+lcb_STATUS lcb_stats(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS *cmd);
 
 #ifdef __cplusplus
 }

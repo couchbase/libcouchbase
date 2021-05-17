@@ -18,6 +18,7 @@
 #include "internal.h"
 
 #include "capi/cmd_noop.hh"
+#include "capi/cmd_stats.hh"
 
 struct BcastCookie : mc_REQDATAEX {
     int remaining;
@@ -78,10 +79,83 @@ static void stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_STATUS err, const
     }
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstats_create(lcb_CMDSTATS **cmd)
+{
+    *cmd = (lcb_CMDSTATS *)calloc(1, sizeof(lcb_CMDSTATS));
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstats_destroy(lcb_CMDSTATS *cmd)
+{
+    free(cmd);
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstats_parent_span(lcb_CMDSTATS *cmd, lcbtrace_SPAN *span)
+{
+    cmd->pspan = span;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstats_key(lcb_CMDSTATS *cmd, const char *key, size_t key_len)
+{
+    LCB_CMD_SET_KEY(cmd, key, key_len);
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstats_is_keystats(lcb_CMDSTATS *cmd, int val)
+{
+    if (val) {
+        cmd->cmdflags |= LCB_CMDSTATS_F_KV;
+    } else {
+        cmd->cmdflags &= ~LCB_CMDSTATS_F_KV;
+    }
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_respstats_status(const lcb_RESPSTATS *resp)
+{
+    return resp->ctx.rc;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_respstats_error_context(const lcb_RESPSTATS *resp,
+                                                        const lcb_KEY_VALUE_ERROR_CONTEXT **ctx)
+{
+    *ctx = &resp->ctx;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_respstats_cookie(const lcb_RESPSTATS *resp, void **cookie)
+{
+    *cookie = resp->cookie;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_respstats_key(const lcb_RESPSTATS *resp, const char **key, size_t *key_len)
+{
+    *key = resp->ctx.key;
+    *key_len = resp->ctx.key_len;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_respstats_value(const lcb_RESPSTATS *resp, const char **value, size_t *value_len)
+{
+    *value = resp->value;
+    *value_len = resp->nvalue;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_respstats_server(const lcb_RESPSTATS *resp, const char **server, size_t *server_len)
+{
+    *server = resp->server;
+    *server_len = (resp->server == nullptr) ? 0 : strlen(resp->server);
+    return LCB_SUCCESS;
+}
+
 static mc_REQDATAPROCS stats_procs = {stats_handler, refcnt_dtor_common};
 
 LIBCOUCHBASE_API
-lcb_STATUS lcb_stats3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS *cmd)
+lcb_STATUS lcb_stats(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS *cmd)
 {
     unsigned ii;
     int vbid = -1;

@@ -321,25 +321,35 @@ void MockEnvironment::createConnection(lcb_INSTANCE **instance)
 extern "C" {
 static void statsCallback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
 {
-    auto *me = (MockEnvironment *)resp->cookie;
-    ASSERT_EQ(LCB_SUCCESS, resp->ctx.rc) << lcb_strerror_short(resp->ctx.rc);
+    MockEnvironment *me = nullptr;
+    lcb_respstats_cookie(resp, (void **)&me);
+    lcb_STATUS rc = lcb_respstats_status(resp);
+    ASSERT_EQ(LCB_SUCCESS, rc) << lcb_strerror_short(rc);
 
-    if (resp->server == nullptr) {
+    const char *server = nullptr;
+    size_t server_len;
+    lcb_respstats_server(resp, &server, &server_len);
+    if (server == nullptr) {
         return;
     }
 
-    if (!resp->ctx.key_len) {
+    const char *key = nullptr;
+    size_t key_len = 0;
+    lcb_respstats_key(resp, &key, &key_len);
+    if (key == nullptr || key_len == 0) {
         return;
     }
 
-    if (resp->ctx.key_len != sizeof(STAT_VERSION) - 1 ||
-        memcmp(resp->ctx.key, STAT_VERSION, sizeof(STAT_VERSION) - 1) != 0) {
+    if (key_len != sizeof(STAT_VERSION) - 1 || memcmp(key, STAT_VERSION, sizeof(STAT_VERSION) - 1) != 0) {
         return;
     }
     MockEnvironment::ServerVersion version = MockEnvironment::VERSION_UNKNOWN;
-    if (resp->nvalue > 2) {
-        int major = ((const char *)resp->value)[0] - '0';
-        int minor = ((const char *)resp->value)[2] - '0';
+    const char *value = nullptr;
+    size_t value_len = 0;
+    lcb_respstats_key(resp, &value, &value_len);
+    if (value_len > 2) {
+        int major = value[0] - '0';
+        int minor = value[2] - '0';
         switch (major) {
             case 4:
                 switch (minor) {
@@ -395,12 +405,11 @@ static void statsCallback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_R
     }
     if (version == MockEnvironment::VERSION_UNKNOWN) {
         lcb_log(LOGARGS(instance, ERROR), "Unable to determine version from string '%.*s', assuming 7.0",
-                (int)resp->nvalue, (const char *)resp->value);
+                (int)value_len, value);
         version = MockEnvironment::VERSION_70;
     }
     me->setServerVersion(version);
-    lcb_log(LOGARGS(instance, INFO), "Using real cluster version %.*s (id=%d)", (int)resp->nvalue,
-            (const char *)resp->value, version);
+    lcb_log(LOGARGS(instance, INFO), "Using real cluster version %.*s (id=%d)", (int)value_len, value, version);
 }
 }
 
@@ -422,8 +431,10 @@ void MockEnvironment::bootstrapRealCluster()
     lcb_wait(tmphandle, LCB_WAIT_DEFAULT);
 
     lcb_install_callback(tmphandle, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)statsCallback);
-    lcb_CMDSTATS scmd = {0};
-    err = lcb_stats3(tmphandle, this, &scmd);
+    lcb_CMDSTATS *scmd;
+    lcb_cmdstats_create(&scmd);
+    err = lcb_stats(tmphandle, this, scmd);
+    lcb_cmdstats_destroy(scmd);
     ASSERT_EQ(LCB_SUCCESS, err) << lcb_strerror_short(err);
 
     lcb_wait(tmphandle, LCB_WAIT_DEFAULT);
@@ -534,7 +545,8 @@ void MockEnvironment::SetUp()
     clearAndReset();
 }
 
-void MockEnvironment::TearDown() {
+void MockEnvironment::TearDown()
+{
     if (mock != nullptr) {
         shutdown_mock_server(mock);
         mock = nullptr;

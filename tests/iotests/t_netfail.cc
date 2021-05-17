@@ -137,22 +137,28 @@ static void opFromCallback_statsCB(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, co
     char *statkey;
     lcb_size_t nstatkey;
 
-    const char *server_endpoint = resp->server;
-    const void *key = resp->ctx.key;
-    lcb_size_t nkey = resp->ctx.key_len;
-    const void *bytes = resp->value;
-    lcb_size_t nbytes = resp->nvalue;
+    ASSERT_EQ(LCB_SUCCESS, lcb_respstats_status(resp));
 
-    ASSERT_EQ(LCB_SUCCESS, resp->ctx.rc);
-    if (server_endpoint != nullptr) {
-        nstatkey = strlen(server_endpoint) + nkey + 2;
+    const char *server;
+    size_t server_len;
+    lcb_respstats_server(resp, &server, &server_len);
+    if (server != nullptr) {
+        const char *key;
+        size_t nkey;
+        lcb_respstats_key(resp, &key, &nkey);
+
+        const char *bytes;
+        size_t nbytes;
+        lcb_respstats_value(resp, &bytes, &nbytes);
+
+        nstatkey = server_len + nkey + 2;
         statkey = new char[nstatkey];
-        snprintf(statkey, nstatkey, "%s-%.*s", server_endpoint, (int)nkey, (const char *)key);
+        snprintf(statkey, nstatkey, "%.*s-%.*s", (int)server_len, server, (int)nkey, key);
 
         lcb_CMDSTORE *cmd;
         lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
         lcb_cmdstore_key(cmd, statkey, nstatkey);
-        lcb_cmdstore_value(cmd, (const char *)bytes, nbytes);
+        lcb_cmdstore_value(cmd, bytes, nbytes);
         ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, nullptr, cmd));
         lcb_cmdstore_destroy(cmd);
         delete[] statkey;
@@ -170,9 +176,11 @@ TEST_F(MockUnitTest, testOpFromCallback)
     lcb_install_callback(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)opFromCallback_statsCB);
     lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)opFromCallback_storeCB);
 
-    lcb_CMDSTATS stat = {0};
+    lcb_CMDSTATS *stat;
+    lcb_cmdstats_create(&stat);
     ASSERT_EQ(LCB_SUCCESS, lcb_cntl_string(instance, "operation_timeout", "5.0"));
-    ASSERT_EQ(LCB_SUCCESS, lcb_stats3(instance, nullptr, &stat));
+    ASSERT_EQ(LCB_SUCCESS, lcb_stats(instance, nullptr, stat));
+    lcb_cmdstats_destroy(stat);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
