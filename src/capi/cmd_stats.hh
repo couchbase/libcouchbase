@@ -21,6 +21,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "key_value_error_context.hh"
+
 /**
  * @private
  */
@@ -73,11 +75,11 @@ struct lcb_CMDSTATS_ {
  * @private
  */
 struct lcb_RESPSTATS_ {
+    lcb_KEY_VALUE_ERROR_CONTEXT ctx{};
     /**
      Application-defined pointer passed as the `cookie` parameter when
      scheduling the command.
      */
-    lcb_KEY_VALUE_ERROR_CONTEXT ctx;
     void *cookie;
     /** Response specific flags. see ::lcb_RESPFLAGS */
     lcb_U16 rflags;

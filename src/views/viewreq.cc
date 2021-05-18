@@ -228,23 +228,21 @@ void lcb_VIEW_HANDLE_::JSPARSE_on_complete(const std::string &)
     // Nothing
 }
 
-static void doc_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
+static void doc_callback(lcb_INSTANCE *, int, const lcb_RESPGET *resp)
 {
-    const auto *rg = (const lcb_RESPGET *)rb;
-    auto *dreq = reinterpret_cast<lcb::docreq::DocRequest *>(rb->cookie);
+    auto *dreq = reinterpret_cast<lcb::docreq::DocRequest *>(resp->cookie);
     lcb::docreq::Queue *q = dreq->parent;
 
     q->ref();
 
     q->n_awaiting_response--;
-    dreq->docresp = *rg;
+    dreq->docresp = *resp;
     dreq->ready = 1;
-    dreq->docresp.ctx.key = (const char *)dreq->docid.iov_base;
-    dreq->docresp.ctx.key_len = dreq->docid.iov_len;
+    dreq->docresp.ctx.key.assign((const char *)dreq->docid.iov_base, dreq->docid.iov_len);
 
     /* Reference the response data, since we might not be invoking this right
      * away */
-    if (rg->ctx.rc == LCB_SUCCESS) {
+    if (resp->ctx.rc == LCB_SUCCESS) {
         lcb_backbuf_ref(reinterpret_cast<lcb_BACKBUF>(dreq->docresp.bufh));
     }
     q->check();
@@ -263,7 +261,7 @@ static lcb_STATUS cb_op_schedule(lcb::docreq::Queue *q, lcb::docreq::DocRequest 
             LCB_CMD_SET_TRACESPAN(&gcmd, req->span);
         }
     }
-    dreq->callback = doc_callback;
+    dreq->callback = (lcb_RESPCALLBACK)doc_callback;
     gcmd.cmdflags |= LCB_CMD_F_INTERNAL_CALLBACK;
     return lcb_get(q->instance, &dreq->callback, &gcmd);
 }

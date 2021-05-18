@@ -21,6 +21,8 @@
 #include <gtest/gtest.h>
 #include "internalstructs.h"
 
+#include "capi/cmd_get.hh"
+
 #define NUM_PIPELINES 4
 
 struct CQWrap : mc_CMDQUEUE {
@@ -36,7 +38,7 @@ struct CQWrap : mc_CMDQUEUE {
             pll[ii] = pipeline;
         }
         lcbvb_genconfig(config, NUM_PIPELINES, 3, 1024);
-        this->cqdata = NULL; /* instance pointer */
+        this->cqdata = nullptr; /* instance pointer */
         mcreq_queue_init(this);
         this->seq = 100;
         mcreq_queue_add_pipelines(this, pll, NUM_PIPELINES, config);
@@ -85,16 +87,16 @@ struct PacketWrap {
     mc_PACKET *pkt;
     mc_PIPELINE *pipeline;
     protocol_binary_request_header hdr;
-    lcb_CMDBASE cmd;
+    lcb_CMDGET cmd;
     char *pktbuf;
     char *kbuf;
 
     PacketWrap()
     {
-        pkt = NULL;
-        pipeline = NULL;
-        pktbuf = NULL;
-        kbuf = NULL;
+        pkt = nullptr;
+        pipeline = nullptr;
+        pktbuf = nullptr;
+        kbuf = nullptr;
         memset(&hdr, 0, sizeof(hdr));
         memset(&cmd, 0, sizeof(cmd));
     }
@@ -140,14 +142,12 @@ struct PacketWrap {
     bool reservePacket(mc_CMDQUEUE *cq)
     {
         lcb_STATUS err;
-        err = mcreq_basic_packet(cq, &cmd, &hdr, 0, 0, &pkt, &pipeline, 0);
+        err = mcreq_basic_packet(cq, &cmd.key, cmd.cid, &hdr, 0, 0, &pkt, &pipeline, 0);
         return err == LCB_SUCCESS;
     }
 
     ~PacketWrap()
     {
-        if (pktbuf != NULL) {
-            delete[] pktbuf;
-        }
+        delete[] pktbuf;
     }
 };

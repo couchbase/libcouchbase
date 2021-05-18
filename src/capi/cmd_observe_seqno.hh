@@ -21,6 +21,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "key_value_error_context.hh"
+
 /**
  * @brief Command structure for lcb_observe_seqno3().
  * Note #key, #nkey, and #cas are not used in this command.
@@ -78,11 +80,11 @@ struct lcb_CMDOBSEQNO_ {
  * mutation token fields in @ref lcb_CMDOBSEQNO
  */
 struct lcb_RESPOBSEQNO_ {
+    lcb_KEY_VALUE_ERROR_CONTEXT ctx{};
     /**
      Application-defined pointer passed as the `cookie` parameter when
      scheduling the command.
      */
-    lcb_KEY_VALUE_ERROR_CONTEXT ctx;
     void *cookie;
     /** Response specific flags. see ::lcb_RESPFLAGS */
     std::uint16_t rflags;

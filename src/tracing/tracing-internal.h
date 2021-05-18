@@ -151,7 +151,7 @@ void lcbtrace_span_add_tag_str_nocopy(lcbtrace_SPAN *span, const char *name, con
         if (span) {                                                                                                    \
             lcbtrace_span_add_tag_uint64(span, LCBTRACE_TAG_PEER_LATENCY, (response)->duration());                     \
             lcb::Server *server = static_cast<lcb::Server *>(pipeline);                                                \
-            lcbtrace_span_add_tag_str_nocopy(span, LCBTRACE_TAG_PEER_ADDRESS, resp.ctx.endpoint);                      \
+            lcbtrace_span_add_tag_str_nocopy(span, LCBTRACE_TAG_PEER_ADDRESS, resp.ctx.endpoint.c_str());              \
             lcbio_CTX *ctx = server->connctx;                                                                          \
             if (ctx) {                                                                                                 \
                 char local_id[34] = {};                                                                                \

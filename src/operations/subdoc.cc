@@ -59,17 +59,6 @@ LIBCOUCHBASE_API int lcb_respsubdoc_is_deleted(const lcb_RESPSUBDOC *resp)
 LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_error_context(const lcb_RESPSUBDOC *resp,
                                                          const lcb_KEY_VALUE_ERROR_CONTEXT **ctx)
 {
-    if (resp->rflags & LCB_RESP_F_ERRINFO) {
-        lcb_RESPSUBDOC *mut = const_cast<lcb_RESPSUBDOC *>(resp);
-        mut->ctx.context = lcb_resp_get_error_context(LCB_CALLBACK_SDLOOKUP, (const lcb_RESPBASE *)resp);
-        if (mut->ctx.context) {
-            mut->ctx.context_len = strlen(resp->ctx.context);
-        }
-        mut->ctx.ref = lcb_resp_get_error_ref(LCB_CALLBACK_SDLOOKUP, (const lcb_RESPBASE *)resp);
-        if (mut->ctx.ref) {
-            mut->ctx.ref_len = strlen(resp->ctx.ref);
-        }
-    }
     *ctx = &resp->ctx;
     return LCB_SUCCESS;
 }
@@ -88,23 +77,22 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_cas(const lcb_RESPSUBDOC *resp, uint6
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_key(const lcb_RESPSUBDOC *resp, const char **key, size_t *key_len)
 {
-    *key = (const char *)resp->ctx.key;
-    *key_len = resp->ctx.key_len;
+    *key = resp->ctx.key.c_str();
+    *key_len = resp->ctx.key.size();
     return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respsubdoc_mutation_token(const lcb_RESPSUBDOC *resp, lcb_MUTATION_TOKEN *token)
 {
-    const lcb_MUTATION_TOKEN *mt = lcb_resp_get_mutation_token(LCB_CALLBACK_SDMUTATE, (const lcb_RESPBASE *)resp);
-    if (token && mt) {
-        *token = *mt;
+    if (token) {
+        *token = resp->mt;
     }
     return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_create(lcb_SUBDOCSPECS **operations, size_t capacity)
 {
-    lcb_SUBDOCSPECS *res = (lcb_SUBDOCSPECS *)calloc(1, sizeof(lcb_SUBDOCSPECS));
+    auto *res = (lcb_SUBDOCSPECS *)calloc(1, sizeof(lcb_SUBDOCSPECS));
     res->nspecs = capacity;
     res->specs = (lcb_SDSPEC *)calloc(res->nspecs, sizeof(lcb_SDSPEC));
     *operations = res;
@@ -146,7 +134,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_cas(lcb_CMDSUBDOC *cmd, uint64_t cas)
 LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_get(lcb_SUBDOCSPECS *operations, size_t index, uint32_t flags,
                                                 const char *path, size_t path_len)
 {
-    if (path == NULL || path_len == 0) {
+    if (path == nullptr || path_len == 0) {
         operations->specs[index].sdcmd = LCB_SDCMD_GET_FULLDOC;
     } else {
         operations->specs[index].sdcmd = LCB_SDCMD_GET;
@@ -169,7 +157,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_replace(lcb_SUBDOCSPECS *operations,
                                                     const char *path, size_t path_len, const char *value,
                                                     size_t value_len)
 {
-    if (path == NULL || path_len == 0) {
+    if (path == nullptr || path_len == 0) {
         operations->specs[index].sdcmd = LCB_SDCMD_SET_FULLDOC;
     } else {
         operations->specs[index].sdcmd = LCB_SDCMD_REPLACE;
@@ -252,7 +240,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_counter(lcb_SUBDOCSPECS *operations,
     operations->specs[index].sdcmd = LCB_SDCMD_COUNTER;
     operations->specs[index].options = flags;
     LCB_SDSPEC_SET_PATH(&operations->specs[index], path, path_len);
-    char *value = (char *)calloc(22, sizeof(char));
+    auto *value = (char *)calloc(22, sizeof(char));
     size_t value_len = snprintf(value, 21, "%" PRId64, delta);
     LCB_SDSPEC_SET_VALUE(&operations->specs[index], value, value_len);
     return LCB_SUCCESS;
@@ -261,7 +249,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_counter(lcb_SUBDOCSPECS *operations,
 LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_remove(lcb_SUBDOCSPECS *operations, size_t index, uint32_t flags,
                                                    const char *path, size_t path_len)
 {
-    if (path == NULL || path_len == 0) {
+    if (path == nullptr || path_len == 0) {
         operations->specs[index].sdcmd = LCB_SDCMD_REMOVE_FULLDOC;
     } else {
         operations->specs[index].sdcmd = LCB_SDCMD_REMOVE;
@@ -628,7 +616,7 @@ struct MultiBuilder {
 
     ~MultiBuilder()
     {
-        if (extra_body != NULL) {
+        if (extra_body != nullptr) {
             delete[] extra_body;
         }
     }
@@ -790,8 +778,7 @@ lcb_STATUS lcb_subdoc(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC 
             lcb_RESPCALLBACK cb = lcb_find_callback(instance, cbtype);
             lcb_RESPSUBDOC sd{};
             sd.ctx = resp->ctx;
-            sd.ctx.key = static_cast<const char *>(cmd->key.contig.bytes);
-            sd.ctx.key_len = cmd->key.contig.nbytes;
+            sd.ctx.key.assign(static_cast<const char *>(cmd->key.contig.bytes), cmd->key.contig.nbytes);
             sd.cookie = cookie;
             cb(instance, cbtype, reinterpret_cast<const lcb_RESPBASE *>(&sd));
             return resp->ctx.rc;
@@ -853,8 +840,8 @@ lcb_STATUS lcb_subdoc(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSUBDOC 
             *cmd->error_index = -1;
         }
 
-        rc = mcreq_basic_packet(&instance->cmdq, reinterpret_cast<const lcb_CMDBASE *>(cmd), &hdr, extlen, ffextlen,
-                                &pkt, &pl, MCREQ_BASICPACKET_F_FALLBACKOK);
+        rc = mcreq_basic_packet(&instance->cmdq, &cmd->key, cmd->cid, &hdr, extlen, ffextlen, &pkt, &pl,
+                                MCREQ_BASICPACKET_F_FALLBACKOK);
 
         if (rc != LCB_SUCCESS) {
             return rc;

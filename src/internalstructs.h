@@ -28,30 +28,6 @@ extern "C" {
 /**
  * @private
  */
-struct lcb_KEY_VALUE_ERROR_CONTEXT_ {
-    lcb_STATUS rc;
-    uint16_t status_code;
-    uint32_t opaque;
-    uint64_t cas;
-    const char *key;
-    size_t key_len;
-    const char *bucket;
-    size_t bucket_len;
-    const char *collection;
-    size_t collection_len;
-    const char *scope;
-    size_t scope_len;
-    const char *ref;
-    size_t ref_len;
-    const char *context;
-    size_t context_len;
-    char endpoint[NI_MAXHOST + NI_MAXSERV + 4];
-    size_t endpoint_len;
-};
-
-/**
- * @private
- */
 struct lcb_HTTP_ERROR_CONTEXT_ {
     lcb_STATUS rc;
     uint32_t response_code;
@@ -112,22 +88,6 @@ struct lcb_CREATEOPTS_ {
  * @{
  */
 
-#define LCB_RESP_BASE                                                                                                  \
-    /**                                                                                                                \
-     Application-defined pointer passed as the `cookie` parameter when                                                 \
-     scheduling the command.                                                                                           \
-     */                                                                                                                \
-    lcb_KEY_VALUE_ERROR_CONTEXT ctx;                                                                                   \
-    void *cookie;                                                                                                      \
-    /** Response specific flags. see ::lcb_RESPFLAGS */                                                                \
-    lcb_U16 rflags;
-
-/**@brief Common ABI header for all commands. _Any_ command may be safely
- * casted to this type.*/
-struct lcb_CMDBASE_ {
-    LCB_CMD_BASE;
-};
-
 /**
  * Flag for lcb_CMDBASE::cmdflags which indicates that the lcb_CMDBASE::cookie
  * is a special callback object. This flag is used internally within the
@@ -147,15 +107,6 @@ struct lcb_CMDBASE_ {
 #define LCB_CMD_F_CLONE (1u << 2u)
 
 /**@}*/
-
-/**
- * @brief
- * Base response structure for callbacks.
- * All responses structures derive from this ABI.
- */
-struct lcb_RESPBASE_ {
-    LCB_RESP_BASE
-};
 
 /**
  * @committed
@@ -203,6 +154,9 @@ struct lcb_RESPBASE_ {
 typedef struct lcb_RESPOBSERVE_ lcb_RESPOBSERVE;
 typedef struct lcb_CMDOBSERVE_ lcb_CMDOBSERVE;
 
+typedef struct lcb_RESPENDURE_ lcb_RESPENDURE;
+typedef struct lcb_CMDENDURE_ lcb_CMDENDURE;
+
 /**
  * @ingroup lcb-kv-api
  * @defgroup lcb-mctx MULTICMD API
@@ -246,7 +200,8 @@ typedef struct lcb_MULTICMD_CTX_st {
      * @param cmd the command to add. Note that `cmd` may be a subclass of lcb_CMDBASE
      * @return LCB_SUCCESS, or failure if a command could not be added.
      */
-    lcb_STATUS (*addcmd)(struct lcb_MULTICMD_CTX_st *ctx, const lcb_CMDBASE *cmd);
+    lcb_STATUS (*add_observe)(struct lcb_MULTICMD_CTX_st *ctx, const lcb_CMDOBSERVE *cmd);
+    lcb_STATUS (*add_endure)(struct lcb_MULTICMD_CTX_st *ctx, const lcb_CMDENDURE *cmd);
 
     /**
      * Indicate that no more commands are added to this context, and that the
@@ -406,9 +361,6 @@ typedef struct lcb_durability_opts_st {
         lcb_DURABILITYOPTSv0 v0;
     } v;
 } lcb_durability_opts_t;
-
-typedef struct lcb_RESPENDURE_ lcb_RESPENDURE;
-typedef struct lcb_CMDENDURE_ lcb_CMDENDURE;
 
 /**
  * @committed

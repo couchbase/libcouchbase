@@ -26,6 +26,7 @@
 #include <lcbio/iotable.h>
 
 #include "capi/cmd_store.hh"
+#include "capi/cmd_observe.hh"
 
 using namespace lcb::durability;
 
@@ -217,7 +218,6 @@ void Item::finish()
     if (parent->is_durstore) {
         lcb_RESPSTORE resp{};
         resp.ctx.key = result.ctx.key;
-        resp.ctx.key_len = result.ctx.key_len;
         resp.ctx.rc = result.ctx.rc;
         resp.ctx.cas = reqcas;
         resp.cookie = result.cookie;
@@ -323,7 +323,12 @@ void Durset::MCTX_setspan(lcbtrace_SPAN *span_)
     span = span_;
 }
 
-lcb_STATUS Durset::MCTX_addcmd(const lcb_CMDBASE *cmd)
+lcb_STATUS Durset::MCTX_add_observe(const lcb_CMDOBSERVE *)
+{
+    return LCB_ERR_UNSUPPORTED_OPERATION;
+}
+
+lcb_STATUS Durset::MCTX_add_endure(const lcb_CMDENDURE *cmd)
 {
     if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
         return LCB_ERR_EMPTY_KEY;
@@ -336,30 +341,23 @@ lcb_STATUS Durset::MCTX_addcmd(const lcb_CMDBASE *cmd)
     mcreq_map_key(&instance->cmdq, &cmd->key, MCREQ_PKT_BASESIZE, &vbid, &srvix);
 
     /* ok. now let's initialize the entry..*/
-    ent.res().ctx.key_len = cmd->key.contig.nbytes;
+    ent.res().ctx.key.assign(static_cast<const char *>(cmd->key.contig.bytes), cmd->key.contig.nbytes);
     ent.reqcas = cmd->cas;
     ent.parent = this;
     ent.vbid = vbid;
 
-    kvbufs.append(reinterpret_cast<const char *>(cmd->key.contig.bytes), cmd->key.contig.nbytes);
+    kvbufs.append(ent.res().ctx.key);
 
-    return after_add(ent, reinterpret_cast<const lcb_CMDENDURE *>(cmd));
+    return after_add(ent, cmd->mutation_token);
 }
 
 lcb_STATUS Durset::MCTX_done(const void *cookie_)
 {
     lcb_STATUS err;
-    const char *kptr = kvbufs.c_str();
 
     if (entries.empty()) {
         delete this;
         return LCB_ERR_INVALID_ARGUMENT;
-    }
-
-    for (size_t ii = 0; ii < entries.size(); ii++) {
-        Item *ent = &entries[ii];
-        ent->res().ctx.key = kptr;
-        kptr += ent->res().ctx.key_len;
     }
 
     if ((err = prepare_schedule()) != LCB_SUCCESS) {

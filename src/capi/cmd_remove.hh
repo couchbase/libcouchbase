@@ -21,6 +21,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "key_value_error_context.hh"
+
 /**
  * @private
  */
@@ -72,11 +74,12 @@ struct lcb_CMDREMOVE_ {
  * @private
  */
 struct lcb_RESPREMOVE_ {
+    lcb_KEY_VALUE_ERROR_CONTEXT ctx{};
+    lcb_MUTATION_TOKEN mt{};
     /**
      Application-defined pointer passed as the `cookie` parameter when
      scheduling the command.
      */
-    lcb_KEY_VALUE_ERROR_CONTEXT ctx;
     void *cookie;
     /** Response specific flags. see ::lcb_RESPFLAGS */
     std::uint16_t rflags;

@@ -330,11 +330,11 @@ static void touch_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPTOUC
 
 static void observe_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPOBSERVE *resp)
 {
-    if (resp->ctx.key == nullptr) {
+    if (resp->ctx.key.empty()) {
         return;
     }
 
-    string key((const char *)resp->ctx.key, resp->ctx.key_len);
+    string key = resp->ctx.key;
     if (resp->ctx.rc == LCB_SUCCESS) {
         fprintf(stderr, "%-20s [%s] Status=0x%x, CAS=0x%" PRIx64 "\n", key.c_str(),
                 resp->ismaster ? "Master" : "Replica", resp->status, resp->ctx.cas);
@@ -1077,7 +1077,7 @@ void ObserveHandler::run()
     for (const auto &key : keys) {
         lcb_CMDOBSERVE cmd = {0};
         LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
-        err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
+        err = mctx->add_observe(mctx, &cmd);
         if (err != LCB_SUCCESS) {
             throw LcbError(err);
         }

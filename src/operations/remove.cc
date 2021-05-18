@@ -29,17 +29,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respremove_status(const lcb_RESPREMOVE *resp)
 LIBCOUCHBASE_API lcb_STATUS lcb_respremove_error_context(const lcb_RESPREMOVE *resp,
                                                          const lcb_KEY_VALUE_ERROR_CONTEXT **ctx)
 {
-    if (resp->rflags & LCB_RESP_F_ERRINFO) {
-        auto *mut = const_cast<lcb_RESPREMOVE *>(resp);
-        mut->ctx.context = lcb_resp_get_error_context(LCB_CALLBACK_REMOVE, (const lcb_RESPBASE *)resp);
-        if (mut->ctx.context) {
-            mut->ctx.context_len = strlen(resp->ctx.context);
-        }
-        mut->ctx.ref = lcb_resp_get_error_ref(LCB_CALLBACK_REMOVE, (const lcb_RESPBASE *)resp);
-        if (mut->ctx.ref) {
-            mut->ctx.ref_len = strlen(resp->ctx.ref);
-        }
-    }
     *ctx = &resp->ctx;
     return LCB_SUCCESS;
 }
@@ -58,16 +47,15 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respremove_cas(const lcb_RESPREMOVE *resp, uint6
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respremove_key(const lcb_RESPREMOVE *resp, const char **key, size_t *key_len)
 {
-    *key = (const char *)resp->ctx.key;
-    *key_len = resp->ctx.key_len;
+    *key = resp->ctx.key.c_str();
+    *key_len = resp->ctx.key.size();
     return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respremove_mutation_token(const lcb_RESPREMOVE *resp, lcb_MUTATION_TOKEN *token)
 {
-    const lcb_MUTATION_TOKEN *mt = lcb_resp_get_mutation_token(LCB_CALLBACK_REMOVE, (const lcb_RESPBASE *)resp);
-    if (token && mt) {
-        *token = *mt;
+    if (token) {
+        *token = resp->mt;
     }
     return LCB_SUCCESS;
 }
@@ -160,8 +148,7 @@ lcb_STATUS lcb_remove(lcb_INSTANCE *instance, void *cookie, const lcb_CMDREMOVE 
             lcb_RESPCALLBACK cb = lcb_find_callback(instance, LCB_CALLBACK_REMOVE);
             lcb_RESPREMOVE rem{};
             rem.ctx = resp->ctx;
-            rem.ctx.key = static_cast<const char *>(cmd->key.contig.bytes);
-            rem.ctx.key_len = cmd->key.contig.nbytes;
+            rem.ctx.key.assign(static_cast<const char *>(cmd->key.contig.bytes), cmd->key.contig.nbytes);
             rem.cookie = cookie;
             cb(instance, LCB_CALLBACK_REMOVE, reinterpret_cast<const lcb_RESPBASE *>(&rem));
             return resp->ctx.rc;
@@ -183,7 +170,7 @@ lcb_STATUS lcb_remove(lcb_INSTANCE *instance, void *cookie, const lcb_CMDREMOVE 
             ffextlen = 4;
         }
 
-        err = mcreq_basic_packet(cq, (const lcb_CMDBASE *)cmd, hdr, 0, ffextlen, &pkt, &pl,
+        err = mcreq_basic_packet(cq, &cmd->key, cmd->cid , hdr, 0, ffextlen, &pkt, &pl,
                                  MCREQ_BASICPACKET_F_FALLBACKOK);
         if (err != LCB_SUCCESS) {
             return err;

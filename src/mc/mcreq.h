@@ -664,9 +664,9 @@ void mcreq_map_key(mc_CMDQUEUE *queue, const lcb_KEYBUF *key, unsigned nhdr, int
  * MCREQ_BASICPACKET_F_FALLBACKOK
  */
 
-lcb_STATUS mcreq_basic_packet(mc_CMDQUEUE *queue, const lcb_CMDBASE *cmd, protocol_binary_request_header *req,
-                              uint8_t extlen, uint8_t ffextlen, mc_PACKET **packet, mc_PIPELINE **pipeline,
-                              int options);
+lcb_STATUS mcreq_basic_packet(mc_CMDQUEUE *queue, const lcb_KEYBUF *key, uint32_t collection_id,
+                              protocol_binary_request_header *req, lcb_uint8_t extlen, lcb_uint8_t ffextlen,
+                              mc_PACKET **packet, mc_PIPELINE **pipeline, int options);
 
 /**
  * @brief Get the key from a packet
@@ -956,7 +956,7 @@ void mcreq_dump_chain(const mc_PIPELINE *pipeline, FILE *fp, mcreq_payload_dump_
     } while (0)
 
 int leb128_encode(uint32_t value, uint8_t *buf);
-int leb128_decode(uint8_t *buf, size_t nbuf, uint32_t *result);
+int leb128_decode(const uint8_t *buf, size_t nbuf, uint32_t *result);
 
 /**@}*/
 

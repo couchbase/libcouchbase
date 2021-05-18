@@ -182,8 +182,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respgetcid_status(const lcb_RESPGETCID *resp)
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetcid_scoped_collection(const lcb_RESPGETCID *resp, const char **name,
                                                              size_t *name_len)
 {
-    *name = (const char *)resp->ctx.key;
-    *name_len = resp->ctx.key_len;
+    *name = resp->ctx.key.c_str();
+    *name_len = resp->ctx.key.size();
     return LCB_SUCCESS;
 }
 

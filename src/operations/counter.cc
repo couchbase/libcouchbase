@@ -28,17 +28,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_status(const lcb_RESPCOUNTER *resp)
 LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_error_context(const lcb_RESPCOUNTER *resp,
                                                           const lcb_KEY_VALUE_ERROR_CONTEXT **ctx)
 {
-    if (resp->rflags & LCB_RESP_F_ERRINFO) {
-        lcb_RESPCOUNTER *mut = const_cast<lcb_RESPCOUNTER *>(resp);
-        mut->ctx.context = lcb_resp_get_error_context(LCB_CALLBACK_COUNTER, (const lcb_RESPBASE *)resp);
-        if (mut->ctx.context) {
-            mut->ctx.context_len = strlen(resp->ctx.context);
-        }
-        mut->ctx.ref = lcb_resp_get_error_ref(LCB_CALLBACK_COUNTER, (const lcb_RESPBASE *)resp);
-        if (mut->ctx.ref) {
-            mut->ctx.ref_len = strlen(resp->ctx.ref);
-        }
-    }
     *ctx = &resp->ctx;
     return LCB_SUCCESS;
 }
@@ -57,16 +46,15 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_cas(const lcb_RESPCOUNTER *resp, uin
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_key(const lcb_RESPCOUNTER *resp, const char **key, size_t *key_len)
 {
-    *key = (const char *)resp->ctx.key;
-    *key_len = resp->ctx.key_len;
+    *key = resp->ctx.key.c_str();
+    *key_len = resp->ctx.key.size();
     return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respcounter_mutation_token(const lcb_RESPCOUNTER *resp, lcb_MUTATION_TOKEN *token)
 {
-    const lcb_MUTATION_TOKEN *mt = lcb_resp_get_mutation_token(LCB_CALLBACK_COUNTER, (const lcb_RESPBASE *)resp);
-    if (token && mt) {
-        *token = *mt;
+    if (token) {
+        *token = resp->mt;
     }
     return LCB_SUCCESS;
 }
@@ -188,8 +176,7 @@ lcb_STATUS lcb_counter(lcb_INSTANCE *instance, void *cookie, const lcb_CMDCOUNTE
             lcb_RESPCALLBACK cb = lcb_find_callback(instance, LCB_CALLBACK_COUNTER);
             lcb_RESPCOUNTER cnt{};
             cnt.ctx = resp->ctx;
-            cnt.ctx.key = static_cast<const char *>(cmd->key.contig.bytes);
-            cnt.ctx.key_len = cmd->key.contig.nbytes;
+            cnt.ctx.key.assign(static_cast<const char *>(cmd->key.contig.bytes), cmd->key.contig.nbytes);
             cnt.cookie = cookie;
             cb(instance, LCB_CALLBACK_COUNTER, reinterpret_cast<const lcb_RESPBASE *>(&cnt));
             return resp->ctx.rc;
@@ -212,7 +199,7 @@ lcb_STATUS lcb_counter(lcb_INSTANCE *instance, void *cookie, const lcb_CMDCOUNTE
             ffextlen = 4;
         }
 
-        err = mcreq_basic_packet(q, (const lcb_CMDBASE *)cmd, hdr, 20, ffextlen, &packet, &pipeline,
+        err = mcreq_basic_packet(q, &cmd->key, cmd->cid, hdr, 20, ffextlen, &packet, &pipeline,
                                  MCREQ_BASICPACKET_F_FALLBACKOK);
         if (err != LCB_SUCCESS) {
             return err;

@@ -34,17 +34,6 @@ LIBCOUCHBASE_API int lcb_respexists_is_found(const lcb_RESPEXISTS *resp)
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_error_context(const lcb_RESPEXISTS *resp,
                                                          const lcb_KEY_VALUE_ERROR_CONTEXT **ctx)
 {
-    if (resp->rflags & LCB_RESP_F_ERRINFO) {
-        lcb_RESPEXISTS *mut = const_cast<lcb_RESPEXISTS *>(resp);
-        mut->ctx.context = lcb_resp_get_error_context(LCB_CALLBACK_EXISTS, (const lcb_RESPBASE *)resp);
-        if (mut->ctx.context) {
-            mut->ctx.context_len = strlen(resp->ctx.context);
-        }
-        mut->ctx.ref = lcb_resp_get_error_ref(LCB_CALLBACK_EXISTS, (const lcb_RESPBASE *)resp);
-        if (mut->ctx.ref) {
-            mut->ctx.ref_len = strlen(resp->ctx.ref);
-        }
-    }
     *ctx = &resp->ctx;
     return LCB_SUCCESS;
 }
@@ -63,16 +52,15 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respexists_cas(const lcb_RESPEXISTS *resp, uint6
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_key(const lcb_RESPEXISTS *resp, const char **key, size_t *key_len)
 {
-    *key = (const char *)resp->ctx.key;
-    *key_len = resp->ctx.key_len;
+    *key = resp->ctx.key.c_str();
+    *key_len = resp->ctx.key.size();
     return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respexists_mutation_token(const lcb_RESPEXISTS *resp, lcb_MUTATION_TOKEN *token)
 {
-    const lcb_MUTATION_TOKEN *mt = lcb_resp_get_mutation_token(LCB_CALLBACK_EXISTS, (const lcb_RESPBASE *)resp);
-    if (token && mt) {
-        *token = *mt;
+    if (token) {
+        *token = resp->mt;
     }
     return LCB_SUCCESS;
 }
@@ -153,8 +141,7 @@ lcb_STATUS lcb_exists(lcb_INSTANCE *instance, void *cookie, const lcb_CMDEXISTS 
             lcb_RESPCALLBACK cb = lcb_find_callback(instance, LCB_CALLBACK_EXISTS);
             lcb_RESPEXISTS ext{};
             ext.ctx = resp->ctx;
-            ext.ctx.key = static_cast<const char *>(cmd->key.contig.bytes);
-            ext.ctx.key_len = cmd->key.contig.nbytes;
+            ext.ctx.key.assign(static_cast<const char *>(cmd->key.contig.bytes), cmd->key.contig.nbytes);
             ext.cookie = cookie;
             cb(instance, LCB_CALLBACK_EXISTS, reinterpret_cast<const lcb_RESPBASE *>(&ext));
             return resp->ctx.rc;
@@ -166,7 +153,7 @@ lcb_STATUS lcb_exists(lcb_INSTANCE *instance, void *cookie, const lcb_CMDEXISTS 
         mc_PIPELINE *pipeline;
         mc_PACKET *pkt;
         lcb_STATUS err;
-        err = mcreq_basic_packet(cq, (const lcb_CMDBASE *)cmd, &hdr, 0, 0, &pkt, &pipeline,
+        err = mcreq_basic_packet(cq, &cmd->key, cmd->cid, &hdr, 0, 0, &pkt, &pipeline,
                                  MCREQ_BASICPACKET_F_FALLBACKOK);
         if (err != LCB_SUCCESS) {
             return err;

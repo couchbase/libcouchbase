@@ -733,9 +733,9 @@ static void doManyItems(lcb_INSTANCE *instance, const std::vector<std::string> &
 }
 
 extern "C" {
-static void mcdFoVerifyCb(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
+static void mcdFoVerifyCb(lcb_INSTANCE *, int, const lcb_RESPSTORE *resp)
 {
-    EXPECT_EQ(LCB_SUCCESS, rb->ctx.rc);
+    EXPECT_EQ(LCB_SUCCESS, lcb_respstore_status(resp));
 }
 }
 
@@ -757,7 +757,7 @@ TEST_F(MockUnitTest, DISABLED_testMemcachedFailover)
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     size_t numNodes = mock->getNumNodes();
 
-    oldCb = lcb_install_callback(instance, LCB_CALLBACK_STORE, mcdFoVerifyCb);
+    oldCb = lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)mcdFoVerifyCb);
 
     // Get the command list:
     std::vector<std::string> distKeys;
@@ -778,7 +778,7 @@ TEST_F(MockUnitTest, DISABLED_testMemcachedFailover)
     ASSERT_EQ(numNodes, lcb_get_num_nodes(instance));
 
     // Restore the verify callback
-    lcb_install_callback(instance, LCB_CALLBACK_STORE, mcdFoVerifyCb);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)mcdFoVerifyCb);
     doManyItems(instance, distKeys);
 
     lcb_destroy(instance);

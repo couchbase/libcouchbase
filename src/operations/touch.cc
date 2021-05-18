@@ -29,31 +29,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_status(const lcb_RESPTOUCH *resp)
 LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_error_context(const lcb_RESPTOUCH *resp,
                                                         const lcb_KEY_VALUE_ERROR_CONTEXT **ctx)
 {
-    if (resp->rflags & LCB_RESP_F_ERRINFO) {
-        lcb_RESPTOUCH *mut = const_cast<lcb_RESPTOUCH *>(resp);
-        mut->ctx.context = lcb_resp_get_error_context(LCB_CALLBACK_TOUCH, (const lcb_RESPBASE *)resp);
-        if (mut->ctx.context) {
-            mut->ctx.context_len = strlen(resp->ctx.context);
-        }
-        mut->ctx.ref = lcb_resp_get_error_ref(LCB_CALLBACK_TOUCH, (const lcb_RESPBASE *)resp);
-        if (mut->ctx.ref) {
-            mut->ctx.ref_len = strlen(resp->ctx.ref);
-        }
-    }
     *ctx = &resp->ctx;
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_error_ref(const lcb_RESPTOUCH *resp, const char **ref, size_t *ref_len)
-{
-    if ((resp->rflags & LCB_RESP_F_ERRINFO) == 0) {
-        return LCB_ERR_DOCUMENT_NOT_FOUND;
-    }
-    const char *val = lcb_resp_get_error_ref(LCB_CALLBACK_TOUCH, (const lcb_RESPBASE *)resp);
-    if (val) {
-        *ref = val;
-        *ref_len = strlen(val);
-    }
     return LCB_SUCCESS;
 }
 
@@ -71,16 +47,15 @@ LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_cas(const lcb_RESPTOUCH *resp, uint64_
 
 LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_key(const lcb_RESPTOUCH *resp, const char **key, size_t *key_len)
 {
-    *key = (const char *)resp->ctx.key;
-    *key_len = resp->ctx.key_len;
+    *key = resp->ctx.key.c_str();
+    *key_len = resp->ctx.key.size();
     return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_resptouch_mutation_token(const lcb_RESPTOUCH *resp, lcb_MUTATION_TOKEN *token)
 {
-    const lcb_MUTATION_TOKEN *mt = lcb_resp_get_mutation_token(LCB_CALLBACK_TOUCH, (const lcb_RESPBASE *)resp);
-    if (token && mt) {
-        *token = *mt;
+    if (token) {
+        *token = resp->mt;
     }
     return LCB_SUCCESS;
 }
@@ -171,8 +146,7 @@ lcb_STATUS lcb_touch(lcb_INSTANCE *instance, void *cookie, const lcb_CMDTOUCH *c
             lcb_RESPCALLBACK cb = lcb_find_callback(instance, LCB_CALLBACK_TOUCH);
             lcb_RESPTOUCH touch{};
             touch.ctx = resp->ctx;
-            touch.ctx.key = static_cast<const char *>(cmd->key.contig.bytes);
-            touch.ctx.key_len = cmd->key.contig.nbytes;
+            touch.ctx.key.assign(static_cast<const char *>(cmd->key.contig.bytes), cmd->key.contig.nbytes);
             touch.cookie = cookie;
             cb(instance, LCB_CALLBACK_TOUCH, reinterpret_cast<const lcb_RESPBASE *>(&touch));
             return resp->ctx.rc;
@@ -192,7 +166,7 @@ lcb_STATUS lcb_touch(lcb_INSTANCE *instance, void *cookie, const lcb_CMDTOUCH *c
             ffextlen = 4;
         }
 
-        err = mcreq_basic_packet(&instance->cmdq, (const lcb_CMDBASE *)cmd, hdr, 4, ffextlen, &pkt, &pl,
+        err = mcreq_basic_packet(&instance->cmdq, &cmd->key, cmd->cid, hdr, 4, ffextlen, &pkt, &pl,
                                  MCREQ_BASICPACKET_F_FALLBACKOK);
         if (err != LCB_SUCCESS) {
             return err;

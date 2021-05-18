@@ -76,9 +76,7 @@ class DurabilityOperation
     void assign(const lcb_RESPENDURE *resp)
     {
         resp_ = *resp;
-        key.assign((const char *)resp->ctx.key, resp->ctx.key_len);
-        resp_.ctx.key = nullptr;
-        resp_.ctx.key_len = 0;
+        key = resp->ctx.key;
     }
 
     static void wait(lcb_INSTANCE *instance)
@@ -94,7 +92,7 @@ class DurabilityOperation
         lcb_STATUS rc;
         lcb_MULTICMD_CTX *mctx = lcb_endure3_ctxnew(instance, opts, &rc);
         EXPECT_FALSE(mctx == nullptr);
-        rc = mctx->addcmd(mctx, (lcb_CMDBASE *)cmd);
+        rc = mctx->add_endure(mctx, cmd);
         EXPECT_EQ(expected, rc);
         if (rc != LCB_SUCCESS) {
             mctx->fail(mctx);
@@ -171,7 +169,7 @@ class DurabilityMultiOperation
 
             cmd.cas = itm.cas;
             LCB_CMD_SET_KEY(&cmd, itm.key.c_str(), itm.key.length());
-            rc = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
+            rc = mctx->add_endure(mctx, &cmd);
             ASSERT_EQ(LCB_SUCCESS, rc);
             kmap[itm.key] = DurabilityOperation();
         }
@@ -186,11 +184,10 @@ class DurabilityMultiOperation
 
     void assign(const lcb_RESPENDURE *resp)
     {
-        ASSERT_GT(resp->ctx.key_len, 0U);
+        ASSERT_FALSE(resp->ctx.key.empty());
         counter++;
 
-        string key;
-        key.assign((const char *)resp->ctx.key, resp->ctx.key_len);
+        string key = resp->ctx.key;
         ASSERT_TRUE(kmap.find(key) != kmap.end());
         kmap[key].assign(resp);
     }
@@ -634,7 +631,7 @@ TEST_F(DurabilityUnitTest, testObserveSanity)
         ASSERT_NE((lcb_MULTICMD_CTX *)nullptr, mctx);
         lcb_CMDOBSERVE cmd = {0};
         LCB_CMD_SET_KEY(&cmd, "key", 3);
-        ASSERT_EQ(LCB_SUCCESS, mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd));
+        ASSERT_EQ(LCB_SUCCESS, mctx->add_observe(mctx, &cmd));
         ASSERT_EQ(LCB_SUCCESS, mctx->done(mctx, &o_cookie));
     }
 
@@ -649,7 +646,7 @@ TEST_F(DurabilityUnitTest, testObserveSanity)
         ASSERT_NE((lcb_MULTICMD_CTX *)nullptr, mctx);
         lcb_CMDENDURE cmd = {0};
         LCB_CMD_SET_KEY(&cmd, "key", 3);
-        ASSERT_EQ(LCB_SUCCESS, mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd));
+        ASSERT_EQ(LCB_SUCCESS, mctx->add_endure(mctx, &cmd));
         ASSERT_EQ(LCB_SUCCESS, mctx->done(mctx, &d_cookie));
     }
 
@@ -676,7 +673,7 @@ TEST_F(DurabilityUnitTest, testMasterObserve)
     lcb_CMDOBSERVE cmd = {0};
     cmd.cmdflags |= LCB_CMDOBSERVE_F_MASTER_ONLY;
     LCB_CMD_SET_KEY(&cmd, "key", 3);
-    ASSERT_EQ(LCB_SUCCESS, mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd));
+    ASSERT_EQ(LCB_SUCCESS, mctx->add_observe(mctx, &cmd));
     ASSERT_EQ(LCB_SUCCESS, mctx->done(mctx, &o_cookie));
     lcb_wait(instance, LCB_WAIT_DEFAULT);
 
@@ -751,7 +748,7 @@ TEST_F(DurabilityUnitTest, testDurabilityRelocation)
     ASSERT_NE((lcb_MULTICMD_CTX *)nullptr, mctx);
     lcb_CMDENDURE cmd = {0};
     LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
-    err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
+    err = mctx->add_endure(mctx, &cmd);
     ASSERT_EQ(LCB_SUCCESS, err);
 
     struct cb_cookie cookie = {0, 0};
@@ -785,7 +782,7 @@ TEST_F(DurabilityUnitTest, testMissingSynctoken)
     lcb_CMDENDURE cmd = {0};
     LCB_CMD_SET_KEY(&cmd, "foo", 3);
 
-    rc = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
+    rc = mctx->add_endure(mctx, &cmd);
     ASSERT_EQ(LCB_ERR_DURABILITY_NO_MUTATION_TOKENS, rc);
 
     mctx->fail(mctx);

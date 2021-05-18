@@ -34,9 +34,10 @@ static bool hasPendingOps(lcb_INSTANCE *instance)
     return false;
 }
 
-static void opCallback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
+static void opCallback(lcb_INSTANCE *, int, const lcb_RESPSTORE *resp)
 {
-    size_t *counter = reinterpret_cast< size_t * >(rb->cookie);
+    size_t *counter;
+    lcb_respstore_cookie(resp, (void **)&counter);
     *counter += 1;
 }
 
@@ -48,7 +49,7 @@ TEST_F(SchedUnitTests, testSched)
     size_t counter;
     createConnection(hw, &instance);
 
-    lcb_install_callback(instance, LCB_CALLBACK_STORE, opCallback);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)opCallback);
 
     // lcb_store
     lcb_CMDSTORE *scmd;

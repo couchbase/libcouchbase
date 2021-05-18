@@ -456,9 +456,9 @@ void MockEnvironment::bootstrapRealCluster()
 }
 
 extern "C" {
-static void mock_flush_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *resp)
+static void mock_flush_callback(lcb_INSTANCE *, int, const lcb_RESPCBFLUSH *resp)
 {
-    ASSERT_EQ(LCB_SUCCESS, resp->ctx.rc);
+    ASSERT_EQ(LCB_SUCCESS, resp->rc);
 }
 }
 
@@ -495,7 +495,7 @@ void MockEnvironment::clearAndReset()
         EXPECT_EQ(LCB_SUCCESS, err);
         lcb_wait(innerClient, LCB_WAIT_DEFAULT);
         EXPECT_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(innerClient));
-        lcb_install_callback(innerClient, LCB_CALLBACK_CBFLUSH, mock_flush_callback);
+        lcb_install_callback(innerClient, LCB_CALLBACK_CBFLUSH, (lcb_RESPCALLBACK)mock_flush_callback);
     } else {
         /* ensure that inner client is in a good shape (e.g. update internal timers, check dead sockets etc.) */
         lcb_tick_nowait(innerClient);

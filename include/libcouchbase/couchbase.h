@@ -537,8 +537,8 @@ typedef enum {
     LCB_DURABILITYLEVEL_PERSIST_TO_MAJORITY = 0x03
 } lcb_DURABILITY_LEVEL;
 
-typedef struct lcb_CMDBASE_ lcb_CMDBASE;
-typedef struct lcb_RESPBASE_ lcb_RESPBASE;
+typedef void lcb_CMDBASE;
+typedef void lcb_RESPBASE;
 
 /**
  * Callback invoked for responses.

@@ -443,9 +443,6 @@ TEST_F(MockUnitTest, testEmptyKeys)
     createConnection(hw, &instance);
 
     union {
-        lcb_CMDENDURE endure;
-        lcb_CMDOBSERVE observe;
-        lcb_CMDBASE base;
     } u{};
     memset(&u, 0, sizeof u);
 
@@ -483,7 +480,8 @@ TEST_F(MockUnitTest, testEmptyKeys)
 
     // Observe and such
     lcb_MULTICMD_CTX *ctx = lcb_observe3_ctxnew(instance);
-    ASSERT_EQ(LCB_ERR_EMPTY_KEY, ctx->addcmd(ctx, (lcb_CMDBASE *)&u.observe));
+    lcb_CMDOBSERVE observe{};
+    ASSERT_EQ(LCB_ERR_EMPTY_KEY, ctx->add_observe(ctx, &observe));
     ctx->fail(ctx);
 
     lcb_durability_opts_t dopts;
@@ -492,7 +490,8 @@ TEST_F(MockUnitTest, testEmptyKeys)
 
     ctx = lcb_endure3_ctxnew(instance, &dopts, nullptr);
     ASSERT_TRUE(ctx != nullptr);
-    ASSERT_EQ(LCB_ERR_EMPTY_KEY, ctx->addcmd(ctx, (lcb_CMDBASE *)&u.endure));
+    lcb_CMDENDURE endure{};
+    ASSERT_EQ(LCB_ERR_EMPTY_KEY, ctx->add_endure(ctx, &endure));
     ctx->fail(ctx);
 
     lcb_CMDSTATS *stats;
@@ -763,11 +762,12 @@ TEST_F(MockUnitTest, testRefreshConfig)
 }
 
 extern "C" {
-static void tickOpCb(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
+static void tickOpCb(lcb_INSTANCE *, int, const lcb_RESPSTORE *resp)
 {
-    int *p = (int *)rb->cookie;
+    int *p;
+    lcb_respstore_cookie(resp, (void **)&p);
     *p -= 1;
-    EXPECT_EQ(LCB_SUCCESS, rb->ctx.rc);
+    EXPECT_EQ(LCB_SUCCESS, lcb_respstore_status(resp));
 }
 }
 
@@ -781,7 +781,7 @@ TEST_F(MockUnitTest, testTickLoop)
     const char *key = "tickKey";
     const char *value = "tickValue";
 
-    lcb_install_callback(instance, LCB_CALLBACK_STORE, tickOpCb);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)tickOpCb);
     lcb_CMDSTORE *cmd;
     lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
     lcb_cmdstore_key(cmd, key, strlen(key));
@@ -852,10 +852,11 @@ TEST_F(MockUnitTest, testMultiCreds)
 }
 
 extern "C" {
-static void appendE2BIGcb(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
+static void appendE2BIGcb(lcb_INSTANCE *, int, const lcb_RESPSTORE *resp)
 {
-    auto *e = (lcb_STATUS *)rb->cookie;
-    *e = rb->ctx.rc;
+    lcb_STATUS *e;
+    lcb_respstore_cookie(resp, (void **)&e);
+    *e = lcb_respstore_status(resp);
 }
 }
 
@@ -864,7 +865,7 @@ TEST_F(MockUnitTest, testAppendE2BIG)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
-    lcb_install_callback(instance, LCB_CALLBACK_STORE, appendE2BIGcb);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)appendE2BIGcb);
 
     lcb_STATUS err, res;
 

@@ -21,6 +21,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "key_value_error_context.hh"
+
 /**
  * If this bit is set in lcb_CMDGET::cmdflags then the expiry time is cleared if
  * lcb_CMDGET::exptime is 0. This allows get-and-touch with an expiry of 0.
@@ -78,11 +80,11 @@ struct lcb_CMDGET_ {
 
 /** @private */
 struct lcb_RESPGET_ {
+    lcb_KEY_VALUE_ERROR_CONTEXT ctx{};
     /**
      Application-defined pointer passed as the `cookie` parameter when
      scheduling the command.
      */
-    lcb_KEY_VALUE_ERROR_CONTEXT ctx;
     void *cookie;
     /** Response specific flags. see ::lcb_RESPFLAGS */
     std::uint16_t rflags;

@@ -459,7 +459,7 @@ lcb_U32 lcb_analyticsreq_parsetmo(const std::string &s)
     }
 }
 
-static void doc_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
+static void doc_callback(lcb_INSTANCE *, int, const lcb_RESPSTORE *rb)
 {
     auto *dreq = reinterpret_cast<lcb::docreq::DocRequest *>(rb->cookie);
     lcb::docreq::Queue *q = dreq->parent;
@@ -522,7 +522,7 @@ static lcb_STATUS cb_op_schedule(lcb::docreq::Queue *q, lcb::docreq::DocRequest 
     } else {
         lcb_cmdstore_value(cmd, req->row.c_str(), req->row.size());
     }
-    dreq->callback = doc_callback;
+    dreq->callback = (lcb_RESPCALLBACK)doc_callback;
     cmd->cmdflags |= LCB_CMD_F_INTERNAL_CALLBACK;
     lcb_STATUS err = lcb_store(q->instance, &dreq->callback, cmd);
     lcb_cmdstore_destroy(cmd);

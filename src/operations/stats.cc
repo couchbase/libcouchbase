@@ -133,8 +133,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respstats_cookie(const lcb_RESPSTATS *resp, void
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respstats_key(const lcb_RESPSTATS *resp, const char **key, size_t *key_len)
 {
-    *key = resp->ctx.key;
-    *key_len = resp->ctx.key_len;
+    *key = resp->ctx.key.c_str();
+    *key_len = resp->ctx.key.size();
     return LCB_SUCCESS;
 }
 

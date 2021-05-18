@@ -21,6 +21,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "key_value_error_context.hh"
+
 /**Must specify this flag if using the 'mutation_token' field, as it was added in
  * a later version */
 #define LCB_CMDENDURE_F_MUTATION_TOKEN (1u << 16u)
@@ -74,11 +76,11 @@ struct lcb_CMDENDURE_ {
 
 /**@brief Response structure for endure */
 struct lcb_RESPENDURE_ {
+    lcb_KEY_VALUE_ERROR_CONTEXT ctx{};
     /**
      Application-defined pointer passed as the `cookie` parameter when
      scheduling the command.
      */
-    lcb_KEY_VALUE_ERROR_CONTEXT ctx;
     void *cookie;
     /** Response specific flags. see ::lcb_RESPFLAGS */
     std::uint16_t rflags;
