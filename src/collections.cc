@@ -28,7 +28,11 @@
 
 namespace lcb
 {
-CollectionCache::CollectionCache() : cache_n2i(), cache_i2n() {}
+CollectionCache::CollectionCache()
+{
+    static const std::string default_collection("_default._default");
+    put(default_collection, 0);
+}
 
 std::string CollectionCache::id_to_name(uint32_t cid)
 {
@@ -97,6 +101,18 @@ lcb_STATUS collcache_get(lcb_INSTANCE *instance, const char *scope, size_t nscop
         return LCB_SUCCESS;
     }
     return LCB_ERR_COLLECTION_NOT_FOUND;
+}
+
+lcb_STATUS collcache_get(lcb_INSTANCE *instance, lcb::collection_qualifier &collection)
+{
+    uint32_t collection_id;
+    lcb_STATUS rc = collcache_get(instance, collection.scope().c_str(), collection.scope().size(),
+                                  collection.collection().c_str(), collection.collection().size(), &collection_id);
+    if (rc != LCB_SUCCESS) {
+        return rc;
+    }
+    collection.collection_id(collection_id);
+    return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetmanifest_status(const lcb_RESPGETMANIFEST *resp)

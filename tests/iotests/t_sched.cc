@@ -87,3 +87,39 @@ TEST_F(SchedUnitTests, testSched)
 
     lcb_cmdstore_destroy(scmd);
 }
+
+static void counterCallback(lcb_INSTANCE *, int, const lcb_RESPCOUNTER *resp)
+{
+    size_t *counter;
+    lcb_respcounter_cookie(resp, (void **)&counter);
+    *counter += 1;
+}
+
+TEST_F(SchedUnitTests, testScheduleIncrementBeforeConnection)
+{
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    lcb_STATUS rc;
+
+    MockEnvironment::getInstance()->createConnection(hw, &instance);
+
+    lcb_CMDCOUNTER *cmd;
+    lcb_install_callback(instance, LCB_CALLBACK_COUNTER, (lcb_RESPCALLBACK)counterCallback);
+    lcb_cmdcounter_create(&cmd);
+    lcb_cmdcounter_key(cmd, "key", 3);
+    lcb_cmdcounter_delta(cmd, 1);
+    size_t counter = 0;
+    rc = lcb_counter(instance, &counter, cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
+    lcb_cmdcounter_destroy(cmd);
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_TRUE(instance->has_deferred_operations());
+    ASSERT_EQ(0, counter);
+
+    ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
+    ASSERT_FALSE(instance->has_deferred_operations());
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_EQ(1, counter);
+}

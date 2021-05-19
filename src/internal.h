@@ -56,6 +56,8 @@
 #include "hostlist.h"
 
 #ifdef __cplusplus
+#include <functional>
+
 namespace lcb
 {
 class Connspec;
@@ -133,6 +135,9 @@ struct lcb_st {
 #ifdef __cplusplus
     typedef std::map<std::string, lcbcrypto_PROVIDER *> lcb_ProviderMap;
     lcb_ProviderMap *crypto;
+
+    std::list<std::function<void(lcb_STATUS)>> *deferred_operations;
+
     lcb_settings *getSettings()
     {
         return settings;
@@ -148,6 +153,10 @@ struct lcb_st {
     lcb::Server *get_server(size_t index) const
     {
         return static_cast<lcb::Server *>(cmdq.pipelines[index]);
+    }
+    bool has_deferred_operations() const
+    {
+        return deferred_operations != nullptr && !deferred_operations->empty();
     }
     lcb::Server *find_server(const lcb_host_t &host) const;
     lcb_STATUS request_config(void *cookie, lcb::Server *server);
@@ -315,6 +324,9 @@ lcb_STATUS lcb_stats(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSTATS *c
 
 #ifdef __cplusplus
 }
+
+LCB_INTERNAL_API lcb_STATUS lcb_is_collection_valid(lcb_INSTANCE *instance, const std::string &scope,
+                                                    const std::string &collection);
 #endif
 
 #endif

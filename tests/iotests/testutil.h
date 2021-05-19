@@ -21,6 +21,8 @@
 #include <libcouchbase/vbucket.h>
 #include <string>
 
+#define ASSERT_STATUS_EQ(expected, actual) ASSERT_EQ(expected, actual) << lcb_strerror_short(actual)
+
 struct Item {
     void assign(const lcb_RESPGET *resp)
     {

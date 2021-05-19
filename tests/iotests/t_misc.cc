@@ -713,11 +713,12 @@ TEST_F(MockUnitTest, testConflictingOptions)
 
     lcb_cmdcounter_key(ccmd, key, nkey);
 
-    lcb_cmdcounter_expiry(ccmd, 10);
-    err = lcb_counter(instance, nullptr, ccmd);
+    err = lcb_cmdcounter_expiry(ccmd, 10);
     ASSERT_EQ(LCB_ERR_OPTIONS_CONFLICT, err);
 
     lcb_cmdcounter_initial(ccmd, 0);
+    err = lcb_cmdcounter_expiry(ccmd, 10);
+    ASSERT_EQ(LCB_SUCCESS, err);
     err = lcb_counter(instance, nullptr, ccmd);
     ASSERT_EQ(LCB_SUCCESS, err);
 

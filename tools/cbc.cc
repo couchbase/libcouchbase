@@ -611,11 +611,11 @@ static void arithmetic_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RES
         fprintf(stderr, "%-20s Current value is %" PRIu64 ".", key.c_str(), value);
         uint64_t cas;
         lcb_respcounter_cas(resp, &cas);
-        fprintf(stderr, "CAS=0x%" PRIx64 "\n", cas);
+        fprintf(stderr, " CAS=0x%" PRIx64 "\n", cas);
         lcb_MUTATION_TOKEN token = {0};
         lcb_respcounter_mutation_token(resp, &token);
         if (lcb_mutation_token_is_valid(&token)) {
-            fprintf(stderr, "%-20sSYNCTOKEN=%u,%" PRIu64 ",%" PRIu64 "\n", "", token.vbid_, token.uuid_, token.seqno_);
+            fprintf(stderr, "%-20s SYNCTOKEN=%u,%" PRIu64 ",%" PRIu64 "\n", "", token.vbid_, token.uuid_, token.seqno_);
         }
     }
 }
@@ -1590,10 +1590,15 @@ void ArithmeticHandler::run()
     const vector<string> &keys = parser.getRestArgs();
     lcb_install_callback(instance, LCB_CALLBACK_COUNTER, (lcb_RESPCALLBACK)arithmetic_callback);
     lcb_sched_enter(instance);
+    std::string s = o_scope.result();
+    std::string c = o_collection.result();
     for (const auto &key : keys) {
         lcb_CMDCOUNTER *cmd;
         lcb_cmdcounter_create(&cmd);
         lcb_cmdcounter_key(cmd, key.c_str(), key.size());
+        if (o_collection.passed()) {
+            lcb_cmdcounter_collection(cmd, s.c_str(), s.size(), c.c_str(), c.size());
+        }
         if (o_initial.passed()) {
             lcb_cmdcounter_initial(cmd, o_initial.result());
         }

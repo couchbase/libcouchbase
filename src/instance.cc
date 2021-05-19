@@ -25,6 +25,7 @@
 #include "bucketconfig/clconfig.h"
 #include <lcbio/iotable.h>
 #include <lcbio/ssl.h>
+#include "defer.h"
 
 #define LOGARGS(obj, lvl) (obj)->settings, "instance", LCB_LOG_##lvl, __FILE__, __LINE__
 
@@ -454,6 +455,7 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
         goto GT_DONE;
     }
     obj->crypto = new std::map<std::string, lcbcrypto_PROVIDER *>();
+    obj->deferred_operations = new std::list<std::function<void(lcb_STATUS)>>();
     if (!(settings = lcb_settings_new())) {
         err = LCB_ERR_NO_MEMORY;
         goto GT_DONE;
@@ -619,6 +621,9 @@ void lcb_destroy(lcb_INSTANCE *instance)
     DESTROY(delete, bs_state)
     DESTROY(delete, ht_nodes)
     DESTROY(delete, mc_nodes)
+
+    lcb::cancel_deferred_operations(instance);
+    delete instance->deferred_operations;
 
     if ((pendq = po->items[LCB_PENDTYPE_DURABILITY])) {
         std::vector<void *> dsets(pendq->begin(), pendq->end());
@@ -949,6 +954,12 @@ LCB_INTERNAL_API lcb_STATUS lcb_is_collection_valid(lcb_INSTANCE *instance, cons
         return LCB_SUCCESS;
     }
     return LCB_ERR_INVALID_ARGUMENT;
+}
+
+LCB_INTERNAL_API lcb_STATUS lcb_is_collection_valid(lcb_INSTANCE *instance, const std::string &scope,
+                                                    const std::string &collection)
+{
+    return lcb_is_collection_valid(instance, scope.c_str(), scope.size(), collection.c_str(), collection.size());
 }
 
 LIBCOUCHBASE_API

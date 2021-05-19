@@ -17,6 +17,7 @@
 
 #define LCB_BOOTSTRAP_DEFINE_STRUCT 1
 #include "internal.h"
+#include "defer.h"
 
 #define LOGARGS(instance, lvl) instance->settings, "bootstrap", LCB_LOG_##lvl, __FILE__, __LINE__
 
@@ -133,6 +134,7 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info)
             instance->callbacks.open(instance, LCB_SUCCESS);
             instance->callbacks.open = nullptr;
         }
+        lcb::execute_deferred_operations(instance);
 
         // See if we can enable background polling.
         check_bgpoll();

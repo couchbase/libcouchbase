@@ -50,6 +50,7 @@ SET(LCB_CORE_CXXSRC
     src/bucketconfig/confmon.cc
     src/utilities.cc
     src/collections.cc
+    src/defer.cc
     src/connspec.cc
     src/crypto.cc
     src/dns-srv.cc
