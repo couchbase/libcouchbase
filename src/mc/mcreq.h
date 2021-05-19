@@ -187,9 +187,9 @@ typedef struct {
  * on behalf of an API request.
  */
 typedef struct mc_REQDATAEX {
-    const void *cookie; /**< User data */
-    hrtime_t start;     /**< Start time */
-    hrtime_t deadline;  /**< When the request should be considered timed out */
+    void *cookie;      /**< User data */
+    hrtime_t start;    /**< Start time */
+    hrtime_t deadline; /**< When the request should be considered timed out */
     /**
      * Time when dispatching response has begun for the command.
      * Used for metrics/tracing. Might be zero, when tracing is not enabled.
@@ -200,7 +200,7 @@ typedef struct mc_REQDATAEX {
     const mc_REQDATAPROCS *procs; /**< Common routines for the packet */
 
 #ifdef __cplusplus
-    mc_REQDATAEX(const void *cookie_, const mc_REQDATAPROCS &procs_, hrtime_t start_)
+    mc_REQDATAEX(void *cookie_, const mc_REQDATAPROCS &procs_, hrtime_t start_)
         : cookie(cookie_), start(start_), dispatch(0), span(NULL), nsubreq(0), procs(&procs_)
     {
         deadline = start_ + LCB_DEFAULT_TIMEOUT;
@@ -895,7 +895,8 @@ unsigned mcreq_pipeline_fail(mc_PIPELINE *pipeline, lcb_STATUS err, mcreq_pktfai
  *
  * @return the number of commands actually failed.
  */
-unsigned mcreq_pipeline_timeout(mc_PIPELINE *pipeline, lcb_STATUS err, mcreq_pktfail_fn failcb, void *cbarg, hrtime_t now);
+unsigned mcreq_pipeline_timeout(mc_PIPELINE *pipeline, lcb_STATUS err, mcreq_pktfail_fn failcb, void *cbarg,
+                                hrtime_t now);
 
 /**
  * This function is called when a packet could not be properly mapped to a real

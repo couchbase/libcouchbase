@@ -517,7 +517,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetreplica_key(lcb_CMDGETREPLICA *cmd, const 
 }
 
 struct RGetCookie : mc_REQDATAEX {
-    RGetCookie(const void *cookie, lcb_INSTANCE *instance, lcb_replica_t, int vb);
+    RGetCookie(void *cookie, lcb_INSTANCE *instance, lcb_replica_t, int vb);
     void decref()
     {
         if (!--remaining) {
@@ -591,7 +591,7 @@ static void rget_callback(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS err, const v
 
 static mc_REQDATAPROCS rget_procs = {rget_callback, rget_dtor};
 
-RGetCookie::RGetCookie(const void *cookie_, lcb_INSTANCE *instance_, lcb_replica_t strategy_, int vbucket_)
+RGetCookie::RGetCookie(void *cookie_, lcb_INSTANCE *instance_, lcb_replica_t strategy_, int vbucket_)
     : mc_REQDATAEX(cookie_, rget_procs, gethrtime()), r_cur(0), r_max(LCBT_NREPLICAS(instance_)), remaining(0),
       vbucket(vbucket_), strategy(strategy_), instance(instance_)
 {

@@ -51,7 +51,7 @@ static void ext_callback_dtor(mc_PACKET *pkt)
 
 static mc_REQDATAPROCS procs = {ext_callback_proxy, ext_callback_dtor};
 
-lcb_STATUS lcb_st::request_config(const void *cookie_, lcb::Server *server)
+lcb_STATUS lcb_st::request_config(void *cookie_, lcb::Server *server)
 {
     lcb_STATUS err;
     mc_PACKET *packet;
@@ -87,7 +87,7 @@ lcb_STATUS lcb_st::request_config(const void *cookie_, lcb::Server *server)
     return LCB_SUCCESS;
 }
 
-lcb_STATUS lcb_st::select_bucket(const void *cookie_, lcb::Server *server)
+lcb_STATUS lcb_st::select_bucket(void *cookie_, lcb::Server *server)
 {
     lcb_STATUS err;
     mc_PACKET *packet;

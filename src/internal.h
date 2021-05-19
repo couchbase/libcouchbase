@@ -150,8 +150,8 @@ struct lcb_st {
         return static_cast<lcb::Server *>(cmdq.pipelines[index]);
     }
     lcb::Server *find_server(const lcb_host_t &host) const;
-    lcb_STATUS request_config(const void *cookie, lcb::Server *server);
-    lcb_STATUS select_bucket(const void *cookie, lcb::Server *server);
+    lcb_STATUS request_config(void *cookie, lcb::Server *server);
+    lcb_STATUS select_bucket(void *cookie, lcb::Server *server);
 
     /**
      * @brief Request that the handle update its configuration.
@@ -289,7 +289,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respnoop_cookie(const lcb_RESPNOOP *resp, void *
  * @return status code for scheduling.
  */
 LIBCOUCHBASE_API
-lcb_STATUS lcb_noop(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDNOOP *cmd);
+lcb_STATUS lcb_noop(lcb_INSTANCE *instance, void *cookie, const lcb_CMDNOOP *cmd);
 
 typedef struct lcb_CMDSTATS_ lcb_CMDSTATS;
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdstats_create(lcb_CMDSTATS **cmd);
@@ -311,7 +311,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respstats_server(const lcb_RESPSTATS *resp, cons
  * @uncommitted
  */
 LIBCOUCHBASE_API
-lcb_STATUS lcb_stats(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS *cmd);
+lcb_STATUS lcb_stats(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSTATS *cmd);
 
 #ifdef __cplusplus
 }

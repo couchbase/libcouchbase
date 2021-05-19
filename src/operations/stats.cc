@@ -23,7 +23,7 @@
 struct BcastCookie : mc_REQDATAEX {
     int remaining;
 
-    BcastCookie(const mc_REQDATAPROCS *procs_, const void *cookie_)
+    BcastCookie(const mc_REQDATAPROCS *procs_, void *cookie_)
         : mc_REQDATAEX(cookie_, *procs_, gethrtime()), remaining(0)
     {
     }
@@ -155,7 +155,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respstats_server(const lcb_RESPSTATS *resp, cons
 static mc_REQDATAPROCS stats_procs = {stats_handler, refcnt_dtor_common};
 
 LIBCOUCHBASE_API
-lcb_STATUS lcb_stats(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDSTATS *cmd)
+lcb_STATUS lcb_stats(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSTATS *cmd)
 {
     unsigned ii;
     int vbid = -1;
@@ -313,7 +313,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respnoop_cookie(const lcb_RESPNOOP *resp, void *
 }
 
 LIBCOUCHBASE_API
-lcb_STATUS lcb_noop(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDNOOP *cmd)
+lcb_STATUS lcb_noop(lcb_INSTANCE *instance, void *cookie, const lcb_CMDNOOP *cmd)
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;

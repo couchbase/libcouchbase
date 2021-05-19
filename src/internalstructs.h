@@ -212,7 +212,7 @@ typedef struct lcb_MULTICMD_CTX_st {
      * @return LCB_SUCCESS if scheduled successfully, or an error code if there
      * was a problem constructing the packet(s).
      */
-    lcb_STATUS (*done)(struct lcb_MULTICMD_CTX_st *ctx, const void *cookie);
+    lcb_STATUS (*done)(struct lcb_MULTICMD_CTX_st *ctx, void *cookie);
 
     /**
      * Indicate that no more commands should be added to this context, and that

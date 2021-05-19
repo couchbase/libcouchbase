@@ -256,7 +256,7 @@ struct PingCookie : mc_REQDATAEX {
     std::list<lcb_PINGSVC> responses;
     std::string id;
 
-    PingCookie(const void *cookie_, int _options)
+    PingCookie(void *cookie_, int _options)
         : mc_REQDATAEX(cookie_, ping_procs, gethrtime()), remaining(0), options(_options)
     {
     }

@@ -239,7 +239,7 @@ struct DurStoreCtx : mc_REQDATAEX {
 
     static mc_REQDATAPROCS proctable;
 
-    DurStoreCtx(lcb_INSTANCE *instance_, lcb_U16 persist_, lcb_U16 replicate_, const void *cookie_)
+    DurStoreCtx(lcb_INSTANCE *instance_, lcb_U16 persist_, lcb_U16 replicate_, void *cookie_)
         : mc_REQDATAEX(cookie_, proctable, 0), instance(instance_), persist_to(persist_), replicate_to(replicate_)
     {
     }

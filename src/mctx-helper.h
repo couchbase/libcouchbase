@@ -27,7 +27,7 @@ class MultiCmdContext : public lcb_MULTICMD_CTX
   protected:
     virtual lcb_STATUS MCTX_add_observe(const lcb_CMDOBSERVE *cmd) = 0;
     virtual lcb_STATUS MCTX_add_endure(const lcb_CMDENDURE *cmd) = 0;
-    virtual lcb_STATUS MCTX_done(const void *cookie) = 0;
+    virtual lcb_STATUS MCTX_done(void *cookie) = 0;
     virtual void MCTX_fail() = 0;
     virtual void MCTX_setspan(lcbtrace_SPAN *span) = 0;
 
@@ -51,7 +51,7 @@ class MultiCmdContext : public lcb_MULTICMD_CTX
     {
         return static_cast<MultiCmdContext *>(ctx)->MCTX_add_endure(cmd);
     }
-    static lcb_STATUS dispatch_mctx_done(lcb_MULTICMD_CTX *ctx, const void *cookie)
+    static lcb_STATUS dispatch_mctx_done(lcb_MULTICMD_CTX *ctx, void *cookie)
     {
         return static_cast<MultiCmdContext *>(ctx)->MCTX_done(cookie);
     }

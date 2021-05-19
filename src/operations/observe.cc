@@ -34,7 +34,7 @@ struct ObserveCtx : lcb::MultiCmdContext {
     // Overrides
     lcb_STATUS MCTX_add_observe(const lcb_CMDOBSERVE *cmd) override;
     lcb_STATUS MCTX_add_endure(const lcb_CMDENDURE *cmd) override;
-    lcb_STATUS MCTX_done(const void *) override;
+    lcb_STATUS MCTX_done(void *) override;
     void MCTX_fail() override;
     void MCTX_setspan(lcbtrace_SPAN *span) override;
 
@@ -231,7 +231,7 @@ lcb_STATUS ObserveCtx::MCTX_add_endure(const lcb_CMDENDURE *)
 
 static mc_REQDATAPROCS obs_procs = {handle_observe_callback, handle_schedfail};
 
-lcb_STATUS ObserveCtx::MCTX_done(const void *cookie_)
+lcb_STATUS ObserveCtx::MCTX_done(void *cookie_)
 {
     unsigned ii;
     mc_CMDQUEUE *cq = &instance->cmdq;

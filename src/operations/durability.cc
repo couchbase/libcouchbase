@@ -351,7 +351,7 @@ lcb_STATUS Durset::MCTX_add_endure(const lcb_CMDENDURE *cmd)
     return after_add(ent, cmd->mutation_token);
 }
 
-lcb_STATUS Durset::MCTX_done(const void *cookie_)
+lcb_STATUS Durset::MCTX_done(void *cookie_)
 {
     lcb_STATUS err;
 

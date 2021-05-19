@@ -250,7 +250,7 @@ struct Durset : public MultiCmdContext {
     Durset(lcb_INSTANCE *instance, const lcb_durability_opts_t *options);
 
     // Implementation for MULTICMD_CTX
-    lcb_STATUS MCTX_done(const void *cookie) override;
+    lcb_STATUS MCTX_done(void *cookie) override;
     lcb_STATUS MCTX_add_observe(const lcb_CMDOBSERVE *cmd) override;
     lcb_STATUS MCTX_add_endure(const lcb_CMDENDURE *cmd) override;
     void MCTX_fail() override;
