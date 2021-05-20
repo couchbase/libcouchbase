@@ -54,6 +54,10 @@ int leb128_encode(uint32_t value, uint8_t *buf)
 
 int leb128_decode(const uint8_t *buf, size_t nbuf, uint32_t *result)
 {
+    if (nbuf == 0) {
+        *result = 0;
+        return 0;
+    }
     uint32_t value = buf[0] & 0x7f;
     size_t idx = 0;
     if (buf[0] & 0x80) {
