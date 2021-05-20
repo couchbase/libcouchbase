@@ -123,3 +123,37 @@ TEST_F(SchedUnitTests, testScheduleIncrementBeforeConnection)
     ASSERT_FALSE(hasPendingOps(instance));
     ASSERT_EQ(1, counter);
 }
+
+static void existsCallback(lcb_INSTANCE *, int, const lcb_RESPEXISTS *resp)
+{
+    size_t *counter;
+    lcb_respexists_cookie(resp, (void **)&counter);
+    *counter += 1;
+}
+
+TEST_F(SchedUnitTests, testScheduleExistsBeforeConnection)
+{
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    lcb_STATUS rc;
+
+    MockEnvironment::getInstance()->createConnection(hw, &instance);
+
+    lcb_CMDEXISTS *cmd;
+    lcb_install_callback(instance, LCB_CALLBACK_EXISTS, (lcb_RESPCALLBACK)existsCallback);
+    lcb_cmdexists_create(&cmd);
+    lcb_cmdexists_key(cmd, "key", 3);
+    size_t counter = 0;
+    rc = lcb_exists(instance, &counter, cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
+    lcb_cmdexists_destroy(cmd);
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_TRUE(instance->has_deferred_operations());
+
+    ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
+    ASSERT_FALSE(instance->has_deferred_operations());
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_EQ(1, counter);
+}
