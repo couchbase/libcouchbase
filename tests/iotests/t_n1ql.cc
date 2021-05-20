@@ -445,6 +445,7 @@ TEST_F(QueryUnitTest, testCollectionQuery)
     lcb_cmdquery_create(&cmd);
     string query = "SELECT * FROM `" + collection + "` where meta().id=\"" + id + "\"";
     lcb_cmdquery_statement(cmd, query.c_str(), query.size());
+    lcb_cmdquery_consistency(cmd, LCB_QUERY_CONSISTENCY_REQUEST);
     lcb_cmdquery_callback(cmd, rowcb);
     lcb_cmdquery_scope_name(cmd, scope.c_str(), scope.size());
 
@@ -455,6 +456,7 @@ TEST_F(QueryUnitTest, testCollectionQuery)
     ASSERT_TRUE(handle != nullptr);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_TRUE(res.called);
+    ASSERT_EQ(LCB_SUCCESS, res.rc);
     ASSERT_EQ(1, res.rows.size());
 }
 
@@ -652,7 +654,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
     SKIP_IF_MOCK()
     SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_50)
     createConnection(hw, &instance);
-    lcb_cntl_setu32(instance, LCB_CNTL_QUERY_TIMEOUT, LCB_MS2US(100)); // 100ms before timeout
+    lcb_cntl_setu32(instance, LCB_CNTL_QUERY_TIMEOUT, LCB_MS2US(200)); // 200ms before timeout
 
     string valid_username = MockEnvironment::getInstance()->getUsername();
     string valid_password = MockEnvironment::getInstance()->getPassword();
@@ -757,7 +759,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ASSERT_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
-        ASSERT_EQ(LCB_ERR_TIMEOUT, res.rc); // timeout because of retrying
+        ASSERT_EQ(LCB_ERR_TIMEOUT, res.rc) << lcb_strerror_short(res.rc); // timeout because of retrying
     }
 
     // send query with valid password

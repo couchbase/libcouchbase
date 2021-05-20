@@ -336,6 +336,16 @@ typedef struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
         btimer.cancel();
         delete parser;
         parser = new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this);
+        if (use_prepcache()) {
+            const Plan *cached = cache().get_entry(statement);
+            if (cached != nullptr) {
+                lasterr = apply_plan(*cached);
+            } else {
+                lcb_log(LOGARGS(this, DEBUG), LOGFMT "No cached plan found. Issuing prepare", LOGID(this));
+                lasterr = request_plan();
+            }
+            return;
+        }
         lasterr = issue_htreq();
     }
     lcb::io::Timer<lcb_QUERY_HANDLE_, &lcb_QUERY_HANDLE_::on_backoff> btimer;
