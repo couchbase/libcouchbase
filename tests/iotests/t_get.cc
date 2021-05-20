@@ -985,6 +985,7 @@ static void test_canceled_callback(lcb_INSTANCE *, int, const lcb_RESPGET *resp)
 
 TEST_F(GetUnitTest, testGetCanceled)
 {
+    SKIP_UNLESS_MOCK()
     HandleWrap hw;
     lcb_INSTANCE *instance;
     std::string key("keyGetCanceled");
