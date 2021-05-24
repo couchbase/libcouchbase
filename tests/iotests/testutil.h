@@ -115,7 +115,7 @@ struct Item {
     uint64_t cas;
     uint8_t datatype;
     lcb_STATUS err{};
-    lcb_time_t exp;
+    lcb_time_t exp{0};
 };
 
 struct KVOperation {

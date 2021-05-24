@@ -20,62 +20,172 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <chrono>
 
 #include "key_value_error_context.hh"
+#include "collection_qualifier.hh"
 
-/**
- * If this bit is set in lcb_CMDGET::cmdflags then the expiry time is cleared if
- * lcb_CMDGET::exptime is 0. This allows get-and-touch with an expiry of 0.
- */
-#define LCB_CMDGET_F_CLEAREXP (1 << 16)
-
+enum class get_mode {
+    normal,
+    with_touch,
+    with_lock,
+};
 /**
  * @private
  */
 struct lcb_CMDGET_ {
-    /**Common flags for the command. These modify the command itself. Currently
-     the lower 16 bits of this field are reserved, and the higher 16 bits are
-     used for individual commands.*/
-    std::uint32_t cmdflags;
 
-    /**Specify the expiration time. This is either an absolute Unix time stamp
-     or a relative offset from now, in seconds. If the value of this number
-     is greater than the value of thirty days in seconds, then it is a Unix
-     timestamp.
+    lcb_STATUS with_touch(std::uint32_t expiry)
+    {
+        if (mode_ != get_mode::normal && mode_ != get_mode::with_touch) {
+            return LCB_ERR_INVALID_ARGUMENT;
+        }
+        mode_ = get_mode::with_touch;
+        expiry_ = expiry;
+        return LCB_SUCCESS;
+    }
 
-     This field is used in mutation operations (lcb_store3()) to indicate
-     the lifetime of the item. It is used in lcb_get3() with the lcb_CMDGET::lock
-     option to indicate the lock expiration itself. */
-    std::uint32_t exptime;
+    lcb_STATUS with_lock(std::uint32_t duration)
+    {
+        if (mode_ != get_mode::normal && mode_ != get_mode::with_lock) {
+            return LCB_ERR_INVALID_ARGUMENT;
+        }
+        mode_ = get_mode::with_lock;
+        lock_time_ = duration;
+        return LCB_SUCCESS;
+    }
 
-    /**The known CAS of the item. This is passed to mutation to commands to
-     ensure the item is only changed if the server-side CAS value matches the
-     one specified here. For other operations (such as lcb_CMDENDURE) this
-     is used to ensure that the item has been persisted/replicated to a number
-     of servers with the value specified here. */
-    std::uint64_t cas;
+    bool with_touch() const
+    {
+        return mode_ == get_mode::with_touch;
+    }
 
-    /**< Collection ID */
-    std::uint32_t cid;
-    const char *scope;
-    std::size_t nscope;
-    const char *collection;
-    std::size_t ncollection;
-    /**The key for the document itself. This should be set via LCB_CMD_SET_KEY() */
-    lcb_KEYBUF key;
+    bool with_lock() const
+    {
+        return mode_ == get_mode::with_lock;
+    }
 
-    /** Operation timeout (in microseconds). When zero, the library will use default value. */
-    std::uint32_t timeout;
-    /** Parent tracing span */
-    lcbtrace_SPAN *pspan;
+    std::uint32_t expiry() const
+    {
+        return expiry_;
+    }
 
-    /**If set to true, the `exptime` field inside `options` will take to mean
-     * the time the lock should be held. While the lock is held, other operations
-     * trying to access the key will fail with an `LCB_ERR_TEMPORARY_FAILURE` error. The
-     * item may be unlocked either via `lcb_unlock3()` or via a mutation
-     * operation with a supplied CAS
+    std::uint32_t lock_time() const
+    {
+        return lock_time_;
+    }
+
+    lcb_STATUS key(std::string key)
+    {
+        key_ = std::move(key);
+        return LCB_SUCCESS;
+    }
+
+    lcb_STATUS collection(lcb::collection_qualifier collection)
+    {
+        collection_ = std::move(collection);
+        return LCB_SUCCESS;
+    }
+
+    lcb_STATUS parent_span(lcbtrace_SPAN *parent_span)
+    {
+        parent_span_ = parent_span;
+        return LCB_SUCCESS;
+    }
+
+    lcb_STATUS timeout_in_milliseconds(std::uint32_t timeout)
+    {
+        timeout_ = std::chrono::milliseconds(timeout);
+        return LCB_SUCCESS;
+    }
+
+    lcb_STATUS timeout_in_microseconds(std::uint32_t timeout)
+    {
+        timeout_ = std::chrono::microseconds(timeout);
+        return LCB_SUCCESS;
+    }
+
+    lcb_STATUS start_time_in_nanoseconds(std::uint64_t val)
+    {
+        start_time_ = std::chrono::nanoseconds(val);
+        return LCB_SUCCESS;
+    }
+
+    std::uint64_t start_time_or_default_in_nanoseconds(std::uint64_t default_val) const
+    {
+        if (start_time_ == std::chrono::nanoseconds::zero()) {
+            return default_val;
+        }
+        return start_time_.count();
+    }
+
+    const lcb::collection_qualifier &collection() const
+    {
+        return collection_;
+    }
+
+    lcb::collection_qualifier &collection()
+    {
+        return collection_;
+    }
+
+    const std::string &key() const
+    {
+        return key_;
+    }
+
+    std::uint64_t timeout_or_default_in_nanoseconds(std::uint64_t default_timeout) const
+    {
+        if (timeout_ > std::chrono::microseconds::zero()) {
+            return std::chrono::duration_cast<std::chrono::nanoseconds>(timeout_).count();
+        }
+        return default_timeout;
+    }
+
+    std::uint32_t timeout_in_microseconds() const
+    {
+        return static_cast<std::uint32_t>(timeout_.count());
+    }
+
+    lcbtrace_SPAN *parent_span() const
+    {
+        return parent_span_;
+    }
+
+    void cookie(void *cookie)
+    {
+        cookie_ = cookie;
+    }
+
+    void *cookie()
+    {
+        return cookie_;
+    }
+
+    /* TODO: this function will be removed once the per-command callbacks will be implemented.
+     * Right now only internal code is using it (see view requests)
      */
-    int lock;
+    void treat_cookie_as_callback(bool value)
+    {
+        cookie_is_callback_ = value;
+    }
+
+    bool is_cookie_callback() const
+    {
+        return cookie_is_callback_;
+    }
+
+  private:
+    lcb::collection_qualifier collection_{};
+    std::chrono::microseconds timeout_{0};
+    std::chrono::nanoseconds start_time_{0};
+    std::uint32_t expiry_{0};
+    std::uint32_t lock_time_{0};
+    lcbtrace_SPAN *parent_span_{nullptr};
+    void *cookie_{nullptr};
+    std::string key_{};
+    get_mode mode_{get_mode::normal};
+    bool cookie_is_callback_{false};
 };
 
 /** @private */

@@ -84,22 +84,13 @@ struct CQWrap : mc_CMDQUEUE {
 };
 
 struct PacketWrap {
-    mc_PACKET *pkt;
-    mc_PIPELINE *pipeline;
-    protocol_binary_request_header hdr;
-    lcb_CMDGET cmd;
-    char *pktbuf;
-    char *kbuf;
-
-    PacketWrap()
-    {
-        pkt = nullptr;
-        pipeline = nullptr;
-        pktbuf = nullptr;
-        kbuf = nullptr;
-        memset(&hdr, 0, sizeof(hdr));
-        memset(&cmd, 0, sizeof(cmd));
-    }
+    mc_PACKET *pkt{nullptr};
+    mc_PIPELINE *pipeline{nullptr};
+    protocol_binary_request_header hdr{};
+    lcb_CMDGET cmd{};
+    char *pktbuf{nullptr};
+    char *kbuf{nullptr};
+    lcb_KEYBUF keybuf;
 
     void setKey(const char *key)
     {
@@ -113,15 +104,15 @@ struct PacketWrap {
     void setContigKey(const char *key)
     {
         setKey(key);
-        cmd.key.type = LCB_KV_HEADER_AND_KEY;
-        cmd.key.contig.bytes = pktbuf;
-        cmd.key.contig.nbytes = strlen(key) + 24;
+        cmd.key(kbuf);
+        keybuf = {LCB_KV_CONTIG, {pktbuf, cmd.key().size() + 24}};
     }
 
     void setCopyKey(const char *key)
     {
         setKey(key);
-        LCB_KREQ_SIMPLE(&cmd.key, kbuf, strlen(key));
+        cmd.key(kbuf);
+        keybuf = {LCB_KV_COPY, {cmd.key().c_str(), cmd.key().size()}};
     }
 
     void setHeaderSize()
@@ -142,7 +133,7 @@ struct PacketWrap {
     bool reservePacket(mc_CMDQUEUE *cq)
     {
         lcb_STATUS err;
-        err = mcreq_basic_packet(cq, &cmd.key, cmd.cid, &hdr, 0, 0, &pkt, &pipeline, 0);
+        err = mcreq_basic_packet(cq, &keybuf, cmd.collection().collection_id(), &hdr, 0, 0, &pkt, &pipeline, 0);
         return err == LCB_SUCCESS;
     }
 

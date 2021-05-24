@@ -32,7 +32,7 @@ struct VRDocRequest : lcb::docreq::DocRequest {
 };
 
 struct lcb_VIEW_HANDLE_ : lcb::jsparse::Parser::Actions {
-    lcb_VIEW_HANDLE_(lcb_INSTANCE *, const void *, const lcb_CMDVIEW *);
+    lcb_VIEW_HANDLE_(lcb_INSTANCE *, void *, const lcb_CMDVIEW *);
     ~lcb_VIEW_HANDLE_();
     void invoke_last(lcb_STATUS err);
     void invoke_last()
@@ -76,12 +76,12 @@ struct lcb_VIEW_HANDLE_ : lcb::jsparse::Parser::Actions {
     void JSPARSE_on_complete(const std::string &);
 
     /** Current HTTP response to provide in callbacks */
-    const lcb_RESPHTTP *cur_htresp;
+    const lcb_RESPHTTP *cur_htresp{nullptr};
     /** HTTP request object, in case we need to cancel prematurely */
-    lcb_HTTP_HANDLE *htreq;
+    lcb_HTTP_HANDLE *htreq{nullptr};
     lcb::jsparse::Parser *parser;
-    const void *cookie;
-    lcb::docreq::Queue *docq;
+    void *cookie;
+    lcb::docreq::Queue *docq{nullptr};
     lcb_VIEW_CALLBACK callback;
     lcb_INSTANCE *instance;
 
@@ -91,8 +91,8 @@ struct lcb_VIEW_HANDLE_ : lcb::jsparse::Parser::Actions {
     std::string first_error_code;
     std::string first_error_message;
 
-    unsigned refcount;
+    unsigned refcount{1};
     uint32_t cmdflags;
-    lcb_STATUS lasterr;
-    lcbtrace_SPAN *span;
+    lcb_STATUS lasterr{LCB_SUCCESS};
+    lcbtrace_SPAN *span{nullptr};
 };

@@ -84,7 +84,7 @@ void KVOperation::assertOk(lcb_STATUS err)
     }
 
     if (allowableErrors.empty()) {
-        ASSERT_EQ(LCB_SUCCESS, err) << "Unexpected error: " << lcb_strerror_short(err);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, err);
         return;
     }
     ASSERT_TRUE(allowableErrors.find(err) != allowableErrors.end())
@@ -130,12 +130,14 @@ void KVOperation::get(lcb_INSTANCE *instance)
 {
     lcb_CMDGET *cmd;
     lcb_cmdget_create(&cmd);
-    lcb_cmdget_key(cmd, request->key.data(), request->key.length());
-    lcb_cmdget_expiry(cmd, request->exp);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdget_key(cmd, request->key.data(), request->key.length()));
+    if (request->exp > 0) {
+        ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdget_expiry(cmd, request->exp));
+    }
 
     enter(instance);
-    EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, this, cmd));
-    EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_get(instance, this, cmd));
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
     leave(instance);
 
     lcb_cmdget_destroy(cmd);

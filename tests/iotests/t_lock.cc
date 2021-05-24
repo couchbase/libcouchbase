@@ -226,6 +226,8 @@ TEST_F(LockUnitTest, testStorageLockContention)
     /* undo any funny business on our key */
     removeKey(instance, key);
     storeKey(instance, key, value);
+    getKey(instance, key, itm);
+    std::uint64_t original_cas = itm.cas;
 
     lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)getLockedCallback);
     lcb_install_callback(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlockCallback);
@@ -234,21 +236,23 @@ TEST_F(LockUnitTest, testStorageLockContention)
     /* get the key and lock it */
     lcb_CMDGET *gcmd;
     lcb_cmdget_create(&gcmd);
-    lcb_cmdget_key(gcmd, key.c_str(), key.size());
-    lcb_cmdget_locktime(gcmd, 10);
+    ASSERT_EQ(LCB_SUCCESS, lcb_cmdget_key(gcmd, key.c_str(), key.size()));
+    ASSERT_EQ(LCB_SUCCESS, lcb_cmdget_locktime(gcmd, 10));
     ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, &itm, gcmd));
+    lcb_cmdget_destroy(gcmd);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(LCB_SUCCESS, itm.err);
     ASSERT_GT(itm.cas, 0);
-    lcb_cmdget_destroy(gcmd);
+    ASSERT_NE(itm.cas, original_cas);
 
     /* now try to set the key, while the lock is still in place */
     lcb_CMDSTORE *scmd;
     lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
-    lcb_cmdstore_key(scmd, key.c_str(), key.size());
-    lcb_cmdstore_value(scmd, newvalue.c_str(), newvalue.size());
+    ASSERT_EQ(LCB_SUCCESS, lcb_cmdstore_key(scmd, key.c_str(), key.size()));
+    ASSERT_EQ(LCB_SUCCESS, lcb_cmdstore_value(scmd, newvalue.c_str(), newvalue.size()));
     Item s_itm;
     ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &s_itm, scmd));
+    lcb_cmdstore_destroy(scmd);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(LCB_ERR_DOCUMENT_LOCKED, s_itm.err);
 
@@ -256,21 +260,20 @@ TEST_F(LockUnitTest, testStorageLockContention)
     Item ritem;
     getKey(instance, key, ritem);
     ASSERT_EQ(ritem.val, value);
-    lcb_cmdstore_destroy(scmd);
 
     /* now try to set it with the correct cas, implicitly unlocking the key */
     lcb_cmdstore_create(&scmd, LCB_STORE_REPLACE);
-    lcb_cmdstore_key(scmd, key.c_str(), key.size());
-    lcb_cmdstore_value(scmd, newvalue.c_str(), newvalue.size());
-    lcb_cmdstore_cas(scmd, itm.cas);
+    ASSERT_EQ(LCB_SUCCESS, lcb_cmdstore_key(scmd, key.c_str(), key.size()));
+    ASSERT_EQ(LCB_SUCCESS, lcb_cmdstore_value(scmd, newvalue.c_str(), newvalue.size()));
+    ASSERT_EQ(LCB_SUCCESS, lcb_cmdstore_cas(scmd, itm.cas));
     ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &s_itm, scmd));
+    lcb_cmdstore_destroy(scmd);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(LCB_SUCCESS, itm.err);
 
     /* verify the value is now the new value */
     getKey(instance, key, ritem);
     ASSERT_EQ(ritem.val, newvalue);
-    lcb_cmdstore_destroy(scmd);
 }
 
 /**

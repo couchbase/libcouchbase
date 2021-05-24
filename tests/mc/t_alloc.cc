@@ -122,11 +122,11 @@ TEST_F(McAlloc, testKeyAlloc)
 
     protocol_binary_request_header hdr{};
 
-    cmd.key.contig.bytes = const_cast<char *>("Hello");
-    cmd.key.contig.nbytes = 5;
+    cmd.key("Hello");
 
     lcb_STATUS ret;
-    ret = mcreq_basic_packet(&q, &cmd.key, cmd.cid, &hdr, 0, 0, &packet, &pipeline, 0);
+    lcb_KEYBUF keybuf{LCB_KV_COPY, {cmd.key().c_str(), cmd.key().size()}};
+    ret = mcreq_basic_packet(&q, &keybuf, cmd.collection().collection_id(), &hdr, 0, 0, &packet, &pipeline, 0);
     ASSERT_EQ(LCB_SUCCESS, ret);
     ASSERT_TRUE(packet != nullptr);
     ASSERT_TRUE(pipeline != nullptr);
@@ -161,7 +161,6 @@ TEST_F(McAlloc, testValueAlloc)
     protocol_binary_request_header hdr;
     lcb_VALBUF vreq;
 
-    memset(&cmd, 0, sizeof(cmd));
     memset(&hdr, 0, sizeof(hdr));
     memset(&vreq, 0, sizeof(vreq));
 
@@ -169,12 +168,12 @@ TEST_F(McAlloc, testValueAlloc)
     const char *value = "World";
 
     lcb_STATUS ret;
-    cmd.key.contig.bytes = const_cast<char *>(key);
-    cmd.key.contig.nbytes = 5;
+    cmd.key(std::string(key));
     vreq.u_buf.contig.bytes = const_cast<char *>(value);
     vreq.u_buf.contig.nbytes = 5;
 
-    ret = mcreq_basic_packet(&q, &cmd.key, cmd.cid, &hdr, 0, 0, &packet, &pipeline, 0);
+    lcb_KEYBUF keybuf{LCB_KV_COPY, {cmd.key().c_str(), cmd.key().size()}};
+    ret = mcreq_basic_packet(&q, &keybuf, cmd.collection().collection_id(), &hdr, 0, 0, &packet, &pipeline, 0);
     ASSERT_EQ(LCB_SUCCESS, ret);
     ret = mcreq_reserve_value(pipeline, packet, &vreq);
     ASSERT_EQ(ret, LCB_SUCCESS);
@@ -186,7 +185,7 @@ TEST_F(McAlloc, testValueAlloc)
     mcreq_release_packet(pipeline, packet);
 
     // Allocate another packet, but this time, use our own reserved value
-    ret = mcreq_basic_packet(&q, &cmd.key, cmd.cid, &hdr, 0, 0, &packet, &pipeline, 0);
+    ret = mcreq_basic_packet(&q, &keybuf, cmd.collection().collection_id(), &hdr, 0, 0, &packet, &pipeline, 0);
     ASSERT_EQ(ret, LCB_SUCCESS);
     vreq.vtype = LCB_KV_CONTIG;
     ret = mcreq_reserve_value(pipeline, packet, &vreq);
@@ -204,7 +203,7 @@ TEST_F(McAlloc, testValueAlloc)
     vreq.u_buf.multi.iov = (lcb_IOV *)iov;
     vreq.u_buf.multi.niov = 2;
     vreq.vtype = LCB_KV_IOV;
-    ret = mcreq_basic_packet(&q, &cmd.key, cmd.cid, &hdr, 0, 0, &packet, &pipeline, 0);
+    ret = mcreq_basic_packet(&q, &keybuf, cmd.collection().collection_id(), &hdr, 0, 0, &packet, &pipeline, 0);
     ASSERT_EQ(LCB_SUCCESS, ret);
     ret = mcreq_reserve_value(pipeline, packet, &vreq);
     ASSERT_EQ(LCB_SUCCESS, ret);
@@ -224,7 +223,7 @@ TEST_F(McAlloc, testValueAlloc)
     vreq.u_buf.multi.total_length = 0;
 
     vreq.vtype = LCB_KV_IOVCOPY;
-    ret = mcreq_basic_packet(&q, &cmd.key, cmd.cid, &hdr, 0, 0, &packet, &pipeline, 0);
+    ret = mcreq_basic_packet(&q, &keybuf, cmd.collection().collection_id(), &hdr, 0, 0, &packet, &pipeline, 0);
     ASSERT_EQ(LCB_SUCCESS, ret);
 
     ret = mcreq_reserve_value(pipeline, packet, &vreq);
@@ -258,8 +257,7 @@ TEST_F(McAlloc, testRdataExDtor)
 
     memset(&hdr, 0, sizeof hdr);
 
-    cmd.key.contig.bytes = "foo";
-    cmd.key.contig.nbytes = 3;
+    cmd.key(std::string("foo"));
 
     ExtraCookie ec(procs);
 
@@ -268,7 +266,8 @@ TEST_F(McAlloc, testRdataExDtor)
         lcb_STATUS err;
         mc_PIPELINE *pl;
         mc_PACKET *pkt;
-        err = mcreq_basic_packet(&q, &cmd.key, cmd.cid, &hdr, 0, 0, &pkt, &pl, 0);
+        lcb_KEYBUF keybuf{LCB_KV_COPY, {cmd.key().c_str(), cmd.key().size()}};
+        err = mcreq_basic_packet(&q, &keybuf, cmd.collection().collection_id(), &hdr, 0, 0, &pkt, &pl, 0);
         ASSERT_EQ(LCB_SUCCESS, err);
         pkt->flags |= MCREQ_F_REQEXT;
         pkt->u_rdata.exdata = &ec;

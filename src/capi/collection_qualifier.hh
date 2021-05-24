@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <sstream>
 #include <stdexcept>
 
 namespace lcb

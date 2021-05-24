@@ -70,8 +70,8 @@ void lcb_VIEW_HANDLE_::invoke_last(lcb_STATUS err)
         if (Json::Reader().parse(resp.value, resp.value + resp.nvalue, meta)) {
             Json::Value &errors = meta["errors"];
             if (errors.isArray() && !errors.empty()) {
-                Json::Value &error = errors[0];
-                Json::Value &message = error["reason"];
+                const Json::Value &error = errors[0];
+                const Json::Value &message = error["reason"];
                 if (message.isString()) {
                     first_error_message = message.asString();
                     resp.ctx.first_error_message = first_error_message.c_str();
@@ -84,15 +84,14 @@ void lcb_VIEW_HANDLE_::invoke_last(lcb_STATUS err)
         if (cur_htresp && cur_htresp->ctx.response_code != 200 && cur_htresp->ctx.body_len) {
             // chances that were not able to parse response
             Json::Value meta;
-            if (Json::Reader().parse((const char *)cur_htresp->ctx.body,
-                                     (const char *)cur_htresp->ctx.body + cur_htresp->ctx.body_len, meta)) {
-                Json::Value &error = meta["error"];
+            if (Json::Reader().parse(cur_htresp->ctx.body, cur_htresp->ctx.body + cur_htresp->ctx.body_len, meta)) {
+                const Json::Value &error = meta["error"];
                 if (error.isString()) {
                     first_error_code = error.asString();
                     resp.ctx.first_error_code = first_error_code.c_str();
                     resp.ctx.first_error_code_len = first_error_code.size();
                 }
-                Json::Value &message = meta["reason"];
+                const Json::Value &message = meta["reason"];
                 if (message.isString()) {
                     first_error_message = message.asString();
                     resp.ctx.first_error_message = first_error_message.c_str();
@@ -114,7 +113,7 @@ void lcb_VIEW_HANDLE_::invoke_row(lcb_RESPVIEW *resp)
     if (callback == nullptr) {
         return;
     }
-    resp->cookie = const_cast<void *>(cookie);
+    resp->cookie = cookie;
     resp->htresp = cur_htresp;
     if (cur_htresp) {
         resp->ctx.http_response_code = cur_htresp->ctx.response_code;
@@ -164,7 +163,7 @@ static void chunk_callback(lcb_INSTANCE *instance, int, const lcb_RESPBASE *rb)
     }
 
     req->refcount++;
-    req->parser->feed(reinterpret_cast<const char *>(rh->ctx.body), rh->ctx.body_len);
+    req->parser->feed(rh->ctx.body, rh->ctx.body_len);
     req->cur_htresp = nullptr;
     req->unref();
 }
@@ -252,17 +251,17 @@ static void doc_callback(lcb_INSTANCE *, int, const lcb_RESPGET *resp)
 
 static lcb_STATUS cb_op_schedule(lcb::docreq::Queue *q, lcb::docreq::DocRequest *dreq)
 {
-    lcb_CMDGET gcmd = {0};
+    lcb_CMDGET gcmd{};
 
-    LCB_CMD_SET_KEY(&gcmd, dreq->docid.iov_base, dreq->docid.iov_len);
+    gcmd.key(std::string(static_cast<const char *>(dreq->docid.iov_base), dreq->docid.iov_len));
     if (dreq->parent->parent) {
         auto *req = reinterpret_cast<lcb_VIEW_HANDLE_ *>(dreq->parent->parent);
         if (req->span) {
-            LCB_CMD_SET_TRACESPAN(&gcmd, req->span);
+            gcmd.parent_span(req->span);
         }
     }
     dreq->callback = (lcb_RESPCALLBACK)doc_callback;
-    gcmd.cmdflags |= LCB_CMD_F_INTERNAL_CALLBACK;
+    gcmd.treat_cookie_as_callback(true);
     return lcb_get(q->instance, &dreq->callback, &gcmd);
 }
 
@@ -367,10 +366,9 @@ lcb_STATUS lcb_VIEW_HANDLE_::request_http(const lcb_CMDVIEW *cmd)
     return err;
 }
 
-lcb_VIEW_HANDLE_::lcb_VIEW_HANDLE_(lcb_INSTANCE *instance_, const void *cookie_, const lcb_CMDVIEW *cmd)
-    : cur_htresp(nullptr), htreq(nullptr), parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_VIEWS, this)),
-      cookie(cookie_), docq(nullptr), callback(cmd->callback), instance(instance_), refcount(1),
-      cmdflags(cmd->cmdflags), lasterr(LCB_SUCCESS), span(nullptr)
+lcb_VIEW_HANDLE_::lcb_VIEW_HANDLE_(lcb_INSTANCE *instance_, void *cookie_, const lcb_CMDVIEW *cmd)
+    : parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_VIEWS, this)), cookie(cookie_),
+      callback(cmd->callback), instance(instance_), cmdflags(cmd->cmdflags)
 {
 
     // Validate:

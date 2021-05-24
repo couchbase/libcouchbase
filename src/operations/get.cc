@@ -15,9 +15,12 @@
  *   limitations under the License.
  */
 
+#include <memory>
+
 #include "internal.h"
 #include "collections.h"
 #include "trace.h"
+#include "defer.h"
 
 #include "capi/cmd_get.hh"
 #include "capi/cmd_get_replica.hh"
@@ -74,77 +77,166 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respget_value(const lcb_RESPGET *resp, const cha
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_create(lcb_CMDGET **cmd)
 {
-    *cmd = (lcb_CMDGET *)calloc(1, sizeof(lcb_CMDGET));
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_clone(const lcb_CMDGET *cmd, lcb_CMDGET **copy)
-{
-    LCB_CMD_CLONE(lcb_CMDGET, cmd, copy);
+    *cmd = new lcb_CMDGET{};
     return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_destroy(lcb_CMDGET *cmd)
 {
-    LCB_CMD_DESTROY_CLONE(cmd);
+    delete cmd;
     return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_timeout(lcb_CMDGET *cmd, uint32_t timeout)
 {
-    cmd->timeout = timeout;
-    return LCB_SUCCESS;
+    return cmd->timeout_in_microseconds(timeout);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_parent_span(lcb_CMDGET *cmd, lcbtrace_SPAN *span)
 {
-    cmd->pspan = span;
-    return LCB_SUCCESS;
+    return cmd->parent_span(span);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_collection(lcb_CMDGET *cmd, const char *scope, size_t scope_len,
                                                   const char *collection, size_t collection_len)
 {
-    cmd->scope = scope;
-    cmd->nscope = scope_len;
-    cmd->collection = collection;
-    cmd->ncollection = collection_len;
-    return LCB_SUCCESS;
+    try {
+        lcb::collection_qualifier qualifier(scope, scope_len, collection, collection_len);
+        return cmd->collection(std::move(qualifier));
+    } catch (const std::invalid_argument &) {
+        return LCB_ERR_INVALID_ARGUMENT;
+    }
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_key(lcb_CMDGET *cmd, const char *key, size_t key_len)
 {
-    LCB_CMD_SET_KEY(cmd, key, key_len);
-    return LCB_SUCCESS;
+    if (key == nullptr || key_len == 0) {
+        return LCB_ERR_INVALID_ARGUMENT;
+    }
+    return cmd->key(std::string(key, key_len));
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_expiry(lcb_CMDGET *cmd, uint32_t expiration)
 {
-    cmd->exptime = expiration;
-    return LCB_SUCCESS;
+    return cmd->with_touch(expiration);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdget_locktime(lcb_CMDGET *cmd, uint32_t duration)
 {
-    cmd->exptime = duration;
-    cmd->lock = 1;
-    return LCB_SUCCESS;
+    return cmd->with_lock(duration);
 }
 
 static lcb_STATUS get_validate(lcb_INSTANCE *instance, const lcb_CMDGET *cmd)
 {
-    auto err = lcb_is_collection_valid(instance, cmd->scope, cmd->nscope, cmd->collection, cmd->ncollection);
-    if (err != LCB_SUCCESS) {
-        return err;
-    }
-    if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
+    if (cmd->key().empty()) {
         return LCB_ERR_EMPTY_KEY;
     }
-    if (cmd->cas) {
-        return LCB_ERR_OPTIONS_CONFLICT;
+    if (!LCBT_SETTING(instance, use_collections) && !cmd->collection().is_default_collection()) {
+        /* only allow default collection when collections disabled for the instance */
+        return LCB_ERR_SDK_FEATURE_UNAVAILABLE;
     }
 
     return LCB_SUCCESS;
+}
+
+static lcb_STATUS get_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMDGET> cmd)
+{
+    mc_PIPELINE *pl;
+    mc_PACKET *pkt;
+    mc_REQDATA *rdata;
+    mc_CMDQUEUE *q = &instance->cmdq;
+    lcb_uint8_t extlen = 0;
+    lcb_uint8_t opcode = PROTOCOL_BINARY_CMD_GET;
+    protocol_binary_request_gat gcmd;
+    protocol_binary_request_header *hdr = &gcmd.message.header;
+    lcb_STATUS err;
+
+    hdr->request.magic = PROTOCOL_BINARY_REQ;
+    if (cmd->with_lock()) {
+        extlen = 4;
+        opcode = PROTOCOL_BINARY_CMD_GET_LOCKED;
+    } else if (cmd->with_touch()) {
+        extlen = 4;
+        opcode = PROTOCOL_BINARY_CMD_GAT;
+    }
+
+    lcb_KEYBUF keybuf{LCB_KV_COPY, {cmd->key().c_str(), cmd->key().size()}};
+    err = mcreq_basic_packet(q, &keybuf, cmd->collection().collection_id(), hdr, extlen, 0, &pkt, &pl,
+                             MCREQ_BASICPACKET_F_FALLBACKOK);
+    if (err != LCB_SUCCESS) {
+        return err;
+    }
+
+    rdata = &pkt->u_rdata.reqdata;
+    rdata->cookie = cmd->cookie();
+    rdata->start = cmd->start_time_or_default_in_nanoseconds(gethrtime());
+    rdata->deadline =
+        rdata->start + cmd->timeout_or_default_in_nanoseconds(LCB_US2NS(LCBT_SETTING(instance, operation_timeout)));
+
+    hdr->request.opcode = opcode;
+    hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    hdr->request.bodylen = htonl(extlen + ntohs(hdr->request.keylen));
+    hdr->request.opaque = pkt->opaque;
+    hdr->request.cas = 0;
+
+    if (cmd->with_lock()) {
+        gcmd.message.body.norm.expiration = htonl(cmd->lock_time());
+    }
+    if (extlen) {
+        gcmd.message.body.norm.expiration = htonl(cmd->expiry());
+    }
+
+    if (cmd->is_cookie_callback()) {
+        pkt->flags |= MCREQ_F_PRIVCALLBACK;
+    }
+
+    memcpy(SPAN_BUFFER(&pkt->kh_span), gcmd.bytes, MCREQ_PKT_BASESIZE + extlen);
+    LCB_SCHED_ADD(instance, pl, pkt)
+    if (instance->settings->tracer) {
+        lcbtrace_REF ref{LCBTRACE_REF_CHILD_OF, cmd->parent_span()};
+        auto operation_id = std::to_string(pkt->opaque);
+        rdata->span = lcbtrace_span_start(instance->settings->tracer, LCBTRACE_OP_GET, LCBTRACE_NOW, &ref);
+        lcbtrace_span_add_tag_str(rdata->span, LCBTRACE_TAG_OPERATION_ID, operation_id.c_str());
+        lcbtrace_span_add_system_tags(rdata->span, instance->settings, LCBTRACE_TAG_SERVICE_KV);
+    }
+    TRACE_GET_BEGIN(instance, hdr, cmd)
+    return LCB_SUCCESS;
+}
+
+static lcb_STATUS get_execute(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMDGET> cmd)
+{
+    if (!LCBT_SETTING(instance, use_collections)) {
+        /* fast path if collections are not enabled */
+        return get_schedule(instance, cmd);
+    }
+
+    if (collcache_get(instance, cmd->collection()) == LCB_SUCCESS) {
+        return get_schedule(instance, cmd);
+    }
+
+    return collcache_resolve(
+        instance, cmd,
+        [instance](lcb_STATUS status, const lcb_RESPGETCID *resp, std::shared_ptr<lcb_CMDGET> operation) {
+            const auto callback_type = LCB_CALLBACK_GET;
+            lcb_RESPCALLBACK operation_callback = lcb_find_callback(instance, callback_type);
+            lcb_RESPGET response{};
+            response.ctx.key = operation->key();
+            response.cookie = operation->cookie();
+            if (status == LCB_ERR_SHEDULE_FAILURE || resp == nullptr) {
+                response.ctx.rc = LCB_ERR_TIMEOUT;
+                operation_callback(instance, callback_type, &response);
+                return;
+            }
+            if (resp->ctx.rc != LCB_SUCCESS) {
+                response.ctx = resp->ctx;
+                operation_callback(instance, callback_type, &response);
+                return;
+            }
+            response.ctx.rc = get_schedule(instance, operation);
+            if (response.ctx.rc != LCB_SUCCESS) {
+                operation_callback(instance, callback_type, &response);
+            }
+        });
 }
 
 LIBCOUCHBASE_API
@@ -157,81 +249,29 @@ lcb_STATUS lcb_get(lcb_INSTANCE *instance, void *cookie, const lcb_CMDGET *comma
         return rc;
     }
 
-    auto operation = [instance, cookie](const lcb_RESPGETCID *resp, const lcb_CMDGET *cmd) {
-        if (resp && resp->ctx.rc != LCB_SUCCESS) {
-            lcb_RESPCALLBACK cb = lcb_find_callback(instance, LCB_CALLBACK_GET);
-            lcb_RESPGET get{};
-            get.ctx = resp->ctx;
-            get.ctx.key.assign(static_cast<const char *>(cmd->key.contig.bytes), cmd->key.contig.nbytes);
-            get.cookie = cookie;
-            cb(instance, LCB_CALLBACK_GET, reinterpret_cast<const lcb_RESPBASE *>(&get));
-            return resp->ctx.rc;
-        }
-        mc_PIPELINE *pl;
-        mc_PACKET *pkt;
-        mc_REQDATA *rdata;
-        mc_CMDQUEUE *q = &instance->cmdq;
-        lcb_uint8_t extlen = 0;
-        lcb_uint8_t opcode = PROTOCOL_BINARY_CMD_GET;
-        protocol_binary_request_gat gcmd;
-        protocol_binary_request_header *hdr = &gcmd.message.header;
-        lcb_STATUS err;
+    auto cmd = std::make_shared<lcb_CMDGET>(*command);
+    cmd->cookie(cookie);
 
-        hdr->request.magic = PROTOCOL_BINARY_REQ;
-        if (cmd->lock) {
-            extlen = 4;
-            opcode = PROTOCOL_BINARY_CMD_GET_LOCKED;
-        } else if (cmd->exptime || (cmd->cmdflags & LCB_CMDGET_F_CLEAREXP)) {
-            extlen = 4;
-            opcode = PROTOCOL_BINARY_CMD_GAT;
-        }
-
-        err = mcreq_basic_packet(q, &cmd->key, cmd->cid, hdr, extlen, 0, &pkt, &pl, MCREQ_BASICPACKET_F_FALLBACKOK);
-        if (err != LCB_SUCCESS) {
-            return err;
-        }
-
-        rdata = &pkt->u_rdata.reqdata;
-        rdata->cookie = cookie;
-        rdata->start = gethrtime();
-        rdata->deadline =
-            rdata->start + LCB_US2NS(cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, operation_timeout));
-
-        hdr->request.opcode = opcode;
-        hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-        hdr->request.bodylen = htonl(extlen + ntohs(hdr->request.keylen));
-        hdr->request.opaque = pkt->opaque;
-        hdr->request.cas = 0;
-
-        if (extlen) {
-            gcmd.message.body.norm.expiration = htonl(cmd->exptime);
-        }
-
-        if (cmd->cmdflags & LCB_CMD_F_INTERNAL_CALLBACK) {
-            pkt->flags |= MCREQ_F_PRIVCALLBACK;
-        }
-
-        memcpy(SPAN_BUFFER(&pkt->kh_span), gcmd.bytes, MCREQ_PKT_BASESIZE + extlen);
-        LCB_SCHED_ADD(instance, pl, pkt);
-        LCBTRACE_KV_START(instance->settings, cmd, LCBTRACE_OP_GET, pkt->opaque, rdata->span);
-        TRACE_GET_BEGIN(instance, hdr, cmd);
-        return LCB_SUCCESS;
-    };
-
-    if (!LCBT_SETTING(instance, use_collections)) {
-        /* fast path if collections are not enabled */
-        return operation(nullptr, command);
+    if (instance->cmdq.config == nullptr) {
+        cmd->start_time_in_nanoseconds(gethrtime());
+        return lcb::defer_operation(instance, [instance, cmd](lcb_STATUS status) {
+            const auto callback_type = LCB_CALLBACK_GET;
+            lcb_RESPCALLBACK operation_callback = lcb_find_callback(instance, callback_type);
+            lcb_RESPGET response{};
+            response.ctx.key = cmd->key();
+            response.cookie = cmd->cookie();
+            if (status == LCB_ERR_REQUEST_CANCELED) {
+                response.ctx.rc = status;
+                operation_callback(instance, callback_type, &response);
+                return;
+            }
+            response.ctx.rc = get_execute(instance, cmd);
+            if (response.ctx.rc != LCB_SUCCESS) {
+                operation_callback(instance, callback_type, &response);
+            }
+        });
     }
-
-    uint32_t cid = 0;
-    if (collcache_get(instance, command->scope, command->nscope, command->collection, command->ncollection, &cid) ==
-        LCB_SUCCESS) {
-        lcb_CMDGET clone = *command; /* shallow clone */
-        clone.cid = cid;
-        return operation(nullptr, &clone);
-    } else {
-        return collcache_resolve(instance, command, operation, lcb_cmdget_clone, lcb_cmdget_destroy);
-    }
+    return get_execute(instance, cmd);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respunlock_status(const lcb_RESPUNLOCK *resp)
