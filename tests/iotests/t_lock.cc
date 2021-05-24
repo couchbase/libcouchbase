@@ -162,6 +162,8 @@ TEST_F(LockUnitTest, testUnlockMissingCas)
     HandleWrap hw;
     createConnection(hw, &instance);
 
+    lcb_install_callback(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlockCallback);
+
     lcb_STATUS reserr = LCB_ERR_GENERIC;
     std::string key = "lockKey2";
     std::string value = "lockValue";
@@ -171,11 +173,12 @@ TEST_F(LockUnitTest, testUnlockMissingCas)
     lcb_CMDUNLOCK *cmd;
     lcb_cmdunlock_create(&cmd);
     lcb_cmdunlock_key(cmd, key.c_str(), key.size());
-    lcb_cmdunlock_cas(cmd, 0);
+    ASSERT_EQ(LCB_ERR_INVALID_ARGUMENT, lcb_cmdunlock_cas(cmd, 0));
+    ASSERT_EQ(LCB_ERR_INVALID_ARGUMENT, lcb_unlock(instance, &reserr, cmd));
 
-    lcb_install_callback(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlockCallback);
-
+    ASSERT_EQ(LCB_SUCCESS, lcb_cmdunlock_cas(cmd, 0xdeadbeef));
     ASSERT_EQ(LCB_SUCCESS, lcb_unlock(instance, &reserr, cmd));
+
     lcb_cmdunlock_destroy(cmd);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     if (CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_50)) {

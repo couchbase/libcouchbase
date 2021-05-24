@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <chrono>
 
 #include "key_value_error_context.hh"
 
@@ -27,41 +28,115 @@
  * @private
  */
 struct lcb_CMDUNLOCK_ {
-    /**Common flags for the command. These modify the command itself. Currently
-     the lower 16 bits of this field are reserved, and the higher 16 bits are
-     used for individual commands.*/
-    std::uint32_t cmdflags;
+    lcb_STATUS cas(std::uint64_t cas)
+    {
+        if (cas == 0) {
+            return LCB_ERR_INVALID_ARGUMENT;
+        }
+        cas_ = cas;
+        return LCB_SUCCESS;
+    }
 
-    /**Specify the expiration time. This is either an absolute Unix time stamp
-     or a relative offset from now, in seconds. If the value of this number
-     is greater than the value of thirty days in seconds, then it is a Unix
-     timestamp.
+    std::uint64_t cas() const
+    {
+        return cas_;
+    }
 
-     This field is used in mutation operations (lcb_store3()) to indicate
-     the lifetime of the item. It is used in lcb_get3() with the lcb_CMDGET::lock
-     option to indicate the lock expiration itself. */
-    std::uint32_t exptime;
+    lcb_STATUS key(std::string key)
+    {
+        key_ = std::move(key);
+        return LCB_SUCCESS;
+    }
 
-    /**The known CAS of the item. This is passed to mutation to commands to
-     ensure the item is only changed if the server-side CAS value matches the
-     one specified here. For other operations (such as lcb_CMDENDURE) this
-     is used to ensure that the item has been persisted/replicated to a number
-     of servers with the value specified here. */
-    std::uint64_t cas;
+    lcb_STATUS collection(lcb::collection_qualifier collection)
+    {
+        collection_ = std::move(collection);
+        return LCB_SUCCESS;
+    }
 
-    /**< Collection ID */
-    std::uint32_t cid;
-    const char *scope;
-    std::size_t nscope;
-    const char *collection;
-    std::size_t ncollection;
-    /**The key for the document itself. This should be set via LCB_CMD_SET_KEY() */
-    lcb_KEYBUF key;
+    lcb_STATUS parent_span(lcbtrace_SPAN *parent_span)
+    {
+        parent_span_ = parent_span;
+        return LCB_SUCCESS;
+    }
 
-    /** Operation timeout (in microseconds). When zero, the library will use default value. */
-    std::uint32_t timeout;
-    /** Parent tracing span */
-    lcbtrace_SPAN *pspan;
+    lcb_STATUS timeout_in_milliseconds(std::uint32_t timeout)
+    {
+        timeout_ = std::chrono::milliseconds(timeout);
+        return LCB_SUCCESS;
+    }
+
+    lcb_STATUS timeout_in_microseconds(std::uint32_t timeout)
+    {
+        timeout_ = std::chrono::microseconds(timeout);
+        return LCB_SUCCESS;
+    }
+
+    lcb_STATUS start_time_in_nanoseconds(std::uint64_t val)
+    {
+        start_time_ = std::chrono::nanoseconds(val);
+        return LCB_SUCCESS;
+    }
+
+    std::uint64_t start_time_or_default_in_nanoseconds(std::uint64_t default_val) const
+    {
+        if (start_time_ == std::chrono::nanoseconds::zero()) {
+            return default_val;
+        }
+        return start_time_.count();
+    }
+
+    const lcb::collection_qualifier &collection() const
+    {
+        return collection_;
+    }
+
+    lcb::collection_qualifier &collection()
+    {
+        return collection_;
+    }
+
+    const std::string &key() const
+    {
+        return key_;
+    }
+
+    std::uint64_t timeout_or_default_in_nanoseconds(std::uint64_t default_timeout) const
+    {
+        if (timeout_ > std::chrono::microseconds::zero()) {
+            return std::chrono::duration_cast<std::chrono::nanoseconds>(timeout_).count();
+        }
+        return default_timeout;
+    }
+
+    std::uint32_t timeout_in_microseconds() const
+    {
+        return static_cast<std::uint32_t>(timeout_.count());
+    }
+
+    lcbtrace_SPAN *parent_span() const
+    {
+        return parent_span_;
+    }
+
+    void cookie(void *cookie)
+    {
+        cookie_ = cookie;
+    }
+
+    void *cookie()
+    {
+        return cookie_;
+    }
+
+  private:
+    lcb::collection_qualifier collection_{};
+    std::chrono::microseconds timeout_{0};
+    std::chrono::nanoseconds start_time_{0};
+    lcbtrace_SPAN *parent_span_{nullptr};
+    void *cookie_{nullptr};
+    std::string key_{};
+    std::uint64_t cas_{};
 };
 
 /**

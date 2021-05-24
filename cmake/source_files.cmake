@@ -69,19 +69,20 @@ SET(LCB_CORE_CXXSRC
     src/cbft.cc
     src/operations/cbflush.cc
     src/operations/counter.cc
-    src/operations/durability.cc
     src/operations/durability-seqno.cc
+    src/operations/durability.cc
+    src/operations/exists.cc
     src/operations/get.cc
-    src/operations/observe.cc
     src/operations/observe-seqno.cc
+    src/operations/observe.cc
+    src/operations/ping.cc
     src/operations/pktfwd.cc
     src/operations/remove.cc
     src/operations/stats.cc
     src/operations/store.cc
     src/operations/subdoc.cc
     src/operations/touch.cc
-    src/operations/ping.cc
-    src/operations/exists.cc
+    src/operations/unlock.cc
     src/mcserver/mcserver.cc
     src/mcserver/negotiate.cc
     src/metrics.cc
