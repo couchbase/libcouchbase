@@ -73,6 +73,7 @@ SET(LCB_CORE_CXXSRC
     src/operations/durability.cc
     src/operations/exists.cc
     src/operations/get.cc
+    src/operations/get_replica.cc
     src/operations/observe-seqno.cc
     src/operations/observe.cc
     src/operations/ping.cc
