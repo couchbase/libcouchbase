@@ -191,3 +191,37 @@ TEST_F(SchedUnitTests, testScheduleGetBeforeConnection)
     ASSERT_FALSE(hasPendingOps(instance));
     ASSERT_EQ(1, counter);
 }
+
+static void removeCallback(lcb_INSTANCE *, int, const lcb_RESPREMOVE *resp)
+{
+    size_t *counter;
+    lcb_respremove_cookie(resp, (void **)&counter);
+    *counter += 1;
+}
+
+TEST_F(SchedUnitTests, testScheduleRemoveBeforeConnection)
+{
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    lcb_STATUS rc;
+
+    MockEnvironment::getInstance()->createConnection(hw, &instance);
+
+    lcb_CMDREMOVE *cmd;
+    lcb_install_callback(instance, LCB_CALLBACK_REMOVE, (lcb_RESPCALLBACK)removeCallback);
+    lcb_cmdremove_create(&cmd);
+    lcb_cmdremove_key(cmd, "key", 3);
+    size_t counter = 0;
+    rc = lcb_remove(instance, &counter, cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
+    lcb_cmdremove_destroy(cmd);
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_TRUE(instance->has_deferred_operations());
+
+    ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
+    ASSERT_FALSE(instance->has_deferred_operations());
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_EQ(1, counter);
+}
