@@ -523,7 +523,7 @@ static lcb_STATUS cb_op_schedule(lcb::docreq::Queue *q, lcb::docreq::DocRequest 
         lcb_cmdstore_value(cmd, req->row.c_str(), req->row.size());
     }
     dreq->callback = (lcb_RESPCALLBACK)doc_callback;
-    cmd->cmdflags |= LCB_CMD_F_INTERNAL_CALLBACK;
+    cmd->treat_cookie_as_callback(true);
     lcb_STATUS err = lcb_store(q->instance, &dreq->callback, cmd);
     lcb_cmdstore_destroy(cmd);
     if (param.id_dtor && param.id) {

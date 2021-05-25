@@ -220,12 +220,6 @@ const char *lcbtrace_span_get_operation(lcbtrace_SPAN *span);
 #define LCBTRACE_OP_UPSERT "upsert"
 #define LCBTRACE_OP_EXISTS "exists"
 
-#define LCBTRACE_OP_STORE2NAME(code)                                                                                   \
-    (code == LCB_STORE_INSERT)                                                                                         \
-        ? LCBTRACE_OP_INSERT                                                                                           \
-        : (code == LCB_STORE_PREPEND) ? LCBTRACE_OP_PREPEND                                                            \
-                                      : (code == LCB_STORE_APPEND) ? LCBTRACE_OP_APPEND : LCBTRACE_OP_UPSERT
-
 #define LCBTRACE_TAG_DB_TYPE "db.type"
 #define LCBTRACE_TAG_SPAN_KIND "span.kind"
 /**

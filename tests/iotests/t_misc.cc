@@ -678,25 +678,12 @@ TEST_F(MockUnitTest, testConflictingOptions)
     size_t nkey = 3;
     const char *value = "value";
     size_t nvalue = 5;
+    lcb_STATUS err;
 
     lcb_CMDSTORE *scmd;
     lcb_cmdstore_create(&scmd, LCB_STORE_APPEND);
-    lcb_cmdstore_expiry(scmd, 1);
-    lcb_cmdstore_key(scmd, key, nkey);
-    lcb_cmdstore_value(scmd, value, nvalue);
-
-    lcb_STATUS err;
-    err = lcb_store(instance, nullptr, scmd);
-    ASSERT_EQ(LCB_ERR_OPTIONS_CONFLICT, err);
-    lcb_cmdstore_expiry(scmd, 0);
-    lcb_cmdstore_flags(scmd, 99);
-    err = lcb_store(instance, nullptr, scmd);
-    ASSERT_EQ(LCB_ERR_OPTIONS_CONFLICT, err);
-
-    lcb_cmdstore_expiry(scmd, 0);
-    lcb_cmdstore_flags(scmd, 0);
-    err = lcb_store(instance, nullptr, scmd);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_ERR_OPTIONS_CONFLICT, lcb_cmdstore_expiry(scmd, 1));
+    ASSERT_EQ(LCB_ERR_OPTIONS_CONFLICT, lcb_cmdstore_flags(scmd, 99));
     lcb_cmdstore_destroy(scmd);
 
     lcb_cmdstore_create(&scmd, LCB_STORE_INSERT);

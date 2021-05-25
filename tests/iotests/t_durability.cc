@@ -51,8 +51,8 @@ class DurabilityUnitTest : public MockUnitTest
   protected:
     static void defaultOptions(lcb_INSTANCE *instance, lcb_durability_opts_st &opts)
     {
-        lcb_size_t nservers = lcb_get_num_nodes(instance);
-        lcb_size_t nreplicas = lcb_get_num_replicas(instance);
+        std::size_t nservers = lcb_get_num_nodes(instance);
+        std::size_t nreplicas = lcb_get_num_replicas(instance);
 
         opts.v.v0.persist_to = (lcb_uint16_t)min(nreplicas + 1, nservers);
         opts.v.v0.replicate_to = (lcb_uint16_t)min(nreplicas, nservers - 1);
@@ -925,7 +925,7 @@ TEST_F(DurabilityUnitTest, testDurStore)
     lcb_sched_enter(instance);
     res.rc = LCB_ERR_GENERIC;
     rc = lcb_store(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_sched_leave(instance);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     lcb_cmdstore_destroy(cmd);
