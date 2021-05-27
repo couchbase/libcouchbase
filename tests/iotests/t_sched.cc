@@ -260,3 +260,42 @@ TEST_F(SchedUnitTests, testScheduleStoreBeforeConnection)
     ASSERT_FALSE(hasPendingOps(instance));
     ASSERT_EQ(1, counter);
 }
+
+static void subdocCallback(lcb_INSTANCE *, int, const lcb_RESPSUBDOC *resp)
+{
+    size_t *counter;
+    lcb_respsubdoc_cookie(resp, (void **)&counter);
+    *counter += 1;
+}
+
+TEST_F(SchedUnitTests, testScheduleSubdocBeforeConnection)
+{
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    lcb_STATUS rc;
+
+    MockEnvironment::getInstance()->createConnection(hw, &instance);
+
+    lcb_CMDSUBDOC *cmd;
+    lcb_install_callback(instance, LCB_CALLBACK_SDLOOKUP, (lcb_RESPCALLBACK)subdocCallback);
+    lcb_cmdsubdoc_create(&cmd);
+    lcb_cmdsubdoc_key(cmd, "key", 3);
+    lcb_SUBDOCSPECS *specs;
+    lcb_subdocspecs_create(&specs, 1);
+    lcb_subdocspecs_get(specs, 0, 0, "p", 1);
+    size_t counter = 0;
+    lcb_cmdsubdoc_specs(cmd, specs);
+    rc = lcb_subdoc(instance, &counter, cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
+    lcb_subdocspecs_destroy(specs);
+    lcb_cmdsubdoc_destroy(cmd);
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_TRUE(instance->has_deferred_operations());
+
+    ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
+    ASSERT_FALSE(instance->has_deferred_operations());
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_EQ(1, counter);
+}
