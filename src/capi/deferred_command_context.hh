@@ -35,8 +35,8 @@ struct deferred_command_context : mc_REQDATAEX {
     {
     }
 
-    static void on_packet(struct mc_pipeline_st * /* pipeline */, struct mc_packet_st *pkt, lcb_STATUS rc,
-                          const void *res)
+    static void on_packet(struct mc_pipeline_st * /* pipeline */, struct mc_packet_st *pkt,
+                          lcb_CALLBACK_TYPE /* cbtype */, lcb_STATUS rc, const void *res)
     {
         auto *ctx = static_cast<deferred_command_context<Command, Response, Handler> *>(pkt->u_rdata.exdata);
         ctx->handler_(rc, static_cast<const Response *>(res), std::move(ctx->cmd_));

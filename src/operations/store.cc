@@ -246,7 +246,8 @@ struct DurStoreCtx : mc_REQDATAEX {
 };
 
 /** Observe stuff */
-static void handle_dur_storecb(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS err, const void *arg)
+static void handle_dur_storecb(mc_PIPELINE *, mc_PACKET *pkt, lcb_CALLBACK_TYPE /* cbtype */, lcb_STATUS err,
+                               const void *arg)
 {
     lcb_RESPCALLBACK cb;
     lcb_RESPSTORE resp{};

@@ -24,6 +24,7 @@
 
 #include "capi/cmd_store.hh"
 #include "capi/cmd_get.hh"
+#include "capi/cmd_get_replica.hh"
 #include "capi/cmd_remove.hh"
 #include "capi/cmd_touch.hh"
 #include "capi/cmd_counter.hh"
@@ -373,7 +374,8 @@ void invoke_callback(const mc_PACKET *pkt, mc_PIPELINE *pipeline, T *resp, lcb_C
  * If temporary dynamic storage is required this will be set to the allocated
  * pointer upon return. Otherwise it will be set to nullptr. In any case it must
  */
-static void maybe_decompress(lcb_INSTANCE *o, const MemcachedResponse *respkt, lcb_RESPGET *rescmd, void **freeptr)
+template <typename T>
+static void maybe_decompress(lcb_INSTANCE *o, const MemcachedResponse *respkt, T *rescmd, void **freeptr)
 {
     lcb_U8 dtype = 0;
     if (!respkt->vallen()) {
@@ -455,7 +457,7 @@ static void H_exists(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedRespons
 
 static void H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response, lcb_STATUS immerr)
 {
-    lcb_RESPGET resp{};
+    lcb_RESPGETREPLICA resp{};
     lcb_INSTANCE *instance = get_instance(pipeline);
     void *freeptr = nullptr;
     mc_REQDATAEX *rd = request->u_rdata.exdata;
@@ -475,7 +477,7 @@ static void H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedRes
     }
 
     maybe_decompress(instance, response, &resp, &freeptr);
-    rd->procs->handler(pipeline, request, resp.ctx.rc, &resp);
+    rd->procs->handler(pipeline, request, LCB_CALLBACK_GETREPLICA, resp.ctx.rc, &resp);
     free(freeptr);
 }
 
@@ -693,7 +695,7 @@ static void H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedRespon
 
     if (resp.ctx.rc != LCB_SUCCESS) {
         if (!(request->flags & MCREQ_F_INVOKED)) {
-            rd->procs->handler(pipeline, request, resp.ctx.rc, nullptr);
+            rd->procs->handler(pipeline, request, LCB_CALLBACK_OBSERVE, resp.ctx.rc, nullptr);
         }
         return;
     }
@@ -745,7 +747,7 @@ static void H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedRespon
         TRACE_OBSERVE_PROGRESS(root, request, response, &resp);
         LCBTRACE_KV_FINISH(pipeline, request, resp, response);
         if (!(request->flags & MCREQ_F_INVOKED)) {
-            rd->procs->handler(pipeline, request, resp.ctx.rc, &resp);
+            rd->procs->handler(pipeline, request, LCB_CALLBACK_OBSERVE, resp.ctx.rc, &resp);
         }
     }
 }
@@ -815,7 +817,7 @@ static void H_store(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse
     TRACE_STORE_END(root, request, response, &w.resp);
     if (request->flags & MCREQ_F_REQEXT) {
         LCBTRACE_KV_COMPLETE(pipeline, request, resp, response);
-        request->u_rdata.exdata->procs->handler(pipeline, request, immerr, &resp);
+        request->u_rdata.exdata->procs->handler(pipeline, request, LCB_CALLBACK_STORE, immerr, &resp);
     } else {
         LCBTRACE_KV_FINISH(pipeline, request, resp, response);
         invoke_callback(request, root, &resp, LCB_CALLBACK_STORE);
@@ -855,7 +857,7 @@ static void H_stats(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse
     if (resp.ctx.rc != LCB_SUCCESS || response->keylen() == 0) {
         /* Call the handler without a response, this indicates that this server
          * has finished responding */
-        exdata->procs->handler(pipeline, request, resp.ctx.rc, nullptr);
+        exdata->procs->handler(pipeline, request, LCB_CALLBACK_STATS, resp.ctx.rc, nullptr);
         return;
     }
 
@@ -866,7 +868,7 @@ static void H_stats(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse
         }
     }
 
-    exdata->procs->handler(pipeline, request, resp.ctx.rc, &resp);
+    exdata->procs->handler(pipeline, request, LCB_CALLBACK_STATS, resp.ctx.rc, &resp);
 }
 
 static void H_collections_get_manifest(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
@@ -914,7 +916,7 @@ static void H_collections_get_cid(mc_PIPELINE *pipeline, mc_PACKET *request, Mem
                 resp.ctx.collection = resp.ctx.key.substr(dot + 1);
             }
         }
-        request->u_rdata.exdata->procs->handler(pipeline, request, resp.ctx.rc, &resp);
+        request->u_rdata.exdata->procs->handler(pipeline, request, LCB_CALLBACK_GETCID, resp.ctx.rc, &resp);
     } else {
         invoke_callback(request, root, &resp, LCB_CALLBACK_GETCID);
     }
@@ -928,7 +930,7 @@ static void H_noop(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse 
 
     make_error(root, &resp, response, immerr, request);
 
-    exdata->procs->handler(pipeline, request, resp.ctx.rc, &resp);
+    exdata->procs->handler(pipeline, request, LCB_CALLBACK_NOOP, resp.ctx.rc, &resp);
 }
 
 static void H_touch(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response, lcb_STATUS immerr)
@@ -970,7 +972,7 @@ static void H_config(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedRespons
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
     make_error(get_instance(pipeline), &dummy, response, immerr, request);
 
-    exdata->procs->handler(pipeline, request, dummy.ctx.rc, response);
+    exdata->procs->handler(pipeline, request, LCB_CALLBACK_DEFAULT, dummy.ctx.rc, response);
 }
 
 static void H_select_bucket(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response, lcb_STATUS immerr)
@@ -979,7 +981,7 @@ static void H_select_bucket(mc_PIPELINE *pipeline, mc_PACKET *request, Memcached
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
     if (exdata) {
         make_error(get_instance(pipeline), &dummy, response, immerr, request);
-        exdata->procs->handler(pipeline, request, dummy.ctx.rc, response);
+        exdata->procs->handler(pipeline, request, LCB_CALLBACK_DEFAULT, dummy.ctx.rc, response);
     }
 }
 

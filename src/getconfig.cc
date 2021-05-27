@@ -19,7 +19,8 @@
 #include "packetutils.h"
 #include <bucketconfig/clconfig.h>
 
-static void ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_STATUS rc, const void *resdata)
+static void ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_CALLBACK_TYPE /* cbtype */, lcb_STATUS rc,
+                               const void *resdata)
 {
     auto *server = static_cast<lcb::Server *>(pl);
     const auto *res = reinterpret_cast<const lcb::MemcachedResponse *>(resdata);

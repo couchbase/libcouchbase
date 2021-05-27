@@ -156,7 +156,8 @@ static void rget_dtor(mc_PACKET *pkt)
     static_cast<RGetCookie *>(pkt->u_rdata.exdata)->decref();
 }
 
-static void rget_callback(mc_PIPELINE *, mc_PACKET *pkt, lcb_STATUS err, const void *arg)
+static void rget_callback(mc_PIPELINE *, mc_PACKET *pkt, lcb_CALLBACK_TYPE /* cbtype */, lcb_STATUS err,
+                          const void *arg)
 {
     auto *rck = static_cast<RGetCookie *>(pkt->u_rdata.exdata);
     auto *resp = reinterpret_cast<lcb_RESPGETREPLICA *>(const_cast<void *>(arg));

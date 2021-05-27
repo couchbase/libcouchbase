@@ -83,7 +83,8 @@ GetCidCtx<Command, Operation, Destructor> *make_cid_ctx(std::string path, Operat
 }
 
 template <typename Command, typename Operation, typename Destructor>
-static void handle_collcache_proc(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_STATUS /* err */, const void *rb)
+static void handle_collcache_proc(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_CALLBACK_TYPE /* cbtype */,
+                                  lcb_STATUS /* err */, const void *rb)
 {
     auto *instance = reinterpret_cast<lcb_INSTANCE *>(pipeline->parent->cqdata);
     auto *ctx = static_cast<GetCidCtx<Command, Operation, Destructor> *>(pkt->u_rdata.exdata);

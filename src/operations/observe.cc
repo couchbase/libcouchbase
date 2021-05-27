@@ -63,15 +63,16 @@ typedef enum { F_DURABILITY = 0x01, F_DESTROY = 0x02, F_SCHEDFAILED = 0x04 } obs
 template <typename ContainerType, typename ValueType>
 void add_to_buf(ContainerType &c, ValueType v)
 {
-    typename ContainerType::value_type *p = reinterpret_cast<typename ContainerType::value_type *>(&v);
+    auto *p = reinterpret_cast<typename ContainerType::value_type *>(&v);
     c.insert(c.end(), p, p + sizeof(ValueType));
 }
 
-static void handle_observe_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_STATUS err, const void *arg)
+static void handle_observe_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_CALLBACK_TYPE cbtype, lcb_STATUS err,
+                                    const void *arg)
 {
-    OperationCtx *opc = static_cast<OperationCtx *>(pkt->u_rdata.exdata);
+    auto *opc = static_cast<OperationCtx *>(pkt->u_rdata.exdata);
     ObserveCtx *oc = opc->parent;
-    lcb_RESPOBSERVE *resp = reinterpret_cast<lcb_RESPOBSERVE *>(const_cast<void *>(arg));
+    auto *resp = reinterpret_cast<lcb_RESPOBSERVE *>(const_cast<void *>(arg));
     lcb_INSTANCE *instance = oc->instance;
 
     if (resp == nullptr) {
@@ -90,9 +91,9 @@ static void handle_observe_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_STATUS 
             ptr += 2;
 
             cur.ctx.key.assign(ptr, nkey);
-            cur.cookie = (void *)opc->cookie;
+            cur.cookie = opc->cookie;
             cur.ctx.rc = err;
-            handle_observe_callback(nullptr, pkt, err, &cur);
+            handle_observe_callback(nullptr, pkt, cbtype, err, &cur);
             ptr += nkey;
             nfailed++;
         }
@@ -122,7 +123,7 @@ static void handle_observe_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_STATUS 
         resp2.ctx.rc = err;
         resp2.rflags = LCB_RESP_F_CLIENTGEN | LCB_RESP_F_FINAL;
         oc->oflags |= F_DESTROY;
-        handle_observe_callback(nullptr, pkt, err, &resp2);
+        handle_observe_callback(nullptr, pkt, cbtype, err, &resp2);
         delete oc;
     }
     opc->remaining--;
@@ -137,7 +138,7 @@ static void handle_schedfail(mc_PACKET *pkt)
     OperationCtx *opc = static_cast<OperationCtx *>(pkt->u_rdata.exdata);
     ObserveCtx *oc = opc->parent;
     oc->oflags |= F_SCHEDFAILED;
-    handle_observe_callback(nullptr, pkt, LCB_ERR_SHEDULE_FAILURE, nullptr);
+    handle_observe_callback(nullptr, pkt, LCB_CALLBACK_OBSERVE, LCB_ERR_SHEDULE_FAILURE, nullptr);
 }
 
 void ObserveCtx::MCTX_setspan(lcbtrace_SPAN *span_)

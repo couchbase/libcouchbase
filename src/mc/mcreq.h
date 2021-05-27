@@ -167,7 +167,8 @@ typedef struct {
      * @param rc the error code for the response
      * @param arg opaque pointer for callback
      */
-    void (*handler)(struct mc_pipeline_st *pipeline, struct mc_packet_st *pkt, lcb_STATUS rc, const void *res);
+    void (*handler)(struct mc_pipeline_st *pipeline, struct mc_packet_st *pkt, lcb_CALLBACK_TYPE cbtype, lcb_STATUS rc,
+                    const void *res);
 
     /**
      * Destructor function called from within mcreq_sched_fail() for packets with

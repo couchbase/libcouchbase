@@ -46,7 +46,8 @@ static const char *make_hp_string(const lcb::Server &server, std::string &out)
     return out.c_str();
 }
 
-static void stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_STATUS err, const void *arg)
+static void stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_CALLBACK_TYPE /* cbtype */, lcb_STATUS err,
+                          const void *arg)
 {
     auto *ck = static_cast<BcastCookie *>(req->u_rdata.exdata);
     auto *server = static_cast<lcb::Server *>(pl);
@@ -242,7 +243,8 @@ lcb_STATUS lcb_stats(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSTATS *c
     return LCB_SUCCESS;
 }
 
-static void handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS err, const void *arg)
+static void handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_CALLBACK_TYPE /* cbtype */, lcb_STATUS err,
+                         const void *arg)
 {
     auto *server = static_cast<lcb::Server *>(pipeline);
     auto *ck = (BcastCookie *)req->u_rdata.exdata;

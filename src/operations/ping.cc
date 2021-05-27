@@ -246,7 +246,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdping_encode_json(lcb_CMDPING *cmd, int enable
 }
 
 static void refcnt_dtor_ping(mc_PACKET *);
-static void handle_ping(mc_PIPELINE *, mc_PACKET *, lcb_STATUS, const void *);
+static void handle_ping(mc_PIPELINE *, mc_PACKET *, lcb_CALLBACK_TYPE /* cbtype */, lcb_STATUS, const void *);
 
 static mc_REQDATAPROCS ping_procs = {handle_ping, refcnt_dtor_ping};
 
@@ -404,13 +404,14 @@ static void invoke_ping_callback(lcb_INSTANCE *instance, PingCookie *ck)
     }
     lcb_RESPCALLBACK callback;
     callback = lcb_find_callback(instance, LCB_CALLBACK_PING);
-    ping.cookie = const_cast<void *>(ck->cookie);
+    ping.cookie = ck->cookie;
     callback(instance, LCB_CALLBACK_PING, (lcb_RESPBASE *)&ping);
     delete[] ping.services;
     delete ck;
 }
 
-static void handle_ping(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS err, const void *)
+static void handle_ping(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_CALLBACK_TYPE /* cbtype */, lcb_STATUS err,
+                        const void *)
 {
     auto *server = static_cast<lcb::Server *>(pipeline);
     auto *ck = (PingCookie *)req->u_rdata.exdata;
