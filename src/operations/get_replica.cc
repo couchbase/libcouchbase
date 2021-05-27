@@ -22,11 +22,17 @@
 #include "trace.h"
 #include "defer.h"
 
+#include "capi/cmd_get.hh"
 #include "capi/cmd_get_replica.hh"
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_status(const lcb_RESPGETREPLICA *resp)
 {
     return resp->ctx.rc;
+}
+
+LIBCOUCHBASE_API int lcb_respgetreplica_is_active(const lcb_RESPGETREPLICA *resp)
+{
+    return resp->is_active;
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_error_context(const lcb_RESPGETREPLICA *resp,
@@ -156,16 +162,27 @@ static void rget_dtor(mc_PACKET *pkt)
     static_cast<RGetCookie *>(pkt->u_rdata.exdata)->decref();
 }
 
-static void rget_callback(mc_PIPELINE *, mc_PACKET *pkt, lcb_CALLBACK_TYPE /* cbtype */, lcb_STATUS err,
+static void rget_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_CALLBACK_TYPE cbtype, lcb_STATUS err,
                           const void *arg)
 {
+    auto *instance = static_cast<lcb_INSTANCE *>(pipeline->parent->cqdata);
+    lcb_RESPCALLBACK callback = lcb_find_callback(instance, LCB_CALLBACK_GETREPLICA);
+    lcb_RESPGETREPLICA active_resp{};
+    lcb_RESPGETREPLICA *resp = &active_resp;
+    if (cbtype == LCB_CALLBACK_GET) {
+        const auto *get_resp = reinterpret_cast<const lcb_RESPGET *>(arg);
+        active_resp.is_active = true;
+        active_resp.cookie = get_resp->cookie;
+        active_resp.ctx = get_resp->ctx;
+        active_resp.datatype = get_resp->datatype;
+        active_resp.value = get_resp->value;
+        active_resp.nvalue = get_resp->nvalue;
+        active_resp.itmflags = get_resp->itmflags;
+    } else {
+        resp = reinterpret_cast<lcb_RESPGETREPLICA *>(const_cast<void *>(arg));
+    }
+
     auto *rck = static_cast<RGetCookie *>(pkt->u_rdata.exdata);
-    auto *resp = reinterpret_cast<lcb_RESPGETREPLICA *>(const_cast<void *>(arg));
-    lcb_RESPCALLBACK callback;
-    lcb_INSTANCE *instance = rck->instance;
-
-    callback = lcb_find_callback(instance, LCB_CALLBACK_GETREPLICA);
-
     /** Figure out what the strategy is.. */
     if (rck->strategy == get_replica_mode::select || rck->strategy == get_replica_mode::all) {
         /** Simplest */
@@ -338,7 +355,7 @@ static lcb_STATUS get_replica_schedule(lcb_INSTANCE *instance, std::shared_ptr<l
     req.request.magic = PROTOCOL_BINARY_REQ;
     req.request.opcode = PROTOCOL_BINARY_CMD_GET_REPLICA;
     req.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.request.vbucket = htons((lcb_uint16_t)vbid);
+    req.request.vbucket = htons(static_cast<std::uint16_t>(vbid));
     req.request.cas = 0;
     req.request.extlen = 0;
 
@@ -372,6 +389,24 @@ static lcb_STATUS get_replica_schedule(lcb_INSTANCE *instance, std::shared_ptr<l
         mcreq_write_hdr(pkt, &req);
         mcreq_sched_add(pl, pkt);
     } while (++r0 < r1);
+
+    if (cmd->need_get_active()) {
+        req.request.opcode = PROTOCOL_BINARY_CMD_GET;
+        mc_PIPELINE *pl;
+        mc_PACKET *pkt;
+        lcb_STATUS err = mcreq_basic_packet(cq, &keybuf, cmd->collection().collection_id(), &req, 0, 0, &pkt, &pl,
+                                            MCREQ_BASICPACKET_F_FALLBACKOK);
+        if (err != LCB_SUCCESS) {
+            delete rck;
+            return err;
+        }
+        req.request.opaque = pkt->opaque;
+        pkt->u_rdata.exdata = rck;
+        pkt->flags |= MCREQ_F_REQEXT;
+        rck->remaining++;
+        mcreq_write_hdr(pkt, &req);
+        mcreq_sched_add(pl, pkt);
+    }
 
     MAYBE_SCHEDLEAVE(instance)
 

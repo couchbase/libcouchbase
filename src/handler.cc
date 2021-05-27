@@ -423,7 +423,11 @@ static void H_get(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *
     maybe_decompress(o, response, &resp, &freeptr);
     LCBTRACE_KV_FINISH(pipeline, request, resp, response);
     TRACE_GET_END(o, request, response, &resp);
-    invoke_callback(request, o, &resp, LCB_CALLBACK_GET);
+    if (request->flags & MCREQ_F_REQEXT) {
+        request->u_rdata.exdata->procs->handler(pipeline, request, LCB_CALLBACK_GET, resp.ctx.rc, &resp);
+    } else {
+        invoke_callback(request, o, &resp, LCB_CALLBACK_GET);
+    }
     free(freeptr);
 }
 

@@ -784,6 +784,7 @@ typedef enum {
 typedef struct lcb_RESPGETREPLICA_ lcb_RESPGETREPLICA;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_status(const lcb_RESPGETREPLICA *resp);
+LIBCOUCHBASE_API int lcb_respgetreplica_is_active(const lcb_RESPGETREPLICA *resp);
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_error_context(const lcb_RESPGETREPLICA *resp,
                                                              const lcb_KEY_VALUE_ERROR_CONTEXT **ctx);
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_cookie(const lcb_RESPGETREPLICA *resp, void **cookie);

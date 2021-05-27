@@ -58,6 +58,11 @@ struct lcb_CMDGETREPLICA_ {
         return select_index_;
     }
 
+    bool need_get_active() const
+    {
+        return mode_ == get_replica_mode::all;
+    }
+
     lcb_STATUS key(std::string key)
     {
         key_ = std::move(key);
@@ -170,6 +175,7 @@ struct lcb_RESPGETREPLICA_ {
     void *bufh;
     std::uint8_t datatype;  /**< @internal */
     std::uint32_t itmflags; /**< User-defined flags for the item */
+    bool is_active{false};
 };
 
 #endif // LIBCOUCHBASE_CAPI_GET_REPLICA_HH

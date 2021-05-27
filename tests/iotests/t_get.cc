@@ -289,6 +289,8 @@ struct RGetCookie {
     lcb_STATUS expectrc{};
     std::string value;
     lcb_U64 cas{};
+    int hits_active{0};
+    int hits_replicas{0};
 };
 
 extern "C" {
@@ -296,6 +298,12 @@ static void rget_callback(lcb_INSTANCE *instance, int, const lcb_RESPGETREPLICA 
 {
     RGetCookie *rck;
     lcb_respgetreplica_cookie(resp, (void **)&rck);
+
+    if (lcb_respgetreplica_is_active(resp)) {
+        rck->hits_active++;
+    } else {
+        rck->hits_replicas++;
+    }
 
     lcb_STATUS rc = lcb_respgetreplica_status(resp);
     ASSERT_EQ(rck->expectrc, rc);
@@ -378,14 +386,15 @@ TEST_F(GetUnitTest, testGetReplica)
     // Test with the "All" mode
     MockMutationCommand mcCmd(MockCommand::CACHE, key);
     mcCmd.cas = 999;
-    mcCmd.onMaster = false;
+    mcCmd.onMaster = true;
     mcCmd.replicaCount = nreplicas;
     mock->sendCommand(mcCmd);
     mock->getResponse();
 
-    rck.remaining = nreplicas;
+    rck.remaining = nreplicas + 1 /* active */;
     rck.cas = mcCmd.cas;
     rck.expectrc = LCB_SUCCESS;
+    rck.hits_active = rck.hits_replicas = 0;
 
     lcb_cmdgetreplica_create(&rcmd, LCB_REPLICA_MODE_ALL);
     lcb_cmdgetreplica_key(rcmd, key.c_str(), key.size());
@@ -397,6 +406,8 @@ TEST_F(GetUnitTest, testGetReplica)
 
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(0, rck.remaining);
+    ASSERT_EQ(1, rck.hits_active);
+    ASSERT_EQ(nreplicas, rck.hits_replicas);
 
     MockMutationCommand purgeCmd(MockCommand::PURGE, key);
     purgeCmd.onMaster = true;
