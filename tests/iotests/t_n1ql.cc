@@ -619,18 +619,20 @@ struct cycled_auth {
 };
 
 extern "C" {
-static const char *get_username(void *cookie, const char * /* host */, const char *port, const char * /* bucket */)
+static void get_credentials(lcbauth_CREDENTIALS *credentials)
 {
-    auto *auth = static_cast<cycled_auth *>(cookie);
-    return auth->get(port).first.c_str();
-}
+    cycled_auth *auth = nullptr;
+    lcbauth_credentials_cookie(credentials, reinterpret_cast<void **>(&auth));
 
-static const char *get_password(void *cookie, const char * /* host */, const char *port, const char * /* bucket */)
-{
-    auto *auth = static_cast<cycled_auth *>(cookie);
-    const char *value = auth->get(port).second.c_str();
-    auth->advance(port);
-    return value;
+    const char *port = nullptr;
+    size_t port_len = 0;
+    lcbauth_credentials_port(credentials, &port, &port_len);
+    std::string port_str(port, port_len);
+    const auto &creds = auth->get(port_str);
+    lcbauth_credentials_username(credentials, creds.first.c_str(), creds.first.size());
+    lcbauth_credentials_password(credentials, creds.second.c_str(), creds.second.size());
+    lcbauth_credentials_result(credentials, LCBAUTH_RESULT_OK);
+    auth->advance(port_str);
 }
 }
 
@@ -664,7 +666,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
     cycled_auth ca(get_n1ql_port(instance), fallback_credentials);
 
     lcb_AUTHENTICATOR *auth = lcbauth_new();
-    lcbauth_set_callbacks(auth, &ca, get_username, get_password);
+    lcbauth_set_callback(auth, &ca, get_credentials);
     lcbauth_set_mode(auth, LCBAUTH_MODE_DYNAMIC);
     lcb_set_auth(instance, auth);
 

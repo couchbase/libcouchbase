@@ -573,6 +573,32 @@ const char *Request::get_api_node(lcb_STATUS &rc)
     return lcbvb_get_resturl(vbc, ix, svc, mode);
 }
 
+static lcbauth_SERVICE http_type_to_service(lcb_HTTP_TYPE type)
+{
+    switch (type) {
+        case LCB_HTTP_TYPE_VIEW:
+            return LCBAUTH_SERVICE_VIEWS;
+
+        case LCB_HTTP_TYPE_MANAGEMENT:
+            return LCBAUTH_SERVICE_MANAGEMENT;
+
+        case LCB_HTTP_TYPE_QUERY:
+            return LCBAUTH_SERVICE_QUERY;
+
+        case LCB_HTTP_TYPE_SEARCH:
+            return LCBAUTH_SERVICE_SEARCH;
+
+        case LCB_HTTP_TYPE_ANALYTICS:
+            return LCBAUTH_SERVICE_ANALYTICS;
+
+        case LCB_HTTP_TYPE_EVENTING:
+            return LCBAUTH_SERVICE_EVENTING;
+
+        default:
+            return LCBAUTH_SERVICE_UNSPECIFIED;
+    }
+}
+
 lcb_STATUS Request::setup_inputs(const lcb_CMDHTTP *cmd)
 {
     std::string username, password;
@@ -629,6 +655,7 @@ lcb_STATUS Request::setup_inputs(const lcb_CMDHTTP *cmd)
                 username = auth.username();
                 password = auth.password();
             } else {
+                auto service_type = http_type_to_service(reqtype);
                 if (auth.mode() == LCBAUTH_MODE_DYNAMIC) {
                     struct http_parser_url info = {};
                     if (_lcb_http_parser_parse_url(base, strlen(base), 0, &info)) {
@@ -637,11 +664,15 @@ lcb_STATUS Request::setup_inputs(const lcb_CMDHTTP *cmd)
                     }
                     std::string hh(base + info.field_data[UF_HOST].off, info.field_data[UF_HOST].len);
                     std::string pp(base + info.field_data[UF_PORT].off, info.field_data[UF_PORT].len);
-                    username = auth.username_for(hh.c_str(), pp.c_str(), LCBT_SETTING(instance, bucket));
-                    password = auth.password_for(hh.c_str(), pp.c_str(), LCBT_SETTING(instance, bucket));
+                    auto creds = auth.credentials_for(service_type, LCBAUTH_REASON_NEW_OPERATION, hh.c_str(),
+                                                      pp.c_str(), LCBT_SETTING(instance, bucket));
+                    username = creds.username();
+                    password = creds.password();
                 } else {
-                    username = auth.username_for(nullptr, nullptr, LCBT_SETTING(instance, bucket));
-                    password = auth.password_for(nullptr, nullptr, LCBT_SETTING(instance, bucket));
+                    auto creds = auth.credentials_for(service_type, LCBAUTH_REASON_NEW_OPERATION, nullptr, nullptr,
+                                                      LCBT_SETTING(instance, bucket));
+                    username = creds.username();
+                    password = creds.password();
                 }
             }
         }
