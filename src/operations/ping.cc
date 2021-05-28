@@ -526,6 +526,37 @@ static void handle_analytics(lcb_INSTANCE *instance, int, const lcb_RESPBASE *re
     handle_http(instance, LCB_PING_SERVICE_ANALYTICS, (const lcb_RESPHTTP *)resp);
 }
 
+static lcbauth_SERVICE ping_type_to_service(lcbvb_SVCTYPE type)
+{
+    switch (type) {
+        case LCBVB_SVCTYPE_DATA:
+            return LCBAUTH_SERVICE_KEY_VALUE;
+
+        case LCBVB_SVCTYPE_VIEWS:
+            return LCBAUTH_SERVICE_VIEWS;
+
+        case LCBVB_SVCTYPE_MGMT:
+            return LCBAUTH_SERVICE_MANAGEMENT;
+
+        case LCBVB_SVCTYPE_IXQUERY:
+        case LCBVB_SVCTYPE_IXADMIN:
+        case LCBVB_SVCTYPE_QUERY:
+            return LCBAUTH_SERVICE_QUERY;
+
+        case LCBVB_SVCTYPE_SEARCH:
+            return LCBAUTH_SERVICE_SEARCH;
+
+        case LCBVB_SVCTYPE_ANALYTICS:
+            return LCBAUTH_SERVICE_ANALYTICS;
+
+        case LCBVB_SVCTYPE_EVENTING:
+            return LCBAUTH_SERVICE_EVENTING;
+
+        default:
+            return LCBAUTH_SERVICE_UNSPECIFIED;
+    }
+}
+
 LIBCOUCHBASE_API
 lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const lcb_CMDPING *cmd)
 {
@@ -601,10 +632,10 @@ lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const lcb_CMDPING *cmd
         lcb_cmdhttp_method(htcmd, LCB_HTTP_METHOD_GET);                                                                \
         lcb_cmdhttp_handle(htcmd, &htreq);                                                                             \
         const lcb::Authenticator &auth = *instance->settings->auth;                                                    \
-        std::string username = auth.username_for(nullptr, nullptr, LCBT_SETTING(instance, bucket));                    \
-        lcb_cmdhttp_username(htcmd, username.c_str(), username.size());                                                \
-        std::string password = auth.password_for(nullptr, nullptr, LCBT_SETTING(instance, bucket));                    \
-        lcb_cmdhttp_password(htcmd, password.c_str(), password.size());                                                \
+        auto creds = auth.credentials_for(ping_type_to_service(SVC), LCBAUTH_REASON_NEW_OPERATION, nullptr, nullptr,   \
+                                          LCBT_SETTING(instance, bucket));                                             \
+        lcb_cmdhttp_username(htcmd, creds.username().c_str(), creds.username().size());                                \
+        lcb_cmdhttp_password(htcmd, creds.password().c_str(), creds.password().size());                                \
         lcb_cmdhttp_timeout(htcmd, LCB_NS2US(timeout));                                                                \
         rc = lcb_http(instance, ckwrap, htcmd);                                                                        \
         lcb_cmdhttp_destroy(htcmd);                                                                                    \

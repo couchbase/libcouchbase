@@ -668,16 +668,18 @@ TEST_F(MockUnitTest, testSaslSHA)
 #endif
 
 extern "C" {
-static const char *get_username(void * /* cookie */, const char * /* host */, const char * /* port */,
-                                const char *bucket)
+static void get_credentials(lcbauth_CREDENTIALS *credentials)
 {
-    return bucket;
-}
-
-static const char *get_password(void *cookie, const char * /* host */, const char * /* port */, const char *bucket)
-{
-    auto *credentials = static_cast<std::map<std::string, std::string> *>(cookie);
-    return (*credentials)[bucket].c_str();
+    std::map<std::string, std::string> *store = nullptr;
+    lcbauth_credentials_cookie(credentials, reinterpret_cast<void **>(&store));
+    const char *bucket = nullptr;
+    size_t bucket_len = 0;
+    lcbauth_credentials_bucket(credentials, &bucket, &bucket_len);
+    std::string bucket_name(bucket, bucket_len);
+    auto password = (*store)[bucket_name];
+    lcbauth_credentials_username(credentials, bucket_name.c_str(), bucket_name.size());
+    lcbauth_credentials_password(credentials, password.c_str(), password.size());
+    lcbauth_credentials_result(credentials, LCBAUTH_RESULT_OK);
 }
 }
 
@@ -701,7 +703,7 @@ TEST_F(MockUnitTest, testDynamicAuth)
     std::map<std::string, std::string> credentials;
     credentials["protected"] = "secret";
     lcb_AUTHENTICATOR *auth = lcbauth_new();
-    lcbauth_set_callbacks(auth, &credentials, get_username, get_password);
+    lcbauth_set_callback(auth, &credentials, get_credentials);
     lcbauth_set_mode(auth, LCBAUTH_MODE_DYNAMIC);
     lcb_set_auth(instance, auth);
 

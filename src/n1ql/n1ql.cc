@@ -270,7 +270,7 @@ typedef struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
      */
     inline lcb_RETRY_ACTION has_retriable_error(lcb_STATUS &rc);
 
-    void request_credentials();
+    lcbauth_RESULT request_credentials(lcbauth_REASON reason);
     lcb_STATUS request_address();
 
     /**
@@ -427,11 +427,20 @@ lcb_STATUS N1QLREQ::request_address()
     return LCB_SUCCESS;
 }
 
-void N1QLREQ::request_credentials()
+lcbauth_RESULT N1QLREQ::request_credentials(lcbauth_REASON reason)
 {
-    auto *auth = LCBT_SETTING(instance, auth);
-    username = auth->username_for(hostname.c_str(), port.c_str(), LCBT_SETTING(instance, bucket));
-    password = auth->password_for(hostname.c_str(), port.c_str(), LCBT_SETTING(instance, bucket));
+    if (reason == LCBAUTH_REASON_AUTHENTICATION_FAILURE) {
+        username.clear();
+        password.clear();
+    }
+    const auto *auth = LCBT_SETTING(instance, auth);
+    auto creds = auth->credentials_for(LCBAUTH_SERVICE_QUERY, reason, hostname.c_str(), port.c_str(),
+                                       LCBT_SETTING(instance, bucket));
+    if (reason != LCBAUTH_REASON_AUTHENTICATION_FAILURE && creds.result() == LCBAUTH_RESULT_OK) {
+        username = creds.username();
+        password = creds.password();
+    }
+    return creds.result();
 }
 
 static const char *wtf_magic_strings[] = {
@@ -448,10 +457,13 @@ lcb_RETRY_ACTION N1QLREQ::has_retriable_error(lcb_STATUS &rc)
     }
     if (first_error_code == 13014 &&
         LCBT_SETTING(instance, auth)->mode() == LCBAUTH_MODE_DYNAMIC) { // datastore.couchbase.insufficient_credentials
-        request_credentials();
-        lcb_log(LOGARGS(this, TRACE), LOGFMT "Invalidate credentials and retry request. rc: %s, code: %d, msg: %s",
-                LOGID(this), lcb_strerror_short(rc), first_error_code, first_error_message.c_str());
-        return {1, default_backoff};
+        auto result = request_credentials(LCBAUTH_REASON_AUTHENTICATION_FAILURE);
+        bool credentials_found = result == LCBAUTH_RESULT_OK;
+        lcb_log(LOGARGS(this, TRACE),
+                LOGFMT "Invalidate credentials and retry request. creds: %s, rc: %s, code: %d, msg: %s", LOGID(this),
+                credentials_found ? "ok" : "not_found", lcb_strerror_short(rc), first_error_code,
+                first_error_message.c_str());
+        return {credentials_found, default_backoff};
     }
     if (!first_error_message.empty()) {
         for (const char **curs = wtf_magic_strings; *curs; curs++) {
@@ -561,6 +573,9 @@ lcb_RETRY_ACTION lcb_query_should_retry(const lcb_settings *settings, lcb_QUERY_
 
 bool N1QLREQ::parse_meta(const char *row, size_t row_len, lcb_STATUS &rc)
 {
+    first_error_message.clear();
+    first_error_code = 0;
+
     Json::Value meta;
     if (!parse_json(row, row_len, meta)) {
         return false;
@@ -828,7 +843,13 @@ lcb_STATUS N1QLREQ::issue_htreq(const std::string &body)
         lcb_cmdhttp_skip_auth_header(htcmd, true);
     } else {
         if (username.empty() && password.empty()) {
-            request_credentials();
+            auto result = request_credentials(LCBAUTH_REASON_NEW_OPERATION);
+            if (result != LCBAUTH_RESULT_OK) {
+                const uint32_t auth_backoff = 100 /* ms */;
+                backoff_and_issue_htreq(LCB_MS2US(auth_backoff));
+                lcb_cmdhttp_destroy(htcmd);
+                return rc;
+            }
         }
         lcb_cmdhttp_username(htcmd, username.c_str(), username.size());
         lcb_cmdhttp_password(htcmd, password.c_str(), password.size());
