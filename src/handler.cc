@@ -366,8 +366,9 @@ static lcb_INSTANCE *get_instance(mc_PIPELINE *pipeline)
 template <typename T>
 void invoke_callback(const mc_PACKET *pkt, lcb_INSTANCE *instance, T *resp, lcb_CALLBACK_TYPE cbtype)
 {
+    std::string collection_path;
     if (instance != nullptr) {
-        std::string collection_path = instance->collcache->id_to_name(mcreq_get_cid(instance, pkt));
+        collection_path = instance->collcache->id_to_name(mcreq_get_cid(instance, pkt));
         if (!collection_path.empty()) {
             size_t dot = collection_path.find('.');
             if (dot != std::string::npos) {
