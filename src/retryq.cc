@@ -426,7 +426,8 @@ bool RetryQueue::empty(bool ignore_cfgreq) const
             protocol_binary_request_header hdr = {};
             RetryOp *op = from_schednode(ll);
             mcreq_read_hdr(op->pkt, &hdr);
-            if (hdr.request.opcode != PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG) {
+            if (hdr.request.opcode != PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG &&
+                hdr.request.opcode != PROTOCOL_BINARY_CMD_SELECT_BUCKET) {
                 return false;
             }
         }
