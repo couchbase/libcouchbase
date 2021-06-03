@@ -179,7 +179,7 @@ static lcb_STATUS remove_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CM
         lcbtrace_span_add_tag_str(pkt->u_rdata.reqdata.span, LCBTRACE_TAG_OPERATION_ID, operation_id.c_str());
         lcbtrace_span_add_system_tags(pkt->u_rdata.reqdata.span, instance->settings, LCBTRACE_TAG_SERVICE_KV);
     }
-    TRACE_REMOVE_BEGIN(instance, hdr, cmd)
+    TRACE_REMOVE_BEGIN(instance, hdr, cmd);
     LCB_SCHED_ADD(instance, pl, pkt)
     return LCB_SUCCESS;
 }

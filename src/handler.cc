@@ -680,7 +680,7 @@ static void H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, MemcachedResponse
     handle_error_info(response, resp);
     handle_mutation_token(root, response, packet, &resp.mt);
     LCBTRACE_KV_FINISH(pipeline, packet, resp, response);
-    TRACE_REMOVE_END(root, packet, response, &w.resp);
+    TRACE_REMOVE_END(root, packet, response, &resp);
     invoke_callback(packet, root, &resp, LCB_CALLBACK_REMOVE);
 }
 
@@ -818,7 +818,7 @@ static void H_store(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse
     }
     resp.rflags |= LCB_RESP_F_EXTDATA | LCB_RESP_F_FINAL;
     handle_mutation_token(root, response, request, &resp.mt);
-    TRACE_STORE_END(root, request, response, &w.resp);
+    TRACE_STORE_END(root, request, response, &resp);
     if (request->flags & MCREQ_F_REQEXT) {
         LCBTRACE_KV_COMPLETE(pipeline, request, resp, response);
         request->u_rdata.exdata->procs->handler(pipeline, request, LCB_CALLBACK_STORE, immerr, &resp);
@@ -845,7 +845,7 @@ static void H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedRes
     resp.rflags |= LCB_RESP_F_FINAL;
     resp.ctx.cas = response->cas();
     LCBTRACE_KV_FINISH(pipeline, request, resp, response);
-    TRACE_ARITHMETIC_END(root, request, response, &w.resp);
+    TRACE_ARITHMETIC_END(root, request, response, &resp);
     invoke_callback(request, root, &resp, LCB_CALLBACK_COUNTER);
 }
 

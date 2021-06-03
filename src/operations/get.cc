@@ -197,7 +197,7 @@ static lcb_STATUS get_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMDGE
         lcbtrace_span_add_tag_str(rdata->span, LCBTRACE_TAG_OPERATION_ID, operation_id.c_str());
         lcbtrace_span_add_system_tags(rdata->span, instance->settings, LCBTRACE_TAG_SERVICE_KV);
     }
-    TRACE_GET_BEGIN(instance, hdr, cmd)
+    TRACE_GET_BEGIN(instance, hdr, cmd);
     return LCB_SUCCESS;
 }
 

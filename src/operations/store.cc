@@ -473,7 +473,7 @@ static lcb_STATUS store_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMD
         lcbtrace_span_add_system_tags(MCREQ_PKT_RDATA(packet)->span, instance->settings, LCBTRACE_TAG_SERVICE_KV);
     }
 
-    TRACE_STORE_BEGIN(instance, hdr, (lcb_CMDSTORE *)cmd);
+    TRACE_STORE_BEGIN(instance, hdr, cmd);
 
     return LCB_SUCCESS;
 }
