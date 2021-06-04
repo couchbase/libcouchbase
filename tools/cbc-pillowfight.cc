@@ -1165,12 +1165,10 @@ static void storeCallback(lcb_INSTANCE *instance, int, const lcb_RESPSTORE *resp
         op.m_key = key;
         op.m_seqno = seqno;
 
-        string scope;
         lcb_errctx_kv_scope(ctx, &p, &n);
         if (p && n) {
             op.m_scope.assign(p, n);
         }
-        string collection;
         lcb_errctx_kv_collection(ctx, &p, &n);
         if (p && n) {
             op.m_collection.assign(p, n);

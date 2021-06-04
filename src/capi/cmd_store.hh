@@ -88,6 +88,7 @@ struct lcb_CMDSTORE_ {
                 return PROTOCOL_BINARY_CMD_PREPEND;
         }
         lcb_assert(false && "unknown operation");
+        return PROTOCOL_BINARY_CMD_INVALID;
     }
 
     std::uint8_t extras_size() const
@@ -103,6 +104,7 @@ struct lcb_CMDSTORE_ {
                 return 0;
         }
         lcb_assert(false && "unknown extras_size");
+        return 0;
     }
 
     bool is_replace_semantics() const
@@ -118,6 +120,7 @@ struct lcb_CMDSTORE_ {
                 return false;
         }
         lcb_assert(false && "unknown replace semantics");
+        return false;
     }
 
     const char *operation_name() const
@@ -135,6 +138,7 @@ struct lcb_CMDSTORE_ {
                 return LCBTRACE_OP_INSERT;
         }
         lcb_assert(false && "unknown operation name");
+        return "unknown";
     }
 
     lcb_STATUS flags(std::uint32_t flags)

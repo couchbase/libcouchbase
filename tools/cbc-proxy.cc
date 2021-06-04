@@ -535,7 +535,6 @@ static void real_main(int argc, char **argv)
 
     lcb_CREATEOPTS *cropts = nullptr;
     config.fillCropts(cropts);
-    std::string connection_string(cropts->connstr, cropts->connstr_len);
 
     /* bind to external libevent loop */
     evbase = event_base_new();

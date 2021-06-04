@@ -985,7 +985,7 @@ lcb_QUERY_HANDLE_::lcb_QUERY_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, const
         lasterr = LCB_ERR_INVALID_ARGUMENT;
         return;
     }
-    Json::Value &ccid = json["client_context_id"];
+    const Json::Value &ccid = json["client_context_id"];
     if (ccid.isNull()) {
         char buf[32];
         size_t nbuf = snprintf(buf, sizeof(buf), "%016" PRIx64, lcb_next_rand64());
