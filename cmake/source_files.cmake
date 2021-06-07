@@ -35,6 +35,8 @@ SET(LCB_CORE_SRC
 
 FILE(GLOB LCB_TRACING_SRC src/tracing/*.cc)
 
+FILE(GLOB LCB_METRICS_SRC src/metrics/*.cc)
+
 FILE(GLOB LCB_CAPI_SRC src/capi/*.cc)
 
 SET(LCB_CORE_CXXSRC
@@ -62,10 +64,10 @@ SET(LCB_CORE_CXXSRC
     src/http/http.cc
     src/http/http_io.cc
     src/instance.cc
+    src/iometrics.cc
     src/lcbht/lcbht.cc
     src/mcserver/mcserver.cc
     src/mcserver/negotiate.cc
-    src/metrics.cc
     src/n1ql/ixmgmt.cc
     src/n1ql/n1ql-internal.cc
     src/n1ql/n1ql.cc
@@ -100,6 +102,7 @@ SET(LCB_CORE_CXXSRC
     src/views/view.cc
     src/views/view_handle.cc
     src/wait.cc
+    ${LCB_METRICS_SRC}
     ${LCB_TRACING_SRC}
     ${LCB_CAPI_SRC}
     )

@@ -23,6 +23,8 @@
 #include "rnd.h"
 #include "http/http.h"
 #include "bucketconfig/clconfig.h"
+#include "metrics/cacheing_meter.hh"
+#include "metrics/logging_meter.hh"
 #include <lcbio/iotable.h>
 #include <lcbio/ssl.h>
 #include "defer.h"
@@ -89,6 +91,12 @@ LIBCOUCHBASE_API lcb_STATUS lcb_createopts_io(lcb_CREATEOPTS *options, struct lc
 LIBCOUCHBASE_API lcb_STATUS lcb_createopts_tracer(lcb_CREATEOPTS *options, struct lcbtrace_TRACER *tracer)
 {
     options->tracer = tracer;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_meter(lcb_CREATEOPTS *options, const lcbmetrics_METER *meter)
+{
+    options->meter = meter;
     return LCB_SUCCESS;
 }
 
@@ -571,6 +579,11 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
         } else {
             settings->tracer = lcbtrace_new(obj, LCBTRACE_F_THRESHOLD);
         }
+    }
+    if (options && options->meter) {
+        settings->meter = (new lcb::metrics::CacheingMeter(options->meter))->wrap();
+    } else {
+        settings->meter = (new lcb::metrics::LoggingMeter(obj))->wrap();
     }
 
     obj->last_error = err;

@@ -83,7 +83,7 @@ LIBCOUCHBASE_API
 lcb_RESPCALLBACK lcb_install_callback(lcb_INSTANCE *instance, int cbtype, lcb_RESPCALLBACK cb)
 {
     lcb_RESPCALLBACK ret;
-    if (cbtype >= LCB_CALLBACK__MAX) {
+    if (cbtype < 0 || cbtype >= LCB_CALLBACK__MAX) {
         return NULL;
     }
 

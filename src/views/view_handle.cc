@@ -303,6 +303,8 @@ lcb_VIEW_HANDLE_::~lcb_VIEW_HANDLE_()
     parser_ = nullptr;
 
     if (http_request_ != nullptr) {
+        record_http_op_latency((design_document_ + "/" + view_).c_str(), "views", instance_, http_request_->start);
+
         lcb_http_cancel(instance_, http_request_);
     }
 

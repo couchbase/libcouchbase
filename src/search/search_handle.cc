@@ -185,6 +185,8 @@ lcb_SEARCH_HANDLE_::lcb_SEARCH_HANDLE_(lcb_INSTANCE *instance, void *cookie, con
 lcb_SEARCH_HANDLE_::~lcb_SEARCH_HANDLE_()
 {
     if (http_request_ != nullptr) {
+        record_http_op_latency(index_name_.c_str(), "search", instance_, http_request_->start);
+
         lcb_http_cancel(instance_, http_request_);
         http_request_ = nullptr;
     }

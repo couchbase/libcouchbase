@@ -463,6 +463,8 @@ void lcb_ANALYTICS_HANDLE_::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
 lcb_ANALYTICS_HANDLE_::~lcb_ANALYTICS_HANDLE_()
 {
     if (http_request_ != nullptr) {
+        record_http_op_latency(nullptr, "analytics", instance_, http_request_->start);
+
         lcb_http_cancel(instance_, http_request_);
         http_request_ = nullptr;
     }

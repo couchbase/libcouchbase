@@ -47,6 +47,7 @@ typedef struct lcb_HTTP_HANDLE_ lcb_HTTP_HANDLE;
 #include <libcouchbase/configuration.h>
 #include <libcouchbase/kvbuf.h>
 #include <libcouchbase/auth.h>
+#include <libcouchbase/metrics.h>
 #include <libcouchbase/tracing.h>
 #include <libcouchbase/logger.h>
 #include <libcouchbase/cntl.h>
@@ -267,6 +268,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_createopts_credentials(lcb_CREATEOPTS *options, 
                                                        size_t username_len, const char *password, size_t password_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_createopts_authenticator(lcb_CREATEOPTS *options, lcb_AUTHENTICATOR *auth);
 LIBCOUCHBASE_API lcb_STATUS lcb_createopts_io(lcb_CREATEOPTS *options, struct lcb_io_opt_st *io);
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_meter(lcb_CREATEOPTS *options, const lcbmetrics_METER *metrics);
 
 LIBCOUCHBASE_API lcb_STATUS lcb_createopts_tracer(lcb_CREATEOPTS *options, lcbtrace_TRACER *tracer);
 /**

@@ -18,6 +18,7 @@
 #include "iotests.h"
 #include <map>
 #include <climits>
+#include <cstring>
 #include <algorithm>
 #include "internal.h" /* vbucket_* things from lcb_INSTANCE * */
 #include "auth-priv.h"
@@ -231,6 +232,74 @@ TEST_F(MockUnitTest, testTimingsEx)
     ASSERT_EQ(1, timings.countAt(8, LCB_TIMEUNIT_SEC));
     ASSERT_EQ(1, timings.countAt(93, LCB_TIMEUNIT_SEC));
 #endif
+}
+
+extern "C" {
+static void record_callback(const lcbmetrics_VALUERECORDER *recorder, uint64_t value)
+{
+    return;
+}
+
+static const lcbmetrics_VALUERECORDER *new_recorder(const lcbmetrics_METER *meter, const char *name,
+                                                    const lcbmetrics_TAG *tags, size_t ntags)
+{
+    bool has_service, has_operation = false;
+    for (int i = 0; i < ntags; i++) {
+        if (strcmp("db.operation", tags[i].key) == 0) {
+            has_operation = true;
+            EXPECT_STREQ(tags[i].value, "upsert");
+        } else if (strcmp("db.couchbase.service", tags[i].key) == 0) {
+            has_service = true;
+            EXPECT_STREQ(tags[i].value, "kv");
+        } else {
+            ADD_FAILURE() << "unknown key " << tags[i].key;
+        }
+    }
+    EXPECT_TRUE(has_service && has_operation);
+
+    lcbmetrics_VALUERECORDER *recorder;
+    lcbmetrics_valuerecorder_create(&recorder, nullptr);
+    lcbmetrics_valuerecorder_record_value_callback(recorder, record_callback);
+    return recorder;
+}
+
+static void store_cb(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
+{
+    size_t *counter;
+    lcb_respstore_cookie(resp, (void **)&counter);
+    ++(*counter);
+    ASSERT_EQ(LCB_SUCCESS, lcb_respstore_status(resp));
+}
+} // extern "C"
+
+TEST_F(MockUnitTest, testOpMetrics)
+{
+    lcb_INSTANCE *instance;
+    HandleWrap hw;
+    lcb_CMDSTORE *scmd;
+    size_t counter = 0;
+    lcbmetrics_METER *meter;
+
+    lcbmetrics_meter_create(&meter, nullptr);
+    lcbmetrics_meter_value_recorder_callback(meter, new_recorder);
+
+    lcb_CREATEOPTS *crparams = NULL;
+    MockEnvironment::getInstance()->makeConnectParams(crparams, NULL, LCB_TYPE_BUCKET);
+    lcb_createopts_meter(crparams, meter);
+
+    tryCreateConnection(hw, &instance, crparams);
+
+    int enable = 1;
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_ENABLE_OP_METRICS, &enable);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_cb);
+
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
+    lcb_cmdstore_key(scmd, "key", strlen("key"));
+    lcb_cmdstore_value(scmd, "value", strlen("value"));
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &counter, scmd));
+    lcb_cmdstore_destroy(scmd);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(1, counter);
 }
 
 struct async_ctx {
