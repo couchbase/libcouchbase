@@ -17,7 +17,7 @@
 
 #include <libcouchbase/couchbase.h>
 
-#include "search.hh"
+#include "cmd_search.hh"
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respsearch_status(const lcb_RESPSEARCH *resp)
 {
@@ -75,33 +75,27 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_destroy(lcb_CMDSEARCH *cmd)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_timeout(lcb_CMDSEARCH *cmd, uint32_t timeout)
 {
-    cmd->timeout = timeout;
-    return LCB_SUCCESS;
+    return cmd->timeout_in_microseconds(timeout);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_parent_span(lcb_CMDSEARCH *cmd, lcbtrace_SPAN *span)
 {
-    cmd->pspan = span;
-    return LCB_SUCCESS;
+    return cmd->parent_span(span);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_callback(lcb_CMDSEARCH *cmd, lcb_SEARCH_CALLBACK callback)
 {
-    cmd->callback = callback;
-    return LCB_SUCCESS;
+    return cmd->callback(callback);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_payload(lcb_CMDSEARCH *cmd, const char *payload, size_t payload_len)
 {
-    cmd->query = payload;
-    cmd->nquery = payload_len;
-    return LCB_SUCCESS;
+    return cmd->query(payload, payload_len);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsearch_handle(lcb_CMDSEARCH *cmd, lcb_SEARCH_HANDLE **handle)
 {
-    cmd->handle = handle;
-    return LCB_SUCCESS;
+    return cmd->store_handle_refence_to(handle);
 }
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_search_rc(const lcb_SEARCH_ERROR_CONTEXT *ctx)
 {

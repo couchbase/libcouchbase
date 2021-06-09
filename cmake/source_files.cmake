@@ -38,38 +38,40 @@ FILE(GLOB LCB_TRACING_SRC src/tracing/*.cc)
 FILE(GLOB LCB_CAPI_SRC src/capi/*.cc)
 
 SET(LCB_CORE_CXXSRC
-    src/instance.cc
-    src/settings.cc
-    src/cbas/cbas.cc
     src/auth.cc
     src/bootstrap.cc
     src/bucketconfig/bc_cccp.cc
-    src/bucketconfig/bc_http.cc
     src/bucketconfig/bc_file.cc
+    src/bucketconfig/bc_http.cc
     src/bucketconfig/bc_static.cc
     src/bucketconfig/confmon.cc
-    src/utilities.cc
+    src/cbas/cbas.cc
+    src/cntl.cc
     src/collections.cc
-    src/defer.cc
     src/connspec.cc
     src/crypto.cc
+    src/defer.cc
     src/dns-srv.cc
+    src/docreq/docreq.cc
     src/dump.cc
     src/errmap.cc
     src/getconfig.cc
-    src/nodeinfo.cc
     src/handler.cc
     src/hostlist.cc
     src/http/http.cc
     src/http/http_io.cc
+    src/instance.cc
     src/lcbht/lcbht.cc
-    src/newconfig.cc
+    src/mcserver/mcserver.cc
+    src/mcserver/negotiate.cc
+    src/metrics.cc
     src/n1ql/ixmgmt.cc
     src/n1ql/n1ql-internal.cc
     src/n1ql/n1ql.cc
     src/n1ql/query_handle.cc
     src/n1ql/query_utils.cc
-    src/cbft.cc
+    src/newconfig.cc
+    src/nodeinfo.cc
     src/operations/cbflush.cc
     src/operations/counter.cc
     src/operations/durability-seqno.cc
@@ -87,15 +89,14 @@ SET(LCB_CORE_CXXSRC
     src/operations/subdoc.cc
     src/operations/touch.cc
     src/operations/unlock.cc
-    src/mcserver/mcserver.cc
-    src/mcserver/negotiate.cc
-    src/metrics.cc
     src/retrychk.cc
     src/retryq.cc
     src/rnd.cc
-    src/docreq/docreq.cc
+    src/search/search.cc
+    src/search/search_handle.cc
+    src/settings.cc
+    src/utilities.cc
     src/views/viewreq.cc
-    src/cntl.cc
     src/wait.cc
     ${LCB_TRACING_SRC}
     ${LCB_CAPI_SRC}

@@ -338,3 +338,41 @@ TEST_F(SchedUnitTests, testScheduleQueryBeforeConnection)
         ASSERT_EQ(1, counter); /* reduced implementation */
     }
 }
+
+static void searchCallback(lcb_INSTANCE *, int, const lcb_RESPSEARCH *resp)
+{
+    size_t *counter;
+    lcb_respsearch_cookie(resp, (void **)&counter);
+    *counter += 1;
+}
+
+TEST_F(SchedUnitTests, testScheduleSearchBeforeConnection)
+{
+    SKIP_IF_MOCK()
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70)
+
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    lcb_STATUS rc;
+
+    MockEnvironment::getInstance()->createConnection(hw, &instance);
+
+    lcb_CMDSEARCH *cmd;
+    lcb_cmdsearch_create(&cmd);
+    std::string query(R"({"indexName":"travel-index","limit":2,"query":{"query":"golf"}})");
+    lcb_cmdsearch_payload(cmd, query.c_str(), query.size());
+    lcb_cmdsearch_callback(cmd, searchCallback);
+    size_t counter = 0;
+    rc = lcb_search(instance, &counter, cmd);
+    lcb_cmdsearch_destroy(cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_TRUE(instance->has_deferred_operations());
+
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_connect(instance));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
+    ASSERT_FALSE(instance->has_deferred_operations());
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_EQ(3, counter); /* two rows + meta */
+}
