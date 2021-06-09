@@ -299,3 +299,42 @@ TEST_F(SchedUnitTests, testScheduleSubdocBeforeConnection)
     ASSERT_FALSE(hasPendingOps(instance));
     ASSERT_EQ(1, counter);
 }
+
+static void queryCallback(lcb_INSTANCE *, int, const lcb_RESPQUERY *resp)
+{
+    size_t *counter;
+    lcb_respquery_cookie(resp, (void **)&counter);
+    *counter += 1;
+}
+
+TEST_F(SchedUnitTests, testScheduleQueryBeforeConnection)
+{
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    lcb_STATUS rc;
+
+    MockEnvironment::getInstance()->createConnection(hw, &instance);
+
+    lcb_CMDQUERY *cmd;
+    lcb_cmdquery_create(&cmd);
+    std::string statement("SELECT 'hello' AS greeting");
+    lcb_cmdquery_statement(cmd, statement.c_str(), statement.size());
+    lcb_cmdquery_callback(cmd, queryCallback);
+    size_t counter = 0;
+    rc = lcb_query(instance, &counter, cmd);
+    lcb_cmdquery_destroy(cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_TRUE(instance->has_deferred_operations());
+
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_connect(instance));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
+    ASSERT_FALSE(instance->has_deferred_operations());
+    ASSERT_FALSE(hasPendingOps(instance));
+    if (MockEnvironment::getInstance()->isRealCluster()) {
+        ASSERT_EQ(2, counter); /* single row + meta */
+    } else {
+        ASSERT_EQ(1, counter); /* reduced implementation */
+    }
+}

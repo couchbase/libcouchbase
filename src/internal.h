@@ -126,7 +126,7 @@ struct lcb_st {
     lcb_RETRYQ *retryq;               /**< Retry queue for failed operations */
     lcb_pSCRATCHBUF scratch;          /**< Generic buffer space */
     struct lcb_GUESSVB_st *vbguess;   /**< Heuristic masters for vbuckets */
-    lcb_N1QLCACHE *n1ql_cache;
+    lcb_QUERY_CACHE *n1ql_cache;
     lcb_MUTATION_TOKEN *dcpinfo; /**< Mapping of known vbucket to {uuid,seqno} info */
     lcbio_pTIMER dtor_timer;     /**< Asynchronous destruction timer */
     lcb_BTYPE btype;             /**< Type of the bucket */

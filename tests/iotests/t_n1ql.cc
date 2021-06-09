@@ -22,8 +22,21 @@
 #include <utility>
 #include "internal.h"
 
+#include "n1ql/query_cache.hh"
+
 using std::string;
 using std::vector;
+
+// Special function for debugging. This returns the name and encoded form of
+// the plan
+void lcb_n1qlcache_getplan(lcb_QUERY_CACHE_ *cache, const std::string &key, std::string &out)
+{
+    const Plan *plan = cache->get_entry(key);
+    if (plan != nullptr) {
+        Json::Value tmp(Json::objectValue);
+        plan->apply_plan(tmp, out);
+    }
+}
 
 struct N1QLResult {
     vector<string> rows;
@@ -580,14 +593,14 @@ using credentials = std::pair<string, string>;
 
 struct cycled_auth {
   private:
-    vector<credentials> store_;
-    size_t cur_;
+    vector<credentials> store_{};
+    size_t cur_{0};
     credentials fallback_;
     string port_;
 
   public:
     cycled_auth(string port, credentials fallback)
-        : store_(), cur_(0), fallback_(std::move(fallback)), port_(std::move(port))
+        : fallback_(std::move(fallback)), port_(std::move(port))
     {
     }
 
@@ -656,7 +669,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
     SKIP_IF_MOCK()
     SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_50)
     createConnection(hw, &instance);
-    lcb_cntl_setu32(instance, LCB_CNTL_QUERY_TIMEOUT, LCB_MS2US(200)); // 200ms before timeout
+    lcb_cntl_setu32(instance, LCB_CNTL_QUERY_TIMEOUT, LCB_MS2US(300)); // 300ms before timeout
 
     string valid_username = MockEnvironment::getInstance()->getUsername();
     string valid_password = MockEnvironment::getInstance()->getPassword();
@@ -724,12 +737,13 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ca.clear();
         ca.add(valid_username, invalid_password); // first request
         ca.add(valid_username, valid_password);   // second request
+        ca.add(valid_username, valid_password);
 
         lcb_STATUS rc = lcb_query(instance, &res, cmd);
         ASSERT_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
-        ASSERT_EQ(LCB_SUCCESS, res.rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
         ASSERT_TRUE(res.errors.empty());
     }
 

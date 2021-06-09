@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2015-2020 Couchbase, Inc.
+ *     Copyright 2016-2021 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,24 +15,20 @@
  *   limitations under the License.
  */
 
-/**
- * This C wrapper over Query Cache classes eventually will go away.
- */
+#include "query_cache.hh"
+#include "n1ql-internal.h"
 
-#ifndef LCB_N1QL_INTERNAL_H
-#define LCB_N1QL_INTERNAL_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct lcb_QUERY_CACHE_ lcb_QUERY_CACHE;
-
-lcb_QUERY_CACHE *lcb_n1qlcache_create(void);
-void lcb_n1qlcache_destroy(lcb_QUERY_CACHE *);
-void lcb_n1qlcache_clear(lcb_QUERY_CACHE *);
-
-#ifdef __cplusplus
+lcb_QUERY_CACHE *lcb_n1qlcache_create(void)
+{
+    return new lcb_QUERY_CACHE{};
 }
-#endif
-#endif
+
+void lcb_n1qlcache_destroy(lcb_QUERY_CACHE *cache)
+{
+    delete cache;
+}
+
+void lcb_n1qlcache_clear(lcb_QUERY_CACHE *cache)
+{
+    cache->clear();
+}
