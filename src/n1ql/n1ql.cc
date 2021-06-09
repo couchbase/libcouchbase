@@ -28,6 +28,8 @@
 #include <regex>
 #include <utility>
 
+#include "query_utils.hh"
+
 #include "capi/query.hh"
 #include "capi/cmd_http.hh"
 
@@ -890,36 +892,6 @@ lcb_STATUS N1QLREQ::apply_plan(const Plan &plan)
     return issue_htreq(bodystr);
 }
 
-lcb_U32 lcb_n1qlreq_parsetmo(const std::string &s)
-{
-    double num;
-    int nchars, rv;
-
-    rv = sscanf(s.c_str(), "%lf%n", &num, &nchars);
-    if (rv != 1) {
-        return 0;
-    }
-    std::string mults = s.substr(nchars);
-
-    // Get the actual timeout value in microseconds. Note we can't use the macros
-    // since they will truncate the double value.
-    if (mults == "s") {
-        return num * static_cast<double>(LCB_S2US(1));
-    } else if (mults == "ms") {
-        return num * static_cast<double>(LCB_MS2US(1));
-    } else if (mults == "h") {
-        return num * static_cast<double>(LCB_S2US(3600));
-    } else if (mults == "us") {
-        return num;
-    } else if (mults == "m") {
-        return num * static_cast<double>(LCB_S2US(60));
-    } else if (mults == "ns") {
-        return LCB_NS2US(num);
-    } else {
-        return 0;
-    }
-}
-
 lcb_QUERY_HANDLE_::lcb_QUERY_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, const lcb_CMDQUERY *cmd)
     : cur_htresp(nullptr), htreq(nullptr), parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this)),
       cookie(user_cookie), callback(cmd->callback), instance(obj), lasterr(LCB_SUCCESS), flags(cmd->cmdflags),
@@ -979,7 +951,13 @@ lcb_QUERY_HANDLE_::lcb_QUERY_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, const
         tmoval = buf;
         json["timeout"] = buf;
     } else if (tmoval.isString()) {
-        timeout = lcb_n1qlreq_parsetmo(tmoval.asString());
+        try {
+            auto tmo_ns = lcb_parse_golang_duration(tmoval.asString());
+            timeout = std::chrono::duration_cast<std::chrono::microseconds>(tmo_ns).count();
+        } catch (const lcb_duration_parse_error &) {
+            lasterr = LCB_ERR_INVALID_ARGUMENT;
+            return;
+        }
     } else {
         // Timeout is not a string!
         lasterr = LCB_ERR_INVALID_ARGUMENT;

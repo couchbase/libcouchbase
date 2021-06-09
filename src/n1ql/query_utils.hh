@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2015-2020 Couchbase, Inc.
+ *     Copyright 2016-2021 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,21 +15,27 @@
  *   limitations under the License.
  */
 
-#ifndef LCB_N1QL_INTERNAL_H
-#define LCB_N1QL_INTERNAL_H
+#ifndef LIBCOUCHBASE_N1QL_QUERY_UTILS_HH
+#define LIBCOUCHBASE_N1QL_QUERY_UTILS_HH
 
-#ifdef __cplusplus
+#include <cstddef>
+#include <cstdint>
+#include <chrono>
 #include <string>
-extern "C" {
-#endif
+#include <stdexcept>
 
-typedef struct lcb_N1QLCACHE_st lcb_N1QLCACHE;
-lcb_N1QLCACHE *lcb_n1qlcache_create(void);
-void lcb_n1qlcache_destroy(lcb_N1QLCACHE *);
-void lcb_n1qlcache_clear(lcb_N1QLCACHE *);
+/**
+ * @private
+ */
+class lcb_duration_parse_error : public std::runtime_error
+{
+  public:
+    explicit lcb_duration_parse_error(const std::string &msg) : std::runtime_error(msg) {}
+};
 
-#ifdef __cplusplus
-void lcb_n1qlcache_getplan(lcb_N1QLCACHE *cache, const std::string &key, std::string &out);
-}
-#endif
-#endif
+/**
+ * @private
+ */
+std::chrono::nanoseconds lcb_parse_golang_duration(const std::string &text);
+
+#endif // LIBCOUCHBASE_N1QL_QUERY_UTILS_HH

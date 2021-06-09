@@ -64,8 +64,9 @@ SET(LCB_CORE_CXXSRC
     src/http/http_io.cc
     src/lcbht/lcbht.cc
     src/newconfig.cc
-    src/n1ql/n1ql.cc
     src/n1ql/ixmgmt.cc
+    src/n1ql/n1ql.cc
+    src/n1ql/query_utils.cc
     src/cbft.cc
     src/operations/cbflush.cc
     src/operations/counter.cc
