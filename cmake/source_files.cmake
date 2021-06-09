@@ -38,6 +38,8 @@ FILE(GLOB LCB_TRACING_SRC src/tracing/*.cc)
 FILE(GLOB LCB_CAPI_SRC src/capi/*.cc)
 
 SET(LCB_CORE_CXXSRC
+    src/analytics/analytics.cc
+    src/analytics/analytics_handle.cc
     src/auth.cc
     src/bootstrap.cc
     src/bucketconfig/bc_cccp.cc
@@ -45,7 +47,6 @@ SET(LCB_CORE_CXXSRC
     src/bucketconfig/bc_http.cc
     src/bucketconfig/bc_static.cc
     src/bucketconfig/confmon.cc
-    src/cbas/cbas.cc
     src/cntl.cc
     src/collections.cc
     src/connspec.cc

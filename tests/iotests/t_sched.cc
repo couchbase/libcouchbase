@@ -376,3 +376,41 @@ TEST_F(SchedUnitTests, testScheduleSearchBeforeConnection)
     ASSERT_FALSE(hasPendingOps(instance));
     ASSERT_EQ(3, counter); /* two rows + meta */
 }
+
+static void analyticsCallback(lcb_INSTANCE *, int, const lcb_RESPANALYTICS *resp)
+{
+    size_t *counter;
+    lcb_respanalytics_cookie(resp, (void **)&counter);
+    *counter += 1;
+}
+
+TEST_F(SchedUnitTests, testScheduleAnalyticsBeforeConnection)
+{
+    SKIP_IF_MOCK()
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70)
+
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    lcb_STATUS rc;
+
+    MockEnvironment::getInstance()->createConnection(hw, &instance);
+
+    lcb_CMDANALYTICS *cmd;
+    lcb_cmdanalytics_create(&cmd);
+    std::string query(R"({"statement":"SELECT * FROM Metadata.`Dataverse`"})");
+    lcb_cmdanalytics_payload(cmd, query.c_str(), query.size());
+    lcb_cmdanalytics_callback(cmd, analyticsCallback);
+    size_t counter = 0;
+    rc = lcb_analytics(instance, &counter, cmd);
+    lcb_cmdanalytics_destroy(cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_TRUE(instance->has_deferred_operations());
+
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_connect(instance));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
+    ASSERT_FALSE(instance->has_deferred_operations());
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_GE(2, counter); /* meta + some rows */
+}

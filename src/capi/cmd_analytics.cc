@@ -20,21 +20,16 @@
 
 #include <libcouchbase/couchbase.h>
 
-#include "analytics.hh"
+#include "cmd_analytics.hh"
 #include "../rnd.h"
 
-static lcb_INGEST_STATUS default_data_converter(lcb_INSTANCE *, lcb_INGEST_PARAM *param)
+lcb_INGEST_STATUS default_data_converter(lcb_INSTANCE *, lcb_INGEST_PARAM *param)
 {
     param->id_dtor = (void (*)(const char *))free;
     char *buf = static_cast<char *>(calloc(34, sizeof(char)));
     param->id_len = snprintf(buf, 34, "%016" PRIx64 "-%016" PRIx64, lcb_next_rand64(), lcb_next_rand64());
     param->id = buf;
     return LCB_INGEST_STATUS_OK;
-}
-
-lcb_INGEST_OPTIONS_::lcb_INGEST_OPTIONS_()
-    : method(LCB_INGEST_METHOD_NONE), exptime(0), ignore_errors(false), data_converter(default_data_converter)
-{
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_ingest_dataconverter_param_cookie(lcb_INGEST_PARAM *param, void **cookie)
@@ -131,8 +126,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_destroy(lcb_CMDANALYTICS *cmd)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_timeout(lcb_CMDANALYTICS *cmd, uint32_t timeout)
 {
-    cmd->timeout = timeout;
-    return LCB_SUCCESS;
+    return cmd->timeout_in_microseconds(timeout);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_scope_name(lcb_CMDANALYTICS *cmd, const char *scope, size_t scope_len)
@@ -140,8 +134,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_scope_name(lcb_CMDANALYTICS *cmd, c
     if (scope == nullptr || scope_len == 0) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
-    cmd->scope_name.assign(scope, scope_len);
-    return LCB_SUCCESS;
+    return cmd->scope(std::string(scope, scope_len));
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_scope_qualifier(lcb_CMDANALYTICS *cmd, const char *qualifier,
@@ -150,151 +143,99 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_scope_qualifier(lcb_CMDANALYTICS *c
     if (qualifier == nullptr || qualifier_len == 0) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
-    cmd->scope_qualifier.assign(qualifier, qualifier_len);
-    return LCB_SUCCESS;
+    return cmd->scope_qualifier(std::string(qualifier, qualifier_len));
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_reset(lcb_CMDANALYTICS *cmd)
 {
-    cmd->root.clear();
-    cmd->scope_name.clear();
-    cmd->scope_qualifier.clear();
-    return LCB_SUCCESS;
+    return cmd->clear();
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_parent_span(lcb_CMDANALYTICS *cmd, lcbtrace_SPAN *span)
 {
-    cmd->pspan = span;
-    return LCB_SUCCESS;
+    return cmd->parent_span(span);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_handle(lcb_CMDANALYTICS *cmd, lcb_ANALYTICS_HANDLE **handle)
 {
-    cmd->handle = handle;
-    return LCB_SUCCESS;
+    return cmd->store_handle_refence_to(handle);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_callback(lcb_CMDANALYTICS *cmd, lcb_ANALYTICS_CALLBACK callback)
 {
-    if (cmd) {
-        cmd->callback = callback;
-        return LCB_SUCCESS;
-    }
-    return LCB_ERR_INVALID_ARGUMENT;
+    return cmd->callback(callback);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_encoded_payload(lcb_CMDANALYTICS *cmd, const char **payload,
                                                              size_t *payload_len)
 {
-    cmd->query = Json::FastWriter().write(cmd->root);
-    *payload = cmd->query.c_str();
-    *payload_len = cmd->query.size();
+    lcb_STATUS rc = cmd->encode_payload();
+    if (rc != LCB_SUCCESS) {
+        return rc;
+    }
+    *payload = cmd->query().c_str();
+    *payload_len = cmd->query().size();
     return LCB_SUCCESS;
 }
 
-#define fix_strlen(s, n)                                                                                               \
-    if (n == (size_t)-1) {                                                                                             \
-        n = strlen(s);                                                                                                 \
-    }
-
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_payload(lcb_CMDANALYTICS *cmd, const char *query, size_t query_len)
 {
-    fix_strlen(query, query_len);
-    Json::Value value;
-    if (!Json::Reader().parse(query, query + query_len, value)) {
-        return LCB_ERR_INVALID_ARGUMENT;
-    }
-    cmd->root = value;
-    return LCB_SUCCESS;
+    return cmd->payload(query, query_len);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_client_context_id(lcb_CMDANALYTICS *cmd, const char *value,
                                                                size_t value_len)
 {
-    cmd->root["client_context_id"] = std::string(value, value_len);
-    return LCB_SUCCESS;
+    return cmd->option_string("client_context_id", value, value_len);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_readonly(lcb_CMDANALYTICS *cmd, int readonly)
 {
-    cmd->root["readonly"] = (bool)readonly;
-    return LCB_SUCCESS;
+    return cmd->readonly(readonly);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_priority(lcb_CMDANALYTICS *cmd, int priority)
 {
-    cmd->priority = (bool)priority;
-    return LCB_SUCCESS;
+    return cmd->priority(priority);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_consistency(lcb_CMDANALYTICS *cmd, lcb_ANALYTICS_CONSISTENCY level)
 {
-    switch (level) {
-        case LCB_ANALYTICS_CONSISTENCY_NOT_BOUNDED:
-            cmd->root["scan_consistency"] = "not_bounded";
-            break;
-        case LCB_ANALYTICS_CONSISTENCY_REQUEST_PLUS:
-            cmd->root["scan_consistency"] = "request_plus";
-            break;
-        default:
-            return LCB_ERR_INVALID_ARGUMENT;
-    }
-    return LCB_SUCCESS;
+    return cmd->consistency(level);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_option(lcb_CMDANALYTICS *cmd, const char *name, size_t name_len,
                                                     const char *value, size_t value_len)
 {
-    fix_strlen(value, value_len);
-    fix_strlen(name, name_len);
-    Json::Value jsonVal;
-    if (!Json::Reader().parse(value, value + value_len, jsonVal)) {
-        return LCB_ERR_INVALID_ARGUMENT;
-    }
-    cmd->root[std::string(name, name_len)] = jsonVal;
-    return LCB_SUCCESS;
+    return cmd->option(name, name_len, value, value_len);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_statement(lcb_CMDANALYTICS *cmd, const char *statement,
                                                        size_t statement_len)
 {
-    fix_strlen(statement, statement_len);
-    cmd->root["statement"] = std::string(statement, statement_len);
-    return LCB_SUCCESS;
+    return cmd->statement(statement, statement_len);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_named_param(lcb_CMDANALYTICS *cmd, const char *name, size_t name_len,
                                                          const char *value, size_t value_len)
 {
-    return lcb_cmdanalytics_option(cmd, name, name_len, value, value_len);
+    return cmd->option(name, name_len, value, value_len);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_positional_param(lcb_CMDANALYTICS *cmd, const char *value,
                                                               size_t value_len)
 {
-    fix_strlen(value, value_len);
-    Json::Value jval;
-    if (!Json::Reader().parse(value, value + value_len, jval)) {
-        return LCB_ERR_INVALID_ARGUMENT;
-    }
-    cmd->root["args"].append(jval);
-    return LCB_SUCCESS;
+    return cmd->option_array("args", value, value_len);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_deferred(lcb_CMDANALYTICS *cmd, int deferred)
 {
-    if (deferred) {
-        cmd->root["mode"] = std::string("async");
-    } else {
-        cmd->root.removeMember("mode");
-    }
-    return LCB_SUCCESS;
+    return cmd->deferred(deferred);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdanalytics_ingest_options(lcb_CMDANALYTICS *cmd, lcb_INGEST_OPTIONS *options)
 {
-    cmd->ingest = options;
-    return LCB_SUCCESS;
+    return cmd->ingest_options(options);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_ingest_options_create(lcb_INGEST_OPTIONS **options)
