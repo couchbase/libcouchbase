@@ -414,3 +414,42 @@ TEST_F(SchedUnitTests, testScheduleAnalyticsBeforeConnection)
     ASSERT_FALSE(hasPendingOps(instance));
     ASSERT_GE(2, counter); /* meta + some rows */
 }
+
+static void viewCallback(lcb_INSTANCE *, int, const lcb_RESPVIEW *resp)
+{
+    size_t *counter;
+    lcb_respview_cookie(resp, (void **)&counter);
+    *counter += 1;
+
+    ASSERT_STATUS_EQ(LCB_ERR_VIEW_NOT_FOUND, lcb_respview_status(resp));
+}
+
+TEST_F(SchedUnitTests, testScheduleViewBeforeConnection)
+{
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    lcb_STATUS rc;
+
+    MockEnvironment::getInstance()->createConnection(hw, &instance);
+
+    lcb_CMDVIEW *cmd;
+    lcb_cmdview_create(&cmd);
+    std::string design_document("does_not_exist");
+    std::string view("unknown");
+    lcb_cmdview_design_document(cmd, design_document.c_str(), design_document.size());
+    lcb_cmdview_view_name(cmd, view.c_str(), view.size());
+    lcb_cmdview_callback(cmd, viewCallback);
+    size_t counter = 0;
+    rc = lcb_view(instance, &counter, cmd);
+    lcb_cmdview_destroy(cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_TRUE(instance->has_deferred_operations());
+
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_connect(instance));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
+    ASSERT_FALSE(instance->has_deferred_operations());
+    ASSERT_FALSE(hasPendingOps(instance));
+    ASSERT_GE(1, counter);
+}

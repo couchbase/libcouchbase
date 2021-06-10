@@ -20,6 +20,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
+#include <chrono>
 
 /**
  * @private
@@ -43,39 +45,193 @@ struct lcb_VIEW_ERROR_CONTEXT_ {
     std::size_t endpoint_len;
 };
 
-/** Set this flag to execute an actual get with each response */
-#define LCB_CMDVIEWQUERY_F_INCLUDE_DOCS (1u << 16u)
-
-/**Set this flag to only parse the top level row, and not its constituent
- * parts. Note this is incompatible with `F_INCLUDE_DOCS`*/
-#define LCB_CMDVIEWQUERY_F_NOROWPARSE (1u << 17u)
-
-/**This view is spatial. Modifies how the final view path will be constructed */
-#define LCB_CMDVIEWQUERY_F_SPATIAL (1u << 18u)
-
-/** Command structure for querying a view */
+/** @private */
 struct lcb_CMDVIEW_ {
-    std::uint32_t cmdflags;
-    std::uint32_t exptime;
-    std::uint64_t cas;
-    std::uint32_t cid;
-    const char *scope;
-    std::size_t nscope;
-    const char *collection;
-    std::size_t ncollection;
-    lcb_KEYBUF key;
-    std::uint32_t timeout{0};
-    lcbtrace_SPAN *pspan{nullptr};
+    bool view_or_design_document_empty() const
+    {
+        return view_name_.empty() || design_document_name_.empty();
+    }
 
-    /** The design document as a string; e.g. `"beer"` */
-    const char *ddoc{nullptr};
-    /** Length of design document name */
-    std::size_t nddoc{0};
+    bool has_callback() const
+    {
+        return callback_ != nullptr;
+    }
 
-    /** The name of the view as a string; e.g. `"brewery_beers"` */
-    const char *view{nullptr};
-    /** Length of the view name */
-    std::size_t nview{0};
+    lcb_STATUS callback(lcb_VIEW_CALLBACK row_callback)
+    {
+        callback_ = row_callback;
+        return LCB_SUCCESS;
+    }
+
+    lcb_VIEW_CALLBACK callback() const
+    {
+        return callback_;
+    }
+
+    lcb_STATUS timeout_in_milliseconds(std::uint32_t timeout)
+    {
+        timeout_ = std::chrono::milliseconds(timeout);
+        return LCB_SUCCESS;
+    }
+
+    lcb_STATUS timeout_in_microseconds(std::uint32_t timeout)
+    {
+        timeout_ = std::chrono::microseconds(timeout);
+        return LCB_SUCCESS;
+    }
+
+    std::uint32_t timeout_or_default_in_microseconds(std::uint32_t default_val) const
+    {
+        if (timeout_ == std::chrono::milliseconds ::zero()) {
+            return default_val;
+        }
+        return static_cast<std::uint32_t>(std::chrono::microseconds(timeout_).count());
+    }
+
+    lcb_STATUS start_time_in_nanoseconds(std::uint64_t val)
+    {
+        start_time_ = std::chrono::nanoseconds(val);
+        return LCB_SUCCESS;
+    }
+
+    std::uint64_t start_time_or_default_in_nanoseconds(std::uint64_t default_val) const
+    {
+        if (start_time_ == std::chrono::nanoseconds::zero()) {
+            return default_val;
+        }
+        return start_time_.count();
+    }
+
+    lcb_STATUS parent_span(lcbtrace_SPAN *parent_span)
+    {
+        parent_span_ = parent_span;
+        return LCB_SUCCESS;
+    }
+
+    lcb_STATUS design_document_name(const char *name, std::size_t name_len)
+    {
+        if (name == nullptr || name_len == 0) {
+            return LCB_ERR_INVALID_ARGUMENT;
+        }
+        design_document_name_.assign(name, name_len);
+        return LCB_SUCCESS;
+    }
+
+    const std::string &design_document_name() const
+    {
+        return design_document_name_;
+    }
+
+    lcb_STATUS view_name(const char *name, std::size_t name_len)
+    {
+        if (name == nullptr || name_len == 0) {
+            return LCB_ERR_INVALID_ARGUMENT;
+        }
+        view_name_.assign(name, name_len);
+        return LCB_SUCCESS;
+    }
+
+    const std::string &view_name() const
+    {
+        return view_name_;
+    }
+
+    lcb_STATUS option_string(const char *options, std::size_t options_len)
+    {
+        if (options == nullptr || options_len == 0) {
+            return LCB_ERR_INVALID_ARGUMENT;
+        }
+        option_string_.assign(options, options_len);
+        return LCB_SUCCESS;
+    }
+
+    const std::string &option_string() const
+    {
+        return option_string_;
+    }
+
+    lcb_STATUS post_data(const char *data, std::size_t data_len)
+    {
+        if (data == nullptr || data_len == 0) {
+            return LCB_ERR_INVALID_ARGUMENT;
+        }
+        post_data_.assign(data, data_len);
+        return LCB_SUCCESS;
+    }
+
+    const std::string &post_data() const
+    {
+        return post_data_;
+    }
+
+    bool has_post_data() const
+    {
+        return !post_data_.empty();
+    }
+
+    lcb_STATUS include_documents(bool include_docs)
+    {
+        include_documents_ = include_docs;
+        return LCB_SUCCESS;
+    }
+
+    bool include_documents() const
+    {
+        return include_documents_;
+    }
+
+    lcb_STATUS max_concurrent_documents(std::uint32_t max_docs)
+    {
+        max_concurrent_documents_ = max_docs;
+        return LCB_SUCCESS;
+    }
+
+    std::uint32_t max_concurrent_documents() const
+    {
+        return max_concurrent_documents_;
+    }
+
+    lcb_STATUS do_not_parse_rows(bool flag)
+    {
+        do_not_parse_rows_ = flag;
+        return LCB_SUCCESS;
+    }
+
+    bool do_not_parse_rows() const
+    {
+        return do_not_parse_rows_;
+    }
+
+    void *cookie()
+    {
+        return cookie_;
+    }
+
+    void cookie(void *cookie)
+    {
+        cookie_ = cookie;
+    }
+
+    lcb_STATUS store_handle_refence_to(lcb_VIEW_HANDLE **storage)
+    {
+        handle_ = storage;
+        return LCB_SUCCESS;
+    }
+
+    void handle(lcb_VIEW_HANDLE *handle) const
+    {
+        if (handle_ != nullptr) {
+            *handle_ = handle;
+        }
+    }
+
+  private:
+    std::chrono::microseconds timeout_{0};
+    std::chrono::nanoseconds start_time_{0};
+
+    lcbtrace_SPAN *parent_span_{nullptr};
+    std::string design_document_name_{};
+    std::string view_name_{};
 
     /**Any URL parameters to be passed to the view should be specified here.
      * The library will internally insert a `?` character before the options
@@ -84,16 +240,9 @@ struct lcb_CMDVIEW_ {
      * The format of the options follows the standard for passing parameters
      * via HTTP requests; thus e.g. `key1=value1&key2=value2`. This string
      * is itself not parsed by the library but simply appended to the URL. */
-    const char *optstr{nullptr};
+    std::string option_string_{};
 
-    /** Length of the option string */
-    std::size_t noptstr{0};
-
-    /**Some query parameters (in particular; 'keys') may be send via a POST
-     * request within the request body, since it might be too long for the
-     * URI itself. If you have such data, place it here. */
-    const char *postdata{nullptr};
-    std::size_t npostdata{0};
+    std::string post_data_{};
 
     /**
      * The maximum number of internal get requests to issue concurrently for
@@ -105,15 +254,13 @@ struct lcb_CMDVIEW_ {
      * so that no more than this number of requests will be in progress at any
      * given time.
      */
-    unsigned docs_concurrent_max{0};
+    std::uint32_t max_concurrent_documents_{0};
+    bool include_documents_{false};
+    bool do_not_parse_rows_{false};
 
-    /**Callback to invoke for each row. If not provided, @ref LCB_ERR_INVALID_ARGUMENT will
-     * be returned from lcb_view_query() */
-    lcb_VIEW_CALLBACK callback{nullptr};
-
-    /**If not NULL, this will be set to a handle which may be passed to
-     * lcb_view_cancel(). See that function for more details */
-    lcb_VIEW_HANDLE **handle{nullptr};
+    void *cookie_{nullptr};
+    lcb_VIEW_CALLBACK callback_{nullptr};
+    lcb_VIEW_HANDLE **handle_{nullptr};
 };
 
 /**@brief Response structure representing a row.

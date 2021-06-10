@@ -17,7 +17,7 @@
 
 #include <libcouchbase/couchbase.h>
 
-#include "views.hh"
+#include "cmd_view.hh"
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respview_status(const lcb_RESPVIEW *resp)
 {
@@ -32,7 +32,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respview_cookie(const lcb_RESPVIEW *resp, void *
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respview_key(const lcb_RESPVIEW *resp, const char **key, size_t *key_len)
 {
-    *key = (const char *)resp->key;
+    *key = resp->key;
     *key_len = resp->nkey;
     return LCB_SUCCESS;
 }
@@ -94,80 +94,57 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_destroy(lcb_CMDVIEW *cmd)
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_timeout(lcb_CMDVIEW *cmd, uint32_t timeout)
 {
-    cmd->timeout = timeout;
-    return LCB_SUCCESS;
+    return cmd->timeout_in_microseconds(timeout);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_parent_span(lcb_CMDVIEW *cmd, lcbtrace_SPAN *span)
 {
-    cmd->pspan = span;
-    return LCB_SUCCESS;
+    return cmd->parent_span(span);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_callback(lcb_CMDVIEW *cmd, lcb_VIEW_CALLBACK callback)
 {
-    cmd->callback = callback;
-    return LCB_SUCCESS;
+    return cmd->callback(callback);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_design_document(lcb_CMDVIEW *cmd, const char *ddoc, size_t ddoc_len)
 {
-    cmd->ddoc = ddoc;
-    cmd->nddoc = ddoc_len;
-    return LCB_SUCCESS;
+    return cmd->design_document_name(ddoc, ddoc_len);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_view_name(lcb_CMDVIEW *cmd, const char *view, size_t view_len)
 {
-    cmd->view = view;
-    cmd->nview = view_len;
-    return LCB_SUCCESS;
+    return cmd->view_name(view, view_len);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_option_string(lcb_CMDVIEW *cmd, const char *optstr, size_t optstr_len)
 {
-    cmd->optstr = optstr;
-    cmd->noptstr = optstr_len;
-    return LCB_SUCCESS;
+    return cmd->option_string(optstr, optstr_len);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_post_data(lcb_CMDVIEW *cmd, const char *data, size_t data_len)
 {
-    cmd->postdata = data;
-    cmd->npostdata = data_len;
-    return LCB_SUCCESS;
+    return cmd->post_data(data, data_len);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_include_docs(lcb_CMDVIEW *cmd, int include_docs)
 {
-    if (include_docs) {
-        cmd->cmdflags |= LCB_CMDVIEWQUERY_F_INCLUDE_DOCS;
-    } else {
-        cmd->cmdflags &= ~LCB_CMDVIEWQUERY_F_INCLUDE_DOCS;
-    }
-    return LCB_SUCCESS;
+    return cmd->include_documents(include_docs);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_max_concurrent_docs(lcb_CMDVIEW *cmd, uint32_t num)
 {
-    cmd->docs_concurrent_max = num;
-    return LCB_SUCCESS;
+    return cmd->max_concurrent_documents(num);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_no_row_parse(lcb_CMDVIEW *cmd, int flag)
 {
-    if (flag) {
-        cmd->cmdflags |= LCB_CMDVIEWQUERY_F_NOROWPARSE;
-    } else {
-        cmd->cmdflags &= ~LCB_CMDVIEWQUERY_F_NOROWPARSE;
-    }
-    return LCB_SUCCESS;
+    return cmd->do_not_parse_rows(flag);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdview_handle(lcb_CMDVIEW *cmd, lcb_VIEW_HANDLE **handle)
 {
-    cmd->handle = handle;
-    return LCB_SUCCESS;
+    return cmd->store_handle_refence_to(handle);
 }
 
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_rc(const lcb_VIEW_ERROR_CONTEXT *ctx)

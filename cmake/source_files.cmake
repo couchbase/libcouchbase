@@ -97,7 +97,8 @@ SET(LCB_CORE_CXXSRC
     src/search/search_handle.cc
     src/settings.cc
     src/utilities.cc
-    src/views/viewreq.cc
+    src/views/view.cc
+    src/views/view_handle.cc
     src/wait.cc
     ${LCB_TRACING_SRC}
     ${LCB_CAPI_SRC}
