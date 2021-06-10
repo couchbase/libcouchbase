@@ -818,12 +818,15 @@ static void H_store(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse
     }
     resp.rflags |= LCB_RESP_F_EXTDATA | LCB_RESP_F_FINAL;
     handle_mutation_token(root, response, request, &resp.mt);
-    TRACE_STORE_END(root, request, response, &resp);
     if (request->flags & MCREQ_F_REQEXT) {
         LCBTRACE_KV_COMPLETE(pipeline, request, resp, response);
-        request->u_rdata.exdata->procs->handler(pipeline, request, LCB_CALLBACK_STORE, immerr, &resp);
     } else {
         LCBTRACE_KV_FINISH(pipeline, request, resp, response);
+    }
+    TRACE_STORE_END(root, request, response, &resp);
+    if (request->flags & MCREQ_F_REQEXT) {
+        request->u_rdata.exdata->procs->handler(pipeline, request, LCB_CALLBACK_STORE, immerr, &resp);
+    } else {
         invoke_callback(request, root, &resp, LCB_CALLBACK_STORE);
     }
 }
