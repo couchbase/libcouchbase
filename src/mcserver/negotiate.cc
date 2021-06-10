@@ -449,6 +449,7 @@ bool SessionRequestImpl::send_hello()
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_UNORDERED_EXECUTION;
     }
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_CREATE_AS_DELETED;
+    features[nfeatures++] = PROTOCOL_BINARY_FEATURE_PRESERVE_TTL;
 
     std::string agent = generate_agent_json();
     lcb::MemcachedRequest hdr(PROTOCOL_BINARY_CMD_HELLO);

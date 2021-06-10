@@ -193,6 +193,11 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_expiry(lcb_CMDSTORE *cmd, uint32_t expi
     return cmd->expiry(expiration);
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_preserve_expiry(lcb_CMDSTORE *cmd, int should_preserve)
+{
+    return cmd->preserve_expiry(should_preserve);
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_cas(lcb_CMDSTORE *cmd, uint64_t cas)
 {
     return cmd->cas(cas);
@@ -365,35 +370,36 @@ static lcb_STATUS store_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMD
     mc_PIPELINE *pipeline;
     mc_PACKET *packet;
     mc_CMDQUEUE *cq = &instance->cmdq;
-    protocol_binary_request_set scmd{};
-    protocol_binary_request_header *hdr = &scmd.message.header;
+    protocol_binary_request_header hdr{};
     int new_durability_supported = LCBT_SUPPORT_SYNCREPLICATION(instance);
 
-    int hsize;
-    int should_compress = 0;
-    hdr->request.magic = PROTOCOL_BINARY_REQ;
-
-    lcb_U8 ffextlen = 0;
+    std::vector<std::uint8_t> framing_extras;
     if (new_durability_supported && cmd->has_sync_durability_requirements()) {
-        hdr->request.magic = PROTOCOL_BINARY_AREQ;
-        /* 1 byte for id and size
-         * 1 byte for level
-         * 2 bytes for timeout
-         */
-        ffextlen = 4;
+        std::uint8_t frame_id = 0x01;
+        std::uint8_t frame_size = 0x04;
+        framing_extras.emplace_back(frame_id << 4U | frame_size);
+        framing_extras.emplace_back(cmd->durability_level());
+        auto durability_timeout = htons(lcb_durability_timeout(instance, cmd->timeout_in_microseconds()));
+        framing_extras.emplace_back(durability_timeout >> 8U);
+        framing_extras.emplace_back(durability_timeout & 0xff);
     }
-
-    hdr->request.opcode = cmd->opcode();
-    hdr->request.extlen = cmd->extras_size();
-    hsize = hdr->request.extlen + sizeof(*hdr) + ffextlen;
+    if (cmd->should_preserve_expiry()) {
+        std::uint8_t frame_id = 0x05;
+        std::uint8_t frame_size = 0x00;
+        framing_extras.emplace_back(frame_id << 4U | frame_size);
+    }
+    auto ffextlen = static_cast<std::uint8_t>(framing_extras.size());
+    hdr.request.magic = (ffextlen == 0) ? PROTOCOL_BINARY_REQ : PROTOCOL_BINARY_AREQ;
+    hdr.request.opcode = cmd->opcode();
+    hdr.request.extlen = cmd->extras_size();
     lcb_KEYBUF keybuf{LCB_KV_COPY, {cmd->key().c_str(), cmd->key().size()}};
-    err = mcreq_basic_packet(cq, &keybuf, cmd->collection().collection_id(), hdr, hdr->request.extlen, ffextlen,
+    err = mcreq_basic_packet(cq, &keybuf, cmd->collection().collection_id(), &hdr, hdr.request.extlen, ffextlen,
                              &packet, &pipeline, MCREQ_BASICPACKET_F_FALLBACKOK);
     if (err != LCB_SUCCESS) {
         return err;
     }
 
-    should_compress = can_compress(instance, pipeline, cmd->value_is_compressed());
+    int should_compress = can_compress(instance, pipeline, cmd->value_is_compressed());
     lcb_VALBUF valuebuf{LCB_KV_COPY, {{cmd->value().c_str(), cmd->value().size()}}};
     if (should_compress) {
         int rv = mcreq_compress_value(pipeline, packet, &valuebuf, instance->settings, &should_compress);
@@ -420,46 +426,49 @@ static lcb_STATUS store_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMD
         }
 
         auto *dctx = new DurStoreCtx(instance, persist_to, replicate_to, cmd->cookie());
-        dctx->start = cmd->start_time_or_default_in_nanoseconds(gethrtime());
-        dctx->deadline =
-            dctx->start + cmd->timeout_or_default_in_nanoseconds(LCB_US2NS(LCBT_SETTING(instance, operation_timeout)));
         packet->u_rdata.exdata = dctx;
         packet->flags |= MCREQ_F_REQEXT;
-    } else {
-        mc_REQDATA *rdata = MCREQ_PKT_RDATA(packet);
-        rdata->cookie = cmd->cookie();
-        rdata->start = cmd->start_time_or_default_in_nanoseconds(gethrtime());
-        rdata->deadline =
-            rdata->start + cmd->timeout_or_default_in_nanoseconds(LCB_US2NS(LCBT_SETTING(instance, operation_timeout)));
-        if (new_durability_supported && cmd->has_sync_durability_requirements()) {
-            scmd.message.body.alt.expiration = htonl(cmd->expiry());
-            scmd.message.body.alt.flags = htonl(cmd->flags());
-            scmd.message.body.alt.meta = (1 << 4) | 3;
-            scmd.message.body.alt.level = cmd->durability_level();
-            scmd.message.body.alt.timeout = htons(lcb_durability_timeout(instance, cmd->timeout_in_microseconds()));
-        } else {
-            scmd.message.body.norm.expiration = htonl(cmd->expiry());
-            scmd.message.body.norm.flags = htonl(cmd->flags());
-        }
     }
+    mc_REQDATA *rdata = MCREQ_PKT_RDATA(packet);
+    rdata->cookie = cmd->cookie();
+    rdata->start = cmd->start_time_or_default_in_nanoseconds(gethrtime());
+    rdata->deadline =
+        rdata->start + cmd->timeout_or_default_in_nanoseconds(LCB_US2NS(LCBT_SETTING(instance, operation_timeout)));
 
-    hdr->request.cas = lcb_htonll(cmd->cas());
-    hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    hdr.request.cas = lcb_htonll(cmd->cas());
+    hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     if (should_compress || cmd->value_is_compressed()) {
-        hdr->request.datatype |= PROTOCOL_BINARY_DATATYPE_COMPRESSED;
+        hdr.request.datatype |= PROTOCOL_BINARY_DATATYPE_COMPRESSED;
     }
 
     if (cmd->value_is_json() && static_cast<const lcb::Server *>(pipeline)->supports_json()) {
-        hdr->request.datatype |= PROTOCOL_BINARY_DATATYPE_JSON;
+        hdr.request.datatype |= PROTOCOL_BINARY_DATATYPE_JSON;
     }
 
-    hdr->request.opaque = packet->opaque;
-    hdr->request.bodylen = htonl(hdr->request.extlen + ffextlen + mcreq_get_key_size(hdr) + get_value_size(packet));
+    hdr.request.opaque = packet->opaque;
+    hdr.request.bodylen = htonl(hdr.request.extlen + ffextlen + mcreq_get_key_size(&hdr) + get_value_size(packet));
 
     if (cmd->is_cookie_callback()) {
         packet->flags |= MCREQ_F_PRIVCALLBACK;
     }
-    memcpy(SPAN_BUFFER(&packet->kh_span), scmd.bytes, hsize);
+
+    memcpy(SPAN_BUFFER(&packet->kh_span), &hdr, sizeof(hdr));
+
+    std::size_t offset = sizeof(hdr);
+    if (!framing_extras.empty()) {
+        memcpy(SPAN_BUFFER(&packet->kh_span) + offset, framing_extras.data(), framing_extras.size());
+        offset += framing_extras.size();
+    }
+
+    if (hdr.request.extlen == 2 * sizeof(std::uint32_t)) {
+        std::uint32_t flags = htonl(cmd->flags());
+        memcpy(SPAN_BUFFER(&packet->kh_span) + offset, &flags, sizeof(flags));
+        offset += sizeof(flags);
+
+        std::uint32_t expiry = htonl(cmd->expiry());
+        memcpy(SPAN_BUFFER(&packet->kh_span) + offset, &expiry, sizeof(expiry));
+    }
+
     if (cmd->is_replace_semantics()) {
         packet->flags |= MCREQ_F_REPLACE_SEMANTICS;
     }
@@ -473,7 +482,7 @@ static lcb_STATUS store_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMD
         lcbtrace_span_add_system_tags(MCREQ_PKT_RDATA(packet)->span, instance->settings, LCBTRACE_TAG_SERVICE_KV);
     }
 
-    TRACE_STORE_BEGIN(instance, hdr, cmd);
+    TRACE_STORE_BEGIN(instance, &hdr, cmd);
 
     return LCB_SUCCESS;
 }

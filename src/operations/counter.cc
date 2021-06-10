@@ -159,65 +159,70 @@ static lcb_STATUS counter_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_C
     mc_REQDATA *rdata;
     lcb_STATUS err;
     int new_durability_supported = LCBT_SUPPORT_SYNCREPLICATION(instance);
-    lcb_U8 ffextlen = 0;
-    size_t hsize;
 
-    protocol_binary_request_incr acmd{};
-    protocol_binary_request_header *hdr = &acmd.message.header;
+    protocol_binary_request_header hdr{};
 
+    std::vector<std::uint8_t> framing_extras;
     if (new_durability_supported && cmd->has_durability_requirements()) {
-        hdr->request.magic = PROTOCOL_BINARY_AREQ;
-        ffextlen = 4;
+        std::uint8_t frame_id = 0x01;
+        std::uint8_t frame_size = 0x04;
+        framing_extras.emplace_back(frame_id << 4U | frame_size);
+        framing_extras.emplace_back(cmd->durability_level());
+        auto durability_timeout = htons(lcb_durability_timeout(instance, cmd->timeout_in_microseconds()));
+        framing_extras.emplace_back(durability_timeout >> 8U);
+        framing_extras.emplace_back(durability_timeout & 0xff);
     }
 
+    hdr.request.magic = framing_extras.empty() ? PROTOCOL_BINARY_REQ : PROTOCOL_BINARY_AREQ;
+
+    auto ffextlen = static_cast<std::uint8_t>(framing_extras.size());
     lcb_KEYBUF keybuf{LCB_KV_COPY, {cmd->key().c_str(), cmd->key().size()}};
-    err = mcreq_basic_packet(q, &keybuf, cmd->collection().collection_id(), hdr, 20, ffextlen, &packet, &pipeline,
+    err = mcreq_basic_packet(q, &keybuf, cmd->collection().collection_id(), &hdr, 20, ffextlen, &packet, &pipeline,
                              MCREQ_BASICPACKET_F_FALLBACKOK);
     if (err != LCB_SUCCESS) {
         return err;
     }
-    hsize = hdr->request.extlen + sizeof(*hdr) + ffextlen;
 
     rdata = &packet->u_rdata.reqdata;
     rdata->cookie = cmd->cookie();
     rdata->start = cmd->start_time_or_default_in_nanoseconds(gethrtime());
     rdata->deadline =
         rdata->start + cmd->timeout_or_default_in_nanoseconds(LCB_US2NS(LCBT_SETTING(instance, operation_timeout)));
-    hdr->request.magic = PROTOCOL_BINARY_REQ;
-    hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    hdr->request.cas = 0;
-    hdr->request.opaque = packet->opaque;
-    hdr->request.bodylen = htonl(ffextlen + hdr->request.extlen + mcreq_get_key_size(hdr));
+    hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    hdr.request.cas = 0;
+    hdr.request.opaque = packet->opaque;
+    hdr.request.bodylen = htonl(ffextlen + hdr.request.extlen + mcreq_get_key_size(&hdr));
 
-    uint32_t *exp;
-    uint64_t *delta;
-    if (new_durability_supported && cmd->has_durability_requirements()) {
-        acmd.message.body.alt.meta = (1u << 4u) | 3u;
-        acmd.message.body.alt.level = cmd->durability_level();
-        acmd.message.body.alt.timeout = htons(lcb_durability_timeout(instance, cmd->timeout_in_microseconds()));
-        acmd.message.body.alt.initial = lcb_htonll(cmd->initial_value());
-        exp = &acmd.message.body.alt.expiration;
-        delta = &acmd.message.body.alt.delta;
-    } else {
-        acmd.message.body.norm.initial = lcb_htonll(cmd->initial_value());
-        exp = &acmd.message.body.norm.expiration;
-        delta = &acmd.message.body.norm.delta;
-    }
-    if (cmd->initialize_if_does_not_exist()) {
-        *exp = htonl(cmd->expiry());
-    } else {
-        memset(exp, 0xff, sizeof(*exp));
-    }
-
+    std::uint64_t delta;
     if (cmd->delta() < 0) {
-        hdr->request.opcode = PROTOCOL_BINARY_CMD_DECREMENT;
-        *delta = lcb_htonll((std::uint64_t)(cmd->delta() * -1));
+        hdr.request.opcode = PROTOCOL_BINARY_CMD_DECREMENT;
+        delta = lcb_htonll((std::uint64_t)(cmd->delta() * -1));
     } else {
-        hdr->request.opcode = PROTOCOL_BINARY_CMD_INCREMENT;
-        *delta = lcb_htonll(cmd->delta());
+        hdr.request.opcode = PROTOCOL_BINARY_CMD_INCREMENT;
+        delta = lcb_htonll(cmd->delta());
     }
 
-    memcpy(SPAN_BUFFER(&packet->kh_span), acmd.bytes, hsize);
+    memcpy(SPAN_BUFFER(&packet->kh_span), &hdr, sizeof(hdr));
+    std::size_t offset = sizeof(hdr);
+    if (!framing_extras.empty()) {
+        memcpy(SPAN_BUFFER(&packet->kh_span) + offset, framing_extras.data(), framing_extras.size());
+        offset += framing_extras.size();
+    }
+
+    memcpy(SPAN_BUFFER(&packet->kh_span) + offset, &delta, sizeof(delta));
+    offset += sizeof(delta);
+
+    std::uint64_t initial = lcb_htonll(cmd->initial_value());
+    memcpy(SPAN_BUFFER(&packet->kh_span) + offset, &initial, sizeof(initial));
+    offset += sizeof(initial);
+
+    std::uint32_t expiry;
+    if (cmd->initialize_if_does_not_exist()) {
+        expiry = htonl(cmd->expiry());
+    } else {
+        memset(&expiry, 0xff, sizeof(expiry));
+    }
+    memcpy(SPAN_BUFFER(&packet->kh_span) + offset, &expiry, sizeof(expiry));
 
     if (instance->settings->tracer) {
         lcbtrace_REF ref{LCBTRACE_REF_CHILD_OF, cmd->parent_span()};
@@ -226,8 +231,8 @@ static lcb_STATUS counter_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_C
         lcbtrace_span_add_tag_str(rdata->span, LCBTRACE_TAG_OPERATION_ID, operation_id.c_str());
         lcbtrace_span_add_system_tags(rdata->span, instance->settings, LCBTRACE_TAG_SERVICE_KV);
     }
-    TRACE_ARITHMETIC_BEGIN(instance, hdr, cmd);
-    LCB_SCHED_ADD(instance, pipeline, packet);
+    TRACE_ARITHMETIC_BEGIN(instance, &hdr, cmd);
+    LCB_SCHED_ADD(instance, pipeline, packet)
     return LCB_SUCCESS;
 }
 

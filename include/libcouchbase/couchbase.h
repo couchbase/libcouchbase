@@ -968,6 +968,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_key(lcb_CMDSTORE *cmd, const char *key,
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_value(lcb_CMDSTORE *cmd, const char *value, size_t value_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_value_iov(lcb_CMDSTORE *cmd, const lcb_IOV *value, size_t value_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_expiry(lcb_CMDSTORE *cmd, uint32_t expiration);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_preserve_expiry(lcb_CMDSTORE *cmd, int should_preserve);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_cas(lcb_CMDSTORE *cmd, uint64_t cas);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_flags(lcb_CMDSTORE *cmd, uint32_t flags);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdstore_datatype(lcb_CMDSTORE *cmd, uint8_t datatype);
@@ -3194,6 +3195,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_key(lcb_CMDSUBDOC *cmd, const char *ke
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_cas(lcb_CMDSUBDOC *cmd, uint64_t cas);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_specs(lcb_CMDSUBDOC *cmd, const lcb_SUBDOCSPECS *operations);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_expiry(lcb_CMDSUBDOC *cmd, uint32_t expiration);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_preserve_expiry(lcb_CMDSUBDOC *cmd, int should_preserve);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_durability(lcb_CMDSUBDOC *cmd, lcb_DURABILITY_LEVEL level);
 typedef enum {
     LCB_SUBDOC_STORE_REPLACE = 0,

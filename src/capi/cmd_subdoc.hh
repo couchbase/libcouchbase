@@ -405,6 +405,17 @@ struct lcb_CMDSUBDOC_ {
         return durability_level_;
     }
 
+    lcb_STATUS preserve_expiry(bool preserve)
+    {
+        preserve_expiry_ = preserve;
+        return LCB_SUCCESS;
+    }
+
+    bool should_preserve_expiry() const
+    {
+        return preserve_expiry_;
+    }
+
   private:
     lcb::collection_qualifier collection_{};
     std::chrono::microseconds timeout_{0};
@@ -417,6 +428,7 @@ struct lcb_CMDSUBDOC_ {
     lcb_DURABILITY_LEVEL durability_level_{LCB_DURABILITYLEVEL_NONE};
     subdoc_options options_{};
     lcb_SUBDOCSPECS_ specs_{};
+    bool preserve_expiry_{false};
 };
 
 /**

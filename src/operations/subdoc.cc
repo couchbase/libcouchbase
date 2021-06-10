@@ -391,6 +391,11 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_expiry(lcb_CMDSUBDOC *cmd, uint32_t ex
     return cmd->expiry(expiration);
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_preserve_expiry(lcb_CMDSUBDOC *cmd, int should_preserve)
+{
+    return cmd->preserve_expiry(should_preserve);
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdsubdoc_durability(lcb_CMDSUBDOC *cmd, lcb_DURABILITY_LEVEL level)
 {
     return cmd->durability_level(level);
@@ -744,7 +749,7 @@ static lcb_STATUS subdoc_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CM
 
     MultiBuilder ctx(cmd);
 
-    if (cmd->has_expiry() && !ctx.is_mutate()) {
+    if ((cmd->has_expiry() || cmd->should_preserve_expiry()) && !ctx.is_mutate()) {
         return LCB_ERR_OPTIONS_CONFLICT;
     }
 
@@ -769,17 +774,32 @@ static lcb_STATUS subdoc_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CM
 
     protocol_binary_request_header hdr;
     int new_durability_supported = LCBT_SUPPORT_SYNCREPLICATION(instance);
-    lcb_U8 ffextlen = 0;
 
-    hdr.request.magic = PROTOCOL_BINARY_REQ;
-    if (ctx.is_mutate() && cmd->has_durability_requirements()) {
-        if (new_durability_supported) {
-            hdr.request.magic = PROTOCOL_BINARY_AREQ;
-            ffextlen = 4;
-        } else {
-            return LCB_ERR_UNSUPPORTED_OPERATION;
+    std::vector<std::uint8_t> framing_extras;
+
+    // Set the header fields.
+    if (ctx.is_lookup()) {
+        hdr.request.opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP;
+    } else {
+        hdr.request.opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION;
+
+        if (new_durability_supported && cmd->has_durability_requirements()) {
+            std::uint8_t frame_id = 0x01;
+            std::uint8_t frame_size = 0x04;
+            framing_extras.emplace_back(frame_id << 4U | frame_size);
+            framing_extras.emplace_back(cmd->durability_level());
+            auto durability_timeout = htons(lcb_durability_timeout(instance, cmd->timeout_in_microseconds()));
+            framing_extras.emplace_back(durability_timeout >> 8U);
+            framing_extras.emplace_back(durability_timeout & 0xff);
+        }
+        if (cmd->should_preserve_expiry()) {
+            std::uint8_t frame_id = 0x05;
+            std::uint8_t frame_size = 0x00;
+            framing_extras.emplace_back(frame_id << 4U | frame_size);
         }
     }
+    hdr.request.magic = framing_extras.empty() ? PROTOCOL_BINARY_REQ : PROTOCOL_BINARY_AREQ;
+    auto ffextlen = static_cast<std::uint8_t>(framing_extras.size());
 
     lcb_KEYBUF keybuf{LCB_KV_COPY, {cmd->key().c_str(), cmd->key().size()}};
     rc = mcreq_basic_packet(&instance->cmdq, &keybuf, cmd->collection().collection_id(), &hdr, extlen, ffextlen, &pkt,
@@ -801,32 +821,26 @@ static lcb_STATUS subdoc_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CM
         return rc;
     }
 
-    // Set the header fields.
-    if (ctx.is_lookup()) {
-        hdr.request.opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP;
-    } else {
-        hdr.request.opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION;
-    }
     hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     hdr.request.extlen = extlen;
     hdr.request.opaque = pkt->opaque;
     hdr.request.cas = lcb_htonll(cmd->cas());
     hdr.request.bodylen = htonl(hdr.request.extlen + ffextlen + mcreq_get_key_size(&hdr) + ctx.payload_size_);
     memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof(hdr.bytes));
-    if (new_durability_supported && ctx.is_mutate() && cmd->has_durability_requirements()) {
-        uint8_t meta = (1u << 4u) | 3u;
-        uint8_t level = cmd->durability_level();
-        uint16_t timeout = htons(lcb_durability_timeout(instance, cmd->timeout_in_microseconds()));
-        memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE, &meta, sizeof(meta));
-        memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE + 1, &level, sizeof(level));
-        memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE + 2, &timeout, sizeof(timeout));
+
+    std::size_t offset = sizeof(hdr);
+    if (!framing_extras.empty()) {
+        memcpy(SPAN_BUFFER(&pkt->kh_span) + offset, framing_extras.data(), framing_extras.size());
+        offset += framing_extras.size();
     }
-    if (cmd->has_expiry()) {
+
+    if (ctx.is_mutate() && cmd->has_expiry()) {
         std::uint32_t expiry = htonl(cmd->expiry());
-        memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE + ffextlen, &expiry, 4);
+        memcpy(SPAN_BUFFER(&pkt->kh_span) + offset, &expiry, sizeof(expiry));
+        offset += sizeof(expiry);
     }
     if (docflags) {
-        memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE + ffextlen + (extlen - 1), &docflags, 1);
+        memcpy(SPAN_BUFFER(&pkt->kh_span) + offset, &docflags, sizeof(docflags));
     }
     if (ctx.is_mutate() && !cmd->options().insert_document) {
         pkt->flags |= MCREQ_F_REPLACE_SEMANTICS;

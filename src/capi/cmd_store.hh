@@ -349,6 +349,27 @@ struct lcb_CMDSTORE_ {
         return cookie_is_callback_;
     }
 
+    lcb_STATUS preserve_expiry(bool preserve)
+    {
+        switch (operation_) {
+            case LCB_STORE_INSERT:
+            case LCB_STORE_APPEND:
+            case LCB_STORE_PREPEND:
+                return LCB_ERR_INVALID_ARGUMENT;
+
+            case LCB_STORE_REPLACE:
+            case LCB_STORE_UPSERT:
+                preserve_expiry_ = preserve;
+                return LCB_SUCCESS;
+        }
+        return LCB_ERR_INVALID_ARGUMENT;
+    }
+
+    bool should_preserve_expiry() const
+    {
+        return preserve_expiry_;
+    }
+
   private:
     lcb::collection_qualifier collection_{};
     std::chrono::microseconds timeout_{0};
@@ -368,6 +389,7 @@ struct lcb_CMDSTORE_ {
     bool json_{false};
     bool compressed_{false};
     bool cookie_is_callback_{false};
+    bool preserve_expiry_{false};
 };
 
 /**
