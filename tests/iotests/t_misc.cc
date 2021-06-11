@@ -261,10 +261,8 @@ TEST_F(MockUnitTest, testAsyncDestroy)
     ctx.table = iot;
     lcb_set_destroy_callback(instance, dtor_callback);
     lcb_destroy_async(instance, &ctx);
-    lcb_settings_ref(settings);
     lcbio_table_ref(iot);
     lcb_run_loop(instance);
-    lcb_settings_unref(settings);
     lcbio_table_unref(iot);
     ASSERT_EQ(1, ctx.count);
 }
