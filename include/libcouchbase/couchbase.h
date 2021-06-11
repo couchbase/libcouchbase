@@ -268,6 +268,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_createopts_credentials(lcb_CREATEOPTS *options, 
 LIBCOUCHBASE_API lcb_STATUS lcb_createopts_authenticator(lcb_CREATEOPTS *options, lcb_AUTHENTICATOR *auth);
 LIBCOUCHBASE_API lcb_STATUS lcb_createopts_io(lcb_CREATEOPTS *options, struct lcb_io_opt_st *io);
 
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_tracer(lcb_CREATEOPTS *options, lcbtrace_TRACER *tracer);
 /**
  * @brief Create an instance of lcb.
  * @param instance Where the instance should be returned

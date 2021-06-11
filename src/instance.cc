@@ -86,6 +86,12 @@ LIBCOUCHBASE_API lcb_STATUS lcb_createopts_io(lcb_CREATEOPTS *options, struct lc
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_tracer(lcb_CREATEOPTS *options, struct lcbtrace_TRACER *tracer)
+{
+    options->tracer = tracer;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API
 const char *lcb_get_version(lcb_uint32_t *version)
 {
@@ -560,7 +566,11 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
         goto GT_DONE;
     }
     if (settings->use_tracing) {
-        settings->tracer = lcbtrace_new(obj, LCBTRACE_F_THRESHOLD);
+        if (options && options->tracer) {
+            settings->tracer = options->tracer;
+        } else {
+            settings->tracer = lcbtrace_new(obj, LCBTRACE_F_THRESHOLD);
+        }
     }
 
     obj->last_error = err;

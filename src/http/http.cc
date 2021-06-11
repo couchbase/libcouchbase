@@ -725,7 +725,7 @@ lcb_STATUS Request::setup_inputs(const lcb_CMDHTTP *cmd)
 Request::Request(lcb_INSTANCE *instance_, const void *cookie, const lcb_CMDHTTP *cmd)
     : instance(instance_), body(cmd->body, cmd->body + cmd->nbody), method(cmd->method),
       chunked(cmd->cmdflags & LCB_CMDHTTP_F_STREAM), paused(false), command_cookie(cookie), refcount(1), redircount(0),
-      passed_data(false), last_vbcrev(-1), reqtype(cmd->type), status(ONGOING),
+      span(nullptr), passed_data(false), last_vbcrev(-1), reqtype(cmd->type), status(ONGOING),
       callback(lcb_find_callback(instance, LCB_CALLBACK_HTTP)), io(instance->iotable), ioctx(nullptr), timer(nullptr),
       parser(nullptr), user_timeout(cmd->cmdflags & LCB_CMDHTTP_F_CASTMO ? cmd->cas : 0)
 {
@@ -763,13 +763,12 @@ Request *Request::create(lcb_INSTANCE *instance, const void *cookie, const lcb_C
 {
     auto *req = new lcb_HTTP_HANDLE_(instance, cookie, cmd);
     req->start = gethrtime();
-
     *rc = req->setup_inputs(cmd);
     if (*rc != LCB_SUCCESS) {
         delete req;
         return nullptr;
     }
-
+    req->span = cmd->pspan;
     *rc = req->submit();
     if (*rc == LCB_SUCCESS) {
         if (cmd->reqhandle) {

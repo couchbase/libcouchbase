@@ -283,7 +283,7 @@ lcb_STATUS ObserveCtx::MCTX_done(void *cookie_)
             MCREQ_PKT_RDATA(pkt)->span =
                 lcbtrace_span_start(instance->settings->tracer, LCBTRACE_OP_OBSERVE_CAS, LCBTRACE_NOW, &ref);
             lcbtrace_span_add_tag_str(MCREQ_PKT_RDATA(pkt)->span, LCBTRACE_TAG_OPERATION_ID, opid);
-            lcbtrace_span_add_system_tags(MCREQ_PKT_RDATA(pkt)->span, instance->settings, LCBTRACE_TAG_SERVICE_KV);
+            lcbtrace_span_add_system_tags(MCREQ_PKT_RDATA(pkt)->span, instance->settings, LCBTRACE_THRESHOLD_KV);
         }
 
         mcreq_sched_add(pipeline, pkt);

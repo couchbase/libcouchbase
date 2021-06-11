@@ -171,14 +171,7 @@ static lcb_STATUS remove_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CM
         pkt->u_rdata.reqdata.start +
         cmd->timeout_or_default_in_nanoseconds(LCB_US2NS(LCBT_SETTING(instance, operation_timeout)));
     memcpy(SPAN_BUFFER(&pkt->kh_span), hdr->bytes, hsize);
-    if (instance->settings->tracer) {
-        lcbtrace_REF ref{LCBTRACE_REF_CHILD_OF, cmd->parent_span()};
-        auto operation_id = std::to_string(pkt->opaque);
-        pkt->u_rdata.reqdata.span =
-            lcbtrace_span_start(instance->settings->tracer, LCBTRACE_OP_REMOVE, LCBTRACE_NOW, &ref);
-        lcbtrace_span_add_tag_str(pkt->u_rdata.reqdata.span, LCBTRACE_TAG_OPERATION_ID, operation_id.c_str());
-        lcbtrace_span_add_system_tags(pkt->u_rdata.reqdata.span, instance->settings, LCBTRACE_TAG_SERVICE_KV);
-    }
+    LCBTRACE_KV_START(instance->settings, pkt->opaque, cmd, LCBTRACE_OP_REMOVE, pkt->u_rdata.reqdata.span);
     TRACE_REMOVE_BEGIN(instance, hdr, cmd);
     LCB_SCHED_ADD(instance, pl, pkt)
     return LCB_SUCCESS;

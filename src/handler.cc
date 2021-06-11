@@ -553,6 +553,7 @@ static void H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedRespons
             handle_error_info(response, resp);
         }
     }
+    LCBTRACE_KV_FINISH(pipeline, request, resp, response);
     invoke_callback(request, o, &resp, cbtype);
     free(resp.res);
 }
@@ -749,7 +750,6 @@ static void H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedRespon
         resp.ttp = ttp;
         resp.ttr = ttr;
         TRACE_OBSERVE_PROGRESS(root, request, response, &resp);
-        LCBTRACE_KV_FINISH(pipeline, request, resp, response);
         if (!(request->flags & MCREQ_F_INVOKED)) {
             rd->procs->handler(pipeline, request, LCB_CALLBACK_OBSERVE, resp.ctx.rc, &resp);
         }
@@ -818,12 +818,8 @@ static void H_store(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse
     }
     resp.rflags |= LCB_RESP_F_EXTDATA | LCB_RESP_F_FINAL;
     handle_mutation_token(root, response, request, &resp.mt);
-    if (request->flags & MCREQ_F_REQEXT) {
-        LCBTRACE_KV_COMPLETE(pipeline, request, resp, response);
-    } else {
-        LCBTRACE_KV_FINISH(pipeline, request, resp, response);
-    }
     TRACE_STORE_END(root, request, response, &resp);
+    LCBTRACE_KV_FINISH(pipeline, request, resp, response);
     if (request->flags & MCREQ_F_REQEXT) {
         request->u_rdata.exdata->procs->handler(pipeline, request, LCB_CALLBACK_STORE, immerr, &resp);
     } else {

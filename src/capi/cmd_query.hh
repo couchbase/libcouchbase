@@ -260,6 +260,11 @@ struct lcb_CMDQUERY_ {
         return LCB_SUCCESS;
     }
 
+    lcbtrace_SPAN *parent_span() const
+    {
+        return parent_span_;
+    }
+
     lcb_STATUS timeout_in_milliseconds(std::uint32_t timeout)
     {
         timeout_ = std::chrono::milliseconds(timeout);

@@ -99,7 +99,7 @@ void lcb_SEARCH_HANDLE_::invoke_row(lcb_RESPSEARCH *resp)
                 }
             }
         }
-
+        LCBTRACE_HTTP_FINISH(span_);
         callback_(instance_, LCB_CALLBACK_SEARCH, resp);
     }
 }
@@ -146,6 +146,9 @@ lcb_SEARCH_HANDLE_::lcb_SEARCH_HANDLE_(lcb_INSTANCE *instance, void *cookie, con
         return;
     }
     index_name_ = j_ixname.asString();
+    if (instance_->settings->tracer) {
+        span_ = cmd->parent_span();
+    }
 
     std::string url;
     url.append("api/index/").append(j_ixname.asCString()).append("/query");
@@ -168,34 +171,19 @@ lcb_SEARCH_HANDLE_::lcb_SEARCH_HANDLE_(lcb_INSTANCE *instance, void *cookie, con
     std::string qbody(Json::FastWriter().write(root));
     lcb_cmdhttp_body(htcmd, qbody.c_str(), qbody.size());
 
+    LCBTRACE_HTTP_START(instance_->settings, nullptr, span_, LCBTRACE_TAG_SERVICE_SEARCH, LCBTRACE_THRESHOLD_SEARCH,
+                        span_);
+    lcb_cmdhttp_parent_span(htcmd, span_);
+
     last_error_ = lcb_http(instance_, this, htcmd);
     lcb_cmdhttp_destroy(htcmd);
     if (last_error_ == LCB_SUCCESS) {
         http_request_->set_callback(reinterpret_cast<lcb_RESPCALLBACK>(chunk_callback));
-        if (instance->settings->tracer) {
-            char id[20] = {0};
-            snprintf(id, sizeof(id), "%p", (void *)this);
-            span_ =
-                lcbtrace_span_start(instance->settings->tracer, LCBTRACE_OP_DISPATCH_TO_SERVER, LCBTRACE_NOW, nullptr);
-            lcbtrace_span_add_tag_str(span_, LCBTRACE_TAG_OPERATION_ID, id);
-            lcbtrace_span_add_system_tags(span_, instance->settings, LCBTRACE_TAG_SERVICE_SEARCH);
-        }
     }
 }
 
 lcb_SEARCH_HANDLE_::~lcb_SEARCH_HANDLE_()
 {
-    if (span_) {
-        if (http_request_) {
-            lcbio_CTX *ctx = http_request_->ioctx;
-            if (ctx) {
-                lcbtrace_span_add_tag_str_nocopy(span_, LCBTRACE_TAG_PEER_ADDRESS, http_request_->peer.c_str());
-                lcbtrace_span_add_tag_str_nocopy(span_, LCBTRACE_TAG_LOCAL_ADDRESS, ctx->sock->info->ep_local);
-            }
-        }
-        lcbtrace_span_finish(span_, LCBTRACE_NOW);
-        span_ = nullptr;
-    }
     if (http_request_ != nullptr) {
         lcb_http_cancel(instance_, http_request_);
         http_request_ = nullptr;

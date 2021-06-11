@@ -126,6 +126,11 @@ struct lcb_CMDSEARCH_ {
         return LCB_SUCCESS;
     }
 
+    lcbtrace_SPAN *parent_span() const
+    {
+        return parent_span_;
+    }
+
     void *cookie()
     {
         return cookie_;

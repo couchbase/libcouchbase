@@ -156,16 +156,8 @@ static lcb_STATUS touch_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMD
     pkt->u_rdata.reqdata.deadline =
         pkt->u_rdata.reqdata.start +
         cmd->timeout_or_default_in_nanoseconds(LCB_US2NS(LCBT_SETTING(instance, operation_timeout)));
+    LCBTRACE_KV_START(instance->settings, pkt->opaque, cmd, LCBTRACE_OP_TOUCH, pkt->u_rdata.reqdata.span);
     LCB_SCHED_ADD(instance, pl, pkt);
-    if (instance->settings->tracer) {
-        lcbtrace_REF ref{LCBTRACE_REF_CHILD_OF, cmd->parent_span()};
-        auto operation_id = std::to_string(pkt->opaque);
-        pkt->u_rdata.reqdata.span =
-            lcbtrace_span_start(instance->settings->tracer, LCBTRACE_OP_TOUCH, LCBTRACE_NOW, &ref);
-        lcbtrace_span_add_tag_str(pkt->u_rdata.reqdata.span, LCBTRACE_TAG_OPERATION_ID, operation_id.c_str());
-        lcbtrace_span_add_system_tags(pkt->u_rdata.reqdata.span, instance->settings, LCBTRACE_TAG_SERVICE_KV);
-    }
-
     TRACE_TOUCH_BEGIN(instance, hdr, cmd);
     return LCB_SUCCESS;
 }
@@ -213,7 +205,9 @@ static lcb_STATUS touch_execute(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMDT
 LIBCOUCHBASE_API
 lcb_STATUS lcb_touch(lcb_INSTANCE *instance, void *cookie, const lcb_CMDTOUCH *command)
 {
-    lcb_STATUS rc = touch_validate(instance, command);
+    lcb_STATUS rc;
+
+    rc = touch_validate(instance, command);
     if (rc != LCB_SUCCESS) {
         return rc;
     }

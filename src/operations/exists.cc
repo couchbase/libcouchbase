@@ -147,15 +147,8 @@ static lcb_STATUS exists_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CM
         cmd->timeout_or_default_in_nanoseconds(LCB_US2NS(LCBT_SETTING(instance, operation_timeout)));
     memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, MCREQ_PKT_BASESIZE);
 
+    LCBTRACE_KV_START(instance->settings, pkt->opaque, cmd, LCBTRACE_OP_EXISTS, pkt->u_rdata.reqdata.span);
     LCB_SCHED_ADD(instance, pipeline, pkt)
-    if (instance->settings->tracer) {
-        lcbtrace_REF ref{LCBTRACE_REF_CHILD_OF, cmd->parent_span()};
-        auto operation_id = std::to_string(pkt->opaque);
-        pkt->u_rdata.reqdata.span =
-            lcbtrace_span_start(instance->settings->tracer, LCBTRACE_OP_EXISTS, LCBTRACE_NOW, &ref);
-        lcbtrace_span_add_tag_str(pkt->u_rdata.reqdata.span, LCBTRACE_TAG_OPERATION_ID, operation_id.c_str());
-        lcbtrace_span_add_system_tags(pkt->u_rdata.reqdata.span, instance->settings, LCBTRACE_TAG_SERVICE_KV);
-    }
     TRACE_EXISTS_BEGIN(instance, &hdr, cmd);
     return LCB_SUCCESS;
 }

@@ -472,15 +472,8 @@ static lcb_STATUS store_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMD
     if (cmd->is_replace_semantics()) {
         packet->flags |= MCREQ_F_REPLACE_SEMANTICS;
     }
+    LCBTRACE_KVSTORE_START(instance->settings, packet->opaque, cmd, cmd->operation_name(), rdata->span);
     LCB_SCHED_ADD(instance, pipeline, packet)
-    if (instance->settings->tracer) {
-        lcbtrace_REF ref{LCBTRACE_REF_CHILD_OF, cmd->parent_span()};
-        auto operation_id = std::to_string(packet->opaque);
-        MCREQ_PKT_RDATA(packet)->span =
-            lcbtrace_span_start(instance->settings->tracer, cmd->operation_name(), LCBTRACE_NOW, &ref);
-        lcbtrace_span_add_tag_str(MCREQ_PKT_RDATA(packet)->span, LCBTRACE_TAG_OPERATION_ID, operation_id.c_str());
-        lcbtrace_span_add_system_tags(MCREQ_PKT_RDATA(packet)->span, instance->settings, LCBTRACE_TAG_SERVICE_KV);
-    }
 
     TRACE_STORE_BEGIN(instance, &hdr, cmd);
 

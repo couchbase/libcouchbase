@@ -214,8 +214,9 @@ void lcb_QUERY_HANDLE_::invoke_row(lcb_RESPQUERY *resp, bool is_last)
             resp->ctx.first_error_message_len = first_error_message.size();
         }
         resp->ctx.first_error_code = first_error_code;
+        LCBTRACE_ADD_RETRIES(span_, retries_);
+        LCBTRACE_HTTP_FINISH(span_);
     }
-
     if (callback_) {
         callback_(instance_, LCB_CALLBACK_QUERY, resp);
     }
@@ -402,6 +403,10 @@ lcb_STATUS lcb_QUERY_HANDLE_::issue_htreq(const std::string &body)
         lcb_cmdhttp_password(htcmd, password_.c_str(), password_.size());
     }
 
+    LCBTRACE_HTTP_START(instance_->settings, client_context_id.c_str(), span_, LCBTRACE_TAG_SERVICE_N1QL,
+                        LCBTRACE_THRESHOLD_QUERY, span_);
+    lcb_cmdhttp_parent_span(htcmd, span_);
+
     rc = lcb_http(instance_, this, htcmd);
     lcb_cmdhttp_destroy(htcmd);
     if (rc == LCB_SUCCESS) {
@@ -533,11 +538,7 @@ lcb_QUERY_HANDLE_::lcb_QUERY_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, const
         }
     }
     if (instance_->settings->tracer) {
-        char id[20] = {0};
-        snprintf(id, sizeof(id), "%p", (void *)this);
-        span_ = lcbtrace_span_start(instance_->settings->tracer, LCBTRACE_OP_DISPATCH_TO_SERVER, LCBTRACE_NOW, nullptr);
-        lcbtrace_span_add_tag_str(span_, LCBTRACE_TAG_OPERATION_ID, id);
-        lcbtrace_span_add_system_tags(span_, instance_->settings, LCBTRACE_TAG_SERVICE_N1QL);
+        span_ = cmd->parent_span();
     }
 }
 
@@ -546,18 +547,6 @@ lcb_QUERY_HANDLE_::~lcb_QUERY_HANDLE_()
     if (callback_) {
         lcb_RESPQUERY resp{};
         invoke_row(&resp, true);
-    }
-
-    if (span_) {
-        if (http_request_) {
-            const lcbio_CTX *ctx = http_request_->ioctx;
-            if (ctx) {
-                lcbtrace_span_add_tag_str_nocopy(span_, LCBTRACE_TAG_PEER_ADDRESS, http_request_->peer.c_str());
-                lcbtrace_span_add_tag_str_nocopy(span_, LCBTRACE_TAG_LOCAL_ADDRESS, ctx->sock->info->ep_local);
-            }
-        }
-        lcbtrace_span_finish(span_, LCBTRACE_NOW);
-        span_ = nullptr;
     }
 
     if (http_request_) {

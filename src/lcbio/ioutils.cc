@@ -143,6 +143,11 @@ lcb_sockdata_t *lcbio_C_ai2sock(lcbio_TABLE *io, struct addrinfo **ai, int *conn
     }
     return ret;
 }
+static int saddr_to_host_and_port(struct sockaddr *saddr, int len, char *host, lcb_size_t nhost, char *port,
+                                  lcb_size_t nport)
+{
+    return getnameinfo(saddr, len, host, nhost, port, nport, NI_NUMERICHOST | NI_NUMERICSERV);
+}
 
 static int saddr_to_string(struct sockaddr *saddr, int len, char *buf, lcb_size_t nbuf)
 {
@@ -150,7 +155,7 @@ static int saddr_to_string(struct sockaddr *saddr, int len, char *buf, lcb_size_
     char p[NI_MAXSERV + 1];
     int rv;
 
-    rv = getnameinfo(saddr, len, h, sizeof(h), p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV);
+    rv = saddr_to_host_and_port(saddr, len, h, sizeof(h), p, sizeof(p));
     if (rv < 0) {
         return 0;
     }
@@ -169,6 +174,8 @@ static void lcbio_cache_local_name(lcbio_CONNINFO *sock)
             auto *addr = (struct sockaddr_in *)&sock->sa_local;
             inet_ntop(AF_INET, &(addr->sin_addr), sock->ep_local, sizeof(sock->ep_local));
             size_t len = strlen(sock->ep_local);
+            strcpy(sock->ep_local2.host, sock->ep_local);
+            snprintf(sock->ep_local2.port, sizeof(sock->ep_local2), "%d", (int)ntohs(addr->sin_port));
             snprintf(sock->ep_local + len, sizeof(sock->ep_local) - len, ":%d", (int)ntohs(addr->sin_port));
         } break;
 
@@ -176,6 +183,8 @@ static void lcbio_cache_local_name(lcbio_CONNINFO *sock)
             auto *addr = (struct sockaddr_in6 *)&sock->sa_local;
             inet_ntop(AF_INET6, &(addr->sin6_addr), sock->ep_local, sizeof(sock->ep_local));
             size_t len = strlen(sock->ep_local);
+            strcpy(sock->ep_local2.host, sock->ep_local);
+            snprintf(sock->ep_local2.port, sizeof(sock->ep_local2), "%d", (int)ntohs(addr->sin6_port));
             snprintf(sock->ep_local + len, sizeof(sock->ep_local) - len, ":%d", (int)ntohs(addr->sin6_port));
         } break;
     }

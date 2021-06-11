@@ -299,24 +299,13 @@ lcb_VIEW_HANDLE_::~lcb_VIEW_HANDLE_()
 {
     invoke_last();
 
-    if (span_) {
-        if (http_request_) {
-            lcbio_CTX *ctx = http_request_->ioctx;
-            if (ctx) {
-                lcbtrace_span_add_tag_str_nocopy(span_, LCBTRACE_TAG_PEER_ADDRESS, http_request_->peer.c_str());
-                lcbtrace_span_add_tag_str_nocopy(span_, LCBTRACE_TAG_LOCAL_ADDRESS, ctx->sock->info->ep_local);
-            }
-        }
-        lcbtrace_span_finish(span_, LCBTRACE_NOW);
-        span_ = nullptr;
-    }
-
     delete parser_;
     parser_ = nullptr;
 
     if (http_request_ != nullptr) {
         lcb_http_cancel(instance_, http_request_);
     }
+
     if (document_queue_ != nullptr) {
         document_queue_->parent = nullptr;
         document_queue_->unref();
@@ -333,6 +322,11 @@ lcb_STATUS lcb_VIEW_HANDLE_::request_http(const lcb_CMDVIEW *cmd)
 
     design_document_ = cmd->design_document_name();
     view_ = cmd->view_name();
+
+    if (span_) {
+        std::string operation = design_document_ + "/" + view_;
+        lcbtrace_span_add_tag_str(span_, LCBTRACE_TAG_OPERATION, operation.c_str());
+    }
 
     std::string path;
     path.append("_design/");
@@ -355,6 +349,9 @@ lcb_STATUS lcb_VIEW_HANDLE_::request_http(const lcb_CMDVIEW *cmd)
         lcb_cmdhttp_content_type(htcmd, content_type.c_str(), content_type.size());
     }
     lcb_cmdhttp_timeout(htcmd, cmd->timeout_or_default_in_microseconds(LCBT_SETTING(instance_, views_timeout)));
+
+    LCBTRACE_HTTP_START(instance_->settings, nullptr, span_, LCBTRACE_TAG_SERVICE_VIEW, LCBTRACE_THRESHOLD_VIEW, span_);
+    lcb_cmdhttp_parent_span(htcmd, span_);
 
     lcb_STATUS err = lcb_http(instance_, this, htcmd);
     lcb_cmdhttp_destroy(htcmd);
@@ -382,15 +379,10 @@ lcb_VIEW_HANDLE_::lcb_VIEW_HANDLE_(lcb_INSTANCE *instance, void *cookie, const l
     }
 
     lcb_aspend_add(&instance_->pendops, LCB_PENDTYPE_COUNTER, nullptr);
-
-    last_error_ = request_http(cmd);
-    if (last_error_ == LCB_SUCCESS && instance_->settings->tracer) {
-        char id[20] = {0};
-        snprintf(id, sizeof(id), "%p", (void *)this);
-        span_ = lcbtrace_span_start(instance_->settings->tracer, LCBTRACE_OP_DISPATCH_TO_SERVER, LCBTRACE_NOW, nullptr);
-        lcbtrace_span_add_tag_str(span_, LCBTRACE_TAG_OPERATION_ID, id);
-        lcbtrace_span_add_system_tags(span_, instance_->settings, LCBTRACE_TAG_SERVICE_VIEW);
+    if (instance->settings->tracer) {
+        span_ = cmd->parent_span();
     }
+    last_error_ = request_http(cmd);
 }
 
 void lcb_VIEW_HANDLE_::cancel()

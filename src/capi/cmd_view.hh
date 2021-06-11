@@ -108,6 +108,11 @@ struct lcb_CMDVIEW_ {
         return LCB_SUCCESS;
     }
 
+    lcbtrace_SPAN *parent_span() const
+    {
+        return parent_span_;
+    }
+
     lcb_STATUS design_document_name(const char *name, std::size_t name_len)
     {
         if (name == nullptr || name_len == 0) {

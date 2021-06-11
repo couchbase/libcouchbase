@@ -189,14 +189,8 @@ static lcb_STATUS get_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMDGE
     }
 
     memcpy(SPAN_BUFFER(&pkt->kh_span), gcmd.bytes, MCREQ_PKT_BASESIZE + extlen);
+    LCBTRACE_KV_START(instance->settings, pkt->opaque, cmd, LCBTRACE_OP_GET, rdata->span);
     LCB_SCHED_ADD(instance, pl, pkt)
-    if (instance->settings->tracer) {
-        lcbtrace_REF ref{LCBTRACE_REF_CHILD_OF, cmd->parent_span()};
-        auto operation_id = std::to_string(pkt->opaque);
-        rdata->span = lcbtrace_span_start(instance->settings->tracer, LCBTRACE_OP_GET, LCBTRACE_NOW, &ref);
-        lcbtrace_span_add_tag_str(rdata->span, LCBTRACE_TAG_OPERATION_ID, operation_id.c_str());
-        lcbtrace_span_add_system_tags(rdata->span, instance->settings, LCBTRACE_TAG_SERVICE_KV);
-    }
     TRACE_GET_BEGIN(instance, hdr, cmd);
     return LCB_SUCCESS;
 }

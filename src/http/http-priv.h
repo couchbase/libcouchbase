@@ -262,7 +262,7 @@ struct Request {
     const void *const command_cookie; /** User context for callback */
     size_t refcount;                  /** Initialized to 1. See incref() and decref() */
     int redircount;                   /** Times this request was redirected */
-
+    lcbtrace_SPAN *span;              /** Dispatch span. */
     /**
      * Whether this request has delivered data to the user. This is relevant
      * in cases where a retry is requested. If any data has been passed at

@@ -225,11 +225,7 @@ lcb_ANALYTICS_HANDLE_::lcb_ANALYTICS_HANDLE_(lcb_INSTANCE *obj, void *user_cooki
     query_params_ = Json::FastWriter().write(cmd->root());
 
     if (instance_->settings->tracer) {
-        char id[20] = {0};
-        snprintf(id, sizeof(id), "%p", (void *)this);
-        span_ = lcbtrace_span_start(instance_->settings->tracer, LCBTRACE_OP_DISPATCH_TO_SERVER, LCBTRACE_NOW, nullptr);
-        lcbtrace_span_add_tag_str(span_, LCBTRACE_TAG_OPERATION_ID, id);
-        lcbtrace_span_add_system_tags(span_, instance_->settings, LCBTRACE_TAG_SERVICE_ANALYTICS);
+        span_ = cmd->parent_span();
     }
 
     if (ingest_options().method != LCB_INGEST_METHOD_NONE) {
@@ -248,14 +244,6 @@ lcb_ANALYTICS_HANDLE_::lcb_ANALYTICS_HANDLE_(lcb_INSTANCE *obj, void *user_cooki
       callback_(handle->callback), instance_(obj), deferred_handle_(handle->handle)
 {
     timeout_ = LCBT_SETTING(obj, analytics_timeout);
-
-    if (instance_->settings->tracer) {
-        char id[20] = {0};
-        snprintf(id, sizeof(id), "%p", (void *)this);
-        span_ = lcbtrace_span_start(instance_->settings->tracer, LCBTRACE_OP_DISPATCH_TO_SERVER, LCBTRACE_NOW, nullptr);
-        lcbtrace_span_add_tag_str(span_, LCBTRACE_TAG_OPERATION_ID, id);
-        lcbtrace_span_add_system_tags(span_, instance_->settings, LCBTRACE_TAG_SERVICE_ANALYTICS);
-    }
 }
 
 lcb_STATUS lcb_ANALYTICS_HANDLE_::issue_htreq(const std::string &body)
@@ -289,6 +277,10 @@ lcb_STATUS lcb_ANALYTICS_HANDLE_::issue_htreq(const std::string &body)
     if (!hostname.empty()) {
         lcb_cmdhttp_host(htcmd, hostname.c_str(), hostname.size());
     }
+
+    LCBTRACE_HTTP_START(instance_->settings, client_context_id_.c_str(), span_, LCBTRACE_TAG_SERVICE_ANALYTICS,
+                        LCBTRACE_THRESHOLD_ANALYTICS, span_);
+    lcb_cmdhttp_parent_span(htcmd, span_);
 
     lcb_STATUS rc = lcb_http(instance_, this, htcmd);
     lcb_cmdhttp_destroy(htcmd);
@@ -457,6 +449,7 @@ void lcb_ANALYTICS_HANDLE_::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
                 }
             }
         }
+        LCBTRACE_HTTP_FINISH(span_);
     }
 
     if (callback_ != nullptr) {
@@ -477,18 +470,6 @@ lcb_ANALYTICS_HANDLE_::~lcb_ANALYTICS_HANDLE_()
     if (callback_ != nullptr) {
         lcb_RESPANALYTICS resp{};
         invoke_row(&resp, true);
-    }
-
-    if (span_) {
-        if (http_request_) {
-            lcbio_CTX *ctx = http_request_->ioctx;
-            if (ctx) {
-                lcbtrace_span_add_tag_str_nocopy(span_, LCBTRACE_TAG_PEER_ADDRESS, http_request_->peer.c_str());
-                lcbtrace_span_add_tag_str_nocopy(span_, LCBTRACE_TAG_LOCAL_ADDRESS, ctx->sock->info->ep_local);
-            }
-        }
-        lcbtrace_span_finish(span_, LCBTRACE_NOW);
-        span_ = nullptr;
     }
 
     delete parser_;
