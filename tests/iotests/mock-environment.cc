@@ -346,7 +346,7 @@ static void statsCallback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_R
     MockEnvironment::ServerVersion version = MockEnvironment::VERSION_UNKNOWN;
     const char *value = nullptr;
     size_t value_len = 0;
-    lcb_respstats_key(resp, &value, &value_len);
+    lcb_respstats_value(resp, &value, &value_len);
     if (value_len > 2) {
         int major = value[0] - '0';
         int minor = value[2] - '0';
