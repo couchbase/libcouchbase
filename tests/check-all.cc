@@ -480,10 +480,29 @@ class TestScheduler
                 if (rv == 0) {
                     char msg[2048];
                     cur->exitedOk = cur->proc_.status == 0;
-                    snprintf(msg, 2048, "REAP [%s] '%s' .. %s", cur->pluginName.c_str(), cur->commandline.c_str(),
-                             cur->exitedOk ? "OK" : "FAIL");
+                    snprintf(msg, 2048, "REAP [%s] '%s' (rc=%d).. %s", cur->pluginName.c_str(),
+                             cur->commandline.c_str(), cur->proc_.status, cur->exitedOk ? "OK" : "FAIL");
                     cur->writeLog(msg);
                     fprintf(stderr, "%s\n", msg);
+#ifndef _WIN32
+                    if (!cur->exitedOk) {
+                        sleep(1);
+                        std::string cmd = "coredumpctl info " + std::to_string(cur->proc_.pid);
+                        FILE *stream = popen(cmd.c_str(), "r");
+                        if (stream != nullptr) {
+                            std::stringstream ss;
+                            ss << "# " << cmd << "\n";
+                            int ch;
+                            while ((ch = fgetc(stream)) != EOF) {
+                                ss << static_cast<char>(ch);
+                            }
+                            pclose(stream);
+                            auto info = ss.str();
+                            cur->writeLog(info.c_str());
+                            fprintf(stderr, "%s\n", info.c_str());
+                        }
+                    }
+#endif
                     cleanup_process(&cur->proc_);
                     to_remove_e.push_back(cur);
                 }
