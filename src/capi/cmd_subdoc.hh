@@ -150,6 +150,11 @@ struct subdoc_spec {
         return path_;
     }
 
+    void clear_path()
+    {
+        path_.clear();
+    }
+
     lcb_STATUS path(std::string path)
     {
         path_ = std::move(path);

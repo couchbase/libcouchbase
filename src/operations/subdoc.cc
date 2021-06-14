@@ -124,6 +124,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_get(lcb_SUBDOCSPECS *operations, siz
     auto &spec = operations->specs()[index];
     if (path == nullptr || path_len == 0) {
         spec.opcode(subdoc_opcode::get_fulldoc);
+        spec.clear_path();
     } else {
         spec.opcode(subdoc_opcode::get);
         spec.path(std::string(path, path_len));
@@ -161,6 +162,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_replace(lcb_SUBDOCSPECS *operations,
     auto &spec = operations->specs()[index];
     if (path == nullptr || path_len == 0) {
         spec.opcode(subdoc_opcode::set_fulldoc);
+        spec.clear_path();
     } else {
         spec.opcode(subdoc_opcode::replace);
         spec.path(std::string(path, path_len));
@@ -322,6 +324,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_remove(lcb_SUBDOCSPECS *operations, 
     auto &spec = operations->specs()[index];
     if (path == nullptr || path_len == 0) {
         spec.opcode(subdoc_opcode::remove_fulldoc);
+        spec.clear_path();
     } else {
         spec.opcode(subdoc_opcode::remove);
         spec.path(std::string(path, path_len));
