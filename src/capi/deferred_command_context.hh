@@ -58,7 +58,7 @@ struct deferred_command_context : mc_REQDATAEX {
 template <typename Command, typename Response, typename Handler>
 deferred_command_context<Command, Response, Handler> *
 make_deferred_command_context(std::shared_ptr<Command> cmd, Handler &&handler,
-                              std::uint64_t start_time_ns = lcbtrace_now())
+                              std::uint64_t start_time_ns = gethrtime())
 {
     return new deferred_command_context<Command, Response, Handler>(cmd, std::move(handler), start_time_ns);
 }

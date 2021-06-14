@@ -187,7 +187,12 @@ static lcb_STATUS touch_execute(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMDT
             const auto callback_type = LCB_CALLBACK_TOUCH;
             lcb_RESPCALLBACK operation_callback = lcb_find_callback(instance, callback_type);
             lcb_RESPTOUCH response{};
+            if (resp != nullptr) {
+                response.ctx = resp->ctx;
+            }
             response.ctx.key = operation->key();
+            response.ctx.scope = operation->collection().scope();
+            response.ctx.collection = operation->collection().collection();
             response.cookie = operation->cookie();
             if (status == LCB_ERR_SHEDULE_FAILURE || resp == nullptr) {
                 response.ctx.rc = LCB_ERR_TIMEOUT;
@@ -195,7 +200,6 @@ static lcb_STATUS touch_execute(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMDT
                 return;
             }
             if (resp->ctx.rc != LCB_SUCCESS) {
-                response.ctx = resp->ctx;
                 operation_callback(instance, callback_type, &response);
                 return;
             }

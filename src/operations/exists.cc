@@ -176,7 +176,12 @@ static lcb_STATUS exists_execute(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMD
         [instance](lcb_STATUS status, const lcb_RESPGETCID *resp, std::shared_ptr<lcb_CMDEXISTS> operation) {
             lcb_RESPCALLBACK operation_callback = lcb_find_callback(instance, LCB_CALLBACK_EXISTS);
             lcb_RESPEXISTS response{};
+            if (resp != nullptr) {
+                response.ctx = resp->ctx;
+            }
             response.ctx.key = operation->key();
+            response.ctx.scope = operation->collection().scope();
+            response.ctx.collection = operation->collection().collection();
             response.cookie = operation->cookie();
             if (status == LCB_ERR_SHEDULE_FAILURE || resp == nullptr) {
                 response.ctx.rc = LCB_ERR_TIMEOUT;
@@ -184,7 +189,6 @@ static lcb_STATUS exists_execute(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMD
                 return;
             }
             if (resp->ctx.rc != LCB_SUCCESS) {
-                response.ctx = resp->ctx;
                 operation_callback(instance, LCB_CALLBACK_EXISTS, &response);
                 return;
             }

@@ -260,12 +260,11 @@ static void http_callback(lcb_INSTANCE * /* instance */, int /* cbtype */, const
 }
 }
 
-lcb_STATUS create_scope(lcb_INSTANCE *instance, const std::string &scope)
+void create_scope(lcb_INSTANCE *instance, const std::string &scope)
 {
     (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 
     lcb_CMDHTTP *cmd;
-    lcb_STATUS err;
     std::string path = "/pools/default/buckets/" + MockEnvironment::getInstance()->getBucket() + "/scopes";
     std::string body = "name=" + scope;
     std::string content_type = "application/x-www-form-urlencoded";
@@ -276,13 +275,12 @@ lcb_STATUS create_scope(lcb_INSTANCE *instance, const std::string &scope)
     lcb_cmdhttp_path(cmd, path.c_str(), path.size());
     lcb_cmdhttp_body(cmd, body.c_str(), body.size());
 
-    err = lcb_http(instance, nullptr, cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, nullptr, cmd));
     lcb_cmdhttp_destroy(cmd);
-    EXPECT_EQ(LCB_SUCCESS, err);
-    return lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
 }
 
-lcb_STATUS create_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection)
+void create_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection)
 {
     (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 
@@ -299,10 +297,41 @@ lcb_STATUS create_collection(lcb_INSTANCE *instance, const std::string &scope, c
     lcb_cmdhttp_path(cmd, path.c_str(), path.size());
     lcb_cmdhttp_body(cmd, body.c_str(), body.size());
 
-    err = lcb_http(instance, nullptr, cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, nullptr, cmd));
     lcb_cmdhttp_destroy(cmd);
-    EXPECT_EQ(LCB_SUCCESS, err);
-    return lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+}
+
+void drop_scope(lcb_INSTANCE *instance, const std::string &scope)
+{
+    (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
+
+    lcb_CMDHTTP *cmd;
+    std::string path = "/pools/default/buckets/default/scopes/" + scope;
+
+    lcb_cmdhttp_create(&cmd, LCB_HTTP_TYPE_MANAGEMENT);
+    lcb_cmdhttp_method(cmd, LCB_HTTP_METHOD_DELETE);
+    lcb_cmdhttp_path(cmd, path.c_str(), path.size());
+
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, nullptr, cmd));
+    lcb_cmdhttp_destroy(cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+}
+
+void drop_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection)
+{
+    (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
+
+    lcb_CMDHTTP *cmd;
+    std::string path = "/pools/default/buckets/default/scopes/" + scope + "/collections/" + collection;
+
+    lcb_cmdhttp_create(&cmd, LCB_HTTP_TYPE_MANAGEMENT);
+    lcb_cmdhttp_method(cmd, LCB_HTTP_METHOD_DELETE);
+    lcb_cmdhttp_path(cmd, path.c_str(), path.size());
+
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, nullptr, cmd));
+    lcb_cmdhttp_destroy(cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
 }
 
 std::string unique_name(const std::string &prefix)

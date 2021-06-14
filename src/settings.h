@@ -34,6 +34,8 @@
 /** Convert nanoseconds to microseconds */
 #define LCB_NS2US(s) ((s) / 1000)
 
+#define LCB_NS2MS(s) ((s) / 1000000)
+
 #define LCB_MS2US(s) ((s)*1000)
 
 /** Convert microseconds to nanoseconds */

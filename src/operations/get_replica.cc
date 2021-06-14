@@ -430,7 +430,12 @@ static lcb_STATUS get_replica_execute(lcb_INSTANCE *instance, std::shared_ptr<lc
             const auto callback_type = LCB_CALLBACK_GETREPLICA;
             lcb_RESPCALLBACK operation_callback = lcb_find_callback(instance, callback_type);
             lcb_RESPGETREPLICA response{};
+            if (resp != nullptr) {
+                response.ctx = resp->ctx;
+            }
             response.ctx.key = operation->key();
+            response.ctx.scope = operation->collection().scope();
+            response.ctx.collection = operation->collection().collection();
             response.cookie = operation->cookie();
             response.rflags |= LCB_RESP_F_FINAL;
             if (status == LCB_ERR_SHEDULE_FAILURE || resp == nullptr) {
@@ -439,7 +444,6 @@ static lcb_STATUS get_replica_execute(lcb_INSTANCE *instance, std::shared_ptr<lc
                 return;
             }
             if (resp->ctx.rc != LCB_SUCCESS) {
-                response.ctx = resp->ctx;
                 operation_callback(instance, callback_type, &response);
                 return;
             }

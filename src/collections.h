@@ -156,6 +156,7 @@ lcb_STATUS collcache_resolve(lcb_INSTANCE *instance, Command cmd, Operation op, 
     MutableCommand clone{};
     dup(cmd, &clone);
     pkt->u_rdata.exdata = make_cid_ctx(spec, op, clone, dtor);
+    pkt->u_rdata.exdata->start = gethrtime();
     pkt->u_rdata.exdata->deadline =
         pkt->u_rdata.exdata->start + LCB_US2NS(cmd->timeout ? cmd->timeout : LCBT_SETTING(instance, operation_timeout));
     pkt->flags |= MCREQ_F_REQEXT;
@@ -218,7 +219,8 @@ lcb_STATUS collcache_resolve(lcb_INSTANCE *instance, std::shared_ptr<Command> cm
             scheduler(rc, resp, operation);
         });
     pkt->u_rdata.exdata->deadline =
-        pkt->u_rdata.exdata->start + cmd->timeout_or_default_in_nanoseconds(LCBT_SETTING(instance, operation_timeout));
+        pkt->u_rdata.exdata->start +
+        cmd->timeout_or_default_in_nanoseconds(LCB_US2NS(LCBT_SETTING(instance, operation_timeout)));
     pkt->flags |= MCREQ_F_REQEXT;
 
     LCB_SCHED_ADD(instance, pl, pkt)

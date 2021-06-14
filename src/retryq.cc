@@ -162,10 +162,10 @@ void RetryQueue::fail(RetryOp *op, lcb_STATUS err, hrtime_t now)
 
     assign_error(op, err);
     lcb_log(LOGARGS(this, WARN),
-            "Failing command (pkt=%p, opaque=%u, retries=%d, time=%" PRIu64
+            "Failing command (pkt=%p, opaque=%u, retries=%d, now=%" PRIu64 "ms, spent=%" PRIu64
             "us, status=0x%02x) requested error: %s, from retry queue: %s",
-            (void *)op->pkt, op->pkt->opaque, (int)op->pkt->retries, LCB_NS2US(now - op->start), (int)op->origstatus,
-            lcb_strerror_short(err), lcb_strerror_short(op->origerr));
+            (void *)op->pkt, op->pkt->opaque, (int)op->pkt->retries, LCB_NS2MS(now), LCB_NS2US(now - op->start),
+            (int)op->origstatus, lcb_strerror_short(err), lcb_strerror_short(op->origerr));
     lcb_STATUS immerr = op->origerr;
     if ((op->origstatus == PROTOCOL_BINARY_RESPONSE_UNSPECIFIED && LCB_ERROR_IS_NETWORK(op->origerr)) ||
         op->origerr == LCB_ERR_BUCKET_NOT_FOUND) {
@@ -275,8 +275,10 @@ void RetryQueue::flush(bool throttle)
         } else {
             uint32_t cid = mcreq_get_cid(get_instance(), op->pkt);
             lcb_log(LOGARGS(this, TRACE),
-                    "Flush PKT=%p to network. retries=%u, cid=%u, opaque=%u, IX=%d, time=%" PRIu64 "us",
-                    (void *)op->pkt, op->pkt->retries, cid, op->pkt->opaque, srvix, LCB_NS2US(now - op->start));
+                    "Flush PKT=%p to network. retries=%u, cid=%u, opaque=%u, IX=%d, spent=%" PRIu64
+                    "us, deadline_in=%" PRIu64 "us",
+                    (void *)op->pkt, op->pkt->retries, cid, op->pkt->opaque, srvix, LCB_NS2US(now - op->start),
+                    LCB_NS2US(op->deadline - now));
             mc_PIPELINE *newpl = cq->pipelines[srvix];
             mcreq_enqueue_packet(newpl, op->pkt);
             newpl->flush_start(newpl);
@@ -403,9 +405,10 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, protocol_binary_res
 
     uint32_t cid = mcreq_get_cid(get_instance(), &pkt->base);
     lcb_log(LOGARGS(this, DEBUG),
-            "Adding PKT=%p to retry queue. retries=%u, cid=%u, opaque=%u, time=%" PRIu64 "us, status=0x%02x, rc=%s",
-            (void *)pkt, pkt->base.retries, cid, pkt->base.opaque, LCB_NS2US(now - op->start), status,
-            lcb_strerror_short(err));
+            "Adding PKT=%p to retry queue. retries=%u, cid=%u, opaque=%u, now=%" PRIu64 "ms, spent=%" PRIu64
+            "us, deadline_in=%" PRIu64 "us, , status=0x%02x, rc=%s",
+            (void *)pkt, pkt->base.retries, cid, pkt->base.opaque, LCB_NS2MS(now), LCB_NS2US(now - op->start),
+            LCB_NS2US(op->deadline - now), status, lcb_strerror_short(err));
     schedule();
 
     if (settings->metrics) {

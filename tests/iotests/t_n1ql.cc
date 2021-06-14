@@ -442,8 +442,8 @@ TEST_F(QueryUnitTest, testCollectionQuery)
     string index = "test-index";
 
     // Create a scope and collection
-    EXPECT_EQ(LCB_SUCCESS, create_scope(instance, scope));
-    EXPECT_EQ(LCB_SUCCESS, create_collection(instance, scope, collection));
+    create_scope(instance, scope);
+    create_collection(instance, scope, collection);
     sleep(5);
 
     // Create an index on the collection
@@ -471,6 +471,7 @@ TEST_F(QueryUnitTest, testCollectionQuery)
     ASSERT_TRUE(res.called);
     ASSERT_EQ(LCB_SUCCESS, res.rc);
     ASSERT_EQ(1, res.rows.size());
+    drop_scope(instance, scope);
 }
 
 TEST_F(QueryUnitTest, testQueryWithUnknownCollection)
@@ -489,8 +490,8 @@ TEST_F(QueryUnitTest, testQueryWithUnknownCollection)
     string index = "test-index";
 
     // Create a scope and collection
-    EXPECT_EQ(LCB_SUCCESS, create_scope(instance, scope));
-    EXPECT_EQ(LCB_SUCCESS, create_collection(instance, scope, collection));
+    create_scope(instance, scope);
+    create_collection(instance, scope, collection);
     sleep(5);
 
     // Create an index on the collection
@@ -543,6 +544,8 @@ TEST_F(QueryUnitTest, testQueryWithUnknownCollection)
         ASSERT_EQ(0, res.rows.size());
         ASSERT_EQ(LCB_ERR_KEYSPACE_NOT_FOUND, res.rc) << lcb_strerror_short(res.rc);
     }
+
+    drop_scope(instance, scope);
 }
 
 TEST_F(QueryUnitTest, testCollectionPreparedQuery)
@@ -558,8 +561,8 @@ TEST_F(QueryUnitTest, testCollectionPreparedQuery)
     string index = "test-index";
 
     // Create a scope and collection
-    EXPECT_EQ(LCB_SUCCESS, create_scope(instance, scope));
-    EXPECT_EQ(LCB_SUCCESS, create_collection(instance, scope, collection));
+    create_scope(instance, scope);
+    create_collection(instance, scope, collection);
     sleep(5);
 
     // Create an index on the collection
@@ -587,6 +590,8 @@ TEST_F(QueryUnitTest, testCollectionPreparedQuery)
     ASSERT_TRUE(res.called);
     ASSERT_EQ(LCB_SUCCESS, res.rc) << lcb_strerror_short(res.rc);
     ASSERT_EQ(1, res.rows.size());
+
+    drop_scope(instance, scope);
 }
 
 using credentials = std::pair<string, string>;

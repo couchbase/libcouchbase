@@ -21,7 +21,10 @@
 #include <libcouchbase/vbucket.h>
 #include <string>
 
-#define ASSERT_STATUS_EQ(expected, actual) ASSERT_EQ(expected, actual) << lcb_strerror_short(actual)
+#define ASSERT_STATUS_EQ(expected, actual)                                                                             \
+    lcb_STATUS GTEST_CONCAT_TOKEN_(actual_code__, __LINE__) = (actual);                                                \
+    ASSERT_EQ(expected, GTEST_CONCAT_TOKEN_(actual_code__, __LINE__))                                                  \
+        << lcb_strerror_short(GTEST_CONCAT_TOKEN_(actual_code__, __LINE__))
 
 struct Item {
     void assign(const lcb_RESPGET *resp)
@@ -194,9 +197,13 @@ void genStoreCommands(const std::vector<std::string> &keys, std::vector<lcb_CMDS
  */
 void doDummyOp(lcb_INSTANCE *instance);
 
-lcb_STATUS create_scope(lcb_INSTANCE *instance, const std::string &scope);
+void create_scope(lcb_INSTANCE *instance, const std::string &scope);
 
-lcb_STATUS create_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection);
+void create_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection);
+
+void drop_scope(lcb_INSTANCE *instance, const std::string &scope);
+
+void drop_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection);
 
 std::string unique_name(const std::string &);
 #endif

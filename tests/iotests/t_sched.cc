@@ -412,7 +412,7 @@ TEST_F(SchedUnitTests, testScheduleAnalyticsBeforeConnection)
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
     ASSERT_FALSE(instance->has_deferred_operations());
     ASSERT_FALSE(hasPendingOps(instance));
-    ASSERT_GE(2, counter); /* meta + some rows */
+    ASSERT_GE(counter, 2); /* meta + some rows */
 }
 
 static void viewCallback(lcb_INSTANCE *, int, const lcb_RESPVIEW *resp)
