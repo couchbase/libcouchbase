@@ -835,7 +835,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
     lcb_install_callback(instance, LCB_CALLBACK_STORE, reinterpret_cast<lcb_RESPCALLBACK>(pl_store_callback));
     lcb_install_callback(instance, LCB_CALLBACK_UNLOCK, reinterpret_cast<lcb_RESPCALLBACK>(pl_unlock_callback));
 
-    std::string key("testPessimisticLock");
+    std::string key(unique_name("testPessimisticLock"));
 
     std::uint64_t cas{0};
     {
@@ -851,7 +851,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
         lcb_wait(instance, LCB_WAIT_DEFAULT);
 
         ASSERT_TRUE(res.invoked);
-        ASSERT_EQ(LCB_SUCCESS, res.status);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.status);
         cas = res.cas;
     }
     {
@@ -867,7 +867,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
         lcb_wait(instance, LCB_WAIT_DEFAULT);
 
         ASSERT_TRUE(res.invoked);
-        ASSERT_EQ(LCB_SUCCESS, res.status);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.status);
         ASSERT_NE(cas, res.cas);
         cas = res.cas;
     }
@@ -883,7 +883,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
         lcb_wait(instance, LCB_WAIT_DEFAULT);
 
         ASSERT_TRUE(res.invoked);
-        ASSERT_EQ(LCB_SUCCESS, res.status);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.status);
         ASSERT_NE(cas, res.cas);
     }
     {
@@ -899,7 +899,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
         lcb_wait(instance, LCB_WAIT_DEFAULT);
 
         ASSERT_TRUE(res.invoked);
-        ASSERT_EQ(LCB_ERR_DOCUMENT_LOCKED, res.status);
+        ASSERT_STATUS_EQ(LCB_ERR_DOCUMENT_LOCKED, res.status);
     }
     {
         // it is not allowed to mutate the locked key
@@ -915,7 +915,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
         lcb_wait(instance, LCB_WAIT_DEFAULT);
 
         ASSERT_TRUE(res.invoked);
-        ASSERT_EQ(LCB_ERR_DOCUMENT_LOCKED, res.status);
+        ASSERT_STATUS_EQ(LCB_ERR_DOCUMENT_LOCKED, res.status);
     }
     {
         // but mutating the locked key is allowed with known cas
@@ -923,7 +923,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
 
         std::string value{"foo"};
         lcb_CMDSTORE *cmd = nullptr;
-        lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
+        lcb_cmdstore_create(&cmd, LCB_STORE_REPLACE);
         lcb_cmdstore_key(cmd, key.c_str(), key.size());
         lcb_cmdstore_value(cmd, value.c_str(), value.size());
         lcb_cmdstore_cas(cmd, cas);
@@ -932,7 +932,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
         lcb_wait(instance, LCB_WAIT_DEFAULT);
 
         ASSERT_TRUE(res.invoked);
-        ASSERT_EQ(LCB_SUCCESS, res.status);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.status);
     }
     {
         pl_result res{};
@@ -946,7 +946,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
         lcb_wait(instance, LCB_WAIT_DEFAULT);
 
         ASSERT_TRUE(res.invoked);
-        ASSERT_EQ(LCB_SUCCESS, res.status);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.status);
         ASSERT_NE(cas, res.cas);
         cas = res.cas;
     }
@@ -964,7 +964,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
         lcb_wait(instance, LCB_WAIT_DEFAULT);
 
         ASSERT_TRUE(res.invoked);
-        ASSERT_EQ(LCB_SUCCESS, res.status);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.status);
     }
     {
         // now the key is not locked
@@ -980,7 +980,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
         lcb_wait(instance, LCB_WAIT_DEFAULT);
 
         ASSERT_TRUE(res.invoked);
-        ASSERT_EQ(LCB_SUCCESS, res.status);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.status);
     }
 }
 
