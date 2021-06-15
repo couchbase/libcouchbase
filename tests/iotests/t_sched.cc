@@ -350,6 +350,7 @@ TEST_F(SchedUnitTests, testScheduleSearchBeforeConnection)
 {
     SKIP_IF_MOCK()
     SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70)
+    SKIP_UNLESS_SEARCH_INDEX()
 
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -359,7 +360,7 @@ TEST_F(SchedUnitTests, testScheduleSearchBeforeConnection)
 
     lcb_CMDSEARCH *cmd;
     lcb_cmdsearch_create(&cmd);
-    std::string query(R"({"indexName":"travel-index","limit":2,"query":{"query":"golf"}})");
+    std::string query(R"({"indexName":")" + search_index + R"(","limit":2,"query":{"query":"golf"}})");
     lcb_cmdsearch_payload(cmd, query.c_str(), query.size());
     lcb_cmdsearch_callback(cmd, searchCallback);
     size_t counter = 0;

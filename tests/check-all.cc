@@ -486,7 +486,7 @@ class TestScheduler
                     fprintf(stderr, "%s\n", msg);
 #ifndef _WIN32
                     if (!cur->exitedOk) {
-                        sleep(1);
+                        sleep(3); /* to ensure systemd has processed the dump */
                         std::string cmd = "coredumpctl info " + std::to_string(cur->proc_.pid);
                         FILE *stream = popen(cmd.c_str(), "r");
                         if (stream != nullptr) {
