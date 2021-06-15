@@ -181,10 +181,8 @@ TEST_F(LockUnitTest, testUnlockMissingCas)
 
     lcb_cmdunlock_destroy(cmd);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
-    if (CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_70)) {
+    if (CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_50)) {
         ASSERT_EQ(LCB_ERR_TEMPORARY_FAILURE, reserr);
-    } else if (CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_50)) {
-        ASSERT_EQ(LCB_ERR_KVENGINE_INVALID_PACKET, reserr);
     } else {
         if (MockEnvironment::getInstance()->isRealCluster()) {
             ASSERT_EQ(LCB_ERR_DOCUMENT_LOCKED, reserr);

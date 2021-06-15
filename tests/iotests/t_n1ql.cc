@@ -173,9 +173,9 @@ TEST_F(QueryUnitTest, testSimple)
     N1QLResult res;
     makeCommand("SELECT mockrow");
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
     ASSERT_EQ(1, res.rows.size());
 }
 
@@ -190,7 +190,7 @@ TEST_F(QueryUnitTest, testQueryError)
     makeCommand("SELECT blahblah FROM blahblah");
     lcb_cmdquery_timeout(cmd, LCB_MS2US(200));
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_TRUE(res.rows.empty());
 }
@@ -218,7 +218,7 @@ TEST_F(QueryUnitTest, testPrepareOk)
     N1QLResult res;
     makeCommand("SELECT mockrow", true);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(res.rc, LCB_SUCCESS);
     ASSERT_EQ(1, res.rows.size());
@@ -234,7 +234,7 @@ TEST_F(QueryUnitTest, testPrepareOk)
     makeCommand("SELECT mockrow", true);
     res.reset();
     rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     string plan2;
     lcb_n1qlcache_getplan(instance->n1ql_cache, query, plan2);
@@ -250,7 +250,7 @@ TEST_F(QueryUnitTest, testPrepareOk)
     makeCommand("SELECT mockrow", true);
     res.reset();
     rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
 
     ASSERT_EQ(1, res.rows.size());
@@ -268,7 +268,7 @@ TEST_F(QueryUnitTest, testPrepareStale)
     N1QLResult res;
     makeCommand("SELECT mockrow", true);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(1, res.rows.size());
 
@@ -285,12 +285,12 @@ TEST_F(QueryUnitTest, testPrepareStale)
 
     lcb_cmdquery_reset(cmd);
     lcb_cmdquery_callback(cmd, rowcb);
-    ASSERT_EQ(LCB_SUCCESS, lcb_cmdquery_payload(cmd, raw.c_str(), raw.size()));
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdquery_payload(cmd, raw.c_str(), raw.size()));
 
     res.reset();
     lcb_cmdquery_timeout(cmd, LCB_MS2US(200));
     rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_TRUE(res.called);
     ASSERT_TRUE(res.rows.empty());
@@ -302,7 +302,7 @@ TEST_F(QueryUnitTest, testPrepareStale)
     makeCommand("SELECT mockrow", true);
     res.reset();
     rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(1, res.rows.size());
 }
@@ -318,7 +318,7 @@ TEST_F(QueryUnitTest, testPrepareFailure)
     makeCommand("SELECT blahblah", true);
     lcb_cmdquery_timeout(cmd, LCB_MS2US(200));
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_TRUE(res.called);
     ASSERT_NE(LCB_SUCCESS, res.rc);
@@ -337,7 +337,7 @@ TEST_F(QueryUnitTest, testCancellation)
     lcb_QUERY_HANDLE *handle = nullptr;
     lcb_cmdquery_handle(cmd, &handle);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     ASSERT_TRUE(handle != nullptr);
     lcb_query_cancel(instance, handle);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
@@ -356,7 +356,7 @@ TEST_F(QueryUnitTest, testClusterwide)
     lcb_QUERY_HANDLE *handle = nullptr;
     lcb_cmdquery_handle(cmd, &handle);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     ASSERT_TRUE(handle != nullptr);
     lcb_query_cancel(instance, handle);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
@@ -372,7 +372,7 @@ static void setCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *
     lcb_respstore_operation(resp, &op);
     ASSERT_EQ(LCB_STORE_UPSERT, op);
     lcb_STATUS rc = lcb_respstore_status(resp);
-    ASSERT_EQ(LCB_SUCCESS, rc) << lcb_strerror_short(rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc) << lcb_strerror_short(rc);
 }
 }
 
@@ -410,7 +410,7 @@ void create_index(lcb_INSTANCE *instance, const string &index, const string &sco
     lcb_QUERY_HANDLE *handle = nullptr;
     lcb_cmdquery_handle(cmd, &handle);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     ASSERT_TRUE(handle != nullptr);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
@@ -465,11 +465,11 @@ TEST_F(QueryUnitTest, testCollectionQuery)
     lcb_QUERY_HANDLE *handle = nullptr;
     lcb_cmdquery_handle(cmd, &handle);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     ASSERT_TRUE(handle != nullptr);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_TRUE(res.called);
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
     ASSERT_EQ(1, res.rows.size());
     drop_scope(instance, scope);
 }
@@ -515,12 +515,12 @@ TEST_F(QueryUnitTest, testQueryWithUnknownCollection)
         lcb_cmdquery_handle(cmd, &handle);
         lcb_STATUS rc = lcb_query(instance, &res, cmd);
         lcb_cmdquery_destroy(cmd);
-        ASSERT_EQ(LCB_SUCCESS, rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         ASSERT_TRUE(handle != nullptr);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
         ASSERT_EQ(0, res.rows.size());
-        ASSERT_EQ(LCB_ERR_SCOPE_NOT_FOUND, res.rc) << lcb_strerror_short(res.rc);
+        ASSERT_STATUS_EQ(LCB_ERR_SCOPE_NOT_FOUND, res.rc) << lcb_strerror_short(res.rc);
     }
 
     {
@@ -537,12 +537,12 @@ TEST_F(QueryUnitTest, testQueryWithUnknownCollection)
         lcb_cmdquery_handle(cmd, &handle);
         lcb_STATUS rc = lcb_query(instance, &res, cmd);
         lcb_cmdquery_destroy(cmd);
-        ASSERT_EQ(LCB_SUCCESS, rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         ASSERT_TRUE(handle != nullptr);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
         ASSERT_EQ(0, res.rows.size());
-        ASSERT_EQ(LCB_ERR_KEYSPACE_NOT_FOUND, res.rc) << lcb_strerror_short(res.rc);
+        ASSERT_STATUS_EQ(LCB_ERR_KEYSPACE_NOT_FOUND, res.rc) << lcb_strerror_short(res.rc);
     }
 
     drop_scope(instance, scope);
@@ -584,11 +584,11 @@ TEST_F(QueryUnitTest, testCollectionPreparedQuery)
     lcb_QUERY_HANDLE *handle = nullptr;
     lcb_cmdquery_handle(cmd, &handle);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     ASSERT_TRUE(handle != nullptr);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_TRUE(res.called);
-    ASSERT_EQ(LCB_SUCCESS, res.rc) << lcb_strerror_short(res.rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc) << lcb_strerror_short(res.rc);
     ASSERT_EQ(1, res.rows.size());
 
     drop_scope(instance, scope);
@@ -701,12 +701,12 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ca.add(valid_username, valid_password);
 
         lcb_STATUS rc = lcb_query(instance, &res, cmd);
-        ASSERT_EQ(LCB_SUCCESS, rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
     }
 
-    query = string("SELECT * FROM `") + MockEnvironment::getInstance()->getBucket() + "`";
+    query = string("SELECT * FROM `") + MockEnvironment::getInstance()->getBucket() + "` LIMIT 1";
     makeCommand(query.c_str(), false);
 
     // send query with valid password
@@ -716,10 +716,10 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ca.add(valid_username, valid_password);
 
         lcb_STATUS rc = lcb_query(instance, &res, cmd);
-        ASSERT_EQ(LCB_SUCCESS, rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
-        ASSERT_EQ(LCB_SUCCESS, res.rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
         ASSERT_TRUE(res.errors.empty());
     }
 
@@ -730,10 +730,10 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ca.add(valid_username, invalid_password);
 
         lcb_STATUS rc = lcb_query(instance, &res, cmd);
-        ASSERT_EQ(LCB_SUCCESS, rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
-        ASSERT_EQ(LCB_ERR_TIMEOUT, res.rc); // timeout because of retrying
+        ASSERT_STATUS_EQ(LCB_ERR_TIMEOUT, res.rc); // timeout because of retrying
     }
 
     // send query with valid password
@@ -745,7 +745,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ca.add(valid_username, valid_password);
 
         lcb_STATUS rc = lcb_query(instance, &res, cmd);
-        ASSERT_EQ(LCB_SUCCESS, rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
         ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
@@ -763,10 +763,10 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ca.add(valid_username, valid_password);
 
         lcb_STATUS rc = lcb_query(instance, &res, cmd);
-        ASSERT_EQ(LCB_SUCCESS, rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
-        ASSERT_EQ(LCB_SUCCESS, res.rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
         ASSERT_TRUE(res.errors.empty());
     }
 
@@ -777,10 +777,10 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ca.add(valid_username, invalid_password);
 
         lcb_STATUS rc = lcb_query(instance, &res, cmd);
-        ASSERT_EQ(LCB_SUCCESS, rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
-        ASSERT_EQ(LCB_ERR_TIMEOUT, res.rc) << lcb_strerror_short(res.rc); // timeout because of retrying
+        ASSERT_STATUS_EQ(LCB_ERR_TIMEOUT, res.rc) << lcb_strerror_short(res.rc); // timeout because of retrying
     }
 
     // send query with valid password
@@ -792,10 +792,10 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ca.add(valid_username, valid_password);   // third request
 
         lcb_STATUS rc = lcb_query(instance, &res, cmd);
-        ASSERT_EQ(LCB_SUCCESS, rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
-        ASSERT_EQ(LCB_SUCCESS, res.rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
         ASSERT_TRUE(res.errors.empty());
     }
 }
@@ -809,9 +809,9 @@ TEST_F(QueryUnitTest, testInvalidQueryError)
     N1QLResult res;
     makeCommand("I'm not n1ql");
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
-    ASSERT_EQ(LCB_ERR_PARSING_FAILURE, res.rc);
+    ASSERT_STATUS_EQ(LCB_ERR_PARSING_FAILURE, res.rc);
     ASSERT_TRUE(res.rows.empty());
 }
 
@@ -825,9 +825,9 @@ TEST_F(QueryUnitTest, testRawQuery)
     makeCommand(
         R"(SELECT RAW data.val FROM [{"val": true}, {"val": null}, {"val": 42}, {"val": "foo"}, {"val": false}] AS data)");
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
     ASSERT_EQ(5, res.rows.size());
     ASSERT_EQ("true", res.rows[0]);
     ASSERT_EQ("null", res.rows[1]);

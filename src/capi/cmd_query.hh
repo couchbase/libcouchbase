@@ -274,10 +274,10 @@ struct lcb_CMDQUERY_ {
 
     std::uint32_t timeout_or_default_in_microseconds(std::uint32_t default_val) const
     {
-        if (timeout_ == std::chrono::milliseconds ::zero()) {
+        if (timeout_ == std::chrono::microseconds ::zero()) {
             return default_val;
         }
-        return static_cast<std::uint32_t>(std::chrono::microseconds(timeout_).count());
+        return static_cast<std::uint32_t>(timeout_.count());
     }
 
     lcb_STATUS start_time_in_nanoseconds(std::uint64_t val)
