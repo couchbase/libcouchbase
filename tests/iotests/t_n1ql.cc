@@ -658,10 +658,13 @@ string get_n1ql_port(lcb_INSTANCE *instance)
     lcb_STATUS rc;
     rc = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBCONFIG, &vbc);
     EXPECT_EQ(LCB_SUCCESS, rc);
-    std::stringstream buf;
-    unsigned int port = lcbvb_get_port(vbc, 0, LCBVB_SVCTYPE_QUERY, LCBVB_SVCMODE_PLAIN);
-    buf << port;
-    return buf.str();
+    for (int i = 0; i < LCBVB_NSERVERS(vbc); ++i) {
+        unsigned int port = lcbvb_get_port(vbc, i, LCBVB_SVCTYPE_QUERY, LCBVB_SVCMODE_PLAIN);
+        if (port != 0) {
+            return std::to_string(port);
+        }
+    }
+    return "";
 }
 
 TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
@@ -678,7 +681,9 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
     string invalid_password = valid_password + "_garbage";
 
     credentials fallback_credentials(valid_username, valid_password);
-    cycled_auth ca(get_n1ql_port(instance), fallback_credentials);
+    std::string query_service_port = get_n1ql_port(instance);
+    ASSERT_FALSE(query_service_port.empty());
+    cycled_auth ca(query_service_port, fallback_credentials);
 
     lcb_AUTHENTICATOR *auth = lcbauth_new();
     lcbauth_set_callback(auth, &ca, get_credentials);
@@ -703,11 +708,12 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ASSERT_TRUE(res.called);
     }
 
-    query = string("SELECT * FROM `") + MockEnvironment::getInstance()->getBucket() + "` LIMIT 1";
-    makeCommand(query.c_str(), false);
-
     // send query with valid password
     {
+        query = string("SELECT * FROM `") + MockEnvironment::getInstance()->getBucket() +
+                R"(` ORDER BY "valid_password" LIMIT 1)";
+        makeCommand(query.c_str(), false);
+
         res.reset();
         ca.clear();
         ca.add(valid_username, valid_password);
@@ -716,12 +722,16 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
+        ASSERT_TRUE(res.errors.empty()) << res.errors[0].first << ": " << res.errors[0].second;
         ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
-        ASSERT_TRUE(res.errors.empty());
     }
 
     // send query with invalid password
     {
+        query = string("SELECT * FROM `") + MockEnvironment::getInstance()->getBucket() +
+                R"(` ORDER BY "invalid_password" LIMIT 1)";
+        makeCommand(query.c_str(), false);
+
         res.reset();
         ca.clear();
         ca.add(valid_username, invalid_password);
@@ -735,26 +745,31 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
 
     // send query with valid password
     {
+        query = string("SELECT * FROM `") + MockEnvironment::getInstance()->getBucket() +
+                R"(` ORDER BY "invalid_password -> valid_password" LIMIT 1)";
+        makeCommand(query.c_str(), false);
+
         res.reset();
         ca.clear();
         ca.add(valid_username, invalid_password); // first request
-        ca.add(valid_username, valid_password);   // second request
-        ca.add(valid_username, valid_password);
+        ca.add(valid_username, valid_password);   // other requests
 
         lcb_STATUS rc = lcb_query(instance, &res, cmd);
         ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
+        ASSERT_TRUE(res.errors.empty()) << res.errors[0].first << ": " << res.errors[0].second;
         ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
-        ASSERT_TRUE(res.errors.empty());
     }
 
     // the same as above, but for prepared statement
-    query = string("SELECT * FROM `") + MockEnvironment::getInstance()->getBucket() + "`";
-    makeCommand(query.c_str(), true);
 
     // send query with valid password
     {
+        query = string("SELECT * FROM `") + MockEnvironment::getInstance()->getBucket() +
+                R"(` ORDER BY "prepared: valid_password" LIMIT 1)";
+        makeCommand(query.c_str(), true);
+
         res.reset();
         ca.clear();
         ca.add(valid_username, valid_password);
@@ -763,12 +778,16 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
         ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
+        ASSERT_TRUE(res.errors.empty()) << res.errors[0].first << ": " << res.errors[0].second;
         ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
-        ASSERT_TRUE(res.errors.empty());
     }
 
     // send query with invalid password
     {
+        query = string("SELECT * FROM `") + MockEnvironment::getInstance()->getBucket() +
+                R"(` ORDER BY "prepared: invalid_password" LIMIT 1)";
+        makeCommand(query.c_str(), true);
+
         res.reset();
         ca.clear();
         ca.add(valid_username, invalid_password);
@@ -782,18 +801,21 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
 
     // send query with valid password
     {
+        query = string("SELECT * FROM `") + MockEnvironment::getInstance()->getBucket() +
+                R"(` ORDER BY "prepared: invalid_password -> valid_password" LIMIT 1)";
+        makeCommand(query.c_str(), true);
+
         res.reset();
         ca.clear();
         ca.add(valid_username, invalid_password); // first request
-        ca.add(valid_username, valid_password);   // second request
-        ca.add(valid_username, valid_password);   // third request
+        ca.add(valid_username, valid_password);   // other requests
 
         lcb_STATUS rc = lcb_query(instance, &res, cmd);
         ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_TRUE(res.called);
+        ASSERT_TRUE(res.errors.empty()) << res.errors[0].first << ": " << res.errors[0].second;
         ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
-        ASSERT_TRUE(res.errors.empty());
     }
 }
 

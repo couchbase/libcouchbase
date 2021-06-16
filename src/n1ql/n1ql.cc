@@ -21,7 +21,6 @@
 #include "internal.h"
 #include "http/http.h"
 #include "logging.h"
-#include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
 
 #include "query_handle.hh"
 #include "defer.h"

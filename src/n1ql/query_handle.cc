@@ -502,6 +502,9 @@ lcb_QUERY_HANDLE_::lcb_QUERY_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, const
     if (json.isMember("readonly") && json["readonly"].asBool()) {
         idempotent_ = true;
     }
+    lcb_log(LOGARGS(this, TRACE), LOGFMT "%.*s, idempotent=%s, timeout=%uus, grace_period=%uus", LOGID(this),
+            (int)statement_.size(), statement_.c_str(), idempotent_ ? "true" : "false", timeout,
+            LCBT_SETTING(obj, n1ql_grace_period));
     timeout_timer_.rearm(timeout + LCBT_SETTING(obj, n1ql_grace_period));
 
     // Determine if we need to add more credentials.
