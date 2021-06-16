@@ -88,11 +88,12 @@ static void rowcb(lcb_INSTANCE *, int, const lcb_RESPQUERY *resp)
             res->meta.assign(row, nrow);
             Json::Value meta;
             if (Json::Reader().parse(res->meta.data(), res->meta.data() + res->meta.size(), meta)) {
-                res->status = meta["status"].asString();
+                if (meta.isMember("status") && meta["status"].isString()) {
+                    res->status = meta["status"].asString();
+                }
 
-                Json::Value &errors = meta["errors"];
-                if (errors.isArray()) {
-                    for (auto &err : errors) {
+                if (meta.isMember("errors") && meta["errors"].isArray()) {
+                    for (auto &err : meta["errors"]) {
                         if (err.isObject()) {
                             res->errors.emplace_back(err["code"].asUInt(), err["msg"].asString());
                         }
