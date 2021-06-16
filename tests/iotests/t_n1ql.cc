@@ -604,10 +604,7 @@ struct cycled_auth {
     string port_;
 
   public:
-    cycled_auth(string port, credentials fallback)
-        : fallback_(std::move(fallback)), port_(std::move(port))
-    {
-    }
+    cycled_auth(string port, credentials fallback) : fallback_(std::move(fallback)), port_(std::move(port)) {}
 
     void add(const string &username, const string &password)
     {
@@ -630,8 +627,8 @@ struct cycled_auth {
 
     void advance(const string &port)
     {
-        if (port == port_) {
-            cur_ = (cur_ + 1) % store_.size();
+        if (port == port_ && cur_ < store_.size() - 1) {
+            ++cur_;
         }
     }
 };
@@ -674,7 +671,7 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
     SKIP_IF_MOCK()
     SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_50)
     createConnection(hw, &instance);
-    lcb_cntl_setu32(instance, LCB_CNTL_QUERY_TIMEOUT, LCB_MS2US(300)); // 300ms before timeout
+    lcb_cntl_setu32(instance, LCB_CNTL_QUERY_TIMEOUT, LCB_MS2US(500)); // 500ms before timeout
 
     string valid_username = MockEnvironment::getInstance()->getUsername();
     string valid_password = MockEnvironment::getInstance()->getPassword();

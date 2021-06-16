@@ -170,14 +170,14 @@ class DurabilityMultiOperation
             cmd.cas = itm.cas;
             LCB_CMD_SET_KEY(&cmd, itm.key.c_str(), itm.key.length());
             rc = mctx->add_endure(mctx, &cmd);
-            ASSERT_EQ(LCB_SUCCESS, rc);
+            ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
             kmap[itm.key] = DurabilityOperation();
         }
 
         lcb_install_callback(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)multiDurabilityCallback);
 
         rc = mctx->done(mctx, this);
-        ASSERT_EQ(LCB_SUCCESS, rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_EQ(items.size(), counter);
     }

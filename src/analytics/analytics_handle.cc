@@ -52,7 +52,7 @@ static lcb_STATUS cb_op_schedule(lcb::docreq::Queue *q, lcb::docreq::DocRequest 
     auto *req = reinterpret_cast<IngestRequest *>(dreq);
     lcb_ANALYTICS_HANDLE_ *areq = req->request_;
 
-    lcb_STORE_OPERATION op;
+    lcb_STORE_OPERATION op = LCB_STORE_UPSERT;
     switch (areq->ingest_options().method) {
         case LCB_INGEST_METHOD__MAX:
         case LCB_INGEST_METHOD_NONE:
