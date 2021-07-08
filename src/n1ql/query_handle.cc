@@ -164,6 +164,9 @@ bool lcb_QUERY_HANDLE_::parse_meta(const char *row, size_t row_len, lcb_STATUS &
                 case 12021:
                     rc = LCB_ERR_SCOPE_NOT_FOUND;
                     break;
+                case 13014:
+                    rc = LCB_ERR_AUTHENTICATION_FAILURE;
+                    break;
                 default:
                     if (first_error_code >= 4000 && first_error_code < 5000) {
                         rc = LCB_ERR_PLANNING_FAILURE;
