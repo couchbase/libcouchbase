@@ -992,3 +992,61 @@ TEST_F(SubdocUnitTest, testInsertErrorConsistency)
         lcb_cmdsubdoc_destroy(cmd);
     }
 }
+
+TEST_F(SubdocUnitTest, testRemoveWithEmptyPath)
+{
+    SKIP_IF_MOCK()
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_50)
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    MultiResult mres;
+
+    CREATE_SUBDOC_CONNECTION(hw, &instance)
+
+    std::string empty_path;
+    std::string value{R"({"foo":"bar"})"};
+
+    { // replace with empty key sets root value
+        lcb_CMDSUBDOC *cmd;
+        lcb_cmdsubdoc_create(&cmd);
+        lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
+        lcb_SUBDOCSPECS *spec;
+        lcb_subdocspecs_create(&spec, 1);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_subdocspecs_replace(spec, 0, 0, empty_path.c_str(), empty_path.size(),
+                                                              value.c_str(), value.size()));
+        lcb_cmdsubdoc_specs(cmd, spec);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, schedwait(instance, &mres, cmd, lcb_subdoc));
+        lcb_subdocspecs_destroy(spec);
+        lcb_cmdsubdoc_destroy(cmd);
+    }
+
+    {
+        Item item;
+        getKey(instance, key, item);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, item.err);
+        ASSERT_EQ(item.val, value);
+    }
+
+    { // remove with empty key removes the document
+        lcb_CMDSUBDOC *cmd;
+        lcb_cmdsubdoc_create(&cmd);
+        lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
+        lcb_SUBDOCSPECS *spec;
+        lcb_subdocspecs_create(&spec, 1);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_subdocspecs_remove(spec, 0, 0, empty_path.c_str(), empty_path.size()));
+        lcb_cmdsubdoc_specs(cmd, spec);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, schedwait(instance, &mres, cmd, lcb_subdoc));
+        lcb_subdocspecs_destroy(spec);
+        lcb_cmdsubdoc_destroy(cmd);
+    }
+
+    {
+        Item item;
+        item.key = key;
+        KVOperation kvo = KVOperation(&item);
+        kvo.result.cas = 0xdeadbeef;
+        kvo.allowableErrors.insert(LCB_ERR_DOCUMENT_NOT_FOUND);
+        kvo.get(instance);
+        ASSERT_STATUS_EQ(LCB_ERR_DOCUMENT_NOT_FOUND, kvo.result.err);
+    }
+}
