@@ -742,7 +742,6 @@ TEST_F(MockUnitTest, testConflictingOptions)
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
 
-    lcb_sched_enter(instance);
     const char *key = "key";
     size_t nkey = 3;
     const char *value = "value";
@@ -779,6 +778,8 @@ TEST_F(MockUnitTest, testConflictingOptions)
     ASSERT_EQ(LCB_SUCCESS, err);
 
     lcb_cmdcounter_destroy(ccmd);
+
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
 TEST_F(MockUnitTest, testDump)

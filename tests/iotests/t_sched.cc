@@ -81,6 +81,7 @@ TEST_F(SchedUnitTests, testSched)
     ASSERT_TRUE(hasPendingOps(instance));
     lcb_sched_enter(instance);
     rc = lcb_store(instance, &counter, scmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     lcb_sched_fail(instance);
     lcb_wait(instance, LCB_WAIT_NOCHECK);
     ASSERT_EQ(5, counter);

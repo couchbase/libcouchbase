@@ -804,6 +804,10 @@ static void queuectx_leave(mc_CMDQUEUE *queue, int success, int flush)
             if (success) {
                 mcreq_enqueue_packet(pipeline, pkt);
             } else {
+                if (lcbtrace_span_should_finish(MCREQ_PKT_RDATA(pkt)->span)) {
+                    lcbtrace_span_finish(MCREQ_PKT_RDATA(pkt)->span, LCBTRACE_NOW);
+                }
+
                 if (pkt->flags & MCREQ_F_REQEXT) {
                     mc_REQDATAEX *rd = pkt->u_rdata.exdata;
                     if (rd->procs->fail_dtor) {

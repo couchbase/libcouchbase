@@ -196,6 +196,12 @@ LIBCOUCHBASE_API
 void lcbtrace_span_finish(lcbtrace_SPAN *span, lcb_U64 now);
 
 /**
+ * @private
+ */
+LIBCOUCHBASE_API
+int lcbtrace_span_should_finish(lcbtrace_SPAN *span);
+
+/**
  * Get start timestamp of the span.
  *
  * @param span span instance

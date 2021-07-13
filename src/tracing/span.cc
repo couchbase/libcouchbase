@@ -74,6 +74,16 @@ void lcbtrace_span_finish(lcbtrace_SPAN *span, uint64_t now)
 }
 
 LIBCOUCHBASE_API
+int lcbtrace_span_should_finish(lcbtrace_SPAN *span)
+{
+    if (!span) {
+        return false;
+    }
+
+    return span->should_finish();
+}
+
+LIBCOUCHBASE_API
 void lcbtrace_span_add_tag_str_nocopy(lcbtrace_SPAN *span, const char *name, const char *value)
 {
     if (!span || name == nullptr || value == nullptr) {
