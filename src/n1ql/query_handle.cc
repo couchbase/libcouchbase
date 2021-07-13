@@ -70,14 +70,13 @@ static void prepare_rowcb(lcb_INSTANCE *instance, int, const lcb_RESPQUERY *row)
     origreq->cancel_prepare_query();
 
     if (row->ctx.rc != LCB_SUCCESS || (row->rflags & LCB_RESP_F_FINAL)) {
-        origreq->fail_prepared(row, row->ctx.rc);
+        return origreq->fail_prepared(row, row->ctx.rc);
     } else {
         // Insert into cache
         Json::Value prepared;
         if (!Json::Reader().parse(row->row, row->row + row->nrow, prepared)) {
             lcb_log(LOGARGS2(instance, ERROR), LOGFMT "Invalid JSON returned from PREPARE", LOGID(origreq));
-            origreq->fail_prepared(row, LCB_ERR_PROTOCOL_ERROR);
-            return;
+            return origreq->fail_prepared(row, LCB_ERR_PROTOCOL_ERROR);
         }
 
         bool eps = LCBVB_CCAPS(LCBT_VBCONFIG(instance)) & LCBVB_CCAP_N1QL_ENHANCED_PREPARED_STATEMENTS;
@@ -89,7 +88,7 @@ static void prepare_rowcb(lcb_INSTANCE *instance, int, const lcb_RESPQUERY *row)
         // Issue the query with the newly prepared plan
         lcb_STATUS rc = origreq->apply_plan(ent);
         if (rc != LCB_SUCCESS) {
-            origreq->fail_prepared(row, rc);
+            return origreq->fail_prepared(row, rc);
         }
     }
 }
@@ -215,7 +214,6 @@ void lcb_QUERY_HANDLE_::invoke_row(lcb_RESPQUERY *resp, bool is_last)
         }
         resp->ctx.first_error_code = first_error_code;
         LCBTRACE_ADD_RETRIES(span_, retries_);
-        LCBTRACE_HTTP_FINISH(span_);
     }
     if (callback_) {
         callback_(instance_, LCB_CALLBACK_QUERY, resp);
@@ -403,8 +401,6 @@ lcb_STATUS lcb_QUERY_HANDLE_::issue_htreq(const std::string &body)
         lcb_cmdhttp_password(htcmd, password_.c_str(), password_.size());
     }
 
-    LCBTRACE_HTTP_START(instance_->settings, client_context_id.c_str(), span_, LCBTRACE_TAG_SERVICE_N1QL,
-                        LCBTRACE_THRESHOLD_QUERY, span_);
     lcb_cmdhttp_parent_span(htcmd, span_);
 
     rc = lcb_http(instance_, this, htcmd);
@@ -538,7 +534,9 @@ lcb_QUERY_HANDLE_::lcb_QUERY_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, const
         }
     }
     if (instance_->settings->tracer) {
-        span_ = cmd->parent_span();
+        parent_span_ = cmd->parent_span();
+        LCBTRACE_HTTP_START(instance_->settings, client_context_id.c_str(), parent_span_, LCBTRACE_TAG_SERVICE_N1QL,
+                            LCBTRACE_THRESHOLD_QUERY, span_);
     }
 }
 
@@ -548,6 +546,7 @@ lcb_QUERY_HANDLE_::~lcb_QUERY_HANDLE_()
         lcb_RESPQUERY resp{};
         invoke_row(&resp, true);
     }
+    LCBTRACE_HTTP_FINISH(span_);
 
     if (http_request_) {
         record_http_op_latency(nullptr, "query", instance_, http_request_->start);

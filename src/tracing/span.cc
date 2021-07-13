@@ -406,9 +406,7 @@ using namespace lcb::trace;
 
 Span::Span(lcbtrace_TRACER *tracer, const char *opname, uint64_t start, lcbtrace_REF_TYPE ref, lcbtrace_SPAN *other,
            void *external_span)
-    : m_tracer(tracer), m_opname(opname), m_finish(0), m_extspan(external_span), m_is_outer(false),
-      m_is_dispatch(false), m_is_encode(false), m_should_finish(true), m_svc(LCBTRACE_THRESHOLD__MAX),
-      m_svc_string(nullptr), m_total_dispatch(0), m_last_dispatch(0), m_total_server(0), m_last_server(0), m_encode(0)
+    : m_tracer(tracer), m_opname(opname), m_extspan(external_span)
 {
     if (other != nullptr && ref == LCBTRACE_REF_CHILD_OF) {
         m_parent = other;

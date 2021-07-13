@@ -37,7 +37,6 @@ class Span
   public:
     Span(lcbtrace_TRACER *tracer, const char *opname, uint64_t start, lcbtrace_REF_TYPE ref, lcbtrace_SPAN *other,
          void *external_span);
-    // Span(lcbtrace_TRACER *tracer, const char *opname, lcbtrace_SPAN *other);
     ~Span();
 
     void finish(uint64_t finish);
@@ -77,22 +76,22 @@ class Span
     std::string m_opname;
     uint64_t m_span_id;
     uint64_t m_start;
-    uint64_t m_finish;
+    uint64_t m_finish{0};
     bool m_orphaned;
     Span *m_parent;
     void *m_extspan;
     sllist_root m_tags{};
-    bool m_is_outer;
-    bool m_is_dispatch;
-    bool m_is_encode;
-    bool m_should_finish;
-    lcbtrace_THRESHOLDOPTS m_svc;
-    const char *m_svc_string;
-    uint64_t m_total_dispatch;
-    uint64_t m_last_dispatch;
-    uint64_t m_total_server;
-    uint64_t m_last_server;
-    uint64_t m_encode;
+    bool m_is_outer{false};
+    bool m_is_dispatch{false};
+    bool m_is_encode{false};
+    bool m_should_finish{true};
+    lcbtrace_THRESHOLDOPTS m_svc{LCBTRACE_THRESHOLD__MAX};
+    const char *m_svc_string{nullptr};
+    uint64_t m_total_dispatch{0};
+    uint64_t m_last_dispatch{0};
+    uint64_t m_total_server{0};
+    uint64_t m_last_server{0};
+    uint64_t m_encode{0};
 };
 
 struct ReportedSpan {

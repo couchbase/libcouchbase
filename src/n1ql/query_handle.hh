@@ -285,6 +285,7 @@ struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
     std::int64_t last_config_revision_{0};
     bool idempotent_{false};
 
+    lcbtrace_SPAN *parent_span_{nullptr};
     lcbtrace_SPAN *span_{nullptr};
 
     lcb::io::Timer<lcb_QUERY_HANDLE_, &lcb_QUERY_HANDLE_::on_timeout> timeout_timer_;
