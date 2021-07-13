@@ -283,11 +283,12 @@ TEST_F(MockUnitTest, testOpMetrics)
     lcbmetrics_meter_create(&meter, nullptr);
     lcbmetrics_meter_value_recorder_callback(meter, new_recorder);
 
-    lcb_CREATEOPTS *crparams = NULL;
-    MockEnvironment::getInstance()->makeConnectParams(crparams, NULL, LCB_TYPE_BUCKET);
+    lcb_CREATEOPTS *crparams = nullptr;
+    MockEnvironment::getInstance()->makeConnectParams(crparams, nullptr, LCB_TYPE_BUCKET);
     lcb_createopts_meter(crparams, meter);
 
     tryCreateConnection(hw, &instance, crparams);
+    lcb_createopts_destroy(crparams);
 
     int enable = 1;
     lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_ENABLE_OP_METRICS, &enable);
@@ -300,6 +301,7 @@ TEST_F(MockUnitTest, testOpMetrics)
     lcb_cmdstore_destroy(scmd);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_EQ(1, counter);
+    lcbmetrics_meter_destroy(meter);
 }
 
 struct async_ctx {

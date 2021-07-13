@@ -29,7 +29,7 @@ namespace metrics
 class CachingMeter
 {
   public:
-    CachingMeter(const lcbmetrics_METER *base);
+    explicit CachingMeter(const lcbmetrics_METER *base);
     ~CachingMeter();
 
     const lcbmetrics_METER *wrap();
@@ -37,7 +37,7 @@ class CachingMeter
     const lcbmetrics_VALUERECORDER *findValueRecorder(const char *name, const lcbmetrics_TAG *tags, size_t ntags);
 
   protected:
-    lcbmetrics_METER *wrapper_;
+    lcbmetrics_METER *wrapper_{nullptr};
     const lcbmetrics_METER *base_;
     std::unordered_map<std::string, const lcbmetrics_VALUERECORDER *> valueRecorders_;
 };

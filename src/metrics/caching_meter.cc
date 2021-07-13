@@ -41,11 +41,10 @@ static const lcbmetrics_VALUERECORDER *mcm_find_value_recorder(const lcbmetrics_
 }
 }
 
-CachingMeter::CachingMeter(const lcbmetrics_METER *base) : wrapper_(nullptr), base_(base) {}
+CachingMeter::CachingMeter(const lcbmetrics_METER *base) : base_(base) {}
 
 CachingMeter::~CachingMeter()
 {
-    lcbmetrics_meter_destroy(base_);
     for (auto &item : valueRecorders_) {
         lcbmetrics_valuerecorder_destroy(item.second);
     }
@@ -65,7 +64,7 @@ const lcbmetrics_METER *CachingMeter::wrap()
 }
 
 const lcbmetrics_VALUERECORDER *CachingMeter::findValueRecorder(const char *name, const lcbmetrics_TAG *tags,
-                                                                 size_t ntags)
+                                                                size_t ntags)
 {
     std::stringstream lkpNameBuilder;
     lkpNameBuilder << name << ";";

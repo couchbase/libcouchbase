@@ -40,7 +40,7 @@ class LoggingValueRecorder
 
     const lcbmetrics_VALUERECORDER *wrap();
 
-    void recordValue(lcb_U64 value);
+    void recordValue(std::uint64_t value);
 
     Json::Value flush();
 
@@ -52,7 +52,7 @@ class LoggingValueRecorder
 class LoggingMeter
 {
   public:
-    LoggingMeter(lcb_INSTANCE *lcb);
+    explicit LoggingMeter(lcb_INSTANCE *lcb);
 
     const lcbmetrics_METER *wrap();
 
@@ -63,7 +63,7 @@ class LoggingMeter
   protected:
     LoggingValueRecorder &findValueRecorder(const char *svcName, const char *opName);
 
-    lcbmetrics_METER *wrapper_;
+    lcbmetrics_METER *wrapper_{nullptr};
     lcb_settings *settings_;
     lcb::io::Timer<LoggingMeter, &LoggingMeter::flush> timer_;
     std::unordered_map<std::string, std::unordered_map<std::string, LoggingValueRecorder>> valueRecorders_;

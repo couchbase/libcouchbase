@@ -61,8 +61,7 @@ static void mlvr_record_value(const lcbmetrics_VALUERECORDER *wrapper, uint64_t 
 }
 }
 
-LoggingMeter::LoggingMeter(lcb_INSTANCE *instance)
-    : wrapper_(nullptr), settings_(instance->settings), timer_(instance->iotable, this)
+LoggingMeter::LoggingMeter(lcb_INSTANCE *instance) : settings_(instance->settings), timer_(instance->iotable, this)
 {
     lcb_U32 tv = settings_->op_metrics_flush_interval;
     if (tv > 0) {
@@ -151,6 +150,7 @@ LoggingValueRecorder::~LoggingValueRecorder()
         hdr_close(histogram_);
         histogram_ = nullptr;
     }
+    delete wrapper_;
 }
 
 const lcbmetrics_VALUERECORDER *LoggingValueRecorder::wrap()
@@ -166,7 +166,7 @@ const lcbmetrics_VALUERECORDER *LoggingValueRecorder::wrap()
     return wrapper_;
 }
 
-void LoggingValueRecorder::recordValue(lcb_U64 value)
+void LoggingValueRecorder::recordValue(std::uint64_t value)
 {
     hdr_record_value(histogram_, value);
 }
