@@ -102,5 +102,5 @@ TEST_F(ServeropsUnitTest, testKeyStats)
     lcb_cmdstats_is_keystats(cmd, true);
     err = lcb_stats(instance, nullptr, cmd);
     ASSERT_NE(LCB_SUCCESS, err);
-    lcb_cmdstats_create(&cmd);
+    lcb_cmdstats_destroy(cmd);
 }
