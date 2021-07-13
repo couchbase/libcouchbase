@@ -23,7 +23,7 @@
 #include "rnd.h"
 #include "http/http.h"
 #include "bucketconfig/clconfig.h"
-#include "metrics/cacheing_meter.hh"
+#include "metrics/caching_meter.hh"
 #include "metrics/logging_meter.hh"
 #include <lcbio/iotable.h>
 #include <lcbio/ssl.h>
@@ -581,7 +581,7 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
         }
     }
     if (options && options->meter) {
-        settings->meter = (new lcb::metrics::CacheingMeter(options->meter))->wrap();
+        settings->meter = (new lcb::metrics::CachingMeter(options->meter))->wrap();
     } else {
         settings->meter = (new lcb::metrics::LoggingMeter(obj))->wrap();
     }

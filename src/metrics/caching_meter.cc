@@ -15,7 +15,7 @@
  */
 
 #include "internal.h"
-#include "cacheing_meter.hh"
+#include "caching_meter.hh"
 #include <sstream>
 
 using namespace lcb::metrics;
@@ -24,7 +24,7 @@ extern "C" {
 static void mcm_destructor(const lcbmetrics_METER *wrapper)
 {
     if (wrapper != nullptr && wrapper->cookie_) {
-        auto *meter = reinterpret_cast<CacheingMeter *>(wrapper->cookie_);
+        auto *meter = reinterpret_cast<CachingMeter *>(wrapper->cookie_);
         delete meter;
     }
 }
@@ -36,14 +36,14 @@ static const lcbmetrics_VALUERECORDER *mcm_find_value_recorder(const lcbmetrics_
         return nullptr;
     }
 
-    auto *meter = reinterpret_cast<CacheingMeter *>(wrapper->cookie_);
+    auto *meter = reinterpret_cast<CachingMeter *>(wrapper->cookie_);
     return meter->findValueRecorder(name, tags, ntags);
 }
 }
 
-CacheingMeter::CacheingMeter(const lcbmetrics_METER *base) : wrapper_(nullptr), base_(base) {}
+CachingMeter::CachingMeter(const lcbmetrics_METER *base) : wrapper_(nullptr), base_(base) {}
 
-CacheingMeter::~CacheingMeter()
+CachingMeter::~CachingMeter()
 {
     lcbmetrics_meter_destroy(base_);
     for (auto &item : valueRecorders_) {
@@ -51,7 +51,7 @@ CacheingMeter::~CacheingMeter()
     }
 }
 
-const lcbmetrics_METER *CacheingMeter::wrap()
+const lcbmetrics_METER *CachingMeter::wrap()
 {
     if (wrapper_) {
         return wrapper_;
@@ -64,7 +64,7 @@ const lcbmetrics_METER *CacheingMeter::wrap()
     return wrapper_;
 }
 
-const lcbmetrics_VALUERECORDER *CacheingMeter::findValueRecorder(const char *name, const lcbmetrics_TAG *tags,
+const lcbmetrics_VALUERECORDER *CachingMeter::findValueRecorder(const char *name, const lcbmetrics_TAG *tags,
                                                                  size_t ntags)
 {
     std::stringstream lkpNameBuilder;

@@ -26,11 +26,11 @@ namespace lcb
 namespace metrics
 {
 
-class CacheingMeter
+class CachingMeter
 {
   public:
-    CacheingMeter(const lcbmetrics_METER *base);
-    ~CacheingMeter();
+    CachingMeter(const lcbmetrics_METER *base);
+    ~CachingMeter();
 
     const lcbmetrics_METER *wrap();
 
