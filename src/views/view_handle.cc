@@ -250,12 +250,6 @@ static lcb_STATUS cb_op_schedule(lcb::docreq::Queue *q, lcb::docreq::DocRequest 
     lcb_CMDGET gcmd{};
 
     gcmd.key(std::string(static_cast<const char *>(dreq->docid.iov_base), dreq->docid.iov_len));
-    if (dreq->parent->parent) {
-        auto *req = reinterpret_cast<lcb_VIEW_HANDLE_ *>(dreq->parent->parent);
-        if (req->span()) {
-            gcmd.parent_span(req->span());
-        }
-    }
     dreq->callback = (lcb_RESPCALLBACK)doc_callback;
     gcmd.treat_cookie_as_callback(true);
     return lcb_get(q->instance, &dreq->callback, &gcmd);
@@ -298,6 +292,7 @@ static void cb_docq_throttle(lcb::docreq::Queue *q, int enabled)
 lcb_VIEW_HANDLE_::~lcb_VIEW_HANDLE_()
 {
     invoke_last();
+    LCBTRACE_HTTP_FINISH(span_);
 
     delete parser_;
     parser_ = nullptr;
@@ -352,7 +347,6 @@ lcb_STATUS lcb_VIEW_HANDLE_::request_http(const lcb_CMDVIEW *cmd)
     }
     lcb_cmdhttp_timeout(htcmd, cmd->timeout_or_default_in_microseconds(LCBT_SETTING(instance_, views_timeout)));
 
-    LCBTRACE_HTTP_START(instance_->settings, nullptr, span_, LCBTRACE_TAG_SERVICE_VIEW, LCBTRACE_THRESHOLD_VIEW, span_);
     lcb_cmdhttp_parent_span(htcmd, span_);
 
     lcb_STATUS err = lcb_http(instance_, this, htcmd);
@@ -382,7 +376,8 @@ lcb_VIEW_HANDLE_::lcb_VIEW_HANDLE_(lcb_INSTANCE *instance, void *cookie, const l
 
     lcb_aspend_add(&instance_->pendops, LCB_PENDTYPE_COUNTER, nullptr);
     if (instance->settings->tracer) {
-        span_ = cmd->parent_span();
+        LCBTRACE_HTTP_START(instance_->settings, nullptr, cmd->parent_span(), LCBTRACE_TAG_SERVICE_VIEW,
+                            LCBTRACE_THRESHOLD_VIEW, span_);
     }
     last_error_ = request_http(cmd);
 }
