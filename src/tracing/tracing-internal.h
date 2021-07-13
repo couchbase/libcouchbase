@@ -224,11 +224,11 @@ void lcbtrace_span_add_host_and_port(lcbtrace_SPAN *span, lcbio_CONNINFO *info);
         outspan->add_tag(LCBTRACE_TAG_DURABILITY, 0, dur_level_to_string(cmd->durability_level()), 0);                 \
     }
 
-#define LCBTRACE_KV_FINISH(pipeline, request, resp, response)                                                          \
+#define LCBTRACE_KV_FINISH(pipeline, request, resp, server_duration)                                                   \
     do {                                                                                                               \
         lcbtrace_SPAN *dispatch_span__ = MCREQ_PKT_RDATA(request)->span;                                               \
         if (dispatch_span__) {                                                                                         \
-            dispatch_span__->increment_server((response)->duration());                                                 \
+            dispatch_span__->increment_server(server_duration);                                                        \
             lcb::Server *server = static_cast<lcb::Server *>(pipeline);                                                \
             dispatch_span__->find_outer_or_this()->add_tag(LCBTRACE_TAG_RETRIES, 0, (uint64_t)request->retries);       \
             lcbtrace_span_add_tag_str_nocopy(dispatch_span__, LCBTRACE_TAG_TRANSPORT, "IP.TCP");                       \
@@ -258,7 +258,7 @@ void lcbtrace_span_add_host_and_port(lcbtrace_SPAN *span, lcbio_CONNINFO *info);
 #else
 #define LCBTRACE_KVSTORE_START(settings, opaque, cmd, operation_name, outspan)
 #define LCBTRACE_HTTP_START(settings, opaque, pspan, operation_name, svc, outspan)
-#define LCBTRACE_KV_FINISH(pipeline, request, response)
+#define LCBTRACE_KV_FINISH(pipeline, request, server_duration)
 #define LCBTRACE_HTTP_FINISH(span)
 #endif /* __cplusplus*/
 #endif /* LCB_TRACING_INTERNAL_H */

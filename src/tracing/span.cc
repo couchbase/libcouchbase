@@ -518,13 +518,10 @@ void Span::increment_server(uint64_t server)
 lcbtrace_SPAN *Span::find_outer_or_this()
 {
     lcbtrace_SPAN *outer = this;
-    while (!outer->is_outer()) {
+    while (outer->m_parent != nullptr && !outer->is_outer()) {
         outer = outer->m_parent;
     }
-    if (outer) {
-        return outer;
-    }
-    return this;
+    return outer;
 }
 
 void Span::external_span(void *extspan)
