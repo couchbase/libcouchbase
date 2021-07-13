@@ -221,9 +221,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_array_add_first(lcb_SUBDOCSPECS *ope
     if (index >= operations->specs().size()) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
-    if (path == nullptr || path_len == 0) {
-        return LCB_ERR_INVALID_ARGUMENT;
-    }
     if (value == nullptr || value_len == 0) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
@@ -240,9 +237,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_array_add_last(lcb_SUBDOCSPECS *oper
                                                            size_t value_len)
 {
     if (index >= operations->specs().size()) {
-        return LCB_ERR_INVALID_ARGUMENT;
-    }
-    if (path == nullptr || path_len == 0) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
     if (value == nullptr || value_len == 0) {
@@ -263,9 +257,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_array_add_unique(lcb_SUBDOCSPECS *op
     if (index >= operations->specs().size()) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
-    if (path == nullptr || path_len == 0) {
-        return LCB_ERR_INVALID_ARGUMENT;
-    }
     if (value == nullptr || value_len == 0) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
@@ -284,9 +275,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_array_insert(lcb_SUBDOCSPECS *operat
     if (index >= operations->specs().size()) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
-    if (path == nullptr || path_len == 0) {
-        return LCB_ERR_INVALID_ARGUMENT;
-    }
     if (value == nullptr || value_len == 0) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
@@ -302,9 +290,6 @@ LIBCOUCHBASE_API lcb_STATUS lcb_subdocspecs_counter(lcb_SUBDOCSPECS *operations,
                                                     const char *path, size_t path_len, int64_t delta)
 {
     if (index >= operations->specs().size()) {
-        return LCB_ERR_INVALID_ARGUMENT;
-    }
-    if (path == nullptr || path_len == 0) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
     auto &spec = operations->specs()[index];

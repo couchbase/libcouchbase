@@ -1050,3 +1050,105 @@ TEST_F(SubdocUnitTest, testRemoveWithEmptyPath)
         ASSERT_STATUS_EQ(LCB_ERR_DOCUMENT_NOT_FOUND, kvo.result.err);
     }
 }
+
+TEST_F(SubdocUnitTest, testTopLevelArray)
+{
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_50)
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+
+    CREATE_SUBDOC_CONNECTION(hw, &instance)
+
+    key = unique_name("top_level_array");
+    std::string empty_path;
+
+    { // add number 1 to top-level array (and initialize the document)
+        std::string value{"1"};
+        lcb_CMDSUBDOC *cmd;
+        lcb_cmdsubdoc_create(&cmd);
+        lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
+        lcb_SUBDOCSPECS *spec;
+        lcb_subdocspecs_create(&spec, 1);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_subdocspecs_array_add_first(spec, 0, 0, empty_path.c_str(), empty_path.size(),
+                                                                      value.c_str(), value.size()));
+        lcb_cmdsubdoc_specs(cmd, spec);
+        lcb_cmdsubdoc_store_semantics(cmd, LCB_SUBDOC_STORE_UPSERT);
+        MultiResult mres;
+        ASSERT_STATUS_EQ(LCB_SUCCESS, schedwait(instance, &mres, cmd, lcb_subdoc));
+        ASSERT_STATUS_EQ(LCB_SUCCESS, mres.rc);
+        lcb_subdocspecs_destroy(spec);
+        lcb_cmdsubdoc_destroy(cmd);
+    }
+
+    {
+        Item item;
+        getKey(instance, key, item);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, item.err);
+        ASSERT_EQ(item.val, "[1]");
+    }
+
+    { // try to add number 1 but only if it is not in the array yet
+        std::string value{"1"};
+        lcb_CMDSUBDOC *cmd;
+        lcb_cmdsubdoc_create(&cmd);
+        lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
+        lcb_SUBDOCSPECS *spec;
+        lcb_subdocspecs_create(&spec, 1);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_subdocspecs_array_add_unique(spec, 0, 0, empty_path.c_str(),
+                                                                       empty_path.size(), value.c_str(), value.size()));
+        lcb_cmdsubdoc_specs(cmd, spec);
+        MultiResult mres;
+        ASSERT_STATUS_EQ(LCB_SUCCESS, schedwait(instance, &mres, cmd, lcb_subdoc));
+        ASSERT_STATUS_EQ(LCB_SUCCESS, mres.rc);
+        lcb_subdocspecs_destroy(spec);
+        lcb_cmdsubdoc_destroy(cmd);
+    }
+
+    {
+        Item item;
+        getKey(instance, key, item);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, item.err);
+        ASSERT_EQ(item.val, "[1]");
+    }
+
+    { // try to add number 1 but only if it is not in the array yet
+        std::string value{"2"};
+        lcb_CMDSUBDOC *cmd;
+        lcb_cmdsubdoc_create(&cmd);
+        lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
+        lcb_SUBDOCSPECS *spec;
+        lcb_subdocspecs_create(&spec, 1);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_subdocspecs_array_add_last(spec, 0, 0, empty_path.c_str(), empty_path.size(),
+                                                                     value.c_str(), value.size()));
+        lcb_cmdsubdoc_specs(cmd, spec);
+        MultiResult mres;
+        ASSERT_STATUS_EQ(LCB_SUCCESS, schedwait(instance, &mres, cmd, lcb_subdoc));
+        ASSERT_STATUS_EQ(LCB_SUCCESS, mres.rc);
+        lcb_subdocspecs_destroy(spec);
+        lcb_cmdsubdoc_destroy(cmd);
+    }
+
+    {
+        Item item;
+        getKey(instance, key, item);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, item.err);
+        ASSERT_EQ(item.val, "[1,2]");
+    }
+
+    { // check size of the top-level array
+        lcb_CMDSUBDOC *cmd;
+        lcb_cmdsubdoc_create(&cmd);
+        lcb_cmdsubdoc_key(cmd, key.c_str(), key.size());
+        lcb_SUBDOCSPECS *spec;
+        lcb_subdocspecs_create(&spec, 1);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_subdocspecs_get_count(spec, 0, 0, empty_path.c_str(), empty_path.size()));
+        lcb_cmdsubdoc_specs(cmd, spec);
+        MultiResult mres;
+        ASSERT_STATUS_EQ(LCB_SUCCESS, schedwait(instance, &mres, cmd, lcb_subdoc));
+        ASSERT_STATUS_EQ(LCB_SUCCESS, mres.rc);
+        ASSERT_EQ(1, mres.results.size());
+        ASSERT_EQ("2", mres.results[0].value);
+        lcb_subdocspecs_destroy(spec);
+        lcb_cmdsubdoc_destroy(cmd);
+    }
+}
