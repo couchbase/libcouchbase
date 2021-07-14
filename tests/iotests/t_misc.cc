@@ -214,7 +214,7 @@ TEST_F(MockUnitTest, testTimingsEx)
     LcbTimings timings{};
     timings.load(instance);
 
-    // timings.dump();
+    timings.dump();
 
     // Measuring in < us
     ASSERT_EQ(2, timings.countAt(50, LCB_TIMEUNIT_NSEC));

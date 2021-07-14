@@ -98,7 +98,9 @@ class TestConfiguration
 
         opt_cycles.abbrev('n').description("Number of times to run the tests").setDefault(1);
 
-        opt_libdir.abbrev('L').description("Directory where plugins are located. Useful on OS X");
+        opt_libdir.abbrev('L')
+            .description("Directory where plugins are located. Useful on OS X")
+            .setDefault(TEST_LIB_DIR);
 
         opt_realcluster.abbrev('C').description("Path to real cluster");
 
@@ -212,13 +214,12 @@ class TestConfiguration
     std::string setupCommandline(const std::string &name) const
     {
         std::stringstream ss;
-        std::string ret;
 
         if (!debugger.empty()) {
             ss << debugger << " ";
         }
 
-        ss << testdir << PATHSEP << name;
+        ss << setupExecutable(name);
 
         if (!binOptions.empty()) {
             ss << " " << binOptions;
@@ -289,7 +290,7 @@ class TestConfiguration
         return getDefaultSrcroot();
     }
 
-    std::string getEffectiveTestdir()
+    std::string getEffectiveTestdir() const
     {
         const char *tmp = getenv("outdir");
         if (tmp && *tmp) {
@@ -353,7 +354,7 @@ class TestConfiguration
 
     std::string getDefaultTestdir() const
     {
-        return (srcroot + PATHSEP) + "tests";
+        return TEST_TEST_DIR;
     }
 };
 

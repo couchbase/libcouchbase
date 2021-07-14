@@ -24,7 +24,9 @@
 #include "http/http.h"
 #include "bucketconfig/clconfig.h"
 #include "metrics/caching_meter.hh"
+#ifdef LCB_USE_HDR_HISTOGRAM
 #include "metrics/logging_meter.hh"
+#endif
 #include <lcbio/iotable.h>
 #include <lcbio/ssl.h>
 #include "defer.h"
@@ -582,8 +584,10 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
     }
     if (options && options->meter) {
         settings->meter = (new lcb::metrics::CachingMeter(options->meter))->wrap();
+#ifdef LCB_USE_HDR_HISTOGRAM
     } else {
         settings->meter = (new lcb::metrics::LoggingMeter(obj))->wrap();
+#endif
     }
 
     obj->last_error = err;

@@ -35,7 +35,13 @@ SET(LCB_CORE_SRC
 
 FILE(GLOB LCB_TRACING_SRC src/tracing/*.cc)
 
-FILE(GLOB LCB_METRICS_SRC src/metrics/*.cc)
+SET(LCB_METRICS_SRC
+    src/metrics/caching_meter.cc
+    src/metrics/metrics.cc
+    src/metrics/metrics-internal.cc)
+if (LCB_USE_HDR_HISTOGRAM)
+    LIST(APPEND LCB_METRICS_SRC src/metrics/logging_meter.cc)
+endif()
 
 FILE(GLOB LCB_CAPI_SRC src/capi/*.cc)
 

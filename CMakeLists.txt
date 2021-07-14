@@ -115,6 +115,9 @@ IF(LCB_USE_HDR_HISTOGRAM)
     # already includes HdrHistogram_c
     IF (NOT TARGET hdr_histogram_static)
         ADD_SUBDIRECTORY(contrib/HdrHistogram_c)
+        MESSAGE(STATUS "Using embedded HdrHistogram_c")
+    ELSE ()
+        MESSAGE(STATUS "Using HdrHistogram_c from larger project (building inside Server)")
     ENDIF ()
 
     # Use #include files from wherever the hdr_histogram project was loaded
@@ -128,6 +131,7 @@ IF(LCB_USE_HDR_HISTOGRAM)
     SET(LCB_HDR_HISTOGRAM_LINK hdr_histogram_static)
     LIST(APPEND LCB_CORE_SRC "src/hdr_timings.c")
 ELSE()
+    MESSAGE(STATUS "HdrHistogram_c is not enabled")
     SET(LCB_HDR_HISTOGRAM_LINK "")
     LIST(APPEND LCB_CORE_SRC "src/timings.c")
 ENDIF()
