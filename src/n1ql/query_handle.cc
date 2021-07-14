@@ -549,6 +549,7 @@ lcb_QUERY_HANDLE_::~lcb_QUERY_HANDLE_()
     LCBTRACE_HTTP_FINISH(span_);
 
     if (http_request_) {
+        http_request_->span = nullptr;
         record_http_op_latency(nullptr, "query", instance_, http_request_->start);
 
         lcb_http_cancel(instance_, http_request_);

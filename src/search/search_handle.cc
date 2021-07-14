@@ -100,6 +100,9 @@ void lcb_SEARCH_HANDLE_::invoke_row(lcb_RESPSEARCH *resp)
             }
         }
         LCBTRACE_HTTP_FINISH(span_);
+        if (http_request_) {
+            http_request_->span = nullptr;
+        }
         callback_(instance_, LCB_CALLBACK_SEARCH, resp);
     }
 }

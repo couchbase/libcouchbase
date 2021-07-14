@@ -450,6 +450,9 @@ void lcb_ANALYTICS_HANDLE_::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
             }
         }
         LCBTRACE_HTTP_FINISH(span_);
+        if (http_request_) {
+            http_request_->span = nullptr;
+        }
     }
 
     if (callback_ != nullptr) {

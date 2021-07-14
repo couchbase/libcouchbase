@@ -293,6 +293,9 @@ lcb_VIEW_HANDLE_::~lcb_VIEW_HANDLE_()
 {
     invoke_last();
     LCBTRACE_HTTP_FINISH(span_);
+    if (http_request_) {
+        http_request_->span = nullptr;
+    }
 
     delete parser_;
     parser_ = nullptr;
