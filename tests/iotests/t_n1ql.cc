@@ -411,6 +411,7 @@ void create_index(lcb_INSTANCE *instance, const string &index, const string &sco
     lcb_QUERY_HANDLE *handle = nullptr;
     lcb_cmdquery_handle(cmd, &handle);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
+    lcb_cmdquery_destroy(cmd);
     ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     ASSERT_TRUE(handle != nullptr);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
@@ -466,6 +467,7 @@ TEST_F(QueryUnitTest, testCollectionQuery)
     lcb_QUERY_HANDLE *handle = nullptr;
     lcb_cmdquery_handle(cmd, &handle);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
+    lcb_cmdquery_destroy(cmd);
     ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     ASSERT_TRUE(handle != nullptr);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
@@ -585,6 +587,7 @@ TEST_F(QueryUnitTest, testCollectionPreparedQuery)
     lcb_QUERY_HANDLE *handle = nullptr;
     lcb_cmdquery_handle(cmd, &handle);
     lcb_STATUS rc = lcb_query(instance, &res, cmd);
+    lcb_cmdquery_destroy(cmd);
     ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
     ASSERT_TRUE(handle != nullptr);
     lcb_wait(instance, LCB_WAIT_DEFAULT);

@@ -264,7 +264,7 @@ static void testSetHitCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESP
     lcb_respstore_operation(resp, &op);
     ASSERT_EQ(LCB_STORE_UPSERT, op);
     lcb_STATUS rc = lcb_respstore_status(resp);
-    ASSERT_EQ(LCB_SUCCESS, rc) << lcb_strerror_short(rc);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc) << lcb_strerror_short(rc);
     const char *key;
     size_t nkey;
     lcb_respstore_key(resp, &key, &nkey);
@@ -374,6 +374,8 @@ TEST_F(CollectionUnitTest, testDroppedCollection)
     std::string key1("testCollectionMiss1"), key2("testCollectionMiss2");
     std::string val1("val1"), val2("val2");
     std::string scope(unique_name("sCollectionDropMiss")), collection(unique_name("cCollectionDropMiss"));
+
+    std::uint64_t uid;
 
     // Create scope + collection, then drop collection
     create_scope(instance, scope);
@@ -584,7 +586,7 @@ TEST_F(CollectionUnitTest, testMaxCollectionsPerScope)
     std::string scope(unique_name("sScope1"));
     create_scope(instance, scope);
     for (int i = 0; i < 1000; ++i) {
-        create_collection(instance, scope, std::to_string(i));
+        create_collection(instance, scope, std::to_string(i), false);
     }
     drop_scope(instance, scope);
 }
@@ -675,7 +677,7 @@ TEST_F(CollectionUnitTest, testItDoesNotRouteKeysToDefaultCollectionOnScopeDrop)
         lcb_cmdstore_destroy(cmd);
         ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
         ASSERT_TRUE(res.called);
-        ASSERT_EQ(LCB_SUCCESS, res.rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
         ASSERT_EQ(key, res.key);
     }
 
@@ -690,7 +692,7 @@ TEST_F(CollectionUnitTest, testItDoesNotRouteKeysToDefaultCollectionOnScopeDrop)
         lcb_cmdget_destroy(cmd);
         ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
         ASSERT_TRUE(res.called);
-        ASSERT_EQ(LCB_SUCCESS, res.rc);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
         ASSERT_EQ(key, res.key);
         ASSERT_EQ(val, res.value);
     }

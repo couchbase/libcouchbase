@@ -19,6 +19,7 @@
 #include "mock-unit-test.h"
 #include "testutil.h"
 #include <map>
+#include <libcouchbase/utils.h>
 #include "rnd.h"
 
 /*
@@ -242,25 +243,103 @@ std::ostream &operator<<(std::ostream &out, const Item &item)
     return out;
 }
 
+struct http_result {
+    lcb_STATUS rc{LCB_SUCCESS};
+    uint16_t status{0};
+    std::string path{};
+    std::string body{};
+    std::map<std::string, std::string> headers{};
+};
+
+struct manifest_result {
+    lcb_STATUS rc{LCB_SUCCESS};
+    std::string value{};
+};
+
 extern "C" {
 static void http_callback(lcb_INSTANCE * /* instance */, int /* cbtype */, const lcb_RESPHTTP *resp)
 {
+    http_result *result = nullptr;
+    lcb_resphttp_cookie(resp, reinterpret_cast<void **>(&result));
+
+    result->rc = lcb_resphttp_status(resp);
+
     const char *body = nullptr;
     size_t nbody = 0;
     lcb_resphttp_body(resp, &body, &nbody);
+    result->body.assign(body, nbody);
+
     const char *path = nullptr;
     size_t npath = 0;
     lcb_resphttp_path(resp, &path, &npath);
-    uint16_t status;
-    lcb_resphttp_http_status(resp, &status);
-    EXPECT_EQ(200, status) << std::string(path, npath) << ": " << std::string(body, nbody);
-    const char *const *headers;
-    EXPECT_EQ(LCB_SUCCESS, lcb_resphttp_headers(resp, &headers));
-    EXPECT_EQ(LCB_SUCCESS, lcb_resphttp_status(resp));
+    result->path.assign(path, npath);
+
+    lcb_resphttp_http_status(resp, &result->status);
+
+    const char *const *headers = nullptr;
+    lcb_resphttp_headers(resp, &headers);
+    for (; headers && *headers; headers++) {
+        const char *key = *headers;
+        const char *value = nullptr;
+        if (headers + 1) {
+            value = *(++headers);
+            result->headers.emplace(key, value);
+        }
+    }
+
+    EXPECT_EQ(200, result->status) << result->path << ": " << result->body;
+}
+
+static void get_manifest_callback(lcb_INSTANCE *, int, const lcb_RESPGETMANIFEST *resp)
+{
+    manifest_result *result = nullptr;
+    lcb_respgetmanifest_cookie(resp, reinterpret_cast<void **>(&result));
+
+    result->rc = lcb_respgetmanifest_status(resp);
+    if (result->rc == LCB_SUCCESS) {
+        const char *value;
+        size_t nvalue;
+        lcb_respgetmanifest_value(resp, &value, &nvalue);
+        result->value.assign(value, nvalue);
+    }
 }
 }
 
-void create_scope(lcb_INSTANCE *instance, const std::string &scope)
+static std::uint64_t get_manifest_id(lcb_INSTANCE *instance)
+{
+    lcb_install_callback(instance, LCB_CALLBACK_COLLECTIONS_GET_MANIFEST, (lcb_RESPCALLBACK)get_manifest_callback);
+
+    lcb_CMDGETMANIFEST *cmd;
+    lcb_cmdgetmanifest_create(&cmd);
+    manifest_result result;
+    EXPECT_EQ(LCB_SUCCESS, lcb_getmanifest(instance, &result, cmd));
+    lcb_cmdgetmanifest_destroy(cmd);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+
+    Json::Value payload;
+    EXPECT_EQ(LCB_SUCCESS, result.rc);
+    EXPECT_FALSE(result.value.empty());
+    EXPECT_TRUE(Json::Reader().parse(result.value, payload));
+    EXPECT_TRUE(payload.isMember("uid") && payload["uid"].isString());
+    return std::stoull(payload["uid"].asString(), nullptr, 16);
+}
+
+#ifdef WIN32
+#define usleep(n) Sleep(n / 1000)
+#endif
+static void wait_for_manifest_uid(lcb_INSTANCE *instance, std::uint64_t uid)
+{
+    while (true) {
+        std::uint64_t visible_uid = get_manifest_id(instance);
+        if (visible_uid < uid) {
+            usleep(100000);
+        } else {
+            break;
+        }
+    }
+}
+
+void create_scope(lcb_INSTANCE *instance, const std::string &scope, bool wait)
 {
     (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 
@@ -275,17 +354,26 @@ void create_scope(lcb_INSTANCE *instance, const std::string &scope)
     lcb_cmdhttp_path(cmd, path.c_str(), path.size());
     lcb_cmdhttp_body(cmd, body.c_str(), body.size());
 
-    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, nullptr, cmd));
+    http_result result{};
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, &result, cmd));
     lcb_cmdhttp_destroy(cmd);
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+
+    Json::Value payload;
+    ASSERT_TRUE(Json::Reader().parse(result.body, payload)) << result.body;
+    ASSERT_TRUE(payload.isMember("uid") && payload["uid"].isString()) << result.body;
+    std::uint64_t uid = std::stoull(payload["uid"].asString(), nullptr, 16);
+    ASSERT_GT(uid, 0);
+    if (wait) {
+        wait_for_manifest_uid(instance, uid);
+    }
 }
 
-void create_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection)
+void create_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection, bool wait)
 {
     (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 
     lcb_CMDHTTP *cmd;
-    lcb_STATUS err;
     std::string path =
         "/pools/default/buckets/" + MockEnvironment::getInstance()->getBucket() + "/scopes/" + scope + "/collections";
     std::string body = "name=" + collection;
@@ -297,12 +385,23 @@ void create_collection(lcb_INSTANCE *instance, const std::string &scope, const s
     lcb_cmdhttp_path(cmd, path.c_str(), path.size());
     lcb_cmdhttp_body(cmd, body.c_str(), body.size());
 
-    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, nullptr, cmd));
+    http_result result{};
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, &result, cmd));
     lcb_cmdhttp_destroy(cmd);
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+    ASSERT_STATUS_EQ(LCB_SUCCESS, result.rc);
+
+    Json::Value payload;
+    ASSERT_TRUE(Json::Reader().parse(result.body, payload)) << result.body;
+    ASSERT_TRUE(payload.isMember("uid") && payload["uid"].isString()) << result.body;
+    std::uint64_t uid = std::stoull(payload["uid"].asString(), nullptr, 16);
+    ASSERT_GT(uid, 0);
+    if (wait) {
+        wait_for_manifest_uid(instance, uid);
+    }
 }
 
-void drop_scope(lcb_INSTANCE *instance, const std::string &scope)
+void drop_scope(lcb_INSTANCE *instance, const std::string &scope, bool wait)
 {
     (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 
@@ -313,12 +412,23 @@ void drop_scope(lcb_INSTANCE *instance, const std::string &scope)
     lcb_cmdhttp_method(cmd, LCB_HTTP_METHOD_DELETE);
     lcb_cmdhttp_path(cmd, path.c_str(), path.size());
 
-    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, nullptr, cmd));
+    http_result result{};
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, &result, cmd));
     lcb_cmdhttp_destroy(cmd);
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+    ASSERT_STATUS_EQ(LCB_SUCCESS, result.rc);
+
+    Json::Value payload;
+    ASSERT_TRUE(Json::Reader().parse(result.body, payload)) << result.body;
+    ASSERT_TRUE(payload.isMember("uid") && payload["uid"].isString()) << result.body;
+    std::uint64_t uid = std::stoull(payload["uid"].asString(), nullptr, 16);
+    ASSERT_GT(uid, 0);
+    if (wait) {
+        wait_for_manifest_uid(instance, uid);
+    }
 }
 
-void drop_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection)
+void drop_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection, bool wait)
 {
     (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 
@@ -329,9 +439,20 @@ void drop_collection(lcb_INSTANCE *instance, const std::string &scope, const std
     lcb_cmdhttp_method(cmd, LCB_HTTP_METHOD_DELETE);
     lcb_cmdhttp_path(cmd, path.c_str(), path.size());
 
-    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, nullptr, cmd));
+    http_result result{};
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, &result, cmd));
     lcb_cmdhttp_destroy(cmd);
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+    ASSERT_STATUS_EQ(LCB_SUCCESS, result.rc);
+
+    Json::Value payload;
+    ASSERT_TRUE(Json::Reader().parse(result.body, payload)) << result.body;
+    ASSERT_TRUE(payload.isMember("uid") && payload["uid"].isString()) << result.body;
+    std::uint64_t uid = std::stoull(payload["uid"].asString(), nullptr, 16);
+    ASSERT_GT(uid, 0);
+    if (wait) {
+        wait_for_manifest_uid(instance, uid);
+    }
 }
 
 std::string unique_name(const std::string &prefix)
