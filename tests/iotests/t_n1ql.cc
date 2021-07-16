@@ -674,6 +674,12 @@ TEST_F(QueryUnitTest, testRetryOnAuthenticationFailure)
     HandleWrap hw;
     SKIP_IF_MOCK()
     SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_50)
+    if (!getenv("LCB_TEST_ALLOW_CHANGING_PASSWORD")) {
+        MockEnvironment::printSkipMessage(__FILE__, __LINE__,
+                                          "define LCB_TEST_ALLOW_CHANGING_PASSWORD env variable to re-enable it");
+        return;
+    }
+
     createConnection(hw, &instance);
     lcb_cntl_setu32(instance, LCB_CNTL_QUERY_TIMEOUT, LCB_MS2US(500)); // 500ms before timeout
 
