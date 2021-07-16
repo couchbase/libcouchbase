@@ -173,18 +173,18 @@ static void lcbio_cache_local_name(lcbio_CONNINFO *sock)
         case AF_INET: {
             auto *addr = (struct sockaddr_in *)&sock->sa_local;
             inet_ntop(AF_INET, &(addr->sin_addr), sock->ep_local, sizeof(sock->ep_local));
+            strncpy(sock->ep_local2.host, sock->ep_local, sizeof(sock->ep_local2.host));
+            snprintf(sock->ep_local2.port, sizeof(sock->ep_local2.port), "%d", (int)ntohs(addr->sin_port));
             size_t len = strlen(sock->ep_local);
-            strcpy(sock->ep_local2.host, sock->ep_local);
-            snprintf(sock->ep_local2.port, sizeof(sock->ep_local2), "%d", (int)ntohs(addr->sin_port));
             snprintf(sock->ep_local + len, sizeof(sock->ep_local) - len, ":%d", (int)ntohs(addr->sin_port));
         } break;
 
         case AF_INET6: {
             auto *addr = (struct sockaddr_in6 *)&sock->sa_local;
             inet_ntop(AF_INET6, &(addr->sin6_addr), sock->ep_local, sizeof(sock->ep_local));
+            strncpy(sock->ep_local2.host, sock->ep_local, sizeof(sock->ep_local2.host));
+            snprintf(sock->ep_local2.port, sizeof(sock->ep_local2.port), "%d", (int)ntohs(addr->sin6_port));
             size_t len = strlen(sock->ep_local);
-            strcpy(sock->ep_local2.host, sock->ep_local);
-            snprintf(sock->ep_local2.port, sizeof(sock->ep_local2), "%d", (int)ntohs(addr->sin6_port));
             snprintf(sock->ep_local + len, sizeof(sock->ep_local) - len, ":%d", (int)ntohs(addr->sin6_port));
         } break;
     }
