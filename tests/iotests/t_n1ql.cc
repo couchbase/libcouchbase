@@ -347,6 +347,7 @@ TEST_F(QueryUnitTest, testCancellation)
 
 TEST_F(QueryUnitTest, testClusterwide)
 {
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_65)
     lcb_INSTANCE *instance;
     HandleWrap hw;
     if (!createClusterQueryConnection(hw, &instance)) {
