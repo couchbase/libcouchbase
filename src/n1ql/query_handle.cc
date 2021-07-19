@@ -214,6 +214,14 @@ void lcb_QUERY_HANDLE_::invoke_row(lcb_RESPQUERY *resp, bool is_last)
         }
         resp->ctx.first_error_code = first_error_code;
         LCBTRACE_ADD_RETRIES(span_, retries_);
+
+        LCBTRACE_HTTP_FINISH(span_);
+        if (http_request_ != nullptr) {
+            http_request_->span = nullptr;
+        }
+        if (http_request_ != nullptr) {
+            record_http_op_latency(nullptr, "query", instance_, http_request_->start);
+        }
     }
     if (callback_) {
         callback_(instance_, LCB_CALLBACK_QUERY, resp);
@@ -542,23 +550,20 @@ lcb_QUERY_HANDLE_::lcb_QUERY_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, const
 
 lcb_QUERY_HANDLE_::~lcb_QUERY_HANDLE_()
 {
-    if (callback_) {
+    if (callback_ != nullptr) {
         lcb_RESPQUERY resp{};
         invoke_row(&resp, true);
     }
-    LCBTRACE_HTTP_FINISH(span_);
 
-    if (http_request_) {
-        http_request_->span = nullptr;
-        record_http_op_latency(nullptr, "query", instance_, http_request_->start);
-
+    if (http_request_ != nullptr) {
         lcb_http_cancel(instance_, http_request_);
         http_request_ = nullptr;
     }
 
     delete parser_;
+    parser_ = nullptr;
 
-    if (prepare_query_) {
+    if (prepare_query_ != nullptr) {
         lcb_query_cancel(instance_, prepare_query_);
         delete prepare_query_;
     }

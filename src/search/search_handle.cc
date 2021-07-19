@@ -99,10 +99,6 @@ void lcb_SEARCH_HANDLE_::invoke_row(lcb_RESPSEARCH *resp)
                 }
             }
         }
-        LCBTRACE_HTTP_FINISH(span_);
-        if (http_request_) {
-            http_request_->span = nullptr;
-        }
         callback_(instance_, LCB_CALLBACK_SEARCH, resp);
     }
 }
@@ -119,6 +115,15 @@ void lcb_SEARCH_HANDLE_::invoke_last()
         resp.row = static_cast<const char *>(meta.iov_base);
         resp.nrow = meta.iov_len;
     }
+
+    LCBTRACE_HTTP_FINISH(span_);
+    if (http_request_ != nullptr) {
+        http_request_->span = nullptr;
+    }
+    if (http_request_ != nullptr) {
+        record_http_op_latency(index_name_.c_str(), "search", instance_, http_request_->start);
+    }
+
     invoke_row(&resp);
     clear_callback();
 }
@@ -187,13 +192,14 @@ lcb_SEARCH_HANDLE_::lcb_SEARCH_HANDLE_(lcb_INSTANCE *instance, void *cookie, con
 
 lcb_SEARCH_HANDLE_::~lcb_SEARCH_HANDLE_()
 {
-    if (http_request_ != nullptr) {
-        record_http_op_latency(index_name_.c_str(), "search", instance_, http_request_->start);
+    invoke_last();
 
+    if (http_request_ != nullptr) {
         lcb_http_cancel(instance_, http_request_);
         http_request_ = nullptr;
     }
-    if (parser_) {
+
+    if (parser_ != nullptr) {
         delete parser_;
         parser_ = nullptr;
     }

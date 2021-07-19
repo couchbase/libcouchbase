@@ -101,6 +101,14 @@ void lcb_VIEW_HANDLE_::invoke_last(lcb_STATUS err)
         resp.ctx.rc = LCB_ERR_VIEW_NOT_FOUND;
     }
 
+    LCBTRACE_HTTP_FINISH(span_);
+    if (http_request_ != nullptr) {
+        http_request_->span = nullptr;
+    }
+    if (http_request_ != nullptr) {
+        record_http_op_latency((design_document_ + "/" + view_).c_str(), "views", instance_, http_request_->start);
+    }
+
     callback_(instance_, LCB_CALLBACK_VIEWQUERY, &resp);
     cancel();
 }
@@ -292,19 +300,14 @@ static void cb_docq_throttle(lcb::docreq::Queue *q, int enabled)
 lcb_VIEW_HANDLE_::~lcb_VIEW_HANDLE_()
 {
     invoke_last();
-    LCBTRACE_HTTP_FINISH(span_);
-    if (http_request_) {
-        http_request_->span = nullptr;
+
+    if (http_request_ != nullptr) {
+        lcb_http_cancel(instance_, http_request_);
+        http_request_ = nullptr;
     }
 
     delete parser_;
     parser_ = nullptr;
-
-    if (http_request_ != nullptr) {
-        record_http_op_latency((design_document_ + "/" + view_).c_str(), "views", instance_, http_request_->start);
-
-        lcb_http_cancel(instance_, http_request_);
-    }
 
     if (document_queue_ != nullptr) {
         document_queue_->parent = nullptr;

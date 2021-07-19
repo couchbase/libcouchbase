@@ -449,9 +449,13 @@ void lcb_ANALYTICS_HANDLE_::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
                 }
             }
         }
+
         LCBTRACE_HTTP_FINISH(span_);
-        if (http_request_) {
+        if (http_request_ != nullptr) {
             http_request_->span = nullptr;
+        }
+        if (http_request_ != nullptr) {
+            record_http_op_latency(nullptr, "analytics", instance_, http_request_->start);
         }
     }
 
@@ -465,19 +469,18 @@ void lcb_ANALYTICS_HANDLE_::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
 
 lcb_ANALYTICS_HANDLE_::~lcb_ANALYTICS_HANDLE_()
 {
-    if (http_request_ != nullptr) {
-        record_http_op_latency(nullptr, "analytics", instance_, http_request_->start);
-
-        lcb_http_cancel(instance_, http_request_);
-        http_request_ = nullptr;
-    }
-
     if (callback_ != nullptr) {
         lcb_RESPANALYTICS resp{};
         invoke_row(&resp, true);
     }
 
+    if (http_request_ != nullptr) {
+        lcb_http_cancel(instance_, http_request_);
+        http_request_ = nullptr;
+    }
+
     delete parser_;
+    parser_ = nullptr;
 
     if (document_queue_ != nullptr) {
         document_queue_->parent = nullptr;
