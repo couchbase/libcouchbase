@@ -72,6 +72,9 @@ TARGET_LINK_LIBRARIES(subdoc-tombstone couchbase)
 TARGET_LINK_LIBRARIES(subdoc-multi couchbase)
 TARGET_LINK_LIBRARIES(subdoc-xattrs couchbase)
 
+ADD_EXECUTABLE(durability minimal/durability.cc)
+TARGET_LINK_LIBRARIES(durability couchbase)
+
 ADD_EXECUTABLE(minimal minimal/minimal.c)
 TARGET_LINK_LIBRARIES(minimal couchbase)
 
@@ -86,9 +89,6 @@ TARGET_LINK_LIBRARIES(g3cp couchbase)
 
 ADD_EXECUTABLE(g3cp-async minimal/g3cp-async.c)
 TARGET_LINK_LIBRARIES(g3cp-async couchbase)
-
-ADD_EXECUTABLE(durability observe/durability.c)
-TARGET_LINK_LIBRARIES(durability couchbase)
 
 ADD_EXECUTABLE(management-eventing management/eventing.cc)
 TARGET_LINK_LIBRARIES(management-eventing couchbase)
