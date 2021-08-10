@@ -323,6 +323,10 @@ static void statsCallback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_R
 {
     MockEnvironment *me = nullptr;
     lcb_respstats_cookie(resp, (void **)&me);
+    if (me->getServerVersion() != MockEnvironment::VERSION_UNKNOWN) {
+        // ignore all subsequent responses
+        return;
+    }
     lcb_STATUS rc = lcb_respstats_status(resp);
     ASSERT_EQ(LCB_SUCCESS, rc) << lcb_strerror_short(rc);
 
