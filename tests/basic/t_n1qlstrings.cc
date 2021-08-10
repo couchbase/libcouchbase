@@ -49,8 +49,7 @@ TEST_F(N1qLStringTests, testQueryPositionalParams)
     size_t payload_len = 0;
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdquery_encoded_payload(cmd, &payload, &payload_len));
     ASSERT_TRUE(payload != nullptr && payload_len > 0);
-    ASSERT_EQ(R"({"statement":"SELECT 42 AS the_answer WHERE question IN (?, ?, ?) "}
-)",
+    ASSERT_EQ(R"({"statement":"SELECT 42 AS the_answer WHERE question IN (?, ?, ?) "})",
               std::string(payload, payload_len));
 
     std::vector<std::string> question{"\"life\"", "\"Universe\"", "\"Everything\""};
@@ -61,8 +60,7 @@ TEST_F(N1qLStringTests, testQueryPositionalParams)
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdquery_encoded_payload(cmd, &payload, &payload_len));
     ASSERT_TRUE(payload != nullptr && payload_len > 0);
     ASSERT_EQ(
-        R"({"args":["life","Universe","Everything"],"statement":"SELECT 42 AS the_answer WHERE question IN (?, ?, ?) "}
-)",
+        R"({"args":["life","Universe","Everything"],"statement":"SELECT 42 AS the_answer WHERE question IN (?, ?, ?) "})",
         std::string(payload, payload_len));
 
     std::string questions{R"(["Universe", "life", "Everything"])"};
@@ -71,8 +69,7 @@ TEST_F(N1qLStringTests, testQueryPositionalParams)
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdquery_encoded_payload(cmd, &payload, &payload_len));
     ASSERT_TRUE(payload != nullptr && payload_len > 0);
     ASSERT_EQ(
-        R"({"args":["Universe","life","Everything"],"statement":"SELECT 42 AS the_answer WHERE question IN (?, ?, ?) "}
-)",
+        R"({"args":["Universe","life","Everything"],"statement":"SELECT 42 AS the_answer WHERE question IN (?, ?, ?) "})",
         std::string(payload, payload_len));
 }
 
@@ -88,8 +85,7 @@ TEST_F(N1qLStringTests, testAnalyticsPositionalParams)
     size_t payload_len = 0;
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdanalytics_encoded_payload(cmd, &payload, &payload_len));
     ASSERT_TRUE(payload != nullptr && payload_len > 0);
-    ASSERT_EQ(R"({"statement":"SELECT 42 AS the_answer WHERE question IN (?, ?, ?) "}
-)",
+    ASSERT_EQ(R"({"statement":"SELECT 42 AS the_answer WHERE question IN (?, ?, ?) "})",
               std::string(payload, payload_len));
 
     std::vector<std::string> question{"\"life\"", "\"Universe\"", "\"Everything\""};
@@ -100,8 +96,7 @@ TEST_F(N1qLStringTests, testAnalyticsPositionalParams)
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdanalytics_encoded_payload(cmd, &payload, &payload_len));
     ASSERT_TRUE(payload != nullptr && payload_len > 0);
     ASSERT_EQ(
-        R"({"args":["life","Universe","Everything"],"statement":"SELECT 42 AS the_answer WHERE question IN (?, ?, ?) "}
-)",
+        R"({"args":["life","Universe","Everything"],"statement":"SELECT 42 AS the_answer WHERE question IN (?, ?, ?) "})",
         std::string(payload, payload_len));
 
     std::string questions{R"(["Universe", "life", "Everything"])"};
@@ -110,7 +105,6 @@ TEST_F(N1qLStringTests, testAnalyticsPositionalParams)
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdanalytics_encoded_payload(cmd, &payload, &payload_len));
     ASSERT_TRUE(payload != nullptr && payload_len > 0);
     ASSERT_EQ(
-        R"({"args":["Universe","life","Everything"],"statement":"SELECT 42 AS the_answer WHERE question IN (?, ?, ?) "}
-)",
+        R"({"args":["Universe","life","Everything"],"statement":"SELECT 42 AS the_answer WHERE question IN (?, ?, ?) "})",
         std::string(payload, payload_len));
 }

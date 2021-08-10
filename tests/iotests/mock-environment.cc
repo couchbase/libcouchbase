@@ -591,7 +591,7 @@ MockCommand::MockCommand(Code code)
 std::string MockCommand::encode()
 {
     finalizePayload();
-    return Json::FastWriter().write(command);
+    return Json::FastWriter().write(command) + "\n";
 }
 
 void MockKeyCommand::finalizePayload()
