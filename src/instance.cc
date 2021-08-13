@@ -635,6 +635,7 @@ static void do_pool_shutdown(io::Pool *pool)
 LIBCOUCHBASE_API
 void lcb_destroy(lcb_INSTANCE *instance)
 {
+    instance->destroying = 1;
 #define DESTROY(fn, fld)                                                                                               \
     if (instance->fld) {                                                                                               \
         fn(instance->fld);                                                                                             \
@@ -665,10 +666,10 @@ void lcb_destroy(lcb_INSTANCE *instance)
     }
 
     if ((pendq = po->items[LCB_PENDTYPE_HTTP])) {
-        for (it = pendq->begin(); it != pendq->end(); ++it) {
-            auto *htreq = reinterpret_cast<http::Request *>(*it);
-            htreq->block_callback();
-            htreq->finish(LCB_ERR_GENERIC);
+        std::vector<void *> requests(pendq->begin(), pendq->end());
+        for (void *request : requests) {
+            auto *htreq = reinterpret_cast<http::Request *>(request);
+            htreq->finish(LCB_ERR_REQUEST_CANCELED);
         }
     }
 
