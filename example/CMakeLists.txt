@@ -8,7 +8,7 @@ MACRO(ADD_EXAMPLE name dir linkspec incspec)
     TARGET_LINK_LIBRARIES(${name} couchbase ${linkspec})
 
     GET_TARGET_PROPERTY(_tmp_inc ${name} INCLUDE_DIRECTORIES)
-    LIST(APPEND ${_tmp_inc} ${dir} ${incspec})
+    LIST(APPEND _tmp_inc ${incspec})
     SET_TARGET_PROPERTIES(${name} PROPERTIES INCLUDE_DIRECTORIES "${_tmp_inc}")
 ENDMACRO()
 
