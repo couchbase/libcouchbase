@@ -445,7 +445,7 @@ static void handle_ping(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_CALLBACK_TYPE
         lcbio_CTX *ctx = server->connctx;
         if (ctx) {
             char id[20] = {0};
-            svc.local = lcb_strdup(ctx->sock->info->ep_local);
+            svc.local = lcb_strdup(ctx->sock->info->ep_local_host_and_port);
             snprintf(id, sizeof(id), "%p", (void *)ctx->sock);
             svc.id = lcb_strdup(id);
         }
@@ -496,7 +496,7 @@ static void handle_http(lcb_INSTANCE *instance, lcb_PING_SERVICE type, const lcb
             char id[20] = {0};
             snprintf(id, sizeof(id), "%p", (void *)ctx->sock);
             svc.id = lcb_strdup(id);
-            svc.local = lcb_strdup(ctx->sock->info->ep_local);
+            svc.local = lcb_strdup(ctx->sock->info->ep_local_host_and_port);
         }
         ck->responses.push_back(svc);
     }
@@ -759,7 +759,7 @@ lcb_STATUS lcb_diag(lcb_INSTANCE *instance, void *cookie, const lcb_CMDDIAG *cmd
             }
             if (ctx->sock) {
                 if (ctx->sock->info) {
-                    endpoint["local"] = ctx->sock->info->ep_local;
+                    endpoint["local"] = ctx->sock->info->ep_local_host_and_port;
                 }
                 endpoint["last_activity_us"] =
                     (Json::Value::UInt64)(now > ctx->sock->atime ? now - ctx->sock->atime : 0);
@@ -790,7 +790,7 @@ lcb_STATUS lcb_diag(lcb_INSTANCE *instance, void *cookie, const lcb_CMDDIAG *cmd
                     }
                     if (ctx->sock) {
                         if (ctx->sock->info) {
-                            endpoint["local"] = ctx->sock->info->ep_local;
+                            endpoint["local"] = ctx->sock->info->ep_local_host_and_port;
                         }
                         endpoint["last_activity_us"] =
                             (Json::Value::UInt64)(now > ctx->sock->atime ? now - ctx->sock->atime : 0);
