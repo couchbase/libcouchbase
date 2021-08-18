@@ -426,7 +426,7 @@ static void handle_ping(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_CALLBACK_TYPE
             } else {
                 hh.append(remote.host).append(":").append(remote.port);
             }
-            svc.server = strdup(hh.c_str());
+            svc.server = lcb_strdup(hh.c_str());
         }
         svc.type = LCB_PING_SERVICE_KV;
         svc.latency = gethrtime() - MCREQ_PKT_RDATA(req)->start;
@@ -445,9 +445,9 @@ static void handle_ping(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_CALLBACK_TYPE
         lcbio_CTX *ctx = server->connctx;
         if (ctx) {
             char id[20] = {0};
-            svc.local = strdup(ctx->sock->info->ep_local);
+            svc.local = lcb_strdup(ctx->sock->info->ep_local);
             snprintf(id, sizeof(id), "%p", (void *)ctx->sock);
-            svc.id = strdup(id);
+            svc.id = lcb_strdup(id);
         }
         svc.scope = server->get_instance()->get_bucketname();
 
@@ -477,7 +477,7 @@ static void handle_http(lcb_INSTANCE *instance, lcb_PING_SERVICE type, const lcb
         } else {
             hh = std::string(htreq->host) + ":" + std::string(htreq->port);
         }
-        svc.server = strdup(hh.c_str());
+        svc.server = lcb_strdup(hh.c_str());
         svc.latency = gethrtime() - htreq->start;
         svc.rc = resp->ctx.rc;
         switch (resp->ctx.rc) {
@@ -495,8 +495,8 @@ static void handle_http(lcb_INSTANCE *instance, lcb_PING_SERVICE type, const lcb
         if (ctx) {
             char id[20] = {0};
             snprintf(id, sizeof(id), "%p", (void *)ctx->sock);
-            svc.id = strdup(id);
-            svc.local = strdup(ctx->sock->info->ep_local);
+            svc.id = lcb_strdup(id);
+            svc.local = lcb_strdup(ctx->sock->info->ep_local);
         }
         ck->responses.push_back(svc);
     }

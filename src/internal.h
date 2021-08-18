@@ -55,6 +55,7 @@
 #include "tracing/tracing-internal.h"
 
 #include "hostlist.h"
+#include "utilities.h"
 
 #ifdef __cplusplus
 #include <functional>
