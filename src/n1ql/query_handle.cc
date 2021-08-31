@@ -372,6 +372,10 @@ lcb_RETRY_ACTION lcb_QUERY_HANDLE_::has_retriable_error(lcb_STATUS &rc)
             }
         }
     }
+
+    if (rc == LCB_SUCCESS) {
+        return {0, 0};
+    }
     return lcb_query_should_retry(instance_->settings, this, rc);
 }
 
