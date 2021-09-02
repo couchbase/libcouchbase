@@ -1129,6 +1129,7 @@ TEST_F(QueryUnitTest, testRawQuery)
 
 TEST_F(QueryUnitTest, testReadOnlyWithNoResults)
 {
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_65)
     lcb_INSTANCE *instance;
     HandleWrap hw;
     if (!createClusterQueryConnection(hw, &instance)) {
