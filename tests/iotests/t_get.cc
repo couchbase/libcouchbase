@@ -845,6 +845,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
     lcb_install_callback(instance, LCB_CALLBACK_UNLOCK, reinterpret_cast<lcb_RESPCALLBACK>(pl_unlock_callback));
 
     std::string key(unique_name("testPessimisticLock"));
+    std::uint32_t lock_time_s = 10;
 
     std::uint64_t cas{0};
     {
@@ -870,7 +871,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
         lcb_CMDGET *cmd = nullptr;
         lcb_cmdget_create(&cmd);
         lcb_cmdget_key(cmd, key.c_str(), key.size());
-        lcb_cmdget_locktime(cmd, 5);
+        lcb_cmdget_locktime(cmd, lock_time_s);
         lcb_get(instance, &res, cmd);
         lcb_cmdget_destroy(cmd);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
@@ -902,7 +903,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
         lcb_CMDGET *cmd = nullptr;
         lcb_cmdget_create(&cmd);
         lcb_cmdget_key(cmd, key.c_str(), key.size());
-        lcb_cmdget_locktime(cmd, 5);
+        lcb_cmdget_locktime(cmd, lock_time_s);
         lcb_get(instance, &res, cmd);
         lcb_cmdget_destroy(cmd);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
@@ -949,7 +950,7 @@ TEST_F(GetUnitTest, testPessimisticLock)
         lcb_CMDGET *cmd = nullptr;
         lcb_cmdget_create(&cmd);
         lcb_cmdget_key(cmd, key.c_str(), key.size());
-        lcb_cmdget_locktime(cmd, 5);
+        lcb_cmdget_locktime(cmd, lock_time_s);
         lcb_get(instance, &res, cmd);
         lcb_cmdget_destroy(cmd);
         lcb_wait(instance, LCB_WAIT_DEFAULT);

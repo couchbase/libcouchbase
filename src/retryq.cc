@@ -406,7 +406,7 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, protocol_binary_res
     uint32_t cid = mcreq_get_cid(get_instance(), &pkt->base);
     lcb_log(LOGARGS(this, DEBUG),
             "Adding PKT=%p to retry queue. retries=%u, cid=%u, opaque=%u, now=%" PRIu64 "ms, spent=%" PRIu64
-            "us, deadline_in=%" PRIu64 "us, , status=0x%02x, rc=%s",
+            "us, deadline_in=%" PRIu64 "us, status=0x%02x, rc=%s",
             (void *)pkt, pkt->base.retries, cid, pkt->base.opaque, LCB_NS2MS(now), LCB_NS2US(now - op->start),
             LCB_NS2US(op->deadline - now), status, lcb_strerror_short(err));
     schedule();
