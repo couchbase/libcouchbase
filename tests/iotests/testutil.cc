@@ -465,3 +465,96 @@ std::string unique_name(const std::string &prefix)
     ss << prefix << lcb_next_rand32();
     return ss.str();
 }
+
+void TestSpan::SetAttribute(std::string key, uint64_t value)
+{
+    int_tags[std::move(key)] = value;
+}
+
+void TestSpan::SetAttribute(std::string key, std::string value)
+{
+    str_tags[std::move(key)] = std::move(value);
+}
+
+void TestSpan::End()
+{
+    finished = true;
+}
+
+TestSpan::TestSpan(std::string span_name)
+{
+    name = std::move(span_name);
+}
+
+std::shared_ptr<TestSpan> TestTracer::StartSpan(std::string name)
+{
+    auto t_span = std::make_shared<TestSpan>(name);
+    spans.push_back(t_span);
+    return t_span;
+}
+
+void TestTracer::reset()
+{
+    spans.clear();
+}
+
+static void *start_span(lcbtrace_TRACER *tracer, const char *name, void *parent)
+{
+    auto test_tracer = static_cast<TestTracer *>(tracer->cookie);
+    if (!test_tracer->enabled()) {
+        return nullptr;
+    }
+    auto test_span = test_tracer->StartSpan(std::string(name));
+    return test_span.get();
+}
+
+static void end_span(void *span)
+{
+    if (span == nullptr) {
+        return;
+    }
+    static_cast<TestSpan *>(span)->End();
+}
+
+static void add_tag_string(void *span, const char *name, const char *value, size_t value_len)
+{
+    if (span == nullptr) {
+        return;
+    }
+    std::string val;
+    val.append(value, value_len);
+    static_cast<TestSpan *>(span)->SetAttribute(std::string(name), val);
+}
+
+static void add_tag_uint64(void *span, const char *name, uint64_t value)
+{
+    if (span == nullptr) {
+        return;
+    }
+    static_cast<TestSpan *>(span)->SetAttribute(name, value);
+}
+
+void TestTracer::create_lcb_tracer()
+{
+    lcbtracer_ = lcbtrace_new(nullptr, LCBTRACE_F_EXTERNAL);
+    lcbtracer_->version = 1;
+    lcbtracer_->v.v1.start_span = start_span;
+    lcbtracer_->v.v1.end_span = end_span;
+    lcbtracer_->v.v1.add_tag_string = add_tag_string;
+    lcbtracer_->v.v1.add_tag_uint64 = add_tag_uint64;
+    lcbtracer_->cookie = static_cast<void *>(this);
+}
+
+void TestTracer::destroy_lcb_tracer()
+{
+    if (lcbtracer_ != nullptr) {
+        lcbtrace_destroy(lcbtracer_);
+        delete lcbtracer_;
+        lcbtracer_ = nullptr;
+    }
+}
+
+TestTracer::~TestTracer()
+{
+    destroy_lcb_tracer();
+}

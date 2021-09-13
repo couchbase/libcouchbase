@@ -20,6 +20,7 @@
 #include "config.h"
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
+#include "testutil.h"
 
 #include <utility>
 #include "serverparams.h"
@@ -451,6 +452,11 @@ class MockEnvironment : public ::testing::Environment
         std::cerr << std::endl;
     }
 
+    TestTracer &getTracer()
+    {
+        return test_tracer;
+    }
+
     explicit MockEnvironment(const char **argv, const std::string &name = "default");
     ~MockEnvironment() override;
     void postCreate(lcb_INSTANCE *instance) const;
@@ -478,9 +484,27 @@ class MockEnvironment : public ::testing::Environment
     std::string userName;
     const char **argv_{nullptr};
     void clearAndReset();
+    TestTracer test_tracer;
 
   private:
     lcb_INSTANCE *innerClient{nullptr};
+};
+
+class tracing_guard
+{
+  public:
+    tracing_guard()
+    {
+        was_enabled_ = MockEnvironment::getInstance()->getTracer().set_enabled(true);
+    }
+
+    ~tracing_guard()
+    {
+        MockEnvironment::getInstance()->getTracer().set_enabled(was_enabled_);
+    }
+
+  private:
+    bool was_enabled_{false};
 };
 
 #define LCB_TEST_REQUIRE_CLUSTER_VERSION(v)                                                                            \

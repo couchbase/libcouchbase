@@ -21,6 +21,7 @@
 #include "iotests.h"
 #include "logging.h"
 #include "internal.h"
+#include "testutil.h"
 
 #define LOGARGS(instance, lvl) instance->settings, "tests-GET", LCB_LOG_##lvl, __FILE__, __LINE__
 
@@ -106,6 +107,8 @@ static void testGetHitGetCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_R
  */
 TEST_F(GetUnitTest, testGetHit)
 {
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    tracing_guard use_tracing;
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
@@ -129,6 +132,13 @@ TEST_F(GetUnitTest, testGetHit)
 
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     EXPECT_EQ(2, numcallbacks);
+
+    auto spans = mock->getTracer().spans;
+    ASSERT_EQ(4, spans.size());
+    auto span = spans[0];
+    assert_kv_span(span, "upsert", {});
+    span = spans[2];
+    assert_kv_span(span, "get", {});
 }
 
 extern "C" {

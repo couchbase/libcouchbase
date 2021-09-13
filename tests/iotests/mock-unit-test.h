@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
 #include "mock-environment.h"
+#include "testutil.h"
 
 class HandleWrap;
 
@@ -44,6 +45,22 @@ class HandleWrap;
         return;                                                                                                        \
     }
 
+struct KVSpanAssertions {
+    lcb_DURABILITY_LEVEL durability_level{LCB_DURABILITYLEVEL_NONE};
+    std::string scope{"_default"};
+    std::string collection{"_default"};
+};
+
+struct HTTPSpanAssertions {
+    std::string statement{};
+    std::string scope{};
+    std::string collection{};
+    std::string bucket{};
+    std::string op{};
+    std::string operation_id{};
+    std::string service{};
+};
+
 class MockUnitTest : public ::testing::Test
 {
   protected:
@@ -55,6 +72,11 @@ class MockUnitTest : public ::testing::Test
                                   const std::string &password);
     virtual void createClusterConnection(HandleWrap &handle, lcb_INSTANCE **instance);
     virtual lcb_STATUS tryCreateConnection(HandleWrap &hw, lcb_INSTANCE **instance, lcb_CREATEOPTS *&crparams);
+
+    static void assert_kv_span(const std::shared_ptr<TestSpan> &span, const std::string &expectedName,
+                               const KVSpanAssertions &assertions);
+    static void assert_http_span(const std::shared_ptr<TestSpan> &span, const std::string &expectedName,
+                                 const HTTPSpanAssertions &assertions);
 
     // A mock "Transaction"
     void doMockTxn(MockCommand &cmd)
