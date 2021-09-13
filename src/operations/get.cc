@@ -205,7 +205,7 @@ static lcb_STATUS get_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMDGE
         std::uint32_t lock_expiry = htonl(cmd->lock_time());
         memcpy(SPAN_BUFFER(&pkt->kh_span) + offset, &lock_expiry, sizeof(lock_expiry));
     } else if (cmd->with_touch()) {
-        std::uint32_t expiry = htonl(cmd->lock_time());
+        std::uint32_t expiry = htonl(cmd->expiry());
         memcpy(SPAN_BUFFER(&pkt->kh_span) + offset, &expiry, sizeof(expiry));
     }
 
