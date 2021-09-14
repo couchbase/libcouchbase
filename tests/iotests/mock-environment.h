@@ -457,6 +457,11 @@ class MockEnvironment : public ::testing::Environment
         return test_tracer;
     }
 
+    TestMeter &getMeter()
+    {
+        return test_meter;
+    }
+
     explicit MockEnvironment(const char **argv, const std::string &name = "default");
     ~MockEnvironment() override;
     void postCreate(lcb_INSTANCE *instance) const;
@@ -485,6 +490,7 @@ class MockEnvironment : public ::testing::Environment
     const char **argv_{nullptr};
     void clearAndReset();
     TestTracer test_tracer;
+    TestMeter test_meter;
 
   private:
     lcb_INSTANCE *innerClient{nullptr};
@@ -501,6 +507,23 @@ class tracing_guard
     ~tracing_guard()
     {
         MockEnvironment::getInstance()->getTracer().set_enabled(was_enabled_);
+    }
+
+  private:
+    bool was_enabled_{false};
+};
+
+class metrics_guard
+{
+  public:
+    metrics_guard()
+    {
+        was_enabled_ = MockEnvironment::getInstance()->getMeter().set_enabled(true);
+    }
+
+    ~metrics_guard()
+    {
+        MockEnvironment::getInstance()->getMeter().set_enabled(was_enabled_);
     }
 
   private:

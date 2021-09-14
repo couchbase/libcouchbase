@@ -148,3 +148,27 @@ void MockUnitTest::assert_http_span(const std::shared_ptr<TestSpan> &span, const
     }
     ASSERT_TRUE(span->finished);
 }
+
+void MockUnitTest::assert_kv_metrics(const std::string &metric_name, const std::string &op, uint32_t length,
+                                     bool at_least_len)
+{
+    std::string key = metric_name + ":kv";
+    if (op != "") {
+        key = key + ":" + op;
+    }
+    assert_metrics(key, length, at_least_len);
+}
+
+void MockUnitTest::assert_metrics(const std::string &key, uint32_t length, bool at_least_len)
+{
+    auto meter = MockEnvironment::getInstance()->getMeter();
+    ASSERT_TRUE(meter.recorders.find(key) != meter.recorders.end());
+    if (at_least_len) {
+        ASSERT_TRUE(meter.recorders[key]->values.size() >= length);
+    } else {
+        ASSERT_TRUE(meter.recorders[key]->values.size() == length);
+    }
+    for (const auto value : meter.recorders[key]->values) {
+        ASSERT_NE(0, value);
+    }
+}

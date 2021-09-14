@@ -558,3 +558,74 @@ TestTracer::~TestTracer()
 {
     destroy_lcb_tracer();
 }
+
+TestMeter::TestMeter() = default;
+
+void TestMeter::reset()
+{
+    recorders.clear();
+}
+
+void TestValueRecorder::RecordValue(uint64_t value)
+{
+    values.push_back(value);
+}
+
+std::shared_ptr<TestValueRecorder> TestMeter::ValueRecorder(std::string name,
+                                                            std::unordered_map<std::string, std::string> tags)
+{
+    auto key = name + ":" + tags["db.couchbase.service"];
+    auto op = tags["db.operation"];
+    if (!op.empty()) {
+        key = key + ":" + op;
+    }
+    std::shared_ptr<TestValueRecorder> test_recorder;
+    if (recorders.find(key) == recorders.end()) {
+        test_recorder = std::make_shared<TestValueRecorder>();
+        recorders[key] = test_recorder;
+    } else {
+        test_recorder = recorders[key];
+    }
+    return test_recorder;
+}
+
+static void record_callback(const lcbmetrics_VALUERECORDER *recorder, uint64_t value)
+{
+    void *test_recorder;
+    lcbmetrics_valuerecorder_cookie(recorder, &test_recorder);
+    static_cast<TestValueRecorder *>(test_recorder)->RecordValue(value);
+}
+
+static const lcbmetrics_VALUERECORDER *new_recorder(const lcbmetrics_METER *meter, const char *name,
+                                                    const lcbmetrics_TAG *tags, size_t ntags)
+{
+    std::unordered_map<std::string, std::string> recorder_tags;
+    for (int i = 0; i < ntags; i++) {
+        recorder_tags[tags[i].key] = tags[i].value;
+    }
+
+    void *test_meter_;
+    lcbmetrics_meter_cookie(meter, &test_meter_);
+    auto test_meter = static_cast<TestMeter *>(test_meter_);
+    auto test_value_recorder = test_meter->ValueRecorder(std::string(name), recorder_tags);
+
+    lcbmetrics_VALUERECORDER *recorder;
+    lcbmetrics_valuerecorder_create(&recorder, test_value_recorder.get());
+    lcbmetrics_valuerecorder_record_value_callback(recorder, record_callback);
+
+    return recorder;
+}
+
+void TestMeter::create_lcb_meter()
+{
+    lcbmetrics_meter_create(&lcbmeter_, static_cast<void *>(this));
+    lcbmetrics_meter_value_recorder_callback(lcbmeter_, new_recorder);
+}
+
+void TestMeter::destroy_lcb_meter()
+{
+    if (lcbmeter_ != nullptr) {
+        lcbmetrics_meter_destroy(lcbmeter_);
+        lcbmeter_ = nullptr;
+    }
+}

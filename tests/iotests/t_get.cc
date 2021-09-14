@@ -109,6 +109,7 @@ TEST_F(GetUnitTest, testGetHit)
 {
     MockEnvironment *mock = MockEnvironment::getInstance();
     tracing_guard use_tracing;
+    metrics_guard use_metrics;
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
@@ -139,6 +140,9 @@ TEST_F(GetUnitTest, testGetHit)
     assert_kv_span(span, "upsert", {});
     span = spans[2];
     assert_kv_span(span, "get", {});
+
+    assert_kv_metrics(METRICS_OPS_METER_NAME, "get", 2, false);
+    assert_kv_metrics(METRICS_OPS_METER_NAME, "upsert", 2, false);
 }
 
 extern "C" {

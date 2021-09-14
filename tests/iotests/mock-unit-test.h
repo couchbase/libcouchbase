@@ -77,6 +77,8 @@ class MockUnitTest : public ::testing::Test
                                const KVSpanAssertions &assertions);
     static void assert_http_span(const std::shared_ptr<TestSpan> &span, const std::string &expectedName,
                                  const HTTPSpanAssertions &assertions);
+    void assert_kv_metrics(const std::string &metric_name, const std::string &op, uint32_t length, bool at_least_len);
+    void assert_metrics(const std::string &key, uint32_t length, bool at_least_len);
 
     // A mock "Transaction"
     void doMockTxn(MockCommand &cmd)

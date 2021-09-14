@@ -308,6 +308,11 @@ void MockEnvironment::createConnection(HandleWrap &handle, lcb_INSTANCE **instan
     if (test_tracer.enabled()) {
         lcb_createopts_tracer(options, test_tracer.lcb_tracer());
     }
+
+    if (test_meter.enabled()) {
+        lcb_createopts_meter(options, test_meter.lcb_meter());
+    }
+
     createConnection(handle, instance, options);
     lcb_createopts_destroy(options);
 }
@@ -564,6 +569,7 @@ void MockEnvironment::SetUp()
     featureRegistry.insert("lock");
 
     test_tracer = TestTracer();
+    test_meter = TestMeter();
 
     clearAndReset();
 }

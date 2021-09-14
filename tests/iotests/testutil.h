@@ -265,16 +265,61 @@ class TestTracer
         return lcbtracer_;
     }
 
-    void detach()
-    {
-        lcbtracer_ = nullptr;
-    }
-
   private:
     void create_lcb_tracer();
     void destroy_lcb_tracer();
 
     lcbtrace_TRACER *lcbtracer_{nullptr};
+    bool enabled_{false};
+};
+
+class TestValueRecorder
+{
+  public:
+    TestValueRecorder() = default;
+    void RecordValue(uint64_t value);
+
+    std::vector<uint64_t> values{};
+};
+
+class TestMeter
+{
+  public:
+    TestMeter();
+    void reset();
+    std::shared_ptr<TestValueRecorder> ValueRecorder(std::string name,
+                                                     std::unordered_map<std::string, std::string> tags);
+
+    std::unordered_map<std::string, std::shared_ptr<TestValueRecorder>> recorders{};
+
+    bool set_enabled(bool new_value)
+    {
+        bool old_value = enabled_;
+        enabled_ = new_value;
+
+        reset();
+        destroy_lcb_meter();
+        if (new_value) {
+            create_lcb_meter();
+        }
+        return old_value;
+    }
+
+    bool enabled() const
+    {
+        return enabled_;
+    }
+
+    lcbmetrics_METER *lcb_meter()
+    {
+        return lcbmeter_;
+    }
+
+  private:
+    void create_lcb_meter();
+    void destroy_lcb_meter();
+
+    lcbmetrics_METER *lcbmeter_{nullptr};
     bool enabled_{false};
 };
 
