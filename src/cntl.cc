@@ -238,7 +238,35 @@ HANDLER(select_bucket_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, select
 
 HANDLER(log_redaction_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, log_redaction))}
 
-HANDLER(enable_tracing_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, use_tracing))}
+HANDLER(enable_tracing_handler)
+{
+    if (mode == LCB_CNTL_GET) {
+        RETURN_GET_ONLY(int, instance->settings->use_tracing)
+    } else if (mode == LCB_CNTL_SET) {
+        if (arg == nullptr) {
+            return LCB_ERR_INVALID_ARGUMENT;
+        }
+        int enabled = *(static_cast<int *>(arg));
+        if (enabled) {
+            if (instance->settings->use_tracing) {
+                /* do nothing */
+                return LCB_SUCCESS;
+            }
+            instance->settings->tracer = lcbtrace_new(instance, LCBTRACE_F_THRESHOLD);
+            instance->settings->use_tracing = true;
+            return LCB_SUCCESS;
+        } else {
+            if (instance->settings->use_tracing) {
+                lcbtrace_destroy(instance->settings->tracer);
+                instance->settings->tracer = nullptr;
+                instance->settings->use_tracing = false;
+            }
+            return LCB_SUCCESS;
+        }
+    } else {
+        return LCB_ERR_CONTROL_UNSUPPORTED_MODE;
+    }
+}
 
 HANDLER(enable_errmap_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, use_errmap))}
 
