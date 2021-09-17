@@ -99,7 +99,7 @@ bool lcb_QUERY_HANDLE_::parse_meta(const char *row, size_t row_len, lcb_STATUS &
     first_error_code = 0;
 
     Json::Value meta;
-    if (!Json::Reader().parse(row, row + row_len, meta)) {
+    if (!Json::Reader(Json::Features::strictMode()).parse(row, row + row_len, meta)) {
         return false;
     }
     const Json::Value &errors = meta["errors"];

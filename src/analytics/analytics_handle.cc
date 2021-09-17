@@ -394,7 +394,7 @@ void lcb_ANALYTICS_HANDLE_::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
             resp->rflags |= LCB_RESP_F_EXTDATA;
         }
         Json::Value meta;
-        if (Json::Reader().parse(resp->row, resp->row + resp->nrow, meta)) {
+        if (Json::Reader(Json::Features::strictMode()).parse(resp->row, resp->row + resp->nrow, meta)) {
             const Json::Value &errors = meta["errors"];
             if (errors.isArray() && !errors.empty()) {
                 const Json::Value &err = errors[0];

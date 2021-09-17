@@ -73,7 +73,7 @@ void lcb_SEARCH_HANDLE_::invoke_row(lcb_RESPSEARCH *resp)
     if (callback_) {
         if (resp->rflags & LCB_RESP_F_FINAL) {
             Json::Value meta;
-            if (Json::Reader().parse(resp->row, resp->row + resp->nrow, meta)) {
+            if (Json::Reader(Json::Features::strictMode()).parse(resp->row, resp->row + resp->nrow, meta)) {
                 const Json::Value &top_error = meta["error"];
                 if (top_error.isString()) {
                     resp->ctx.has_top_level_error = 1;
