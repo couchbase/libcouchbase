@@ -287,7 +287,7 @@ static void http_callback(lcb_INSTANCE * /* instance */, int /* cbtype */, const
         }
     }
 
-    EXPECT_EQ(200, result->status) << result->path << ": " << result->body;
+    EXPECT_EQ(2, result->status/100) << result->path << ": " << result->body;
 }
 
 static void get_manifest_callback(lcb_INSTANCE *, int, const lcb_RESPGETMANIFEST *resp)
@@ -410,7 +410,7 @@ void drop_scope(lcb_INSTANCE *instance, const std::string &scope, bool wait)
     (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 
     lcb_CMDHTTP *cmd;
-    std::string path = "/pools/default/buckets/default/scopes/" + scope;
+    std::string path = "/pools/default/buckets/" + MockEnvironment::getInstance()->getBucket() + "/scopes/" + scope;
 
     lcb_cmdhttp_create(&cmd, LCB_HTTP_TYPE_MANAGEMENT);
     lcb_cmdhttp_method(cmd, LCB_HTTP_METHOD_DELETE);
@@ -457,6 +457,26 @@ void drop_collection(lcb_INSTANCE *instance, const std::string &scope, const std
     if (wait) {
         wait_for_manifest_uid(instance, uid);
     }
+}
+
+void create_bucket(lcb_INSTANCE *instance, const std::string &name, uint64_t ram_quota) {
+    (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
+    lcb_CMDHTTP *cmd;
+    std::string path = "/pools/default/buckets";
+    std::string body = "name=" + name + "&ramQuotaMB=" + std::to_string(ram_quota);
+    std::string content_type = "application/x-www-form-urlencoded";
+
+    lcb_cmdhttp_create(&cmd, LCB_HTTP_TYPE_MANAGEMENT);
+    lcb_cmdhttp_method(cmd, LCB_HTTP_METHOD_POST);
+    lcb_cmdhttp_content_type(cmd, content_type.c_str(), content_type.size());
+    lcb_cmdhttp_path(cmd, path.c_str(), path.size());
+    lcb_cmdhttp_body(cmd, body.c_str(), body.size());
+
+    http_result result{};
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_http(instance, &result, cmd));
+    lcb_cmdhttp_destroy(cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+    ASSERT_STATUS_EQ(LCB_SUCCESS, result.rc);
 }
 
 std::string unique_name(const std::string &prefix)

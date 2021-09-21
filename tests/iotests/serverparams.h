@@ -90,6 +90,10 @@ class ServerParams
         mcNodes = ss.str();
     }
 
+    void setBucket(const std::string &name) {
+        bucket = name;
+    }
+
   protected:
     std::string host;
     std::string user;

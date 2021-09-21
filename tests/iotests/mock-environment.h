@@ -431,6 +431,10 @@ class MockEnvironment : public ::testing::Environment
         serverVersion = ver;
     }
 
+    void setBucket(const std::string &bucket_name) {
+        serverParams.setBucket(bucket_name);
+    }
+
     void sendCommand(MockCommand &cmd);
     void getResponse(MockResponse &resp);
     void getResponse()
