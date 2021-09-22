@@ -580,24 +580,15 @@ TEST_F(ContaminatingUnitTest, test_CCBC_1483_MaxCollectionsPerScope)
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
 
-    std::string bucket_name(unique_name("bucket"));
-    create_bucket(instance, bucket_name);
-
-    hw.destroy();
-
-    sleep(5);
-
-    MockEnvironment::getInstance()->setBucket(bucket_name);
-
-    createConnection(hw, &instance);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)testSetScopeMissCallback);
+    (void)lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)testGetScopeMissCallback);
 
     std::string scope(unique_name("sScope1"));
     create_scope(instance, scope);
     for (int i = 0; i < 1000; ++i) {
         create_collection(instance, scope, std::to_string(i), false);
     }
-    drop_scope(instance, scope, false);
-    drop_bucket(instance, bucket_name);
+    drop_scope(instance, scope);
 }
 
 struct operation_result {

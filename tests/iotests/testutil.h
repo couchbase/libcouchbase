@@ -211,8 +211,5 @@ void drop_scope(lcb_INSTANCE *instance, const std::string &scope, bool wait = tr
 
 void drop_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection, bool wait = true);
 
-void create_bucket(lcb_INSTANCE *instance, const std::string &name, uint64_t ram_quota = 256);
-void drop_bucket(lcb_INSTANCE *instance, const std::string &name);
-
 std::string unique_name(const std::string &);
 #endif
