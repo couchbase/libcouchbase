@@ -816,7 +816,7 @@ void Server::purge_single(mc_PACKET *pkt, lcb_STATUS err)
         std::string msg(Json::FastWriter().write(info));
         if (msg.size() > 1) {
             lcb_log(LOGARGS(instance, WARN), "Failing command with error %s: %.*s", lcb_strerror_short(err),
-                    (int)(msg.size() - 1), msg.c_str());
+                    (int)msg.size(), msg.c_str());
         }
     } else {
         lcb_log(LOGARGS_T(WARN), LOGFMT "Failing command (pkt=%p, opaque=%lu, opcode=0x%x) with error %s", LOGID_T(),

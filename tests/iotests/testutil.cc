@@ -316,6 +316,10 @@ static std::uint64_t get_manifest_id(lcb_INSTANCE *instance)
     lcb_cmdgetmanifest_destroy(cmd);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
 
+    if (result.rc == LCB_ERR_TIMEOUT) {
+        return 0;
+    }
+
     Json::Value payload;
     EXPECT_EQ(LCB_SUCCESS, result.rc);
     EXPECT_FALSE(result.value.empty());
