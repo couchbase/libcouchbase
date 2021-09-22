@@ -597,6 +597,7 @@ TEST_F(ContaminatingUnitTest, test_CCBC_1483_MaxCollectionsPerScope)
         create_collection(instance, scope, std::to_string(i), false);
     }
     drop_scope(instance, scope, false);
+    drop_bucket(instance, bucket_name);
 }
 
 struct operation_result {
