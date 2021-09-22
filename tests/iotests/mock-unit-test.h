@@ -66,4 +66,12 @@ class MockUnitTest : public ::testing::Test
     }
 };
 
+/*
+ * This test class groups tests that might be problematic when executed together with all other tests.
+ * Every test case in this suite must start with Jira ticket number for future.
+ */
+class ContaminatingUnitTest : public MockUnitTest
+{
+};
+
 #endif
