@@ -21,6 +21,7 @@
 #include <lcbio/iotable.h>
 #include <mcserver/negotiate.h>
 #include <lcbio/ssl.h>
+#include "n1ql/query_utils.hh"
 
 #define LOGARGS(instance, lvl) instance->settings, "cntl", LCB_LOG_##lvl, __FILE__, __LINE__
 
@@ -886,14 +887,19 @@ typedef struct {
 
 static lcb_STATUS convert_timevalue(const char *arg, u_STRCONVERT *u)
 {
-    double dtmp;
-    char *end = nullptr;
-    errno = 0;
-    dtmp = std::strtod(arg, &end);
-    if (errno == ERANGE || end == arg) {
-        return LCB_ERR_CONTROL_INVALID_ARGUMENT;
+    try {
+        auto tmo_ns = lcb_parse_golang_duration(arg);
+        u->u32 = static_cast<std::uint32_t>(std::chrono::duration_cast<std::chrono::microseconds>(tmo_ns).count());
+    } catch (const lcb_duration_parse_error &) {
+        double dtmp;
+        char *end = nullptr;
+        errno = 0;
+        dtmp = std::strtod(arg, &end);
+        if (errno == ERANGE || end == arg) {
+            return LCB_ERR_CONTROL_INVALID_ARGUMENT;
+        }
+        u->u32 = static_cast<std::uint32_t>(dtmp * (double)1000000);
     }
-    u->u32 = static_cast<std::uint32_t>(dtmp * (double)1000000);
     return LCB_SUCCESS;
 }
 
