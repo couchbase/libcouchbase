@@ -174,7 +174,7 @@ static lcb_STATUS touch_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMD
     pkt->u_rdata.reqdata.deadline =
         pkt->u_rdata.reqdata.start +
         cmd->timeout_or_default_in_nanoseconds(LCB_US2NS(LCBT_SETTING(instance, operation_timeout)));
-    LCBTRACE_KV_START(instance->settings, pkt->opaque, cmd, LCBTRACE_OP_TOUCH, pkt->u_rdata.reqdata.span);
+    pkt->u_rdata.reqdata.span = lcb::trace::start_kv_span(instance->settings, pkt, cmd);
     LCB_SCHED_ADD(instance, pl, pkt);
     TRACE_TOUCH_BEGIN(instance, &hdr, cmd);
     return LCB_SUCCESS;
