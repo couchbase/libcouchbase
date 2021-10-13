@@ -754,6 +754,8 @@ static const char *opcode_name(uint8_t code)
             return "subdoc_get_count";
         case PROTOCOL_BINARY_CMD_GET_ERROR_MAP:
             return "get_error_map";
+        case PROTOCOL_BINARY_CMD_GET_META:
+            return "exists";
         default:
             return "unknown";
     }

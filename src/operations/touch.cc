@@ -158,7 +158,7 @@ static lcb_STATUS touch_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CMD
     hdr.request.cas = 0;
     hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     hdr.request.opaque = pkt->opaque;
-    hdr.request.bodylen = htonl(hdr.request.extlen + ffextlen + ntohs(hdr.request.keylen));
+    hdr.request.bodylen = htonl(hdr.request.extlen + ffextlen + mcreq_get_key_size(&hdr));
 
     memcpy(SPAN_BUFFER(&pkt->kh_span), &hdr, sizeof(hdr));
     std::size_t offset = sizeof(hdr);
