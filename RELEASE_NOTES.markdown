@@ -1,5 +1,20 @@
 # Release Notes
 
+## 3.2.3 (2021-10-20)
+
+* CCBC-1484: Fixed tracing tags in accordance to RFC.
+
+* CCBC-1510: Fixed key length calculation for exists/get/touch/unlock.
+
+* CCBC-1495: Fixed payload encoding in query index management helpers. Query index management helpers now explicitly
+  declared deperecated.
+
+* CCBC-1506: Duration values now accepted golang style encoding. Connection string and `lcb_cntl_string` now can parse
+  strings with duration encoded in golang style, e.g. `analytics_timeout=5s42us`. The result still converted into 32-bit
+  value with microsecond resolution.
+
+* Improved test coverage, stability and documentation.
+
 ## 3.2.2 (2021-09-22)
 
 * CCBC-1485: Allow disabling tracer for connected instance.
