@@ -316,8 +316,9 @@ SessionRequestImpl::MechStatus SessionRequestImpl::set_chosen_mech(std::string &
                         "PLAIN, but using SCRAM methods is strongly recommended over non-encrypted transports.",
                         LOGID(this));
 #else
-                lcb_log(LOGARGS(this, WARN), LOGFMT "SASL PLAIN authentication is not allowed on non-TLS connections",
-                        LOGID(this));
+                lcb_log(LOGARGS(this, WARN),
+                        LOGFMT "SASL PLAIN authentication is not allowed on non-TLS connections (server supports: %s)",
+                        LOGID(this), mechlist.c_str());
                 return MECH_UNAVAILABLE;
 #endif
             }
