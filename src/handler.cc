@@ -269,20 +269,19 @@ void init_resp(lcb_INSTANCE *instance, mc_PIPELINE *pipeline, const MemcachedRes
         resp->ctx.key.assign(key, key_len);
     }
 
-    auto *server = static_cast<lcb::Server *>(pipeline);
+    const auto *server = static_cast<lcb::Server *>(pipeline);
     const lcb_host_t *remote = server->curhost;
     if (remote) {
-        std::stringstream ss;
+        resp->ctx.endpoint.reserve(sizeof(remote->host) + sizeof(remote->port) + 3);
         if (remote->ipv6) {
-            ss << '[';
+            resp->ctx.endpoint.append("[");
         }
-        ss << remote->host;
+        resp->ctx.endpoint.append(remote->host);
         if (remote->ipv6) {
-            ss << ']';
+            resp->ctx.endpoint.append("]");
         }
-        ss << ':';
-        ss << remote->port;
-        resp->ctx.endpoint = ss.str();
+        resp->ctx.endpoint.append(":");
+        resp->ctx.endpoint.append(remote->port);
     }
 }
 

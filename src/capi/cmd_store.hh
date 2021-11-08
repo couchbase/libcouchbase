@@ -237,13 +237,16 @@ struct lcb_CMDSTORE_ {
 
     lcb_STATUS value(const lcb_IOV *iov, std::size_t iov_len)
     {
-        std::stringstream ss;
+        std::size_t total_size = 0;
+        for (std::size_t i = 0; i < iov_len; ++i) {
+            total_size += iov[i].iov_len;
+        }
+        value_.reserve(total_size);
         for (std::size_t i = 0; i < iov_len; ++i) {
             if (iov[i].iov_len > 0 && iov[i].iov_base != nullptr) {
-                ss << std::string(static_cast<const char *>(iov[i].iov_base), iov[i].iov_len);
+                value_.append(static_cast<const char *>(iov[i].iov_base), iov[i].iov_len);
             }
         }
-        value_ = ss.str();
         return LCB_SUCCESS;
     }
 
