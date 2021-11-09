@@ -395,10 +395,6 @@ int Server::handle_unknown_error(const mc_PACKET *request, const MemcachedRespon
         newerr = LCB_ERR_TEMPORARY_FAILURE;
     }
 
-    if (err.hasAttribute(errmap::CONSTRAINT_FAILURE)) {
-        newerr = LCB_ERR_CAS_MISMATCH;
-    }
-
     if (err.hasAttribute(errmap::AUTH)) {
         newerr = LCB_ERR_AUTHENTICATION_FAILURE;
     }
