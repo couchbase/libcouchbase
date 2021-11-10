@@ -157,6 +157,13 @@ lcb_STATUS lcb_map_error(lcb_INSTANCE *instance, int in)
             return LCB_ERR_DURABILITY_AMBIGUOUS;
         case PROTOCOL_BINARY_RESPONSE_LOCKED:
             return LCB_ERR_DOCUMENT_LOCKED;
+        case PROTOCOL_BINARY_RATE_LIMITED_NETWORK_INGRESS:
+        case PROTOCOL_BINARY_RATE_LIMITED_NETWORK_EGRESS:
+        case PROTOCOL_BINARY_RATE_LIMITED_MAX_CONNECTIONS:
+        case PROTOCOL_BINARY_RATE_LIMITED_MAX_COMMANDS:
+            return LCB_ERR_RATE_LIMITING_FAILURE;
+        case PROTOCOL_BINARY_SCOPE_SIZE_LIMIT_EXCEEDED:
+            return LCB_ERR_QUOTA_LIMITING_FAILURE;
         default:
             if (instance != nullptr) {
                 return instance->callbacks.errmap(instance, in);

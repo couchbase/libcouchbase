@@ -143,13 +143,15 @@ bool lcb_QUERY_HANDLE_::parse_meta(const char *row, size_t row_len, lcb_STATUS &
                     rc = LCB_ERR_INTERNAL_SERVER_FAILURE;
                     if (!first_error_message.empty()) {
                         std::regex already_exists("Index.+already exists"); /* NOTE: case sensitive */
+                        std::regex not_found("index.+not found");
                         if (std::regex_search(first_error_message, already_exists)) {
                             rc = LCB_ERR_INDEX_EXISTS;
-                        } else {
-                            std::regex not_found("index.+not found");
-                            if (std::regex_search(first_error_message, not_found)) {
-                                rc = LCB_ERR_INDEX_NOT_FOUND;
-                            }
+                        } else if (std::regex_search(first_error_message, not_found)) {
+                            rc = LCB_ERR_INDEX_NOT_FOUND;
+                        } else if (first_error_message.find(
+                                       "Limit for number of indexes that can be created per scope has been reached") !=
+                                   std::string::npos) {
+                            rc = LCB_ERR_QUOTA_LIMITING_FAILURE;
                         }
                     }
                     break;
@@ -166,6 +168,13 @@ bool lcb_QUERY_HANDLE_::parse_meta(const char *row, size_t row_len, lcb_STATUS &
                 case 13014:
                     rc = LCB_ERR_AUTHENTICATION_FAILURE;
                     break;
+
+                case 1191:
+                case 1192:
+                case 1193:
+                case 1194:
+                    rc = LCB_ERR_RATE_LIMITING_FAILURE;
+
                 default:
                     if (first_error_code >= 4000 && first_error_code < 5000) {
                         rc = LCB_ERR_PLANNING_FAILURE;
