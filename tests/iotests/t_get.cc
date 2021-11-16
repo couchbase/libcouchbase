@@ -1111,10 +1111,6 @@ TEST_F(GetUnitTest, testChangePassword)
     createConnection(hwHttp, &instanceHttp);
     (void)lcb_install_callback(instanceHttp, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)change_password_http_callback);
 
-    // Set short timeout
-    lcb_uint32_t tmoval = 100000;
-    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
-
     // store keys
     // run one set to connect to only one node
     // the goal is to change the password then try to connect others nodes
