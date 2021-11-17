@@ -174,6 +174,7 @@ bool lcb_QUERY_HANDLE_::parse_meta(const char *row, size_t row_len, lcb_STATUS &
                 case 1193:
                 case 1194:
                     rc = LCB_ERR_RATE_LIMITING_FAILURE;
+                    break;
 
                 default:
                     if (first_error_code >= 4000 && first_error_code < 5000) {

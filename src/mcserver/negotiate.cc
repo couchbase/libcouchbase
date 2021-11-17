@@ -665,18 +665,37 @@ GT_NEXT_PACKET:
         }
 
         case PROTOCOL_BINARY_CMD_SELECT_BUCKET: {
-            if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-                completed = true;
-                info->selected = true;
-            } else if (status == PROTOCOL_BINARY_RESPONSE_EACCESS) {
-                set_error(LCB_ERR_BUCKET_NOT_FOUND,
-                          "Provided credentials not allowed for bucket or bucket does not exist", &resp);
-            } else if (status == PROTOCOL_BINARY_RESPONSE_KEY_ENOENT) {
-                set_error(LCB_ERR_BUCKET_NOT_FOUND, "Key/Value service is not configured for given node", &resp);
-            } else {
-                lcb_log(LOGARGS(this, ERROR), LOGFMT "Unexpected status 0x%x received for SELECT_BUCKET", LOGID(this),
-                        status);
-                set_error(LCB_ERR_PROTOCOL_ERROR, "Other auth error", &resp);
+            switch (status) {
+                case PROTOCOL_BINARY_RESPONSE_SUCCESS:
+                    completed = true;
+                    info->selected = true;
+                    break;
+
+                case PROTOCOL_BINARY_RESPONSE_EACCESS:
+                    set_error(LCB_ERR_BUCKET_NOT_FOUND,
+                              "Provided credentials not allowed for bucket or bucket does not exist", &resp);
+                    break;
+
+                case PROTOCOL_BINARY_RESPONSE_KEY_ENOENT:
+                    set_error(LCB_ERR_BUCKET_NOT_FOUND, "Key/Value service is not configured for given node", &resp);
+                    break;
+
+                case PROTOCOL_BINARY_RATE_LIMITED_MAX_COMMANDS:
+                case PROTOCOL_BINARY_RATE_LIMITED_MAX_CONNECTIONS:
+                case PROTOCOL_BINARY_RATE_LIMITED_NETWORK_EGRESS:
+                case PROTOCOL_BINARY_RATE_LIMITED_NETWORK_INGRESS:
+                    set_error(LCB_ERR_RATE_LIMITING_FAILURE, "The tenant has reached rate limit", &resp);
+                    break;
+
+                case PROTOCOL_BINARY_SCOPE_SIZE_LIMIT_EXCEEDED:
+                    set_error(LCB_ERR_QUOTA_LIMITING_FAILURE, "The tenant has reached quota limit", &resp);
+                    break;
+
+                default:
+                    lcb_log(LOGARGS(this, ERROR), LOGFMT "Unexpected status 0x%x received for SELECT_BUCKET",
+                            LOGID(this), status);
+                    set_error(LCB_ERR_PROTOCOL_ERROR, "Other auth error", &resp);
+                    break;
             }
             break;
         }
