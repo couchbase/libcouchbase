@@ -684,11 +684,11 @@ GT_NEXT_PACKET:
                 case PROTOCOL_BINARY_RATE_LIMITED_MAX_CONNECTIONS:
                 case PROTOCOL_BINARY_RATE_LIMITED_NETWORK_EGRESS:
                 case PROTOCOL_BINARY_RATE_LIMITED_NETWORK_INGRESS:
-                    set_error(LCB_ERR_RATE_LIMITING_FAILURE, "The tenant has reached rate limit", &resp);
+                    set_error(LCB_ERR_RATE_LIMITED, "The tenant has reached rate limit", &resp);
                     break;
 
                 case PROTOCOL_BINARY_SCOPE_SIZE_LIMIT_EXCEEDED:
-                    set_error(LCB_ERR_QUOTA_LIMITING_FAILURE, "The tenant has reached quota limit", &resp);
+                    set_error(LCB_ERR_QUOTA_LIMITED, "The tenant has reached quota limit", &resp);
                     break;
 
                 default:

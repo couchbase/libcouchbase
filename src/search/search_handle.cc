@@ -99,13 +99,13 @@ void lcb_SEARCH_HANDLE_::invoke_row(lcb_RESPSEARCH *resp)
                             resp->ctx.rc = LCB_ERR_INDEX_NOT_FOUND;
                         } else if (error_message_.find("CreateIndex, Prepare failed, err: num_fts_indexes") !=
                                    std::string::npos) {
-                            resp->ctx.rc = LCB_ERR_QUOTA_LIMITING_FAILURE;
+                            resp->ctx.rc = LCB_ERR_QUOTA_LIMITED;
                         }
                     } else if (resp->ctx.http_response_code == 429) {
                         std::regex rate_limiting_message(
                             "num_concurrent_requests|num_queries_per_min|ingress_mib_per_min|egress_mib_per_min");
                         if (std::regex_search(error_message_, rate_limiting_message)) {
-                            resp->ctx.rc = LCB_ERR_RATE_LIMITING_FAILURE;
+                            resp->ctx.rc = LCB_ERR_RATE_LIMITED;
                         }
                     }
                 }

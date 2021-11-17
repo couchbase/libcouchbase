@@ -151,7 +151,7 @@ bool lcb_QUERY_HANDLE_::parse_meta(const char *row, size_t row_len, lcb_STATUS &
                         } else if (first_error_message.find(
                                        "Limit for number of indexes that can be created per scope has been reached") !=
                                    std::string::npos) {
-                            rc = LCB_ERR_QUOTA_LIMITING_FAILURE;
+                            rc = LCB_ERR_QUOTA_LIMITED;
                         }
                     }
                     break;
@@ -173,7 +173,7 @@ bool lcb_QUERY_HANDLE_::parse_meta(const char *row, size_t row_len, lcb_STATUS &
                 case 1192:
                 case 1193:
                 case 1194:
-                    rc = LCB_ERR_RATE_LIMITING_FAILURE;
+                    rc = LCB_ERR_RATE_LIMITED;
                     break;
 
                 default:
