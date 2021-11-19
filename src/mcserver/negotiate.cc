@@ -185,6 +185,7 @@ class lcb::SessionRequestImpl : public SessionRequest
     SessionInfo *info;
     lcb_settings *settings;
     lcb_host_t host_{};
+    bool expecting_error_map{false};
 };
 
 static void handle_read(lcbio_CTX *ioctx, unsigned)
@@ -643,15 +644,15 @@ GT_NEXT_PACKET:
             }
 
             if (settings->keypath) {
-                completed = !maybe_select_bucket();
+                completed = !expecting_error_map && !maybe_select_bucket();
             }
             break;
         }
 
         case PROTOCOL_BINARY_CMD_GET_ERROR_MAP: {
+            expecting_error_map = false;
             if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-                if (!update_errmap(resp)) {
-                }
+                update_errmap(resp);
             } else if (isUnsupported(status)) {
                 lcb_log(LOGARGS(this, DEBUG), LOGFMT "Server does not support GET_ERRMAP (0x%x)", LOGID(this), status);
             } else {
@@ -764,6 +765,7 @@ void SessionRequestImpl::start(lcbio_SOCKET *sock)
     send_hello();
     if (settings->use_errmap) {
         request_errmap();
+        expecting_error_map = true;
     } else {
         lcb_log(LOGARGS(this, TRACE), LOGFMT "GET_ERRORMAP disabled", LOGID(this));
     }
