@@ -1,5 +1,21 @@
 # Release Notes
 
+## 3.2.4 (2021-11-23)
+
+CCBC-1522: Filter `DnsQuery` results on Windows by type: only use records with `DNS_TYPE_SRV` type.
+
+CCBC-1521: Fixed bootstrap process when client certificate is used. We always pipeline error map request with `HELLO`
+request, and usually await for `hello`+`error_map` responses, because after that goes SASL authentication (and then
+optional selection of the bucket) which cannot be completely pipelined. But in case of client certificate, we might
+terminate bootstrap process too early if the bootstrap process does not require immediate selection of the bucket.
+    
+CCBC-1432: Support for rate limiting error codes: `LCB_ERR_RATE_LIMITED` and `LCB_ERR_QUOTA_LIMITED`.
+
+CCBC-1514: Do not translate unknown error with "item-only" attribute into `LCB_ERR_CAS_MISMATCH`.
+
+CCBC-1515: Performance optimization: replace `sstream` with string `append()`. Only if list of IO vectors supplied for
+value in mutation operations.
+
 ## 3.2.3 (2021-10-20)
 
 * CCBC-1484: Fixed tracing tags in accordance to RFC.
