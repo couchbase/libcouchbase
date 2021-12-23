@@ -214,6 +214,15 @@ TEST_F(RateLimitTest, testRateLimitsKVMaxConnections)
 
     ASSERT_STATUS_EQ(LCB_SUCCESS, retry_connect_on_auth_failure(hw, &instance, username, "password"));
 
+    // max connections is per node so if we have multiple nodes, we need to force a connection to all of them to trigger
+    // an error
+
+    lcb_CMDPING *cmd;
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdping_create(&cmd));
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdping_all(cmd));
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_ping(instance, nullptr, cmd));
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+
     lcb_INSTANCE *instance2;
     HandleWrap hw2;
 
@@ -221,7 +230,12 @@ TEST_F(RateLimitTest, testRateLimitsKVMaxConnections)
     MockEnvironment::getInstance()->makeConnectParams(options);
     lcb_createopts_credentials(options, username.c_str(), username.size(), password.c_str(), password.size());
 
+    lcb_CREATEOPTS *bucketless_options = nullptr;
+    MockEnvironment::getInstance()->makeConnectParams(bucketless_options, nullptr, LCB_TYPE_CLUSTER);
+    lcb_createopts_credentials(bucketless_options, username.c_str(), username.size(), password.c_str(), password.size());
+
     ASSERT_STATUS_EQ(LCB_ERR_RATE_LIMITED, tryCreateConnection(hw2, &instance2, options));
+    ASSERT_STATUS_EQ(LCB_ERR_RATE_LIMITED, tryCreateConnection(hw2, &instance2, bucketless_options));
 }
 
 TEST_F(RateLimitTest, testRateLimitsQueryNumQueries)
