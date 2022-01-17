@@ -3110,6 +3110,16 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_option(lcb_CMDQUERY *cmd, const char *n
                                                 size_t value_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_handle(lcb_CMDQUERY *cmd, lcb_QUERY_HANDLE **handle);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_timeout(lcb_CMDQUERY *cmd, uint32_t timeout);
+ /**
+ * @uncommitted
+ * Indicates that the query engine to preserve expiration values set on any
+ * documents modified by this query.
+ *
+ *
+ * @param cmd the command
+ * @param preserve_expiry if non-zero, the query will preserve expiration values
+ */
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdquery_preserve_expiry(lcb_CMDQUERY *cmd, int preserve_expiry);
 
 /**
  * @internal Internal: This should never be used and is not supported.

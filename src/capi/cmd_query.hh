@@ -203,6 +203,12 @@ struct lcb_CMDQUERY_ {
         return LCB_SUCCESS;
     }
 
+    lcb_STATUS preserve_expiry(bool preserve_expiry)
+    {
+        root_["preserve_expiry"] = preserve_expiry;
+        return LCB_SUCCESS;
+    }
+
     lcb_STATUS callback(lcb_QUERY_CALLBACK row_callback)
     {
         callback_ = row_callback;
