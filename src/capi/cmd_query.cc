@@ -292,6 +292,14 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_query_first_error_message(const lcb_QUERY
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_errctx_query_error_response_body(const lcb_QUERY_ERROR_CONTEXT *ctx, const char **body,
+                                                                 size_t *body_len)
+{
+    *body = ctx->error_response_body;
+    *body_len = ctx->error_response_body_len;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_query_statement(const lcb_QUERY_ERROR_CONTEXT *ctx, const char **statement,
                                                        size_t *statement_len)
 {
