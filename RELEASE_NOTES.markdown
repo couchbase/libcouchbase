@@ -1,5 +1,11 @@
 # Release Notes
 
+## 3.3.0 (2022-05-09)
+CCBC-1538: use 64-bit integer to store time in IOCP plugin
+CCBC-1540: bundle capella ca certificate with SDK
+CCBC-1526: do not validate length of collection specifier. Length will be checked on the server-side. 
+CCBC-1527: pillowfight: deallocate all memory during shutdown
+
 ## 3.2.5 (2022-02-08)
 
 CCBC-1486: Add support for preserve expiry to query options
