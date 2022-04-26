@@ -104,7 +104,7 @@ class Configuration
           o_startAt("start-at"), o_rateLimit("rate-limit"), o_userdocs("docs"), o_writeJson("json"),
           o_templatePairs("template"), o_subdoc("subdoc"), o_noop("noop"), o_sdPathCount("pathcount"),
           o_populateOnly("populate-only"), o_exptime("expiry"), o_collection("collection"), o_durability("durability"),
-          o_persist("persist-to"), o_replicate("replicate-to"), o_lock("lock")
+          o_persist("persist-to"), o_replicate("replicate-to"), o_lock("lock"), o_randSpace("rand-space-per-thread")
     {
         o_multiSize.setDefault(100).abbrev('B').description("Number of operations to batch");
         o_numItems.setDefault(1000).abbrev('I').description("Number of items to operate on");
@@ -138,6 +138,8 @@ class Configuration
         o_replicate.description("Wait until item is replicated to this number of nodes (-1 for all replicas)")
             .setDefault(0);
         o_lock.description("Lock keys for updates for given time (will not lock when set to zero)").setDefault(0);
+        o_randSpace.description("When set and --sequential is not set, threads will perform operations on different key"
+                                " spaces").setDefault(false);
         params.getTimings().description("Enable command timings (second time to dump timings automatically)");
     }
 
@@ -279,6 +281,7 @@ class Configuration
         parser.addOption(o_persist);
         parser.addOption(o_replicate);
         parser.addOption(o_lock);
+        parser.addOption(o_randSpace);
         params.addToParser(parser);
         depr.addOptions(parser);
     }
@@ -357,6 +360,10 @@ class Configuration
     {
         return o_exptime;
     }
+    bool useRandSpacePerThread()
+    {
+        return o_randSpace;
+    }
 
     uint32_t opsPerCycle{};
     uint32_t sdOpsPerCmd{};
@@ -411,6 +418,7 @@ class Configuration
     IntOption o_replicate;
 
     IntOption o_lock;
+    BoolOption o_randSpace;
     DeprecatedOptions depr;
 } config;
 
@@ -569,7 +577,9 @@ class KeyGenerator : public OpGenerator
     explicit KeyGenerator(int ix)
         : OpGenerator(ix), m_gencount(0), m_force_sequential(false), m_in_population(config.shouldPopulate)
     {
-        srand(config.getRandomSeed());
+        if(!config.useRandSpacePerThread()) {
+            srand(config.getRandomSeed());
+        }
 
         m_genrandom.reset(new SeqGenerator(config.firstKeyOffset(), config.getNumItems() + config.firstKeyOffset()));
 
@@ -1369,6 +1379,9 @@ int main(int argc, char **argv)
         nthreads = 1;
     }
 #endif
+    if(config.useRandSpacePerThread()) {
+        srand(config.getRandomSeed());
+    }
 
     lcb_CREATEOPTS *options = nullptr;
     ConnParams &cp = config.params;
