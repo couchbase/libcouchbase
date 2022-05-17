@@ -1637,7 +1637,7 @@ typedef enum {
  * @code{.c}
  * void http_strm_callback(lcb_INSTANCE, int, const lcb_RESPBASE *rb)
  * {
- *     const lcb_RESPHTTP *resp = (const lcb_RESPHTTP *)resp;
+ *     const lcb_RESPHTTP *resp = (const lcb_RESPHTTP *)rb;
  *     char* body;
  *     size_t body_len;
  *     const char* const* headers;
