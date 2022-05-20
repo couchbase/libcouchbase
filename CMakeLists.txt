@@ -278,20 +278,30 @@ ELSE()
         # and set the appropriate OpenSSL variables
         IF(APPLE)
             IF(NOT OpenSSL_DIR)
-                EXECUTE_PROCESS(COMMAND brew --prefix openssl
+                EXECUTE_PROCESS(COMMAND brew --prefix openssl@1.1
                     OUTPUT_VARIABLE OPENSSL_ROOT_DIR
                     OUTPUT_STRIP_TRAILING_WHITESPACE)
                 MESSAGE(STATUS "Found OpenSSL Prefix: ${OPENSSL_ROOT_DIR}")
             ENDIF()
         ENDIF()
         FIND_PACKAGE(OpenSSL)
+        # If it still not found, try to locate it using pkg-config
+        IF(NOT OPENSSL_FOUND AND UNIX)
+            find_package(PkgConfig)
+            IF(PkgConfig_FOUND)
+                pkg_check_modules(OPENSSL openssl11)
+                IF(OPENSSL_FOUND)
+                    SET(OPENSSL_INCLUDE_DIR ${OPENSSL_INCLUDE_DIRS})
+                    SET(OPENSSL_LIBRARIES ${OPENSSL_LINK_LIBRARIES})
+                ENDIF()
+            ENDIF()
+        ENDIF()
     ENDIF(NOT OPENSSL_FOUND)
 
     IF(OPENSSL_FOUND)
         MESSAGE(STATUS "SSL Found: ${OPENSSL_VERSION} (${OPENSSL_LIBRARIES})")
     ELSE()
-        MESSAGE(STATUS "SSL Not Found. SSL support will be disabled")
-        ADD_DEFINITIONS(-DLCB_NO_SSL=1)
+        MESSAGE(FATAL_ERROR "SSL Not Found. Use LCB_NO_SSL to produce build without OpenSSL")
     ENDIF()
 ENDIF()
 
