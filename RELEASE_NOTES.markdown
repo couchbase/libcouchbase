@@ -1,5 +1,12 @@
 # Release Notes
 
+## 3.3.1 (2022-05-25)
+CCBC-1550: Fixed RPM packages for CentOS 7, now they will require OpenSSL 1.1 during build. Also build script will not
+automatically define `LCB_NO_SSL` option if OpenSSL is not found. For builds without TLS support, this option must be
+explicitly defined.
+
+CCBC-1546: cbc-pillowfight: add '--rand-space-per-thread' to allow threads to work from different rand numbers.
+
 ## 3.3.0 (2022-05-09)
 CCBC-1538: use 64-bit integer to store time in IOCP plugin
 CCBC-1540: bundle capella ca certificate with SDK
