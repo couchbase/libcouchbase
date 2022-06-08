@@ -62,6 +62,12 @@ struct FileProvider : Provider, Listener {
 
 FileProvider::Status FileProvider::load_cache()
 {
+    if (settings().conntype != LCB_TYPE_BUCKET) {
+        lcb_log(LOGARGS(this, DEBUG),
+                LOGFMT "No bucket opened yet, ignore configuration cache and proceed to the next provider",
+                LOGID(this));
+        return CACHE_ERROR;
+    }
     if (filename.empty()) {
         return CACHE_ERROR;
     }
@@ -70,7 +76,9 @@ FileProvider::Status FileProvider::load_cache()
 
     if (!ifs.is_open() || !ifs.good()) {
         int save_errno = last_errno = errno;
-        lcb_log(LOGARGS(this, ERROR), LOGFMT "Couldn't open for reading: %s", LOGID(this), strerror(save_errno));
+        lcb_log(LOGARGS(this, WARN),
+                LOGFMT "Couldn't open config cache for reading (%s). Proceed to next configuration provider.",
+                LOGID(this), strerror(save_errno));
         return CACHE_ERROR;
     }
 
