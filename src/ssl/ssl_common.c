@@ -423,8 +423,13 @@ lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *
             goto GT_ERR;
         }
     } else {
-        // add the capella Root CA if no other CA was specified.
         lcb_log(LOGARGS_S(settings, LCB_LOG_DEBUG), "Use default CA for TLS verify");
+        if (SSL_CTX_set_default_verify_paths(ret->ctx) != 1) {
+            unsigned long err = ERR_get_error();
+            lcb_log(LOGARGS_S(settings, LCB_LOG_WARN), "Unable to load system certificates: lib=%s, reason=%s",
+                    ERR_lib_error_string(err), ERR_reason_error_string(err));
+        }
+        // add the capella Root CA if no other CA was specified.
         *errp = add_certificate_authority(settings, ret->ctx, capella_ca_cert, strlen(capella_ca_cert));
         if (*errp != LCB_SUCCESS) {
             goto GT_ERR;
