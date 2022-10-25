@@ -241,6 +241,9 @@ static void log_callback(const SSL *ssl, int where, int ret)
 {
     int should_log = 0;
     lcbio_SOCKET *sock = SSL_get_app_data(ssl);
+    if (sock == NULL) {
+        return;
+    }
     /* Ignore low-level SSL stuff */
 
     if (where & SSL_CB_ALERT) {
@@ -492,15 +495,25 @@ GT_ERR:
     return NULL;
 }
 
+struct proto_ctx_ssl {
+    lcbio_PROTOCTX proto;
+    SSL *ssl;
+};
+
 static void noop_dtor(lcbio_PROTOCTX *arg)
 {
-    free(arg);
+    if (!arg) {
+        return;
+    }
+    struct proto_ctx_ssl *sproto = (struct proto_ctx_ssl *)arg;
+    SSL_set_app_data(sproto->ssl, NULL);
+    free(sproto);
 }
 
 lcb_STATUS lcbio_ssl_apply(lcbio_SOCKET *sock, lcbio_pSSLCTX sctx)
 {
     lcbio_pTABLE old_iot = sock->io, new_iot;
-    lcbio_PROTOCTX *sproto;
+    struct proto_ctx_ssl *sproto;
 
     if (old_iot->model == LCB_IOMODEL_EVENT) {
         new_iot = lcbio_Essl_new(old_iot, sock->u.fd, sctx->ctx);
@@ -510,12 +523,13 @@ lcb_STATUS lcbio_ssl_apply(lcbio_SOCKET *sock, lcbio_pSSLCTX sctx)
 
     if (new_iot) {
         sproto = calloc(1, sizeof(*sproto));
-        sproto->id = LCBIO_PROTOCTX_SSL;
-        sproto->dtor = noop_dtor;
-        lcbio_protoctx_add(sock, sproto);
+        sproto->proto.id = LCBIO_PROTOCTX_SSL;
+        sproto->proto.dtor = noop_dtor;
+        lcbio_protoctx_add(sock, &sproto->proto);
         lcbio_table_unref(old_iot);
         sock->io = new_iot;
         /* just for logging */
+        sproto->ssl = ((lcbio_XSSL *)new_iot)->ssl;
         SSL_set_app_data(((lcbio_XSSL *)new_iot)->ssl, sock);
         return LCB_SUCCESS;
 
