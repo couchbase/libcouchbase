@@ -23,6 +23,7 @@
 #ifdef __cplusplus
 #include <string>
 #include <vector>
+#include <cstdint>
 
 namespace lcb
 {
