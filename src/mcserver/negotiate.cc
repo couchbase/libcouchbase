@@ -300,6 +300,8 @@ SessionRequestImpl::MechStatus SessionRequestImpl::set_chosen_mech(std::string &
         }
         mechlist.assign(forced_list);
         user_specified = true;
+    } else if (tls) {
+        mechlist = "PLAIN";
     }
 
     const char *chosenmech;
