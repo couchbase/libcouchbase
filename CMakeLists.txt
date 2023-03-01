@@ -56,6 +56,7 @@ OPTION(LCB_BUILD_DTRACE "Build DTrace instrumentation, if available on platform"
 OPTION(LCB_EMBED_PLUGIN_LIBEVENT "Embed the libevent plugin" OFF)
 OPTION(LCB_STATIC_LIBEVENT "Link static libevent (only applicable if EMBED_PLUGIN_LIBEVENT is ON" OFF)
 OPTION(LCB_USE_HDR_HISTOGRAM "Use HdrHistogram for statistics recording" ON)
+OPTION(LCB_UNINSTALL_TARGET "Generate uninstall target" ON)
 OPTION(LCB_INSTALL_HEADERS "Install header files" ON)
 OPTION(LCB_INSTALL_LIBRARY "Install library files" ON)
 OPTION(LCB_INSTALL_PKGCONFIG "Install pkgconfig/libcouchbase.pc" ON)
@@ -506,8 +507,10 @@ IF(NOT WIN32 AND LCB_INSTALL_PKGCONFIG)
 ENDIF()
 
 
-ADD_CUSTOM_TARGET(uninstall
-    COMMAND xargs rm -vf < ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt)
+IF(LCB_UNINSTALL_TARGET)
+    ADD_CUSTOM_TARGET(uninstall
+        COMMAND xargs rm -vf < ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt)
+ENDIF()
 
 ADD_CUSTOM_TARGET(file_manifest
     COMMAND sh -c 'test -e ${_lcb_manifest} || git ls-files > ${_lcb_manifest}'
