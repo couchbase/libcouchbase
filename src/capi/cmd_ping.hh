@@ -129,13 +129,13 @@ struct lcb_CMDPING_ {
 typedef struct {
     lcb_PING_SERVICE type; /**< type of the service */
     /* TODO: rename to "remote" */
-    const char *server;     /**< server host:port */
-    std::uint64_t latency;  /**< latency in nanoseconds */
-    lcb_STATUS rc;          /**< raw return code of the operation */
-    const char *local;      /**< server host:port */
-    const char *id;         /**< service identifier (unique in scope of lcb_INSTANCE *connection instance) */
-    const char *scope;      /**< optional scope name (typically equals to the bucket name) */
-    lcb_PING_STATUS status; /**< status of the operation */
+    const char *server{nullptr}; /**< server host:port */
+    std::uint64_t latency{0};    /**< latency in nanoseconds */
+    lcb_STATUS rc{LCB_SUCCESS};  /**< raw return code of the operation */
+    const char *local{nullptr};  /**< server host:port */
+    const char *id{nullptr};     /**< service identifier (unique in scope of lcb_INSTANCE *connection instance) */
+    const char *scope{nullptr};  /**< optional scope name (typically equals to the bucket name) */
+    lcb_PING_STATUS status{LCB_PING_STATUS_OK}; /**< status of the operation */
 } lcb_PINGSVC;
 
 /**
@@ -149,15 +149,15 @@ struct lcb_RESPPING_ {
      Application-defined pointer passed as the `cookie` parameter when
      scheduling the command.
      */
-    void *cookie;
+    void *cookie{nullptr};
     /** Response specific flags. see ::lcb_RESPFLAGS */
-    std::uint16_t rflags;
+    std::uint16_t rflags{0};
     /** String containing the `host:port` of the server which sent this response */
     const char *server;
-    std::size_t nservices; /**< number of the nodes, replied to ping */
-    lcb_PINGSVC *services; /**< the nodes, replied to ping, if any */
-    std::size_t njson;     /**< length of JSON string (when #LCB_PINGOPT_F_JSON was specified) */
-    const char *json;      /**< pointer to JSON string */
+    std::size_t nservices{0};       /**< number of the nodes, replied to ping */
+    lcb_PINGSVC *services{nullptr}; /**< the nodes, replied to ping, if any */
+    std::size_t njson{0};           /**< length of JSON string (when #LCB_PINGOPT_F_JSON was specified) */
+    const char *json{nullptr};      /**< pointer to JSON string */
     std::string id;
 };
 

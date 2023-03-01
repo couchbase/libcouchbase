@@ -251,13 +251,14 @@ static void handle_ping(mc_PIPELINE *, mc_PACKET *, lcb_CALLBACK_TYPE /* cbtype 
 static mc_REQDATAPROCS ping_procs = {handle_ping, refcnt_dtor_ping};
 
 struct PingCookie : mc_REQDATAEX {
-    int remaining;
+    int remaining = 0;
     int options;
+    lcb_RESPCALLBACK callback;
     std::list<lcb_PINGSVC> responses;
     std::string id;
 
-    PingCookie(void *cookie_, int _options)
-        : mc_REQDATAEX(cookie_, ping_procs, gethrtime()), remaining(0), options(_options)
+    PingCookie(void *cookie_, int _options, lcb_RESPCALLBACK callback_)
+        : mc_REQDATAEX(cookie_, ping_procs, gethrtime()), options(_options), callback(callback_)
     {
     }
 
@@ -375,9 +376,10 @@ static void build_ping_json(lcb_INSTANCE *instance, lcb_RESPPING &ping, Json::Va
     root["config_rev"] = (Json::Int64)config_rev;
 }
 
-static void invoke_ping_callback(lcb_INSTANCE *instance, PingCookie *ck)
+static void invoke_ping_callback(lcb_INSTANCE *instance, PingCookie *ck, lcb_STATUS rc)
 {
     lcb_RESPPING ping{};
+    ping.ctx.rc = rc;
     std::string json;
     size_t idx = 0;
     if (ck->needMetrics()) {
@@ -402,10 +404,8 @@ static void invoke_ping_callback(lcb_INSTANCE *instance, PingCookie *ck)
             ping.json = json.c_str();
         }
     }
-    lcb_RESPCALLBACK callback;
-    callback = lcb_find_callback(instance, LCB_CALLBACK_PING);
     ping.cookie = ck->cookie;
-    callback(instance, LCB_CALLBACK_PING, (lcb_RESPBASE *)&ping);
+    ck->callback(instance, LCB_CALLBACK_PING, (lcb_RESPBASE *)&ping);
     delete[] ping.services;
     delete ck;
 }
@@ -416,7 +416,7 @@ static void handle_ping(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_CALLBACK_TYPE
     auto *server = static_cast<lcb::Server *>(pipeline);
     auto *ck = (PingCookie *)req->u_rdata.exdata;
 
-    if (ck->needMetrics()) {
+    if (err != LCB_ERR_REQUEST_CANCELED && ck->needMetrics()) {
         lcb_PINGSVC svc = {};
         if (server->has_valid_host()) {
             const lcb_host_t &remote = server->get_host();
@@ -457,7 +457,7 @@ static void handle_ping(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_CALLBACK_TYPE
     if (--ck->remaining) {
         return;
     }
-    invoke_ping_callback(server->get_instance(), ck);
+    invoke_ping_callback(server->get_instance(), ck, err);
 }
 
 static void handle_http(lcb_INSTANCE *instance, lcb_PING_SERVICE type, const lcb_RESPHTTP *resp)
@@ -468,7 +468,7 @@ static void handle_http(lcb_INSTANCE *instance, lcb_PING_SERVICE type, const lcb
     auto *ck = (PingCookie *)resp->cookie;
     auto *htreq = reinterpret_cast<lcb::http::Request *>(resp->_htreq);
 
-    if (ck->needMetrics()) {
+    if (resp->ctx.rc != LCB_ERR_REQUEST_CANCELED && ck->needMetrics()) {
         lcb_PINGSVC svc = {};
         svc.type = type;
         std::string hh;
@@ -503,7 +503,7 @@ static void handle_http(lcb_INSTANCE *instance, lcb_PING_SERVICE type, const lcb
     if (--ck->remaining) {
         return;
     }
-    invoke_ping_callback(instance, ck);
+    invoke_ping_callback(instance, ck, resp->ctx.rc);
 }
 
 static void handle_n1ql(lcb_INSTANCE *instance, int, const lcb_RESPBASE *resp)
@@ -567,7 +567,7 @@ lcb_STATUS lcb_ping(lcb_INSTANCE *instance, void *cookie, const lcb_CMDPING *cmd
         return LCB_ERR_NO_CONFIGURATION;
     }
 
-    auto *ckwrap = new PingCookie(cookie, cmd->options);
+    auto *ckwrap = new PingCookie(cookie, cmd->options, lcb_find_callback(instance, LCB_CALLBACK_PING));
     {
         char id[20] = {0};
         snprintf(id, sizeof(id), "%p", (void *)instance);
