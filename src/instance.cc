@@ -509,13 +509,18 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
         settings->bucket = lcb_strdup(spec.bucket().c_str());
     }
 
-    if (!spec.username().empty()) {
-        settings->auth->set_mode(LCBAUTH_MODE_RBAC);
-        err = settings->auth->add(spec.username(), spec.password(), LCBAUTH_F_CLUSTER);
+    if (options != nullptr && options->auth != nullptr) {
+        lcbauth_unref(settings->auth);
+        settings->auth = lcbauth_clone(options->auth);
     } else {
-        if (type == LCB_TYPE_BUCKET) {
-            settings->auth->set_mode(LCBAUTH_MODE_CLASSIC);
-            err = settings->auth->add(settings->bucket, spec.password(), LCBAUTH_F_BUCKET);
+        if (!spec.username().empty()) {
+            settings->auth->set_mode(LCBAUTH_MODE_RBAC);
+            err = settings->auth->add(spec.username(), spec.password(), LCBAUTH_F_CLUSTER);
+        } else {
+            if (type == LCB_TYPE_BUCKET) {
+                settings->auth->set_mode(LCBAUTH_MODE_CLASSIC);
+                err = settings->auth->add(settings->bucket, spec.password(), LCBAUTH_F_BUCKET);
+            }
         }
     }
     if (err != LCB_SUCCESS) {
