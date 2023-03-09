@@ -1,5 +1,23 @@
 # Release Notes
 
+## 3.3.5 (2023-03-09)
+
+* CCBC-1545: handle `LCB_ERR_REQUEST_CANCELED` in ping callback
+    
+  If the instance is being destroyed, while the operations in flight, all
+  these operations will be cancelled with error code
+  `LCB_ERR_REQUEST_CANCELED`. Ping implementation should handle this error
+  code and don't assume any of the objects (except response) be in valid
+  state.
+    
+* CCBC-1586: force SASL PLAIN for TLS connections
+    
+* CCBC-1589: apply authenticator when passed to `lcb_create`
+    
+* CCBC-1585: fix build for gcc-13
+
+* CCBC-1587: allow to disable uninstall target
+
 ## 3.3.4 (2023-02-08)
 
 * CCBC-1583: disable collections support if KV does not ack it.
