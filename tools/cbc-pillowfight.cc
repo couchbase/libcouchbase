@@ -103,8 +103,9 @@ class Configuration
           o_maxSize("max-size"), o_noPopulate("no-population"), o_numCycles("num-cycles"), o_sequential("sequential"),
           o_startAt("start-at"), o_rateLimit("rate-limit"), o_userdocs("docs"), o_writeJson("json"),
           o_templatePairs("template"), o_subdoc("subdoc"), o_noop("noop"), o_sdPathCount("pathcount"),
-          o_populateOnly("populate-only"), o_exptime("expiry"), o_collection("collection"), o_durability("durability"),
-          o_persist("persist-to"), o_replicate("replicate-to"), o_lock("lock"), o_randSpace("rand-space-per-thread")
+          o_populateOnly("populate-only"), o_upsertExptime("expiry"), o_getExptime("get-expiry"),
+          o_collection("collection"), o_durability("durability"), o_persist("persist-to"), o_replicate("replicate-to"),
+          o_lock("lock"), o_randSpace("rand-space-per-thread")
     {
         o_multiSize.setDefault(100).abbrev('B').description("Number of operations to batch");
         o_numItems.setDefault(1000).abbrev('I').description("Number of items to operate on");
@@ -130,7 +131,8 @@ class Configuration
         o_noop.description("Use NOOP instead of document operations").setDefault(false);
         o_sdPathCount.description("Number of subdoc paths per command").setDefault(1);
         o_populateOnly.description("Exit after documents have been populated");
-        o_exptime.description("Set TTL for items").abbrev('e');
+        o_upsertExptime.description("Set TTL for items (UPSERT operation)").abbrev('e');
+        o_getExptime.description("Set TTL for items (GET operation)");
         o_collection.description("Allowed collection full path including scope (could be specified multiple times)");
         o_durability.abbrev('d').description("Durability level").setDefault("none");
         o_persist.description("Wait until item is persisted to this number of nodes (-1 for master+replicas)")
@@ -275,7 +277,8 @@ class Configuration
         parser.addOption(o_noop);
         parser.addOption(o_sdPathCount);
         parser.addOption(o_populateOnly);
-        parser.addOption(o_exptime);
+        parser.addOption(o_upsertExptime);
+        parser.addOption(o_getExptime);
         parser.addOption(o_collection);
         parser.addOption(o_durability);
         parser.addOption(o_persist);
@@ -356,9 +359,17 @@ class Configuration
     {
         return o_rateLimit;
     }
-    unsigned getExptime()
+    unsigned getExptimeForUpsert()
     {
-        return o_exptime;
+        return o_upsertExptime;
+    }
+    bool hasExptimeForGet()
+    {
+        return o_getExptime.passed();
+    }
+    unsigned getExptimeForGet()
+    {
+        return o_getExptime;
     }
     bool useRandSpacePerThread()
     {
@@ -410,7 +421,8 @@ class Configuration
     // Compound option
     BoolOption o_populateOnly;
 
-    UIntOption o_exptime;
+    UIntOption o_upsertExptime;
+    UIntOption o_getExptime;
 
     ListOption o_collection;
     StringOption o_durability;
@@ -778,7 +790,7 @@ class ThreadContext
         InstanceCookie *cookie = InstanceCookie::get(instance);
 
         while (!retryq.empty()) {
-            unsigned exptime = config.getExptime();
+            unsigned exptime = config.getExptimeForUpsert();
             lcb_sched_enter(instance);
             while (!retryq.empty()) {
                 opinfo = retryq.front();
@@ -818,7 +830,9 @@ class ThreadContext
     bool scheduleNextOperation()
     {
         NextOp opinfo;
-        unsigned exptime = config.getExptime();
+        unsigned exptime = config.getExptimeForUpsert();
+        bool useGat = config.hasExptimeForGet();
+        unsigned getExptime = config.getExptimeForGet();
         gen->setNextOp(opinfo);
 
         switch (opinfo.m_mode) {
@@ -865,7 +879,9 @@ class ThreadContext
                                               opinfo.m_collection.c_str(), opinfo.m_collection.size());
                     }
                 }
-                lcb_cmdget_expiry(gcmd, exptime);
+                if (useGat) {
+                    lcb_cmdget_expiry(gcmd, getExptime);
+                }
                 error = lcb_get(instance, this, gcmd);
                 lcb_cmdget_destroy(gcmd);
                 break;
@@ -1113,7 +1129,7 @@ static void getCallback(lcb_INSTANCE *instance, int, const lcb_RESPGET *resp)
 
             lcb_CMDSTORE *scmd;
             lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
-            lcb_cmdstore_expiry(scmd, config.getExptime());
+            lcb_cmdstore_expiry(scmd, config.getExptimeForUpsert());
             uint64_t cas;
             lcb_respget_cas(resp, &cas);
             lcb_cmdstore_cas(scmd, cas);
