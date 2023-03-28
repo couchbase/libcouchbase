@@ -26,6 +26,7 @@
 #include "hash.h"
 #include "crc32.h"
 #include "utilities.h"
+#include "rnd.h"
 
 #define STRINGIFY_(X) #X
 #define STRINGIFY(X) STRINGIFY_(X)
@@ -1515,7 +1516,7 @@ int lcbvb_get_randhost_ex(const lcbvb_CONFIG *cfg, lcbvb_SVCTYPE type, lcbvb_SVC
         return -1;
     }
 
-    nn = rand();
+    nn = lcb_next_rand32();
     nn %= oix;
     return cfg->randbuf[nn];
 }
