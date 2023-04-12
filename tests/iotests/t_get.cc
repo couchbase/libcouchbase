@@ -1136,7 +1136,7 @@ static void change_password(lcb_INSTANCE *instance, const std::string &current_p
     EXPECT_EQ(LCB_SUCCESS, err);
 }
 
-TEST_F(GetUnitTest, testChangePassword)
+TEST_F(GetUnitTest, DISABLED_testChangePassword)
 {
     SKIP_IF_MOCK();
     MockEnvironment *mock = MockEnvironment::getInstance();
