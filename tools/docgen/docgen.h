@@ -259,18 +259,18 @@ class JsonDocGenerator : public PresetDocGenerator
      * @param minsz Minimum JSON document size
      * @param maxsz Maximum JSON document size
      */
-    JsonDocGenerator(uint32_t minsz, uint32_t maxsz, int rnd)
+    JsonDocGenerator(uint32_t minsz, uint32_t maxsz, int rnd, uint32_t pool_size)
     {
-        genDocuments(minsz, maxsz, m_docs, rnd);
+        genDocuments(minsz, maxsz, m_docs, rnd, pool_size);
         for (size_t ii = 0; ii < m_docs.size(); ++ii) {
             m_bufs.push_back(m_docs[ii].m_doc);
         }
     }
 
-    static void genDocuments(uint32_t minsz, uint32_t maxsz, std::vector< std::string > &out, int rnd)
+    static void genDocuments(uint32_t minsz, uint32_t maxsz, std::vector< std::string > &out, int rnd, uint32_t pool_size)
     {
         std::vector< Doc > docs;
-        genDocuments(minsz, maxsz, docs, rnd);
+        genDocuments(minsz, maxsz, docs, rnd, pool_size);
         for (size_t ii = 0; ii < docs.size(); ++ii) {
             out.push_back(docs[ii].m_doc);
         }
@@ -290,11 +290,13 @@ class JsonDocGenerator : public PresetDocGenerator
         *orig = std::max(0, *orig - static_cast< int >(toDecr));
     }
 
-    static void genDocuments(uint32_t minsz, uint32_t maxsz, std::vector< Doc > &out, int rnd)
+    static void genDocuments(uint32_t minsz, uint32_t maxsz, std::vector< Doc > &out, int rnd, uint32_t pool_size)
     {
         std::vector< size_t > sizes = RawDocGenerator::gen_graded_sizes(minsz, maxsz);
-        for (std::vector< size_t >::iterator ii = sizes.begin(); ii != sizes.end(); ++ii) {
-            out.push_back(generate(*ii, rnd));
+        for (const auto &size : sizes) {
+            for (uint32_t ii = 0; ii < pool_size; ++ii) {
+                out.push_back(generate(size, rnd));
+            }
         }
     }
 
@@ -487,11 +489,12 @@ class PlaceholderJsonGenerator : public PlaceholderDocGenerator
      * @param minsz Minimum document size
      * @param maxsz Maximum document size
      */
-    PlaceholderJsonGenerator(uint32_t minsz, uint32_t maxsz, const std::vector< TemplateSpec > &specs, int rnd)
+    PlaceholderJsonGenerator(uint32_t minsz, uint32_t maxsz, const std::vector<TemplateSpec> &specs, int rnd,
+                             uint32_t pool_size)
     {
 
         std::vector< std::string > jsondocs;
-        JsonDocGenerator::genDocuments(minsz, maxsz, jsondocs, rnd);
+        JsonDocGenerator::genDocuments(minsz, maxsz, jsondocs, rnd, pool_size);
         initJsonPlaceholders(specs, jsondocs);
     }
 

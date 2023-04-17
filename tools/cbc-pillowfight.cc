@@ -99,7 +99,8 @@ class Configuration
   public:
     Configuration()
         : o_multiSize("batch-size"), o_numItems("num-items"), o_keyPrefix("key-prefix"), o_numThreads("num-threads"),
-          o_randSeed("random-seed"), o_randomBody("random-body"), o_setPercent("set-pct"), o_minSize("min-size"),
+          o_randSeed("random-seed"), o_randomBody("random-body"), o_randomBodyPoolSize("random-body-pool-size"),
+          o_setPercent("set-pct"), o_minSize("min-size"),
           o_maxSize("max-size"), o_noPopulate("no-population"), o_numCycles("num-cycles"), o_sequential("sequential"),
           o_startAt("start-at"), o_rateLimit("rate-limit"), o_userdocs("docs"), o_writeJson("json"),
           o_templatePairs("template"), o_subdoc("subdoc"), o_noop("noop"), o_sdPathCount("pathcount"),
@@ -114,6 +115,9 @@ class Configuration
         o_randSeed.setDefault(0).abbrev('s').description("Specify random seed").hide();
         o_randomBody.setDefault(false).abbrev('R').description(
             "Randomize document body (otherwise use 'x' and '*' to fill)");
+        o_randomBodyPoolSize.setDefault(100).description(
+            "How many of randomized documents should be generated for each size in the range [min-size..max-size]. "
+            "Only used if --random-body is specified.");
         o_setPercent.setDefault(33).abbrev('r').description("The percentage of operations which should be mutations");
         o_minSize.setDefault(50).abbrev('m').description("Set minimum payload size");
         o_maxSize.setDefault(5120).abbrev('M').description("Set maximum payload size");
@@ -222,7 +226,8 @@ class Configuration
 
         if (specs.empty()) {
             if (o_writeJson.result()) {
-                docgen.reset(new JsonDocGenerator(o_minSize.result(), o_maxSize.result(), o_randomBody.numSpecified()));
+                docgen.reset(new JsonDocGenerator(o_minSize.result(), o_maxSize.result(), o_randomBody.numSpecified(),
+                                                  o_randomBodyPoolSize.result()));
             } else if (!userdocs.empty()) {
                 docgen.reset(new PresetDocGenerator(userdocs));
             } else {
@@ -232,7 +237,8 @@ class Configuration
             if (o_writeJson.result()) {
                 if (userdocs.empty()) {
                     docgen.reset(new PlaceholderJsonGenerator(o_minSize.result(), o_maxSize.result(), specs,
-                                                          o_randomBody.numSpecified()));
+                                                              o_randomBody.numSpecified(),
+                                                              o_randomBodyPoolSize.result()));
                 } else {
                     docgen.reset(new PlaceholderJsonGenerator(userdocs, specs));
                 }
@@ -262,6 +268,7 @@ class Configuration
         parser.addOption(o_numThreads);
         parser.addOption(o_randSeed);
         parser.addOption(o_randomBody);
+        parser.addOption(o_randomBodyPoolSize);
         parser.addOption(o_setPercent);
         parser.addOption(o_noPopulate);
         parser.addOption(o_minSize);
@@ -397,6 +404,7 @@ class Configuration
     UIntOption o_numThreads;
     UIntOption o_randSeed;
     BoolOption o_randomBody;
+    UIntOption o_randomBodyPoolSize;
     UIntOption o_setPercent;
     UIntOption o_minSize;
     UIntOption o_maxSize;
