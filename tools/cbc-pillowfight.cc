@@ -924,6 +924,7 @@ class ThreadContext
                 if (mutate && config.durabilityLevel != LCB_DURABILITYLEVEL_NONE) {
                     lcb_cmdsubdoc_durability(sdcmd, config.durabilityLevel);
                 }
+                lcb_cmdsubdoc_specs(sdcmd, specs);
                 error = lcb_subdoc(instance, nullptr, sdcmd);
                 lcb_subdocspecs_destroy(specs);
                 lcb_cmdsubdoc_destroy(sdcmd);
