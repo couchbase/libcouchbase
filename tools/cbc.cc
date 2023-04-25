@@ -2044,11 +2044,11 @@ void BucketListHandler::format()
 
     printf("%-20s%-10s%s\n", "Name", "Type", "Items");
 
-    for (Json::Value::ArrayIndex i = 0; i < json.size(); ++i) {
-        const char *name = json[i]["name"].asString().c_str();
-        const char *bucketType = json[i]["bucketType"].asString().c_str();
-        const int itemCount = json[i]["basicStats"]["itemCount"].asInt();
-        printf("%-20s%-10s%i\n", name, bucketType, itemCount);
+    for (auto &bucket : json) {
+        auto name = bucket["name"].asString();
+        auto type = bucket["bucketType"].asString();
+        const int itemCount = bucket["basicStats"]["itemCount"].asInt();
+        printf("%-20s%-10s%i\n", name.c_str(), type.c_str(), itemCount);
     }
 }
 
