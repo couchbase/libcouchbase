@@ -921,19 +921,19 @@ void cJSON_ReplaceItemInObject(cJSON *object, const char *string, cJSON *newitem
 }
 
 /* Create basic types: */
-cJSON *cJSON_CreateNull()
+cJSON *cJSON_CreateNull(void)
 {
     cJSON *item = cJSON_New_Item(0);
     item->type = cJSON_NULL;
     return item;
 }
-cJSON *cJSON_CreateTrue()
+cJSON *cJSON_CreateTrue(void)
 {
     cJSON *item = cJSON_New_Item(0);
     item->type = cJSON_True;
     return item;
 }
-cJSON *cJSON_CreateFalse()
+cJSON *cJSON_CreateFalse(void)
 {
     cJSON *item = cJSON_New_Item(0);
     item->type = cJSON_False;
@@ -962,13 +962,13 @@ cJSON *cJSON_CreateString(const char *string)
     item->valuestring = cJSON_strdup(string);
     return item;
 }
-cJSON *cJSON_CreateArray()
+cJSON *cJSON_CreateArray(void)
 {
     cJSON *item = cJSON_New_Item(0);
     item->type = cJSON_Array;
     return item;
 }
-cJSON *cJSON_CreateObject()
+cJSON *cJSON_CreateObject(void)
 {
     cJSON *item = cJSON_New_Item(0);
     item->type = cJSON_Object;

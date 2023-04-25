@@ -88,7 +88,7 @@ void hdr_mutex_unlock(struct hdr_mutex* mutex)
     pthread_mutex_unlock(&mutex->_mutex);
 }
 
-void hdr_yield()
+void hdr_yield(void)
 {
     sched_yield();
 }
