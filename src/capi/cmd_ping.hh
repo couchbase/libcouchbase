@@ -126,7 +126,7 @@ struct lcb_CMDPING_ {
  *
  * @committed
  */
-typedef struct {
+typedef struct lcb_PINGSVC_ {
     lcb_PING_SERVICE type; /**< type of the service */
     /* TODO: rename to "remote" */
     const char *server{nullptr}; /**< server host:port */
