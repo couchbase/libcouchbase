@@ -726,7 +726,8 @@ lcb_STATUS WatchIndexCtx::do_poll()
     cmd.callback = cb_watch_gotlist;
     lcb_log(LOGARGS(this, DEBUG), LOGFMT "Will check for index readiness of %lu indexes. %lu completed", LOGID(this),
             (unsigned long int)m_defspend.size(), (unsigned long int)m_defsok.size());
-    return lcb_n1x_list(m_instance, this, &cmd);
+
+    return do_index_list(m_instance, this, &cmd, nullptr);
 }
 
 LIBCOUCHBASE_API
