@@ -321,6 +321,11 @@ static long decode_ssl_protocol(const char *protocol)
     return disallow;
 }
 
+#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
+#define lcb_openssl_func_error_string(err) ERR_func_error_string(err)
+#else
+#define lcb_openssl_func_error_string(err) (char*)NULL
+#endif
 static lcb_STATUS add_certificate_authority(const lcb_settings *settings, SSL_CTX *ctx, const char *certificate_value,
                                             int certificate_length)
 {
@@ -340,7 +345,7 @@ static lcb_STATUS add_certificate_authority(const lcb_settings *settings, SSL_CT
                     }
                     lcb_log(LOGARGS_S(settings, LCB_LOG_ERROR),
                             "Unable to load default certificate: lib=%s, func=%s, reason=%s", ERR_lib_error_string(err),
-                            ERR_func_error_string(err), ERR_reason_error_string(err));
+                            lcb_openssl_func_error_string(err), ERR_reason_error_string(err));
                     rc = LCB_ERR_SSL_ERROR;
                     goto GT_CLEANUP;
                 }
@@ -351,7 +356,7 @@ static lcb_STATUS add_certificate_authority(const lcb_settings *settings, SSL_CT
                     unsigned long err = ERR_get_error();
                     lcb_log(LOGARGS_S(settings, LCB_LOG_ERROR),
                             "Unable to add default certificate: lib=%s, func=%s, reason=%s", ERR_lib_error_string(err),
-                            ERR_func_error_string(err), ERR_reason_error_string(err));
+                            lcb_openssl_func_error_string(err), ERR_reason_error_string(err));
                     rc = LCB_ERR_SSL_ERROR;
                     goto GT_CLEANUP;
                 }
