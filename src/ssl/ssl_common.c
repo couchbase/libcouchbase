@@ -324,7 +324,7 @@ static long decode_ssl_protocol(const char *protocol)
 #if (OPENSSL_VERSION_NUMBER < 0x30000000L)
 #define lcb_openssl_func_error_string(err) ERR_func_error_string(err)
 #else
-#define lcb_openssl_func_error_string(err) (char*)NULL
+#define lcb_openssl_func_error_string(err) "unknown"
 #endif
 static lcb_STATUS add_certificate_authority(const lcb_settings *settings, SSL_CTX *ctx, const char *certificate_value,
                                             int certificate_length)
