@@ -706,7 +706,6 @@ static void H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedRespon
     lcb_INSTANCE *root = get_instance(pipeline);
     uint32_t ttp;
     uint32_t ttr;
-    size_t pos;
     lcbvb_CONFIG *config;
     const char *end, *ptr;
     mc_REQDATAEX *rd = request->u_rdata.exdata;
@@ -735,7 +734,7 @@ static void H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedRespon
     end = ptr + response->vallen();
     config = pipeline->parent->config;
 
-    for (pos = 0; ptr < end; pos++) {
+    while (ptr < end) {
         uint64_t cas;
         uint8_t obs;
         uint16_t nkey, vb;
