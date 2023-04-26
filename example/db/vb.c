@@ -223,8 +223,8 @@ int main(int argc, char *argv[])
         char design_path[64] = {0};
         char doc[256] = {0};
         lcb_CMDHTTP *cmd;
-        sprintf(design_path, "_design/%s", design);
-        sprintf(doc, "{\"views\":{\"all\":{\"map\":\"function(doc,meta){if(meta.id=='%s'){emit(meta.id)}}\"}}}", key);
+        snprintf(design_path, sizeof(design_path), "_design/%s", design);
+        snprintf(doc, sizeof(doc), "{\"views\":{\"all\":{\"map\":\"function(doc,meta){if(meta.id=='%s'){emit(meta.id)}}\"}}}", key);
 
         lcb_cmdhttp_create(&cmd, LCB_HTTP_TYPE_VIEW);
         lcb_cmdhttp_path(cmd, design_path, strlen(design_path));

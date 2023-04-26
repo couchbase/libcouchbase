@@ -270,15 +270,15 @@ static char *print_number(cJSON *item)
     double d = item->valuedouble;
     if (fabs(((double)item->valueint) - d) <= DBL_EPSILON && d <= INT_MAX && d >= INT_MIN) {
         str = (char *)cJSON_malloc(21); /* 2^64+1 can be represented in 21 chars. */
-        sprintf(str, "%" PRId64, item->valueint);
+        snprintf(str, 21, "%" PRId64, item->valueint);
     } else {
         str = (char *)cJSON_malloc(64); /* This is a nice tradeoff. */
         if (fabs(floor(d) - d) <= DBL_EPSILON)
-            sprintf(str, "%.0f", d);
+            snprintf(str, 64, "%.0f", d);
         else if (fabs(d) < 1.0e-6 || fabs(d) > 1.0e9)
-            sprintf(str, "%e", d);
+            snprintf(str, 64, "%e", d);
         else
-            sprintf(str, "%f", d);
+            snprintf(str, 64, "%f", d);
     }
     return str;
 }

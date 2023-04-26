@@ -101,7 +101,7 @@ TestServer::~TestServer()
 std::string TestServer::getPortString()
 {
     char buf[4096];
-    sprintf(buf, "%d", lsn->getLocalPort());
+    snprintf(buf, sizeof(buf), "%d", lsn->getLocalPort());
     return std::string(buf);
 }
 

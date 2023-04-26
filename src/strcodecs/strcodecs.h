@@ -206,7 +206,7 @@ bool urlencode(Ti first, Ti last, To &o, bool check_encoded = true)
 
             do {
                 char buf[4];
-                sprintf(buf, "%%%02X", static_cast<unsigned char>(*first));
+                snprintf(buf, sizeof(buf), "%%%02X", static_cast<unsigned char>(*first));
                 o.insert(o.end(), &buf[0], &buf[0] + 3);
             } while (--numbytes && ++first != last);
         }

@@ -447,7 +447,7 @@ TEST_F(MockUnitTest, testKeyTooLong)
     size_t counter = 0;
     for (size_t ii = 0; ii < nbCallbacks; ++ii) {
         char key[6];
-        sprintf(key, "key%lu", ii);
+        snprintf(key, sizeof(key), "key%lu", ii);
         keys[ii] = std::string(key);
         lcb_CMDSTORE *scmd;
         lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);

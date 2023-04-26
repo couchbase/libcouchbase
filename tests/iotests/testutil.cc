@@ -183,7 +183,7 @@ void genDistKeys(lcbvb_CONFIG *vbc, std::vector<std::string> &out)
     EXPECT_TRUE(servers_max > 0);
 
     for (int cur_num = 0; found_servers.size() != servers_max; cur_num++) {
-        int ksize = sprintf(buf, "VBKEY_%d", cur_num);
+        int ksize = snprintf(buf, sizeof(buf), "VBKEY_%d", cur_num);
         int vbid;
         int srvix;
         lcbvb_map_key(vbc, buf, ksize, &vbid, &srvix);

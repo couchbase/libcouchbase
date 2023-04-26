@@ -142,7 +142,7 @@ lcb_STATUS lcb_host_parse(lcb_host_t *host, const char *spec, int speclen, int d
     if (*port_s) {
         strcpy(host->port, port_s);
     } else {
-        sprintf(host->port, "%d", deflport);
+        snprintf(host->port, sizeof(host->port), "%d", deflport);
     }
     host->ipv6 = ipv6;
 

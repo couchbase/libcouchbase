@@ -39,7 +39,7 @@ static void fallback_logger(const lcb_LOGGER *logger, uint64_t, const char *, lc
                             const char *fmt, va_list ap)
 {
     char buf[2048];
-    vsprintf(buf, fmt, ap);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
     EXPECT_FALSE(logger == NULL);
     MyLogprocs *myprocs;
     lcb_logger_cookie(logger, reinterpret_cast< void ** >(&myprocs));

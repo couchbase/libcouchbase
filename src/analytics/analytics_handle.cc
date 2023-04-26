@@ -194,7 +194,7 @@ lcb_ANALYTICS_HANDLE_::lcb_ANALYTICS_HANDLE_(lcb_INSTANCE *obj, void *user_cooki
         // Set the default timeout as the server-side query timeout if no
         // other timeout is used.
         char buf[64] = {0};
-        sprintf(buf, "%uus", LCBT_SETTING(obj, analytics_timeout));
+        snprintf(buf, sizeof(buf), "%uus", LCBT_SETTING(obj, analytics_timeout));
         tmoval = buf;
         timeout_ = LCBT_SETTING(obj, analytics_timeout);
     } else if (tmoval.isString()) {

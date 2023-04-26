@@ -214,7 +214,7 @@ class Substitutions
             // Get the number
             uint32_t cur = gen->next();
 
-            sprintf(buf, "%u", cur);
+            snprintf(buf, sizeof(buf), "%u", cur);
             output_str.assign(buf);
             output_iov.iov_base = const_cast< char * >(output_str.c_str());
             output_iov.iov_len = output_str.size();

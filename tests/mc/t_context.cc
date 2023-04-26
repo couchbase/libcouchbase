@@ -47,7 +47,7 @@ TEST_F(McContext, testBasicContext)
     for (int ii = 0; ii < 20; ii++) {
         PacketWrap pw;
         char kbuf[128];
-        sprintf(kbuf, "key_%d", ii);
+        snprintf(kbuf, sizeof(kbuf), "key_%d", ii);
         pw.setCopyKey(kbuf);
 
         ASSERT_TRUE(pw.reservePacket(&cq));
@@ -91,7 +91,7 @@ TEST_F(McContext, testFailedContext)
     for (int ii = 0; ii < 20; ii++) {
         PacketWrap pw;
         char kbuf[128];
-        sprintf(kbuf, "Key_%d", ii);
+        snprintf(kbuf, sizeof(kbuf), "Key_%d", ii);
         pw.setCopyKey(kbuf);
 
         ASSERT_TRUE(pw.reservePacket(&cq));

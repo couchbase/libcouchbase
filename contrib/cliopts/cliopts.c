@@ -539,22 +539,31 @@ parse_option(struct cliopts_priv *ctx,
     return WANT_VALUE;
 }
 
+static size_t bytes_left(const char *buf, size_t capacity)
+{
+    size_t len = strlen(buf);
+    if (len >= capacity - 1) {
+        return 0;
+    }
+    return capacity - len;
+}
+
 static char *
-get_option_name(cliopts_entry *entry, char *buf)
+get_option_name(cliopts_entry *entry, char *buf, size_t capacity)
 {
     /* [-s,--option] */
     char *bufp = buf;
-    bufp += sprintf(buf, "[");
+    bufp += snprintf(buf, bytes_left(buf, capacity), "[");
     if (entry->kshort) {
-        bufp += sprintf(bufp, "-%c", entry->kshort);
+        bufp += snprintf(bufp, bytes_left(buf, capacity), "-%c", entry->kshort);
     }
     if (entry->klong) {
         if (entry->kshort) {
-            bufp += sprintf(bufp, ",");
+            bufp += snprintf(bufp, bytes_left(buf, capacity), ",");
         }
-        bufp += sprintf(bufp, "--%s", entry->klong);
+        bufp += snprintf(bufp, bytes_left(buf, capacity), "--%s", entry->klong);
     }
-    sprintf(bufp, "]");
+    snprintf(bufp, bytes_left(buf, capacity), "]");
     return buf;
 }
 
@@ -576,12 +585,12 @@ static int get_terminal_width(void)
 
 static char*
 format_option_help(cliopts_entry *entry,
-                   char *buf,
+                   char *buf, size_t capacity,
                    struct cliopts_extra_settings *settings)
 {
     char *bufp = buf;
     if (entry->kshort) {
-        bufp += sprintf(bufp, " -%c ", entry->kshort);
+        bufp += snprintf(bufp, bytes_left(buf, capacity), " -%c ", entry->kshort);
     }
 
 #define _advance_margin(offset) \
@@ -595,11 +604,11 @@ format_option_help(cliopts_entry *entry,
     _advance_margin(4)
 
     if (entry->klong) {
-        bufp += sprintf(bufp, " --%s ", entry->klong);
+        bufp += snprintf(bufp, bytes_left(buf, capacity), " --%s ", entry->klong);
     }
 
     if (entry->vdesc) {
-        bufp += sprintf(bufp, " <%s> ", entry->vdesc);
+        bufp += snprintf(bufp, bytes_left(buf, capacity), " <%s> ", entry->vdesc);
     }
 
     _advance_margin(35)
@@ -664,7 +673,7 @@ print_help(struct cliopts_priv *ctx, struct cliopts_extra_settings *settings)
         }
 
         memset(helpbuf, 0, sizeof(helpbuf));
-        format_option_help(cur, helpbuf, settings);
+        format_option_help(cur, helpbuf, sizeof(helpbuf), settings);
         fprintf(stderr, INDENT "%s", helpbuf);
 
 
@@ -728,7 +737,7 @@ print_help(struct cliopts_priv *ctx, struct cliopts_extra_settings *settings)
     }
     memset(helpbuf, 0, sizeof(helpbuf));
     fprintf(stderr, INDENT "%s\n",
-            format_option_help(&helpent, helpbuf, settings));
+            format_option_help(&helpent, helpbuf, sizeof(helpbuf), settings));
 
 }
 
@@ -747,7 +756,7 @@ dump_error(struct cliopts_priv *ctx)
     } else if (ctx->errnum == CLIOPTS_ERR_ISSWITCH) {
         char optbuf[64] = { 0 };
         fprintf(stderr, "Option %s takes no arguments",
-                get_option_name(ctx->prev, optbuf));
+                get_option_name(ctx->prev, optbuf, sizeof(optbuf)));
     }
     fprintf(stderr, "\n");
 
@@ -865,7 +874,7 @@ cliopts_parse_options(cliopts_entry *entries,
             }
 
             fprintf(stderr, "Required option %s missing\n",
-                    get_option_name(cur_ent, entbuf));
+                    get_option_name(cur_ent, entbuf, sizeof(entbuf)));
         }
     }
 

@@ -39,7 +39,7 @@ using namespace LCBTest;
 static inline void hostFromSockFD(SockFD *sfd, lcb_host_t *tgt)
 {
     strcpy(tgt->host, sfd->getLocalHost().c_str());
-    sprintf(tgt->port, "%d", sfd->getLocalPort());
+    snprintf(tgt->port, sizeof(tgt->port), "%d", sfd->getLocalPort());
 }
 
 class Loop;

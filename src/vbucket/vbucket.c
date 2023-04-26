@@ -365,7 +365,7 @@ static int build_server_strings(lcbvb_CONFIG *cfg, lcbvb_SERVER *server)
     server->svc.hoststrs[LCBVB_SVCTYPE_DATA] = lcb_strdup(server->authority);
     if (server->viewpath == NULL && server->svc.views && cfg->bname) {
         server->viewpath = malloc(strlen(cfg->bname) + 2);
-        sprintf(server->viewpath, "/%s", cfg->bname);
+        snprintf(server->viewpath, strlen(cfg->bname) + 2, "/%s", cfg->bname);
     }
     if (server->querypath == NULL && server->svc.n1ql) {
         server->querypath = lcb_strdup("/query/service");
@@ -1254,8 +1254,8 @@ static void compute_vb_list_diff(lcbvb_CONFIG *from, lcbvb_CONFIG *to, char **ou
         if (!found) {
             char *infostr = malloc(strlen(newsrv->authority) + 128);
             lcb_assert(infostr);
-            sprintf(infostr, "%s(Data=%d, Index=%d, Query=%d)", newsrv->authority, newsrv->svc.data,
-                    newsrv->svc.ixquery, newsrv->svc.n1ql);
+            snprintf(infostr, strlen(newsrv->authority) + 128, "%s(Data=%d, Index=%d, Query=%d)", newsrv->authority,
+                     newsrv->svc.data, newsrv->svc.ixquery, newsrv->svc.n1ql);
             out[offset] = infostr;
             ++offset;
         }

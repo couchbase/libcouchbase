@@ -448,7 +448,7 @@ void log(const char *format, ...)
     va_list args;
 
     va_start(args, format);
-    vsprintf(buffer, format, args);
+    vsnprintf(buffer, sizeof(buffer), format, args);
     if (config.numTimings() > 0) {
         std::cerr << "[" << std::fixed << lcb_nstime() / 1000000000.0 << "] ";
     }

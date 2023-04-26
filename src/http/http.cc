@@ -712,7 +712,7 @@ lcb_STATUS Request::setup_inputs(const lcb_CMDHTTP *cmd)
 
     if (!body.empty()) {
         char lenbuf[64];
-        sprintf(lenbuf, "%lu", (unsigned long int)body.size());
+        snprintf(lenbuf, sizeof(lenbuf), "%lu", (unsigned long int)body.size());
         add_header("Content-Length", lenbuf);
         if (cmd->content_type) {
             add_header("Content-Type", cmd->content_type);

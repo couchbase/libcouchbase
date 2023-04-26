@@ -583,7 +583,7 @@ static bool runSingleCycle(const TestConfiguration &config)
 #ifdef __linux__
         {
             char buf[1024] = {0};
-            sprintf(buf, "ldd %s/libcouchbase_%s.so", config.libDir.c_str(), plugin.c_str());
+            snprintf(buf, sizeof(buf), "ldd %s/libcouchbase_%s.so", config.libDir.c_str(), plugin.c_str());
             fprintf(stderr, "%s\n", buf);
             int rc = system(buf);
             if (rc != 0) {

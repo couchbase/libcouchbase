@@ -534,7 +534,7 @@ lcb_QUERY_HANDLE_::lcb_QUERY_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, const
     Json::Value &tmoval = json["timeout"];
     if (tmoval.isNull()) {
         char buf[64] = {0};
-        sprintf(buf, "%uus", timeout);
+        snprintf(buf, sizeof(buf), "%uus", timeout);
         tmoval = buf;
         json["timeout"] = buf;
     } else if (tmoval.isString()) {

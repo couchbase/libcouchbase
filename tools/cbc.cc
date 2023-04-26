@@ -229,15 +229,16 @@ static void store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTOR
         lcb_respstore_observe_num_persisted(resp, &npersisted);
         lcb_respstore_observe_num_replicated(resp, &nreplicated);
         if (rc == LCB_SUCCESS) {
-            sprintf(buf, "Stored. Persisted(%u). Replicated(%u)", npersisted, nreplicated);
+            snprintf(buf, sizeof(buf), "Stored. Persisted(%u). Replicated(%u)", npersisted, nreplicated);
             storePrintSuccess(resp, buf);
         } else {
             int store_ok;
             lcb_respstore_observe_stored(resp, &store_ok);
             if (store_ok) {
-                sprintf(buf, "Store OK, but durability failed. Persisted(%u). Replicated(%u)", npersisted, nreplicated);
+                snprintf(buf, sizeof(buf), "Store OK, but durability failed. Persisted(%u). Replicated(%u)", npersisted,
+                         nreplicated);
             } else {
-                sprintf(buf, "%s", "Store failed");
+                snprintf(buf, sizeof(buf), "%s", "Store failed");
             }
             storePrintError(resp, buf);
         }
@@ -1254,7 +1255,7 @@ void VersionHandler::run()
 
             cio.v.v0.type = known_io[ii];
             if (lcb_create_io_ops(&io, &cio) == LCB_SUCCESS) {
-                p += sprintf(p, "%s,", iops_to_string(known_io[ii]));
+                p += snprintf(p, sizeof(buf) - strlen(p), "%s,", iops_to_string(known_io[ii]));
                 lcb_destroy_io_ops(io);
             }
         }

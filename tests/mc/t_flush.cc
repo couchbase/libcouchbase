@@ -136,7 +136,7 @@ TEST_F(McFlush, testMultiFlush)
         auto *pw = new PacketWrap;
         pws[ii] = pw;
         char curkey[128];
-        sprintf(curkey, "Key_%d", ii);
+        snprintf(curkey, sizeof(curkey), "Key_%d", ii);
         pw->setContigKey(curkey);
 
         cookies[ii] = new MyCookie;

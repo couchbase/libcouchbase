@@ -710,7 +710,7 @@ TEST_F(GetUnitTest, DISABLED_testFailoverAndMultiGet)
         lcb_CMDSTORE *scmd;
         lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
         char key[6];
-        sprintf(key, "key%zu", ii);
+        snprintf(key, sizeof(key), "key%zu", ii);
         keys[ii] = std::string(key);
         lcb_cmdstore_key(scmd, key, strlen(key));
         lcb_cmdstore_value(scmd, "val", 3);
@@ -1162,7 +1162,7 @@ TEST_F(GetUnitTest, DISABLED_testChangePassword)
         lcb_CMDSTORE *scmd;
         lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
         char akey[6];
-        sprintf(akey, "key%lu", ii);
+        snprintf(akey, sizeof(akey), "key%lu", ii);
         keys[ii] = std::string(akey);
         lcb_cmdstore_key(scmd, akey, strlen(akey));
         lcb_cmdstore_value(scmd, "val", 3);
@@ -1193,7 +1193,7 @@ TEST_F(GetUnitTest, DISABLED_testChangePassword)
         lcb_CMDSTORE *scmd;
         lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
         char akey[6];
-        sprintf(akey, "key%lu", ii);
+        snprintf(akey, sizeof(akey), "key%lu", ii);
         keys[ii] = std::string(akey);
         lcb_cmdstore_key(scmd, akey, strlen(akey));
         lcb_cmdstore_value(scmd, "val", 3);
@@ -1219,7 +1219,7 @@ TEST_F(GetUnitTest, DISABLED_testChangePassword)
         lcb_CMDSTORE *scmd;
         lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
         char akey[6];
-        sprintf(akey, "key%lu", ii);
+        snprintf(akey, sizeof(akey), "key%lu", ii);
         keys[ii] = std::string(akey);
         lcb_cmdstore_key(scmd, akey, strlen(akey));
         lcb_cmdstore_value(scmd, "val", 3);

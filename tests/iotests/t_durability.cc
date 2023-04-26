@@ -556,7 +556,7 @@ TEST_F(DurabilityUnitTest, testMulti)
 
     for (ii = 0; ii < limit; ii++) {
         char buf[64];
-        sprintf(buf, "key-stored-%u", ii);
+        snprintf(buf, sizeof(buf), "key-stored-%u", ii);
         string key_stored = buf;
 
         removeKey(instance, key_stored);

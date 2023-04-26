@@ -144,8 +144,8 @@ int main(int argc, char **argv)
         std::string &val = bufs[(ii * 2) + 1];
         char pbuf[24], vbuf[24];
 
-        sprintf(pbuf, "pth%d", ii);
-        sprintf(vbuf, "\"Value_%d\"", ii);
+        snprintf(pbuf, sizeof(pbuf), "pth%d", ii);
+        snprintf(vbuf, sizeof(vbuf), "\"Value_%d\"", ii);
         path = pbuf;
         val = vbuf;
 
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
     for (int ii = 0; ii < 5; ii++) {
         char pbuf[24];
         std::string &path = bufs[ii];
-        sprintf(pbuf, "pth%d", ii);
+        snprintf(pbuf, sizeof(pbuf), "pth%d", ii);
         path = pbuf;
 
         lcb_subdocspecs_get(specs, ii, 0, path.c_str(), path.size());

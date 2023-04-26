@@ -315,7 +315,7 @@ class JsonDocGenerator : public PresetDocGenerator
         Doc ret;
 
         while (docsize > 0) {
-            decrSize(&docsize, sprintf(keybuf, "Field_%d", ++counter) + 3);
+            decrSize(&docsize, snprintf(keybuf, sizeof(keybuf), "Field_%d", ++counter) + 3);
             size_t valsize = std::min(JSON_VALUE_SIZE, docsize);
             if (!valsize) {
                 valsize = 1;
@@ -517,7 +517,7 @@ class PlaceholderJsonGenerator : public PlaceholderDocGenerator
             for (size_t jj = 0; jj < specs.size(); ++jj) {
                 char buf[64];
                 const TemplateSpec &spec = specs[jj];
-                sprintf(buf, "$__pillowfight_%d", serial++);
+                snprintf(buf, sizeof(buf), "$__pillowfight_%d", serial++);
                 root[spec.term] = buf;
                 TemplateSpec new_spec = spec;
 

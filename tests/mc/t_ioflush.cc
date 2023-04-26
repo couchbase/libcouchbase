@@ -80,7 +80,7 @@ TEST_F(McIOFlush, testIOCPFlush)
 
     for (int ii = 0; ii < count; ii++) {
         char buf[128];
-        sprintf(buf, "Key_%d", ii);
+        snprintf(buf, sizeof(buf), "Key_%d", ii);
         PacketWrap pw;
         pw.setCopyKey(buf);
         ASSERT_TRUE(pw.reservePacket(&cq));

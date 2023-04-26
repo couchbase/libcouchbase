@@ -282,7 +282,7 @@ static int start_mock_server(struct test_server_info *info, char **cmdline)
     {
         int arg = 0;
         argv[arg++] = (char *)wrapper;
-        sprintf(monitor, "--harakiri-monitor=localhost:%d", info->port);
+        snprintf(monitor, sizeof(monitor), "--harakiri-monitor=localhost:%d", info->port);
         argv[arg++] = monitor;
 
         if (cmdline != NULL) {

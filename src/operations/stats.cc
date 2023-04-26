@@ -187,7 +187,7 @@ lcb_STATUS lcb_stats(lcb_INSTANCE *instance, void *cookie, const lcb_CMDSTATS *c
                 return LCB_ERR_INVALID_ARGUMENT;
             }
         }
-        sprintf(ksbuf, "key %.*s %d", (int)kbuf_in->nbytes, (const char *)kbuf_in->bytes, vbid);
+        snprintf(ksbuf, sizeof(ksbuf), "key %.*s %d", (int)kbuf_in->nbytes, (const char *)kbuf_in->bytes, vbid);
         kbuf_out.contig.nbytes = strlen(ksbuf);
         kbuf_out.contig.bytes = ksbuf;
     } else {
