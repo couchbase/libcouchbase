@@ -1,19 +1,47 @@
 # Release Notes
 
+## 3.3.6 (2023-04-26)
+
+* CCBC-1590: Always pick random node for HTTP services.
+
+  It helps with certain edge cases, when the application might spawn a lot
+  of processes, perform queries, so that first queries will be directed to
+  the same node due to the absense of `srand()` call in the library.
+
+* CCBC-1596: Fix various compiler warnings.
+
+* CCBC-1592: Allow to generate more randomized bodies in pillowfight
+
+  By default cbc-pillowfight pre-generates only one document body per
+  selected size. New option `--random-body-pool-size` allows to control how
+  many documents will be generated (default is 100).
+
+  This fixes behaviour in the corner case when `--min-size` equals
+  `--max-size` and allow still have many random bodies in this case.
+
+* CCBC-1595: Fix building of the subdocument operation when `--subdoc`
+  switch for pillowfight was used.
+
+* pillowfight: use separate exptime switch for GET
+
+  Do not share the same value of expiry for get operations.  Also it does
+  not turn `GET` into `GET_WITH_TOUCH` if the --get-expiry is not being
+  used.
+
 ## 3.3.5 (2023-03-09)
 
 * CCBC-1545: handle `LCB_ERR_REQUEST_CANCELED` in ping callback
-    
+
   If the instance is being destroyed, while the operations in flight, all
   these operations will be cancelled with error code
   `LCB_ERR_REQUEST_CANCELED`. Ping implementation should handle this error
   code and don't assume any of the objects (except response) be in valid
   state.
-    
+
 * CCBC-1586: force SASL PLAIN for TLS connections
-    
+
 * CCBC-1589: apply authenticator when passed to `lcb_create`
-    
+
 * CCBC-1585: fix build for gcc-13
 
 * CCBC-1587: allow to disable uninstall target
@@ -62,7 +90,7 @@
 * CCBC-1556: clarify log messages related to config cache
 
 * CCBC-1557: allow caching cluster-level configurations
-    
+
   The library will cache cluster-level configurations only if the
   `config_cache= connection` string option is set to directory (ends
   with '/' symbol), otherwise it will cache only buckets configurations
@@ -82,7 +110,7 @@ explicitly defined.
 
 * CCBC-1538: use 64-bit integer to store time in IOCP plugin
 * CCBC-1540: bundle capella ca certificate with SDK
-* CCBC-1526: do not validate length of collection specifier. Length will be checked on the server-side. 
+* CCBC-1526: do not validate length of collection specifier. Length will be checked on the server-side.
 * CCBC-1527: pillowfight: deallocate all memory during shutdown
 
 ## 3.2.5 (2022-02-08)
@@ -105,7 +133,7 @@ the error map response has been received, the negotiation is complete.
 request, and usually await for `hello`+`error_map` responses, because after that goes SASL authentication (and then
 optional selection of the bucket) which cannot be completely pipelined. But in case of client certificate, we might
 terminate bootstrap process too early if the bootstrap process does not require immediate selection of the bucket.
-    
+
 * CCBC-1432: Support for rate limiting error codes: `LCB_ERR_RATE_LIMITED` and `LCB_ERR_QUOTA_LIMITED`.
 
 * CCBC-1514: Do not translate unknown error with "item-only" attribute into `LCB_ERR_CAS_MISMATCH`.
