@@ -24,6 +24,7 @@
 #include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
 #include "check_config.h"
 #include "contrib/cJSON/cJSON.h"
+#include "jsparse/parser.h"
 
 using std::map;
 using std::string;
@@ -374,7 +375,7 @@ TEST_F(ConfigTest, testKetamaCompliance)
     // Now, load the hash file
     string expected_txt = getConfigFile("ketama_expected.json");
     Json::Value json;
-    ASSERT_TRUE(Json::Reader().parse(expected_txt, json));
+    ASSERT_TRUE(lcb::jsparse::parse_json(expected_txt, json));
 
     ASSERT_EQ(json.size(), vbc->ncontinuum);
 
@@ -444,7 +445,7 @@ TEST_F(ConfigTest, testLargeRevision)
 
     {
         Json::Value json;
-        ASSERT_TRUE(Json::Reader().parse(config_txt, json));
+        ASSERT_TRUE(lcb::jsparse::parse_json(config_txt, json));
 
         ASSERT_TRUE(json.isMember("max_int64"));
         ASSERT_EQ(9223372036854775807, json["max_int64"].asInt64());

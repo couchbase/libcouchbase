@@ -103,7 +103,7 @@ lcb_STATUS lcbcrypto_encrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDENCRYPT
     cmd->nout = 0;
 
     Json::Value jdoc;
-    if (!Json::Reader().parse(cmd->doc, cmd->doc + cmd->ndoc, jdoc)) {
+    if (!lcb::jsparse::parse_json(cmd->doc, cmd->ndoc, jdoc)) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
     bool changed = false;
@@ -233,7 +233,7 @@ lcb_STATUS lcbcrypto_decrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDDECRYPT
     cmd->nout = 0;
 
     Json::Value jdoc;
-    if (!Json::Reader().parse(cmd->doc, cmd->doc + cmd->ndoc, jdoc)) {
+    if (!lcb::jsparse::parse_json(cmd->doc, cmd->ndoc, jdoc)) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
 
@@ -371,7 +371,7 @@ lcb_STATUS lcbcrypto_decrypt_fields(lcb_INSTANCE *instance, lcbcrypto_CMDDECRYPT
         }
         Json::Value frag;
         char *json = reinterpret_cast<char *>(ptext);
-        bool valid_json = Json::Reader().parse(json, json + nptext, frag);
+        bool valid_json = lcb::jsparse::parse_json(json, nptext, frag);
         PROVIDER_RELEASE_BYTES(provider, ptext)
         if (!valid_json) {
             lcb_log(LOGARGS(instance, WARN), "Result of decryption is not valid JSON");

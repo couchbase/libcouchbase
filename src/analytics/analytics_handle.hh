@@ -213,10 +213,9 @@ struct lcb_ANALYTICS_HANDLE_ : lcb::jsparse::Parser::Actions {
         return LCBTRACE_THRESHOLD_ANALYTICS;
     }
 
-    static const std::string &operation_name()
+    static const char *operation_name()
     {
-        static std::string name = LCBTRACE_OP_ANALYTICS;
-        return name;
+        return LCBTRACE_OP_ANALYTICS;
     }
 
     lcbtrace_SPAN *parent_span() const

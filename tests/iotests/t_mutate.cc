@@ -17,6 +17,8 @@
 #include "config.h"
 #include "iotests.h"
 
+#include <cinttypes>
+
 class MutateUnitTest : public MockUnitTest
 {
 };

@@ -232,11 +232,9 @@ struct lcb_SUBDOCSPECS_ {
 };
 
 struct lcb_CMDSUBDOC_ {
-    const std::string &operation_name() const
+    const char *operation_name() const
     {
-        static std::string lookup_in_name = LCBTRACE_OP_LOOKUPIN;
-        static std::string mutate_in_name = LCBTRACE_OP_MUTATEIN;
-        return specs_.is_lookup() ? lookup_in_name : mutate_in_name;
+        return specs_.is_lookup() ? LCBTRACE_OP_LOOKUPIN : LCBTRACE_OP_MUTATEIN;
     }
 
     const subdoc_options &options() const

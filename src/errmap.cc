@@ -97,8 +97,7 @@ const uint32_t ErrorMap::MAX_VERSION = 1;
 ErrorMap::ParseStatus ErrorMap::parse(const char *s, size_t n, std::string &errmsg)
 {
     Json::Value root_nonconst;
-    Json::Reader reader;
-    if (!reader.parse(s, s + n, root_nonconst)) {
+    if (!lcb::jsparse::parse_json(s, n, root_nonconst)) {
         errmsg = "Invalid JSON";
         return PARSE_ERROR;
     }

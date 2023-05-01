@@ -18,6 +18,8 @@
 #include <map>
 #include "iotests.h"
 
+#include <cinttypes>
+
 class LockUnitTest : public MockUnitTest
 {
 };

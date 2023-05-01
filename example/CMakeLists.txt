@@ -103,3 +103,8 @@ ENDIF()
 IF(HAVE_LIBUV AND LCB_BUILD_LIBUV)
     ADD_EXAMPLE(libuv-direct libuvdirect ${LIBUV_LIBRARIES} ${LIBUV_INCLUDE_DIR})
 ENDIF()
+
+IF(NOT WIN32)
+    ADD_EXAMPLE(threads-shared threads-shared pthread "")
+    ADD_EXAMPLE(threads-private threads-private pthread "")
+ENDIF()

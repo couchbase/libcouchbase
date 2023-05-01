@@ -318,11 +318,10 @@ typedef struct {
 
 static void parse_json_docid(lcb_IOV *iov, Parser *parent)
 {
-    Json::Reader r;
     const char *s = static_cast<char *>(iov->iov_base);
     const char *s_end = s + iov->iov_len;
     Json::Value &jvp = parent->cxx_data;
-    bool rv = r.parse(s, s_end, jvp);
+    bool rv = lcb::jsparse::parse_json(s, iov->iov_len, jvp);
     if (!rv) {
         // fprintf(stderr, "libcouchbase: Failed to parse document ID as JSON!\n");
         return;
@@ -420,4 +419,32 @@ void Parser::parse_viewrow(Row &vr)
     jsn_rdetails->data = &ctx;
 
     jsonsl_feed(jsn_rdetails, static_cast<const char *>(vr.row.iov_base), vr.row.iov_len);
+}
+
+bool lcb::jsparse::parse_json(const char *s, size_t n, Json::Value &root)
+{
+    auto *reader = Json::CharReaderBuilder().newCharReader();
+    bool ok = reader->parse(s, s + n, &root, nullptr);
+    delete reader;
+    return ok;
+}
+
+bool lcb::jsparse::parse_json(const std::string &s, Json::Value &root)
+{
+    return parse_json(s.c_str(), s.size(), root);
+}
+
+bool lcb::jsparse::parse_json_strict(const char *s, size_t n, Json::Value &root)
+{
+    Json::CharReaderBuilder builder;
+    Json::CharReaderBuilder::strictMode(&builder.settings_);
+    auto *reader = builder.newCharReader();
+    bool ok = reader->parse(s, s + n, &root, nullptr);
+    delete reader;
+    return ok;
+}
+
+bool lcb::jsparse::parse_json_strict(const std::string &s, Json::Value &root)
+{
+    return parse_json_strict(s.c_str(), s.size(), root);
 }

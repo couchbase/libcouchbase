@@ -503,7 +503,7 @@ static void ping_table_callback(lcb_INSTANCE *, int, const lcb_RESPPING *resp)
         }
         std::string report_json(json, njson);
         Json::Value report;
-        if (!Json::Reader().parse(report_json, report)) {
+        if (!parse_json(report_json, report)) {
             return;
         }
         Json::Value services = report.get("services", Json::nullValue);
@@ -2038,7 +2038,7 @@ void BucketListHandler::run()
 void BucketListHandler::format()
 {
     Json::Value json;
-    if (!Json::Reader().parse(resbuf, json)) {
+    if (!parse_json(resbuf, json)) {
         fprintf(stderr, "Failed to parse response as JSON, falling back to raw mode\n");
         printf("%s\n", resbuf.c_str());
     }
@@ -2086,7 +2086,7 @@ void RbacHandler::run()
 void RoleListHandler::format()
 {
     Json::Value json;
-    if (!Json::Reader().parse(resbuf, json)) {
+    if (!parse_json(resbuf, json)) {
         fprintf(stderr, "Failed to parse response as JSON, falling back to raw mode\n");
         printf("%s\n", resbuf.c_str());
     }
@@ -2108,7 +2108,7 @@ void RoleListHandler::format()
 void UserListHandler::format()
 {
     Json::Value json;
-    if (!Json::Reader().parse(resbuf, json)) {
+    if (!parse_json(resbuf, json)) {
         fprintf(stderr, "Failed to parse response as JSON, falling back to raw mode\n");
         printf("%s\n", resbuf.c_str());
     }

@@ -239,7 +239,7 @@ void handle_error_info(const MemcachedResponse *mc_resp, T &resp)
     }
     const char *val = mc_resp->value();
     Json::Value jval;
-    if (!Json::Reader().parse(val, val + nval, jval)) {
+    if (!lcb::jsparse::parse_json(val, nval, jval)) {
         return;
     }
     if (jval.empty()) {

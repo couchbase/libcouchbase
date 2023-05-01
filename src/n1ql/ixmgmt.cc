@@ -66,7 +66,7 @@ template <typename T>
 lcb_STATUS extract_n1ql_errors(const char *s, size_t n, T &err_out)
 {
     Json::Value jresp;
-    if (!Json::Reader().parse(s, s + n, jresp)) {
+    if (!lcb::jsparse::parse_json(s, n, jresp)) {
         return LCB_ERR_PROTOCOL_ERROR;
     }
     if (jresp["status"].asString() == "success") {
@@ -290,8 +290,7 @@ lcb_STATUS lcb_n1x_create(lcb_INSTANCE *instance, const void *cookie, const lcb_
         // See if we can parse 'fields' properly. First, try to parse as
         // JSON:
         Json::Value fields_arr;
-        Json::Reader r;
-        if (!r.parse(spec.fields, spec.fields + spec.nfields, fields_arr)) {
+        if (!lcb::jsparse::parse_json(spec.fields, spec.nfields, fields_arr)) {
             // Invalid JSON!
             return LCB_ERR_INVALID_ARGUMENT;
         }
@@ -754,7 +753,7 @@ void IndexSpec::load_json(const char *s, size_t n)
     m_buf.assign(s, n);
     nrawjson = n;
 
-    if (!Json::Reader().parse(s, s + n, root)) {
+    if (!lcb::jsparse::parse_json(s, n, root)) {
         rawjson = m_buf.c_str();
         return;
     }

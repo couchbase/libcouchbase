@@ -244,7 +244,7 @@ class Configuration
             std::getline(ifs, curline);
             if (!curline.empty()) {
                 Json::Value json;
-                if (!Json::Reader().parse(curline, json)) {
+                if (!parse_json(curline, json)) {
                     std::cerr << "Failed to parse query \"" << curline << "\" as JSON, skipping" << std::endl;
                     continue;
                 }

@@ -159,7 +159,7 @@ lcb_ANALYTICS_HANDLE_::lcb_ANALYTICS_HANDLE_(lcb_INSTANCE *obj, void *user_cooki
 
     std::string encoded = Json::FastWriter().write(cmd->root());
 
-    if (!Json::Reader().parse(encoded, json)) {
+    if (!lcb::jsparse::parse_json(encoded, json)) {
         last_error_ = LCB_ERR_INVALID_ARGUMENT;
         return;
     }
@@ -353,8 +353,7 @@ bool lcb_ANALYTICS_HANDLE_::maybe_retry()
     was_retried_ = true;
     parser_->get_postmortem(meta);
 
-    if (!Json::Reader().parse(static_cast<const char *>(meta.iov_base),
-                              static_cast<const char *>(meta.iov_base) + meta.iov_len, json)) {
+    if (!lcb::jsparse::parse_json(static_cast<const char *>(meta.iov_base), meta.iov_len, json)) {
         return false; // Not JSON
     }
     if (has_retriable_error(root)) {
@@ -393,7 +392,7 @@ void lcb_ANALYTICS_HANDLE_::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
             resp->rflags |= LCB_RESP_F_EXTDATA;
         }
         Json::Value meta;
-        if (Json::Reader(Json::Features::strictMode()).parse(resp->row, resp->row + resp->nrow, meta)) {
+        if (lcb::jsparse::parse_json_strict(resp->row, resp->nrow, meta)) {
             const Json::Value &errors = meta["errors"];
             if (errors.isArray() && !errors.empty()) {
                 const Json::Value &err = errors[0];

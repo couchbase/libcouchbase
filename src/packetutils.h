@@ -29,6 +29,7 @@
 typedef struct packet_info_st packet_info;
 #else
 #include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
+#include "jsparse/parser.h"
 #include <math.h>
 namespace lcb
 {
@@ -304,7 +305,7 @@ class MemcachedResponse
             return LCB_ERR_INVALID_ARGUMENT;
         }
         Json::Value jval;
-        if (!Json::Reader().parse(value, value + nvalue, jval)) {
+        if (!lcb::jsparse::parse_json(value, nvalue, jval)) {
             return LCB_ERR_INVALID_ARGUMENT;
         }
         if (jval.empty()) {

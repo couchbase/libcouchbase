@@ -469,7 +469,7 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
     {
         // Warn users if they attempt to use Capella without TLS being enabled.
         bool is_capella = false;
-        static std::string suffix = "cloud.couchbase.com";
+        static const std::string suffix = "cloud.couchbase.com";
         for (auto &node : spec.hosts()) {
             auto pos = node.hostname.find(suffix);
             if (pos != std::string::npos && pos + suffix.size() == node.hostname.size()) {

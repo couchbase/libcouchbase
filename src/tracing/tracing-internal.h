@@ -181,8 +181,8 @@ lcbtrace_SPAN *start_kv_span(const lcb_settings *settings, const mc_PACKET *pack
         ref.span = parent_span;
         bool is_dispatch = (parent_span != nullptr && parent_span->is_outer());
         span = lcbtrace_span_start((settings)->tracer,
-                                   is_dispatch ? LCBTRACE_OP_DISPATCH_TO_SERVER : cmd->operation_name().c_str(),
-                                   LCBTRACE_NOW, &ref);
+                                   is_dispatch ? LCBTRACE_OP_DISPATCH_TO_SERVER : cmd->operation_name(), LCBTRACE_NOW,
+                                   &ref);
         span->should_finish(true);
         span->is_outer(!is_dispatch);
     }
@@ -192,7 +192,7 @@ lcbtrace_SPAN *start_kv_span(const lcb_settings *settings, const mc_PACKET *pack
     lcbtrace_span_add_system_tags(span, settings, LCBTRACE_THRESHOLD_KV);
     span->add_tag(LCBTRACE_TAG_SCOPE, cmd->collection().scope());
     span->add_tag(LCBTRACE_TAG_COLLECTION, cmd->collection().collection());
-    span->add_tag(LCBTRACE_TAG_OPERATION, cmd->operation_name());
+    span->add_tag(LCBTRACE_TAG_OPERATION, 0, cmd->operation_name(), 0);
     return span;
 }
 
@@ -226,8 +226,8 @@ lcbtrace_SPAN *start_http_span(const lcb_settings *settings, const COMMAND *cmd)
         ref.span = parent_span;
         bool is_dispatch = (parent_span != nullptr && parent_span->is_outer());
         span = lcbtrace_span_start((settings)->tracer,
-                                   is_dispatch ? LCBTRACE_OP_DISPATCH_TO_SERVER : cmd->operation_name().c_str(),
-                                   LCBTRACE_NOW, &ref);
+                                   is_dispatch ? LCBTRACE_OP_DISPATCH_TO_SERVER : cmd->operation_name(), LCBTRACE_NOW,
+                                   &ref);
         span->should_finish(true);
         span->is_outer(!is_dispatch);
     }

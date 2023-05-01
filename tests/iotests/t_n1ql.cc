@@ -87,7 +87,7 @@ static void rowcb(lcb_INSTANCE *, int, const lcb_RESPQUERY *resp)
         if (row) {
             res->meta.assign(row, nrow);
             Json::Value meta;
-            if (Json::Reader().parse(res->meta.data(), res->meta.data() + res->meta.size(), meta)) {
+            if (lcb::jsparse::parse_json(res->meta, meta)) {
                 if (meta.isMember("status") && meta["status"].isString()) {
                     res->status = meta["status"].asString();
                 }
@@ -462,7 +462,7 @@ static void list_indexes_callback(lcb_INSTANCE *, int, const lcb_RESPQUERY *resp
         if (row) {
             res->meta.assign(row, nrow);
             Json::Value meta;
-            if (Json::Reader().parse(res->meta, meta)) {
+            if (lcb::jsparse::parse_json(res->meta, meta)) {
                 if (meta.isMember("status") && meta["status"].isString()) {
                     res->status = meta["status"].asString();
                 }
@@ -483,7 +483,7 @@ static void list_indexes_callback(lcb_INSTANCE *, int, const lcb_RESPQUERY *resp
         }
     } else {
         Json::Value index_json;
-        if (Json::Reader().parse(row, row + nrow, index_json)) {
+        if (lcb::jsparse::parse_json(row, nrow, index_json)) {
             query_index index{};
             if (index_json.isMember("is_primary") && index_json["is_primary"].isBool()) {
                 index.is_primary = index_json["is_primary"].asBool();
@@ -612,7 +612,7 @@ std::vector<index_stats_point> index_status(lcb_INSTANCE *instance, const std::s
 
     std::vector<index_stats_point> stats{};
     Json::Value stats_json;
-    if (Json::Reader().parse(res.body, stats_json)) {
+    if (lcb::jsparse::parse_json(res.body, stats_json)) {
         if (stats_json.isArray() && !stats_json.empty()) {
             const auto &entry_json = stats_json[0];
             if (entry_json.isObject() && entry_json.isMember("data") && entry_json["data"].isArray() &&

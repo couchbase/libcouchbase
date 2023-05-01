@@ -84,6 +84,12 @@
  *
  * @example example/minimal/query.c
  * Shows N1QL query API. Also because queries executed in a loop, the sample might be used as simple benchmark (more sofisticated shipped with cbc tools, as cbc-n1qlback)
+ *
+ * @example example/threads-shared/threads-shared.c
+ * Shows how to protect single `lcb_INSTANCE` when it is shared between multiple threads.
+ *
+ * @example example/threads-private/threads-private.c
+ * Shows how to bind `lcb_INSTANCE` to each thread, and how to use custom logger in the thread-safe way.
  */
 
 /**
@@ -119,18 +125,30 @@
  * @}
  */
 
-
 /**
  * @page lcb_thrsafe Thread Safety
  *
- * The library uses no internal locking and is thus not safe to be used
- * concurrently from multiple threads. As the library contains no globals
- * you may call into the library from multiple threads so long as the same data
- * structure (specifically, the same `lcb_INSTANCE *`) is not used.
+ * This library is not designed to be thread-safe. However, it should be safe to use one `lcb_INSTANCE` object per
+ * thread, with some caveats and careful consideration.
  *
- * @include doc/example/threads.c
+ * 1. You must be certain that the `lcb_INSTANCE` is not shared with other threads. For performance, there are no
+ *    internal locks or other thread safety mechanisms to protect internal data structures.
  *
- * In this quick mockup example, the same `lcb_INSTANCE *` is being used from multiple
- * threads and thus requires locking. Now if each thread created its own `lcb_INSTANCE *`
- * it would be free to operate upon it without locking.
+ * 2. Also for performance reasons, the default logger is not thread-safe, and is not bound to a single `lcb_INSTANCE`.
+ *    Therefore, a multi-threaded application must also override the logger with a thread-safe version or use a separate
+ *    logger for each instance (see example @ref example/threads-private/threads-private.c).
+ *
+ * 3. Likewise, any other shared instances that are registered with the library (e.g., `lcb_io_opt_t`) must also be
+ *    protected in a similar manner. Such instances must either be protected and made thread-safe internally or a new
+ *    instance per `lcb_INSTANCE` can be provided.
+ *
+ * As with any multi-threaded application extra testing and analysis should be done using a tool like
+ * <a href="https://valgrind.org/docs/manual/drd-manual.html">Valgrind/DRD</a>,
+ * <a href="https://clang.llvm.org/docs/ThreadSanitizer.html">ThreadSanitizer</a> or similar.
+ *
+ * * @ref example/threads-shared/threads-shared.c - this example shows how to protect single `lcb_INSTANCE` when it is
+ *   shared between multiple threads.
+ *
+ * * @ref example/threads-private/threads-private.c - this example shows how to bind `lcb_INSTANCE` to each thread, and
+ *   how to use custom logger in the thread-safe way.
  */

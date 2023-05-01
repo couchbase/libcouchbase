@@ -35,14 +35,21 @@ enum class durability_mode {
  * @private
  */
 struct lcb_CMDSTORE_ {
-    const std::string &operation_name() const
+    const char *operation_name() const
     {
-        static std::map<int, std::string> names{
-            {LCB_STORE_UPSERT, LCBTRACE_OP_UPSERT}, {LCB_STORE_REPLACE, LCBTRACE_OP_REPLACE},
-            {LCB_STORE_APPEND, LCBTRACE_OP_APPEND}, {LCB_STORE_PREPEND, LCBTRACE_OP_PREPEND},
-            {LCB_STORE_INSERT, LCBTRACE_OP_INSERT},
-        };
-        return names[operation_];
+        switch (operation_) {
+            case LCB_STORE_UPSERT:
+                return LCBTRACE_OP_UPSERT;
+            case LCB_STORE_INSERT:
+                return LCBTRACE_OP_INSERT;
+            case LCB_STORE_REPLACE:
+                return LCBTRACE_OP_REPLACE;
+            case LCB_STORE_APPEND:
+                return LCBTRACE_OP_APPEND;
+            case LCB_STORE_PREPEND:
+                return LCBTRACE_OP_PREPEND;
+        }
+        return "BUG: unexpected store operation";
     }
 
     lcb_STATUS operation(lcb_STORE_OPERATION operation)

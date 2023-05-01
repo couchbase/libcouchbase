@@ -675,7 +675,7 @@ HANDLER(bucket_auth_handler)
         const char *ss = reinterpret_cast<const char *>(arg);
         size_t sslen = strlen(ss);
         Json::Value root;
-        if (!Json::Reader().parse(ss, ss + sslen, root)) {
+        if (!lcb::jsparse::parse_json(ss, sslen, root)) {
             return LCB_ERR_CONTROL_INVALID_ARGUMENT;
         }
         if (!root.isArray() || root.size() != 2) {

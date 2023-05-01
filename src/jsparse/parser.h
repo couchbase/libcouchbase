@@ -27,6 +27,11 @@ namespace lcb
 namespace jsparse
 {
 
+bool parse_json(const char *s, size_t n, Json::Value &root);
+bool parse_json(const std::string &s, Json::Value &root);
+bool parse_json_strict(const char *s, size_t n, Json::Value &root);
+bool parse_json_strict(const std::string &s, Json::Value &root);
+
 struct Parser;
 
 struct Row {

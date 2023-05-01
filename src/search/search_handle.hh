@@ -120,10 +120,9 @@ struct lcb_SEARCH_HANDLE_ : lcb::jsparse::Parser::Actions {
         return LCBTRACE_THRESHOLD_SEARCH;
     }
 
-    static const std::string &operation_name()
+    static const char *operation_name()
     {
-        static std::string name = LCBTRACE_OP_SEARCH;
-        return name;
+        return LCBTRACE_OP_SEARCH;
     }
 
     lcbtrace_SPAN *parent_span() const

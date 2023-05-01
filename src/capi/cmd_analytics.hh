@@ -24,6 +24,7 @@
 #include <chrono>
 
 #include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
+#include "jsparse/parser.h"
 
 struct lcb_INGEST_PARAM_ {
     lcb_INGEST_METHOD method;
@@ -199,7 +200,7 @@ struct lcb_CMDANALYTICS_ {
             return LCB_ERR_INVALID_ARGUMENT;
         }
         Json::Value json_value;
-        if (!Json::Reader().parse(value, value + value_len, json_value)) {
+        if (!lcb::jsparse::parse_json(value, value_len, json_value)) {
             return LCB_ERR_INVALID_ARGUMENT;
         }
         root_[std::string(name, name_len)] = json_value;
@@ -212,7 +213,7 @@ struct lcb_CMDANALYTICS_ {
             return LCB_ERR_INVALID_ARGUMENT;
         }
         Json::Value json_value;
-        if (!Json::Reader().parse(value, value + value_len, json_value)) {
+        if (!lcb::jsparse::parse_json(value, value_len, json_value)) {
             return LCB_ERR_INVALID_ARGUMENT;
         }
         if (json_value.type() != Json::ValueType::arrayValue) {
@@ -228,7 +229,7 @@ struct lcb_CMDANALYTICS_ {
             return LCB_ERR_INVALID_ARGUMENT;
         }
         Json::Value json_value;
-        if (!Json::Reader().parse(value, value + value_len, json_value)) {
+        if (!lcb::jsparse::parse_json(value, value_len, json_value)) {
             return LCB_ERR_INVALID_ARGUMENT;
         }
         root_[name].append(json_value);
@@ -257,7 +258,7 @@ struct lcb_CMDANALYTICS_ {
     lcb_STATUS payload(const char *query, std::size_t query_len)
     {
         Json::Value value;
-        if (!Json::Reader().parse(query, query + query_len, value)) {
+        if (!lcb::jsparse::parse_json(query, query_len, value)) {
             return LCB_ERR_INVALID_ARGUMENT;
         }
         root_ = value;

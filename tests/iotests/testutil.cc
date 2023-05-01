@@ -21,6 +21,9 @@
 #include <map>
 #include <libcouchbase/utils.h>
 #include "rnd.h"
+#include "jsparse/parser.h"
+
+#include <cinttypes>
 
 /*
  * Helper functions
@@ -323,7 +326,7 @@ static std::uint64_t get_manifest_id(lcb_INSTANCE *instance)
     Json::Value payload;
     EXPECT_EQ(LCB_SUCCESS, result.rc);
     EXPECT_FALSE(result.value.empty());
-    EXPECT_TRUE(Json::Reader().parse(result.value, payload));
+    EXPECT_TRUE(lcb::jsparse::parse_json(result.value, payload));
     EXPECT_TRUE(payload.isMember("uid") && payload["uid"].isString());
     return std::stoull(payload["uid"].asString(), nullptr, 16);
 }
@@ -364,7 +367,7 @@ void create_scope(lcb_INSTANCE *instance, const std::string &scope, bool wait)
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
 
     Json::Value payload;
-    ASSERT_TRUE(Json::Reader().parse(result.body, payload)) << result.body;
+    ASSERT_TRUE(lcb::jsparse::parse_json(result.body, payload)) << result.body;
     ASSERT_TRUE(payload.isMember("uid") && payload["uid"].isString()) << result.body;
     std::uint64_t uid = std::stoull(payload["uid"].asString(), nullptr, 16);
     ASSERT_GT(uid, 0);
@@ -396,7 +399,7 @@ void create_collection(lcb_INSTANCE *instance, const std::string &scope, const s
     ASSERT_STATUS_EQ(LCB_SUCCESS, result.rc);
 
     Json::Value payload;
-    ASSERT_TRUE(Json::Reader().parse(result.body, payload)) << result.body;
+    ASSERT_TRUE(lcb::jsparse::parse_json(result.body, payload)) << result.body;
     ASSERT_TRUE(payload.isMember("uid") && payload["uid"].isString()) << result.body;
     std::uint64_t uid = std::stoull(payload["uid"].asString(), nullptr, 16);
     ASSERT_GT(uid, 0);
@@ -423,7 +426,7 @@ void drop_scope(lcb_INSTANCE *instance, const std::string &scope, bool wait)
     ASSERT_STATUS_EQ(LCB_SUCCESS, result.rc);
 
     Json::Value payload;
-    ASSERT_TRUE(Json::Reader().parse(result.body, payload)) << result.body;
+    ASSERT_TRUE(lcb::jsparse::parse_json(result.body, payload)) << result.body;
     ASSERT_TRUE(payload.isMember("uid") && payload["uid"].isString()) << result.body;
     std::uint64_t uid = std::stoull(payload["uid"].asString(), nullptr, 16);
     ASSERT_GT(uid, 0);
@@ -450,7 +453,7 @@ void drop_collection(lcb_INSTANCE *instance, const std::string &scope, const std
     ASSERT_STATUS_EQ(LCB_SUCCESS, result.rc);
 
     Json::Value payload;
-    ASSERT_TRUE(Json::Reader().parse(result.body, payload)) << result.body;
+    ASSERT_TRUE(lcb::jsparse::parse_json(result.body, payload)) << result.body;
     ASSERT_TRUE(payload.isMember("uid") && payload["uid"].isString()) << result.body;
     std::uint64_t uid = std::stoull(payload["uid"].asString(), nullptr, 16);
     ASSERT_GT(uid, 0);

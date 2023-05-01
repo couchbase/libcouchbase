@@ -295,7 +295,7 @@ LIBCOUCHBASE_API lcb_STATUS lcb_respanalytics_deferred_handle_extract(const lcb_
         return LCB_ERR_INVALID_ARGUMENT;
     }
     Json::Value payload;
-    if (!Json::Reader().parse(resp->row, resp->row + resp->nrow, payload)) {
+    if (!lcb::jsparse::parse_json(resp->row, resp->nrow, payload)) {
         return LCB_ERR_INVALID_ARGUMENT;
     }
     if (!payload.isObject()) {

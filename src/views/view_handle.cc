@@ -63,7 +63,7 @@ void lcb_VIEW_HANDLE_::invoke_last(lcb_STATUS err)
         resp.value = parser_->meta_buf.c_str();
         resp.nvalue = parser_->meta_buf.size();
         Json::Value meta;
-        if (Json::Reader().parse(resp.value, resp.value + resp.nvalue, meta)) {
+        if (lcb::jsparse::parse_json_strict(resp.value, resp.nvalue, meta)) {
             Json::Value &errors = meta["errors"];
             if (errors.isArray() && !errors.empty()) {
                 const Json::Value &error = errors[0];
@@ -80,8 +80,7 @@ void lcb_VIEW_HANDLE_::invoke_last(lcb_STATUS err)
         if (http_response_ && http_response_->ctx.response_code != 200 && http_response_->ctx.body_len) {
             // chances that were not able to parse response
             Json::Value meta;
-            if (Json::Reader(Json::Features::strictMode())
-                    .parse(http_response_->ctx.body, http_response_->ctx.body + http_response_->ctx.body_len, meta)) {
+            if (lcb::jsparse::parse_json(http_response_->ctx.body, http_response_->ctx.body_len, meta)) {
                 const Json::Value &error = meta["error"];
                 if (error.isString()) {
                     first_error_code_ = error.asString();

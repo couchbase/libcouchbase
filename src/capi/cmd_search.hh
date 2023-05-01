@@ -70,10 +70,9 @@ struct lcb_RESPSEARCH_ {
  * @private
  */
 struct lcb_CMDSEARCH_ {
-    static const std::string &operation_name()
+    static const char *operation_name()
     {
-        static std::string name = LCBTRACE_OP_SEARCH;
-        return name;
+        return LCBTRACE_OP_SEARCH;
     }
 
     bool has_callback() const

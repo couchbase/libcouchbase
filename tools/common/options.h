@@ -24,6 +24,7 @@
 #include <stdexcept>
 #include <sstream>
 #include "contrib/cliopts/cliopts.h"
+#include "lcb-jsoncpp.h"
 
 #define CBC_CONFIG_FILENAME ".cbcrc"
 #define CBC_WIN32_APPDIR "Couchbase CBC Utility"
@@ -135,6 +136,14 @@ class ConnParams
     bool isAdmin;
     bool loadFileDefaults();
 };
+
+static inline bool parse_json(const std::string &s, Json::Value &root)
+{
+    auto *reader = Json::CharReaderBuilder().newCharReader();
+    bool ok = reader->parse(s.data(), s.data() + s.size(), &root, nullptr);
+    delete reader;
+    return ok;
+}
 
 } // namespace cbc
 

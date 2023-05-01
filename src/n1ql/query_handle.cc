@@ -74,7 +74,7 @@ static void prepare_rowcb(lcb_INSTANCE *instance, int, const lcb_RESPQUERY *row)
     } else {
         // Insert into cache
         Json::Value prepared;
-        if (!Json::Reader().parse(row->row, row->row + row->nrow, prepared)) {
+        if (!lcb::jsparse::parse_json(row->row, row->nrow, prepared)) {
             lcb_log(LOGARGS2(instance, ERROR), LOGFMT "Invalid JSON returned from PREPARE", LOGID(origreq));
             return origreq->fail_prepared(row, LCB_ERR_PROTOCOL_ERROR);
         }
@@ -99,7 +99,7 @@ bool lcb_QUERY_HANDLE_::parse_meta(const char *row, size_t row_len, lcb_STATUS &
     first_error.code = 0;
 
     Json::Value meta;
-    if (!Json::Reader(Json::Features::strictMode()).parse(row, row + row_len, meta)) {
+    if (!lcb::jsparse::parse_json_strict(row, row_len, meta)) {
         return false;
     }
     const Json::Value &errors = meta["errors"];
@@ -501,7 +501,7 @@ lcb_QUERY_HANDLE_::lcb_QUERY_HANDLE_(lcb_INSTANCE *obj, void *user_cookie, const
         json = cmd->root();
     } else {
         std::string encoded = Json::FastWriter().write(cmd->root());
-        if (!Json::Reader().parse(encoded, json)) {
+        if (!lcb::jsparse::parse_json(encoded, json)) {
             last_error_ = LCB_ERR_INVALID_ARGUMENT;
             return;
         }

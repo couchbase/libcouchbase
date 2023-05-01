@@ -375,8 +375,6 @@ TEST_F(CollectionUnitTest, testDroppedCollection)
     std::string val1("val1"), val2("val2");
     std::string scope(unique_name("sCollectionDropMiss")), collection(unique_name("cCollectionDropMiss"));
 
-    std::uint64_t uid;
-
     // Create scope + collection, then drop collection
     create_scope(instance, scope);
     create_collection(instance, scope, collection);

@@ -18,6 +18,7 @@
 #include <libcouchbase/couchbase.h>
 #include "iotests.h"
 #include <string>
+#include <cinttypes>
 
 namespace std
 {

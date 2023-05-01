@@ -34,10 +34,9 @@ enum class get_mode {
  * @private
  */
 struct lcb_CMDGET_ {
-    static const std::string &operation_name()
+    static const char *operation_name()
     {
-        static std::string name = LCBTRACE_OP_GET;
-        return name;
+        return LCBTRACE_OP_GET;
     }
 
     lcb_STATUS with_touch(std::uint32_t expiry)

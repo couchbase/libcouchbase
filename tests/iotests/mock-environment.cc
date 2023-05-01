@@ -685,7 +685,7 @@ void MockBucketCommand::finalizePayload()
 
 void MockResponse::assign(const std::string &resp)
 {
-    bool rv = Json::Reader().parse(resp, jresp);
+    bool rv = lcb::jsparse::parse_json(resp, jresp);
     assert(rv);
 }
 

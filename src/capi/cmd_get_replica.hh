@@ -36,10 +36,9 @@ enum class get_replica_mode {
  * @private
  */
 struct lcb_CMDGETREPLICA_ {
-    static const std::string &operation_name()
+    static const char *operation_name()
     {
-        static std::string name = LCBTRACE_OP_GET_FROM_REPLICA;
-        return name;
+        return LCBTRACE_OP_GET_FROM_REPLICA;
     }
 
     lcb_STATUS mode(get_replica_mode mode)

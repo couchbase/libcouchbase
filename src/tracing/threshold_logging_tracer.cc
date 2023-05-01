@@ -159,7 +159,7 @@ void ThresholdLoggingTracer::flush_queue(FixedSpanQueue &queue, const char *mess
     Json::Value top;
     while (!queue.empty()) {
         Json::Value entry;
-        if (Json::Reader().parse(queue.top().payload, entry)) {
+        if (lcb::jsparse::parse_json(queue.top().payload, entry)) {
             top.append(entry);
         }
         queue.pop();

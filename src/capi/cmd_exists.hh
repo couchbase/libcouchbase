@@ -28,10 +28,9 @@
  * @private
  */
 struct lcb_CMDEXISTS_ {
-    static const std::string &operation_name()
+    static const char *operation_name()
     {
-        static std::string name = LCBTRACE_OP_EXISTS;
-        return name;
+        return LCBTRACE_OP_EXISTS;
     }
 
     lcb_STATUS key(std::string key)

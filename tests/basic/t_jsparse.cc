@@ -79,7 +79,7 @@ static bool validateJsonRows(const char *txt, size_t ntxt, Parser::Mode mode)
     parser.get_postmortem(out);
     EXPECT_EQ(cx.meta, iov2s(out));
     Json::Value root;
-    EXPECT_TRUE(Json::Reader().parse(cx.meta, root));
+    EXPECT_TRUE(lcb::jsparse::parse_json(cx.meta, root));
     return true;
 }
 
@@ -110,6 +110,6 @@ TEST_F(JsonParseTest, testInvalidJSON)
 {
     std::string input = "503 Service Unavailable";
     Json::Value meta;
-    ASSERT_TRUE(Json::Reader().parse(input.c_str(), input.c_str() + input.size(), meta));
-    ASSERT_FALSE(Json::Reader(Json::Features::strictMode()).parse(input.c_str(), input.c_str() + input.size(), meta));
+    ASSERT_TRUE(lcb::jsparse::parse_json(input, meta));
+    ASSERT_FALSE(lcb::jsparse::parse_json_strict(input, meta));
 }
