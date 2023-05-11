@@ -1,5 +1,21 @@
 # Release Notes
 
+## 3.3.7 (2023-05-11)
+
+* CCBC-1596: replace unsafe sprintf with snprintf.
+
+* CCBC-1597: Update threading example, reduce global state.
+
+  - Json::Reader uses static global variable, this patch replaces calls
+    to it with Json::CharReaderBuilder, which is re-entrant.
+
+  - Constants for tracing system defined as mutable static strings, this
+    patch replaces it with const static strings.
+
+  - Updated examples for thread-safe usage is updated to SDK3 API and
+    added them to the build pipeline
+
+
 ## 3.3.6 (2023-04-26)
 
 * CCBC-1590: Always pick random node for HTTP services.
