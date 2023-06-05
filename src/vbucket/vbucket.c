@@ -804,7 +804,7 @@ void lcbvb_replace_host(lcbvb_CONFIG *cfg, const char *hoststr)
     char *replacement = (char *)hoststr;
     if (strchr(replacement, ':')) {
         size_t len = strlen(hoststr);
-        replacement = calloc(len + 2, sizeof(char));
+        replacement = calloc(len + 3 /* '[', ']', '\0' */, sizeof(char));
         replacement[0] = '[';
         memcpy(replacement + 1, hoststr, len);
         replacement[len + 1] = ']';
