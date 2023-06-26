@@ -177,9 +177,11 @@ void iotssl_log_errors(lcbio_XSSL *xs)
 {
     unsigned long curerr;
     while ((curerr = ERR_get_error())) {
-        char errbuf[4096];
-        ERR_error_string_n(curerr, errbuf, sizeof errbuf);
-        lcb_log(LOGARGS(xs->ssl, LCB_LOG_ERROR), "%s", errbuf);
+        if (SSL_get_app_data(xs->ssl) != NULL) {
+            char errbuf[4096];
+            ERR_error_string_n(curerr, errbuf, sizeof errbuf);
+            lcb_log(LOGARGS(xs->ssl, LCB_LOG_ERROR), "%s", errbuf);
+        }
 
         if (xs->errcode != LCB_SUCCESS) {
             continue; /* Already set */
