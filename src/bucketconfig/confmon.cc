@@ -154,16 +154,17 @@ int Confmon::do_set_next(ConfigInfo *new_config, bool notify_miss)
             ca = config->vbc;
             cb = new_config->vbc;
 
-            lcb_log(LOGARGS(this, TRACE),
-                    "Not applying configuration received via %s (bucket=\"%.*s\", source=%s, address=\"%s\"). No "
-                    "changes detected. A.rev=%" PRId64 ":%" PRId64 ", B.rev=%" PRId64 ":%" PRId64
-                    ". Changes: servers=%s, map=%s, replicas=%s",
-                    provider_string(new_config->get_origin()), (int)new_config->vbc->bname_len, new_config->vbc->bname,
-                    provider_string(new_config->get_origin()), new_config->get_address().c_str(), ca->revepoch,
-                    ca->revid, ca->revepoch, cb->revid, (chstatus & LCBVB_SERVERS_MODIFIED) ? "yes" : "no",
-                    (chstatus & LCBVB_MAP_MODIFIED) ? "yes" : "no",
-                    (chstatus & LCBVB_REPLICAS_MODIFIED) ? "yes" : "no");
             if (notify_miss) {
+                lcb_log(LOGARGS(this, TRACE),
+                        "Not applying configuration received via %s (bucket=\"%.*s\", source=%s, address=\"%s\"). No "
+                        "changes detected. A.rev=%" PRId64 ":%" PRId64 ", B.rev=%" PRId64 ":%" PRId64
+                        ". Changes: servers=%s, map=%s, replicas=%s",
+                        provider_string(new_config->get_origin()), (int)new_config->vbc->bname_len,
+                        new_config->vbc->bname, provider_string(new_config->get_origin()),
+                        new_config->get_address().c_str(), ca->revepoch, ca->revid, ca->revepoch, cb->revid,
+                        (chstatus & LCBVB_SERVERS_MODIFIED) ? "yes" : "no",
+                        (chstatus & LCBVB_MAP_MODIFIED) ? "yes" : "no",
+                        (chstatus & LCBVB_REPLICAS_MODIFIED) ? "yes" : "no");
                 invoke_listeners(CLCONFIG_EVENT_GOT_ANY_CONFIG, new_config);
             }
             return 0;
@@ -302,8 +303,6 @@ void Confmon::do_next_provider()
         }
     }
 
-    lcb_log(LOGARGS(this, TRACE), "Attempting to retrieve cluster map via %s", provider_string(cur_provider->type));
-
     cur_provider->refresh();
 }
 
@@ -316,7 +315,6 @@ void Confmon::start(bool refresh)
         return;
     }
 
-    lcb_log(LOGARGS(this, TRACE), "Refreshing current cluster map (bucket: %s)", settings->bucket);
     lcb_assert(cur_provider);
     state = CONFMON_S_ACTIVE | CONFMON_S_ITERGRACE;
 
@@ -328,6 +326,8 @@ void Confmon::start(bool refresh)
     }
 
     if (refresh) {
+        lcb_log(LOGARGS(this, TRACE), "Refreshing current cluster map (bucket: \"%s\"), next update in %dus",
+                settings->bucket, tmonext);
         cur_provider->refresh();
     }
     as_start.rearm(tmonext);
@@ -352,6 +352,14 @@ void Confmon::stop()
     as_start.cancel();
     as_stop.cancel();
     state = CONFMON_S_INACTIVE;
+}
+
+config_version Confmon::get_current_version() const
+{
+    if (config == nullptr || config->vbc == nullptr) {
+        return {0, 0};
+    }
+    return {config->vbc->revepoch, config->vbc->revid};
 }
 
 Provider::Provider(Confmon *parent_, Method type_) : type(type_), enabled(false), parent(parent_) {}

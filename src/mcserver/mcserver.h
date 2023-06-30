@@ -135,6 +135,24 @@ class Server : public mc_PIPELINE
         return new_durability;
     }
 
+    /**
+     * The connection supports configuration push. When this flag is true, the library will not use this connection for
+     * configuration polling, and expect KV engine to post notification when the topology will change.
+     */
+    bool supports_config_push() const
+    {
+        return clustermap_change_notification;
+    }
+
+    /**
+     * If true, the library will always send version of current configuration, which allows KV engine skip payload in
+     * response, if it does not have newer version.
+     */
+    bool supports_config_known_version() const
+    {
+        return config_with_known_version;
+    }
+
     bool is_connected() const
     {
         return connctx != nullptr;
@@ -200,6 +218,8 @@ class Server : public mc_PIPELINE
     int handle_unknown_error(const mc_PACKET *request, const MemcachedResponse &resinfo, lcb_STATUS &newerr);
     bool handle_nmv(MemcachedResponse &resinfo, mc_PACKET *oldpkt);
     bool handle_unknown_collection(MemcachedResponse &resinfo, mc_PACKET *oldpkt);
+    void handle_server_request(const MemcachedResponse &request);
+    void handle_clustermap_notification(const MemcachedResponse &request);
 
     bool maybe_retry_packet(mc_PACKET *pkt, lcb_STATUS err, protocol_binary_response_status status);
     bool maybe_reconnect_on_fake_timeout(lcb_STATUS received_error);
@@ -231,6 +251,12 @@ class Server : public mc_PIPELINE
 
     /** Whether bucket has been selected */
     short selected_bucket{};
+
+    /** Whether ClustermapChangeNotificationBrief is supported */
+    short clustermap_change_notification{0};
+
+    /** Whether GetClusterConfigWithKnownVersion is supported */
+    short config_with_known_version{0};
 
     lcbio_CTX *connctx;
     lcb::io::ConnectionRequest *connreq{};

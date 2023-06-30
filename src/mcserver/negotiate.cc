@@ -416,14 +416,74 @@ bool SessionRequestImpl::check_auth(const lcb::MemcachedResponse &packet)
     return true;
 }
 
+static const char *protocol_feature_2_text(protocol_binary_hello_features feature)
+{
+    switch (feature) {
+        case PROTOCOL_BINARY_FEATURE_TLS:
+            return "TLS";
+        case PROTOCOL_BINARY_FEATURE_TCPNODELAY:
+            return "TCPNODELAY";
+        case PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO:
+            return "MUTATION_SEQNO";
+        case PROTOCOL_BINARY_FEATURE_TCPDELAY:
+            return "TCPDELAY";
+        case PROTOCOL_BINARY_FEATURE_XATTR:
+            return "XATTR";
+        case PROTOCOL_BINARY_FEATURE_XERROR:
+            return "XERROR";
+        case PROTOCOL_BINARY_FEATURE_SELECT_BUCKET:
+            return "SELECT_BUCKET";
+        case PROTOCOL_BINARY_FEATURE_SNAPPY:
+            return "SNAPPY";
+        case PROTOCOL_BINARY_FEATURE_JSON:
+            return "JSON";
+        case PROTOCOL_BINARY_FEATURE_DUPLEX:
+            return "Duplex";
+        case PROTOCOL_BINARY_FEATURE_CLUSTERMAP_CHANGE_NOTIFICATION:
+            return "ClustermapChangeNotification";
+        case PROTOCOL_BINARY_FEATURE_UNORDERED_EXECUTION:
+            return "UnorderedExecution";
+        case PROTOCOL_BINARY_FEATURE_TRACING:
+            return "Tracing";
+        case PROTOCOL_BINARY_FEATURE_ALT_REQUEST_SUPPORT:
+            return "AltRequestSupport";
+        case PROTOCOL_BINARY_FEATURE_SYNC_REPLICATION:
+            return "SyncReplication";
+        case PROTOCOL_BINARY_FEATURE_COLLECTIONS:
+            return "Collections";
+        case PROTOCOL_BINARY_FEATURE_SNAPPY_EVERYWHERE:
+            return "SnappyEverywhere";
+        case PROTOCOL_BINARY_FEATURE_PRESERVE_TTL:
+            return "PreserveTtl";
+        case PROTOCOL_BINARY_FEATURE_CREATE_AS_DELETED:
+            return "SubdocCreateAsDeleted";
+        case PROTOCOL_BINARY_FEATURE_CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF:
+            return "ClustermapChangeNotificationBrief";
+        case PROTOCOL_BINARY_FEATURE_DEDUPE_NOT_MY_VBUCKET_CLUSTERMAP:
+            return "DedupeNotMyVbucketClustermap";
+        case PROTOCOL_BINARY_FEATURE_GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION:
+            return "GetClusterConfigWithKnownVersion";
+
+        case PROTOCOL_BINARY_FEATURE_INVALID:
+        case PROTOCOL_BINARY_FEATURE_INVALID2:
+        case MEMCACHED_TOTAL_HELLO_FEATURES:
+            return "unknown";
+    }
+    return "unknown";
+}
+
 bool SessionRequestImpl::send_hello()
 {
-    lcb_U16 features[MEMCACHED_TOTAL_HELLO_FEATURES];
+    protocol_binary_hello_features features[MEMCACHED_TOTAL_HELLO_FEATURES] = {};
 
     unsigned nfeatures = 0;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TLS;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XATTR;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_JSON;
+    features[nfeatures++] = PROTOCOL_BINARY_FEATURE_DUPLEX;
+    features[nfeatures++] = PROTOCOL_BINARY_FEATURE_CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF;
+    features[nfeatures++] = PROTOCOL_BINARY_FEATURE_GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION;
+    features[nfeatures++] = PROTOCOL_BINARY_FEATURE_DEDUPE_NOT_MY_VBUCKET_CLUSTERMAP;
     if (settings->select_bucket) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_SELECT_BUCKET;
     }
@@ -435,6 +495,11 @@ bool SessionRequestImpl::send_hello()
     }
     if (settings->compressopts != LCB_COMPRESS_NONE) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_SNAPPY;
+        /**
+         * Signal the KV engine that now libcouchbase supports snappy not only in regular operation handler
+         * (handler.cc), but also in configuration handlers (bc_cccp.cc and getconfig.cc)
+         */
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_SNAPPY_EVERYWHERE;
     }
     if (settings->fetch_mutation_tokens) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO;
@@ -457,14 +522,14 @@ bool SessionRequestImpl::send_hello()
 
     std::string agent = generate_agent_json();
     lcb::MemcachedRequest hdr(PROTOCOL_BINARY_CMD_HELLO);
-    hdr.sizes(0, agent.size(), (sizeof features[0]) * nfeatures);
+    hdr.sizes(0, agent.size(), (sizeof(std::uint16_t)) * nfeatures);
     lcbio_ctx_put(ctx, hdr.data(), hdr.size());
     lcbio_ctx_put(ctx, agent.c_str(), agent.size());
 
     std::string fstr;
     for (size_t ii = 0; ii < nfeatures; ii++) {
         char buf[50] = {0};
-        lcb_U16 tmp = htons(features[ii]);
+        std::uint16_t tmp = htons(features[ii]);
         lcbio_ctx_put(ctx, &tmp, sizeof tmp);
         snprintf(buf, sizeof(buf), "%s0x%02x (%s)", ii > 0 ? ", " : "", features[ii],
                  protocol_feature_2_text(features[ii]));
@@ -493,10 +558,10 @@ bool SessionRequestImpl::read_hello(const lcb::MemcachedResponse &packet)
     size_t ii;
     std::string fstr;
     for (ii = 0, cur = payload; cur < limit; cur += 2, ii++) {
-        lcb_U16 tmp;
+        protocol_binary_hello_features tmp;
         char buf[50] = {0};
         memcpy(&tmp, cur, sizeof(tmp));
-        tmp = ntohs(tmp);
+        tmp = static_cast<protocol_binary_hello_features>(ntohs(tmp));
         info->server_features.push_back(tmp);
         snprintf(buf, sizeof(buf), "%s0x%02x (%s)", ii > 0 ? ", " : "", tmp, protocol_feature_2_text(tmp));
         fstr.append(buf);

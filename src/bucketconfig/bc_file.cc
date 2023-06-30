@@ -189,6 +189,7 @@ ConfigInfo *FileProvider::get_cached()
 
 void FileProvider::reload_cache()
 {
+    lcb_log(LOGARGS(this, TRACE), "Attempting to retrieve cluster map via FILE (path=\"%s\")", filename.c_str());
     if (load_cache() == UPDATED) {
         parent->provider_got_config(this, config);
     } else {

@@ -173,7 +173,6 @@ void Bootstrap::check_bgpoll()
 
 void Bootstrap::bgpoll()
 {
-    lcb_log(LOGARGS(parent, TRACE), "Background-polling for new configuration");
     bootstrap(BS_REFRESH_ALWAYS);
     check_bgpoll();
 }
@@ -246,6 +245,7 @@ lcb_STATUS Bootstrap::bootstrap(unsigned options)
         tm.rearm(LCBT_SETTING(parent, config_timeout));
         lcb_aspend_add(&parent->pendops, LCB_PENDTYPE_COUNTER, nullptr);
     } else if (parent->confmon->is_refreshing()) {
+        lcb_log(LOGARGS(parent, TRACE), "already refreshing, exit");
         return LCB_SUCCESS;
     }
 

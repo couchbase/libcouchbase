@@ -415,6 +415,7 @@ lcb_STATUS HttpProvider::refresh()
 
     /** If we need a new socket, we do connect_next. */
     if (ioctx == nullptr && creq == nullptr) {
+        lcb_log(LOGARGS(this, TRACE), "Reconnect socket to retrieve cluster map via HTTP");
         as_reconnect.signal();
     }
     disconn_timer.cancel();

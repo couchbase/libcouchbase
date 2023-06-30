@@ -402,6 +402,10 @@ typedef enum {
     PROTOCOL_BINARY_CMD_INVALID = 0xff
 } protocol_binary_command;
 
+typedef enum {
+    PROTOCOL_BINARY_CMD_CLUSTERMAP_CHANGE_NOTIFICATION = 0x01,
+} protocol_binary_notification;
+
 /**
  * Definition of the data types in the packet
  * See section 3.4 Data Types
@@ -835,37 +839,14 @@ typedef enum {
     PROTOCOL_BINARY_FEATURE_ALT_REQUEST_SUPPORT = 0x10,
     PROTOCOL_BINARY_FEATURE_SYNC_REPLICATION = 0x11,
     PROTOCOL_BINARY_FEATURE_COLLECTIONS = 0x12,
+    PROTOCOL_BINARY_FEATURE_SNAPPY_EVERYWHERE = 0x13,
     PROTOCOL_BINARY_FEATURE_PRESERVE_TTL = 0x14,
-    PROTOCOL_BINARY_FEATURE_CREATE_AS_DELETED = 0x17
+    PROTOCOL_BINARY_FEATURE_CREATE_AS_DELETED = 0x17,
+    PROTOCOL_BINARY_FEATURE_GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION = 0x1d,
+    PROTOCOL_BINARY_FEATURE_DEDUPE_NOT_MY_VBUCKET_CLUSTERMAP = 0x1e,
+    PROTOCOL_BINARY_FEATURE_CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF = 0x1f,
+    MEMCACHED_TOTAL_HELLO_FEATURES
 } protocol_binary_hello_features;
-
-#define MEMCACHED_FIRST_HELLO_FEATURE 0x01
-#define MEMCACHED_TOTAL_HELLO_FEATURES 15
-
-// clang-format off
-#define protocol_feature_2_text(a) \
-    (a == PROTOCOL_BINARY_FEATURE_INVALID) ? "Invalid" : \
-    (a == PROTOCOL_BINARY_FEATURE_TLS) ? "TLS" : \
-    (a == PROTOCOL_BINARY_FEATURE_TCPNODELAY) ? "TCP nodelay" : \
-    (a == PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO) ? "Mutation seqno" : \
-    (a == PROTOCOL_BINARY_FEATURE_TCPDELAY) ? "TCP delay" : \
-    (a == PROTOCOL_BINARY_FEATURE_XATTR) ? "XATTR" : \
-    (a == PROTOCOL_BINARY_FEATURE_XERROR) ? "XERROR": \
-    (a == PROTOCOL_BINARY_FEATURE_SELECT_BUCKET) ? "Select bucket": \
-    (a == PROTOCOL_BINARY_FEATURE_INVALID2) ? "Invalid2": \
-    (a == PROTOCOL_BINARY_FEATURE_SNAPPY) ? "Snappy": \
-    (a == PROTOCOL_BINARY_FEATURE_JSON) ? "JSON": \
-    (a == PROTOCOL_BINARY_FEATURE_DUPLEX) ? "Duplex": \
-    (a == PROTOCOL_BINARY_FEATURE_CLUSTERMAP_CHANGE_NOTIFICATION) ? "Clustermap change notification": \
-    (a == PROTOCOL_BINARY_FEATURE_UNORDERED_EXECUTION) ? "Unordered execution": \
-    (a == PROTOCOL_BINARY_FEATURE_TRACING) ? "Tracing": \
-    (a == PROTOCOL_BINARY_FEATURE_ALT_REQUEST_SUPPORT) ? "Alt request support": \
-    (a == PROTOCOL_BINARY_FEATURE_SYNC_REPLICATION) ? "Synchronous Replication": \
-    (a == PROTOCOL_BINARY_FEATURE_COLLECTIONS) ? "Collections": \
-    (a == PROTOCOL_BINARY_FEATURE_PRESERVE_TTL) ? "Preserve Expiry": \
-    (a == PROTOCOL_BINARY_FEATURE_CREATE_AS_DELETED) ? "Create as Deleted": \
-    "Unknown"
-// clang-format on
 
 /**
  * The HELLO command is used by the client and the server to agree

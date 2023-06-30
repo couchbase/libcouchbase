@@ -166,7 +166,7 @@ struct lcb_st {
         return deferred_operations != nullptr && !deferred_operations->empty();
     }
     lcb::Server *find_server(const lcb_host_t &host) const;
-    lcb_STATUS request_config(void *cookie, lcb::Server *server);
+    lcb_STATUS request_config(void *cookie_, lcb::Server *server, lcb::clconfig::config_version current_version);
     lcb_STATUS select_bucket(void *cookie, lcb::Server *server);
 
     /**

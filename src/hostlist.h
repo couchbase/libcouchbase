@@ -35,7 +35,8 @@
 typedef struct lcb_host_st {
     char host[NI_MAXHOST + 1];
     char port[NI_MAXSERV + 1];
-    int ipv6;
+    unsigned int ipv6 : 1;
+    unsigned int supports_config_push : 1;
 } lcb_host_t;
 
 #define LCB_HOST_FMT LCB_LOG_SPEC("%s%s%s:%s")
@@ -81,13 +82,19 @@ struct Hostlist {
     bool exists(const char *hostport) const;
 
     /**
+     * Returns true, if all addresses in the list known to support configuration push, and polling is not necessary.
+     */
+    bool all_hosts_support_config_push() const;
+
+    /**
      * Return the next host in the list.
      * @param wrap If the internal iterator has reached its limit, this
      * indicates whether it should be reset, or if it should return NULL
+     * @param skip_if_push_supported skip hosts that support config push mechanism
      * @return a new host if available, or NULL if the list is empty or the
      * iterator is finished.
      */
-    lcb_host_t *next(bool wrap);
+    lcb_host_t *next(bool wrap, bool skip_if_push_supported = false);
     bool finished() const;
 
     size_t size() const

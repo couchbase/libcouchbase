@@ -173,6 +173,16 @@ bool Hostlist::exists(const char *s) const
     return exists(tmp);
 }
 
+bool Hostlist::all_hosts_support_config_push() const
+{
+    for (const auto &ii : hosts) {
+        if (!ii.supports_config_push) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void Hostlist::add(const lcb_host_t &host)
 {
     if (exists(host)) {
@@ -220,23 +230,42 @@ lcb_STATUS Hostlist::add(const char *hostport, long len, int deflport)
     return LCB_SUCCESS;
 }
 
-lcb_host_t *Hostlist::next(bool wrap)
+lcb_host_t *Hostlist::next(bool wrap, bool skip_if_push_supported)
 {
     lcb_host_t *ret;
     if (empty()) {
+        /* no hosts in the list */
         return nullptr;
     }
-    if (ix == size()) {
-        if (wrap) {
-            ix = 0;
-        } else {
-            return nullptr;
-        }
+
+    if (skip_if_push_supported && all_hosts_support_config_push()) {
+        /* the caller asked to ignore all nodes, that support configuration push, so behave like the list is empty */
+        return nullptr;
     }
 
-    ret = &hosts[ix];
-    ix++;
-    return ret;
+    /*
+     * loop through the addresses to find the next node to use
+     */
+    do {
+        if (ix == size()) {
+            if (wrap) {
+                /* reset the index */
+                ix = 0;
+            } else {
+                /* wrap is not enabled, behave like the list is empty */
+                return nullptr;
+            }
+        }
+
+        ret = &hosts[ix];
+        ix++;
+        if (skip_if_push_supported && ret->supports_config_push) {
+            /* skip the address, as it supports configuration push. We already checked that there is at least one node
+             * that does not support configuration push above, so it is guaranteed that the loop will end */
+            continue;
+        }
+        return ret;
+    } while (true);
 }
 
 void Hostlist::randomize()

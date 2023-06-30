@@ -17,7 +17,10 @@
 
 #include "internal.h"
 #include "packetutils.h"
+#include "mc/compress.h"
 #include <bucketconfig/clconfig.h>
+
+#define LOGARGS(instance, lvl) instance->settings, "getconfig", LCB_LOG_##lvl, __FILE__, __LINE__
 
 static void ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_CALLBACK_TYPE /* cbtype */, lcb_STATUS rc,
                                const void *resdata)
@@ -34,10 +37,10 @@ static void ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_CALLBACK_TYP
                 server->bucket.assign(server->settings->bucket, strlen(server->settings->bucket));
             }
             break;
-        case PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG:
-            lcb::clconfig::cccp_update(rd->cookie, rc, res->value(), res->vallen(),
-                                       server->has_valid_host() ? &server->get_host() : nullptr);
-            break;
+        case PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG: {
+            lcb::clconfig::cccp_update(rd->cookie, rc, server->has_valid_host() ? &server->get_host() : nullptr,
+                                       res->inflated_value());
+        } break;
     }
     free(rd);
     req->u_rdata.exdata = nullptr;
@@ -52,7 +55,7 @@ static void ext_callback_dtor(mc_PACKET *pkt)
 
 static mc_REQDATAPROCS procs = {ext_callback_proxy, ext_callback_dtor};
 
-lcb_STATUS lcb_st::request_config(void *cookie_, lcb::Server *server)
+lcb_STATUS lcb_st::request_config(void *cookie_, lcb::Server *server, lcb::clconfig::config_version current_version)
 {
     lcb_STATUS err;
     mc_PACKET *packet;
@@ -63,24 +66,44 @@ lcb_STATUS lcb_st::request_config(void *cookie_, lcb::Server *server)
         return LCB_ERR_NO_MEMORY;
     }
 
-    err = mcreq_reserve_header(server, packet, 24);
+    /*
+     * check if the connection allows to specify the version of the current configuration. If KV engine does not have
+     * newer configuration, it will respond with empty payload.
+     */
+    const auto ext_size = static_cast<std::uint8_t>(server->config_with_known_version ? 2 * sizeof(std::uint64_t) : 0);
+    err = mcreq_reserve_header(server, packet, 24 + ext_size);
     if (err != LCB_SUCCESS) {
         mcreq_release_packet(server, packet);
         return err;
     }
 
+    std::uint32_t timeout = settings->operation_timeout;
+    lcb_log(LOGARGS(this, TRACE),
+            "Attempting to retrieve cluster map via CCCP (timeout=%uus, ext=%d, epoch=%" PRId64 ", revision=%" PRId64
+            ")",
+            timeout, (int)ext_size, current_version.epoch, current_version.revision);
+
     rd = reinterpret_cast<mc_REQDATAEX *>(calloc(1, sizeof(*rd)));
     rd->procs = &procs;
     rd->cookie = cookie_;
     rd->start = gethrtime();
-    rd->deadline =
-        rd->start + LCB_US2NS(LCBT_SETTING(reinterpret_cast<lcb_INSTANCE *>(cmdq.cqdata), operation_timeout));
+    rd->deadline = rd->start + LCB_US2NS(timeout);
     packet->u_rdata.exdata = rd;
     packet->flags |= MCREQ_F_REQEXT;
 
     lcb::MemcachedRequest hdr(PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG, packet->opaque);
     hdr.opaque(packet->opaque);
+    hdr.sizes(ext_size, 0, 0);
     memcpy(SPAN_BUFFER(&packet->kh_span), hdr.data(), hdr.size());
+    if (ext_size > 0) {
+        /* write epoch/revision pair as ext fields */
+        auto offset = hdr.size();
+        auto epoch = lcb_htonll(current_version.epoch);
+        memcpy(SPAN_BUFFER(&packet->kh_span) + offset, &epoch, sizeof(std::uint64_t));
+        offset += sizeof(std::uint64_t);
+        auto revision = lcb_htonll(current_version.revision);
+        memcpy(SPAN_BUFFER(&packet->kh_span) + offset, &revision, sizeof(std::uint64_t));
+    }
 
     mcreq_sched_enter(&cmdq);
     mcreq_sched_add(server, packet);

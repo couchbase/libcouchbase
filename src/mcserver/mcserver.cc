@@ -30,6 +30,7 @@
 
 #include "sllist.h"
 #include "sllist-inl.h"
+#include "mc/compress.h"
 
 #define LOGARGS(c, lvl) (c)->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOGARGS_T(lvl) LOGARGS(this, lvl)
@@ -141,15 +142,17 @@ bool Server::handle_nmv(MemcachedResponse &resinfo, mc_PACKET *oldpkt)
 
     mcreq_read_hdr(oldpkt, &hdr);
     vbid = ntohs(hdr.request.vbucket);
-    lcb_log(LOGARGS_T(WARN), LOGFMT "NOT_MY_VBUCKET. Packet=%p (S=%u). VBID=%u", LOGID_T(), (void *)oldpkt,
-            oldpkt->opaque, vbid);
+    lcb_log(LOGARGS_T(WARN), LOGFMT "NOT_MY_VBUCKET. Packet=%p (S=%u). VBID=%u, has_config=%s", LOGID_T(),
+            (void *)oldpkt, oldpkt->opaque, vbid, resinfo.vallen() ? "yes" : "no");
 
     /* Notify of new map */
     lcb_vbguess_remap(instance, vbid, index);
 
     if (resinfo.vallen() && cccp->enabled) {
-        std::string s(resinfo.value(), resinfo.vallen());
-        err = lcb::clconfig::cccp_update(cccp, curhost->host, s.c_str());
+        /*
+         * apply new configuration, so that when the command will be retried, it will be routed using new vbucket map
+         */
+        err = lcb::clconfig::cccp_update(cccp, curhost->host, resinfo.inflated_value());
     }
 
     if (err != LCB_SUCCESS) {
@@ -447,6 +450,64 @@ static bool is_warmup_issue(uint16_t status)
     return status == PROTOCOL_BINARY_RESPONSE_NO_BUCKET || status == PROTOCOL_BINARY_RESPONSE_NOT_INITIALIZED;
 }
 
+/**
+ * The handler extracts epoch and revision from the notification message, and pass it to configuration provider to
+ * perform PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG (0xb5) operation to fetch configuration body.
+ */
+void Server::handle_clustermap_notification(const MemcachedResponse &request)
+{
+    std::int64_t epoch{0};
+    std::int64_t revision{0};
+
+    if (request.extlen() == 2 * sizeof(std::uint64_t)) {
+        const auto *ext = request.ext();
+        memcpy(&epoch, ext, sizeof(std::uint64_t));
+        epoch = lcb_ntohll(epoch);
+        ext += sizeof(std::uint64_t);
+        memcpy(&revision, ext, sizeof(std::uint64_t));
+        revision = lcb_ntohll(revision);
+    }
+    lcb_log(LOGARGS_T(TRACE),
+            LOGFMT "Received payload clustermap notification. (key=\"%.*s\", epoch=%" PRId64 ", revision=%" PRId64 ")",
+            LOGID_T(), (int)request.keylen(), request.key(), epoch, revision);
+
+    lcb::clconfig::Provider *cccp = instance->confmon->get_provider(lcb::clconfig::CLCONFIG_CCCP);
+    if (cccp == nullptr || !cccp->enabled) {
+        lcb_log(LOGARGS_T(ERR),
+                LOGFMT
+                "CCCP configuration provider is not enabled, ignoring notification. (key=\"%.*s\", epoch=%" PRId64
+                ", revision=%" PRId64 ")",
+                LOGID_T(), (int)request.keylen(), request.key(), epoch, revision);
+        return;
+    }
+
+    /*
+     * Notify configuration provider that the connection seen notification about existence of newer configuration
+     * version.
+     */
+    lcb::clconfig::schedule_get_config(cccp, has_valid_host() ? &get_host() : nullptr,
+                                       lcb::clconfig::config_version{epoch, revision});
+}
+
+/**
+ * Handles requests that are initiated by the KV engine. It only happens when PROTOCOL_BINARY_FEATURE_DUPLEX (0x0c) is
+ * enabled for the connection.
+ */
+void Server::handle_server_request(const MemcachedResponse &request)
+{
+    switch (request.opcode()) {
+        case PROTOCOL_BINARY_CMD_CLUSTERMAP_CHANGE_NOTIFICATION:
+            handle_clustermap_notification(request);
+            break;
+
+        default:
+            lcb_log(LOGARGS_T(DEBUG),
+                    LOGFMT "Server sent us unknown notification packet, ignoring it. (OP=0x%x, RC=0x%x, SEQ=%u)",
+                    LOGID_T(), request.opcode(), request.status(), request.opaque());
+            break;
+    }
+}
+
 /* This function is called within a loop to process a single packet.
  *
  * If a full packet is available, it will process the packet and return
@@ -493,6 +554,17 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     pktsize += mcresp.bodylen();
     if (rdb_get_nused(ior) < pktsize) {
         RETURN_NEED_MORE(pktsize);
+    }
+
+    if (mcresp.res.response.magic == PROTOCOL_BINARY_SREQ) {
+        /*
+         * Server-initiated request, we don't need to look for SDK-request object here.
+         * Handle and return from the function.
+         */
+        DO_ASSIGN_PAYLOAD()
+        handle_server_request(mcresp);
+        DO_SWALLOW_PAYLOAD()
+        return PKT_READ_COMPLETE;
     }
 
     /* Find the packet */
@@ -1006,13 +1078,18 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
         } else if (settings->conntype == LCB_TYPE_BUCKET && settings->bucket) {
             try_to_select_bucket = true;
         }
+        clustermap_change_notification =
+            sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF);
+        config_with_known_version =
+            sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION);
         lcb_log(
             LOGARGS_T(TRACE),
-            R"(<%s:%s> (SRV=%p) Got new KV connection (json=%s, snappy=%s, mt=%s, durability=%s, bucket=%s "%s"%s%s))",
+            R"(<%s:%s> (SRV=%p) Got new KV connection (json=%s, snappy=%s, mt=%s, durability=%s, config_push=%s, config_ver=%s, bucket=%s "%s"%s%s))",
             curhost->host, curhost->port, (void *)this, jsonsupport ? "yes" : "no", compsupport ? "yes" : "no",
-            mutation_tokens ? "yes" : "no", new_durability ? "yes" : "no", selected_bucket ? "yes" : "no",
-            selected_bucket ? bucket.c_str() : "-", try_to_select_bucket ? " selecting " : "",
-            try_to_select_bucket ? settings->bucket : "");
+            mutation_tokens ? "yes" : "no", new_durability ? "yes" : "no",
+            clustermap_change_notification ? "yes" : "no", config_with_known_version ? "yes" : "no",
+            selected_bucket ? "yes" : "no", selected_bucket ? bucket.c_str() : "-",
+            try_to_select_bucket ? " selecting " : "", try_to_select_bucket ? settings->bucket : "");
     }
 
     lcbio_CTXPROCS procs{};
