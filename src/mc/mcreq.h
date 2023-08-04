@@ -295,8 +295,19 @@ typedef enum {
      * The request has "replace" store semantics.
      * Utilized during error translation to map DOCUMENT_EXISTS to CAS_MISMATCH (see make_error() in handler.cc)
      */
-    MCREQ_F_REPLACE_SEMANTICS = 1u << 11u
+    MCREQ_F_REPLACE_SEMANTICS = 1u << 11u,
+
+    /**
+     * collection id is prepended to the key
+     */
+    MCREQ_F_HASCID = 1u << 12u,
 } mcreq_flags;
+
+typedef enum {
+    MCREQ_COLLECTIONS_UNKNOWN = 0,
+    MCREQ_COLLECTIONS_SUPPORTED = 1,
+    MCREQ_COLLECTIONS_UNSUPPORTTED = 2,
+} mcreq_collections_support;
 
 /** @brief mask of flags indicating user-allocated buffers */
 #define MCREQ_UBUF_FLAGS (MCREQ_F_KEY_NOCOPY | MCREQ_F_VALUE_NOCOPY)
@@ -424,6 +435,8 @@ typedef struct mc_pipeline_st {
 
     /** Allocator for packet structures */
     nb_MGR reqpool;
+
+    mcreq_collections_support collections;
 
     /** Optional metrics structure for server */
     struct lcb_SERVERMETRICS_st *metrics;
@@ -690,7 +703,7 @@ uint32_t mcreq_get_bodysize(const mc_PACKET *packet);
  */
 uint32_t mcreq_get_size(const mc_PACKET *packet);
 
-uint32_t mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet);
+uint32_t mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet, int *cid_set);
 
 void mcreq_set_cid(mc_PIPELINE *pipeline, mc_PACKET *packet, uint32_t cid);
 
@@ -703,6 +716,8 @@ uint16_t mcreq_get_vbucket(const mc_PACKET *packet);
 
 /** Initializes a single pipeline object */
 int mcreq_pipeline_init(mc_PIPELINE *pipeline);
+
+int mcreq_pipeline_support_collections(mc_PIPELINE *pipeline);
 
 /** Cleans up any initialization from pipeline_init */
 void mcreq_pipeline_cleanup(mc_PIPELINE *pipeline);

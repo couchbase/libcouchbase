@@ -109,6 +109,7 @@ lcb_STATUS mcreq_reserve_key(mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t h
         /* copy collection ID prefix */
         if (ncid) {
             memcpy(SPAN_BUFFER(&packet->kh_span) + hdrsize, cid, ncid);
+            packet->flags |= MCREQ_F_HASCID;
         }
         /**
          * Copy the key into the packet starting at the extras end
@@ -243,10 +244,89 @@ void mcreq_reenqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
     sllist_insert_sorted(reqs, &packet->slnode, pkt_tmo_compar);
 }
 
+static void check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
+{
+    if ((packet->flags & MCREQ_F_NOCID) != 0) {
+        return;
+    }
+
+    // before adding packet to pipeline lets see if we need add or remove collection id prefix
+    char *header_and_key = SPAN_BUFFER(&packet->kh_span);
+    protocol_binary_request_header *request = (protocol_binary_request_header *)header_and_key;
+
+    uint16_t key_length;
+    uint8_t flexible_extras_length = 0;
+
+    if (request->request.magic == PROTOCOL_BINARY_AREQ) {
+        flexible_extras_length = request->request.keylen & 0xff;
+        key_length = request->request.keylen >> 8;
+    } else {
+        key_length = ntohs(request->request.keylen);
+    }
+    if (key_length == 0) {
+        return;
+    }
+
+    char *key = header_and_key + sizeof(*request) + request->request.extlen + flexible_extras_length;
+    uint32_t collection_id = 0;
+
+    uint16_t collection_id_length = 0;
+    if ((packet->flags & MCREQ_F_HASCID) != 0) {
+        collection_id_length = (uint16_t)leb128_decode((const uint8_t *)key, key_length, &collection_id);
+    }
+
+    switch (pipeline->collections) {
+        case MCREQ_COLLECTIONS_SUPPORTED:
+            // the pipeline had negotiated collections feature with kv engine, so we have to encode collection id
+            // prefix
+            if (collection_id_length == 0) {
+                // but collection id prefix was not encoded, we should assume default collection and prepend zero as
+                // a collection identifier
+                mcreq_set_cid(pipeline, packet, 0);
+            }
+            break;
+
+        case MCREQ_COLLECTIONS_UNSUPPORTTED:
+            // the pipeline been told that the kv engine instance does not support collections
+            if (collection_id_length != 0) {
+                // but the packet has encoded collection id
+                if (collection_id == 0) {
+                    // strip it if it is default collection
+                    request->request.bodylen = htonl(ntohl(request->request.bodylen) - collection_id_length);
+                    uint16_t new_key_length = key_length - collection_id_length;
+                    if (request->request.magic == PROTOCOL_BINARY_AREQ) {
+                        request->request.keylen = (new_key_length << 8U) | (flexible_extras_length & 0xffU);
+                    } else {
+                        request->request.keylen = htons(new_key_length);
+                    }
+
+                    // shift the key content to the left
+                    for (int i = 0; i < new_key_length; ++i) {
+                        key[i] = key[i + collection_id_length];
+                    }
+                } else {
+                    fprintf(
+                        stderr,
+                        "custom collection id has been dispatched to the node, that does not support collections\n");
+                    // TODO log error
+                }
+            }
+            break;
+
+        default:
+            // the pipeline hadn't completed handshake yet, so trust global settings, and let operation be fixed
+            // when it will be retried in case of misprediction.
+            fprintf(stderr, "collections has not been negotiated for the pipeline yet\n");
+            break;
+    }
+}
+
 void mcreq_enqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 {
     nb_SPAN *vspan = &packet->u_value.single;
     sllist_append(&pipeline->requests, &packet->slnode);
+
+    check_collection_id(pipeline, packet);
     netbuf_enqueue_span(&pipeline->nbmgr, &packet->kh_span, packet);
     MC_INCR_METRIC(pipeline, bytes_queued, packet->kh_span.size);
 
@@ -593,9 +673,10 @@ void mcreq_set_cid(mc_PIPELINE *pipeline, mc_PACKET *packet, uint32_t cid)
         netbuf_mblock_release(&pipeline->nbmgr, &packet->kh_span);
     }
     CREATE_STANDALONE_SPAN(&packet->kh_span, kdata, new_size);
+    packet->flags |= MCREQ_F_HASCID;
 }
 
-uint32_t mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet)
+uint32_t mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet, int *cid_set)
 {
     uint8_t ffext = 0;
     uint16_t nk = 0;
@@ -604,6 +685,10 @@ uint32_t mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet)
     protocol_binary_request_header req;
     char *kh = SPAN_BUFFER(&packet->kh_span);
     char *k = NULL;
+
+    if (cid_set != NULL) {
+        *cid_set = 0;
+    }
 
     memcpy(&req, kh, sizeof(req));
     if (req.request.magic == PROTOCOL_BINARY_AREQ) {
@@ -616,6 +701,9 @@ uint32_t mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet)
     if ((packet->flags & MCREQ_F_NOCID) == 0 && instance && LCBT_SETTING(instance, use_collections)) {
         ncid = leb128_decode((uint8_t *)k, nk, &cid);
         if (ncid) {
+            if (cid_set != NULL) {
+                *cid_set = 1;
+            }
             return cid;
         }
     }
@@ -702,6 +790,7 @@ int mcreq_pipeline_init(mc_PIPELINE *pipeline)
     pipeline->index = 0;
     memset(&pipeline->ctxqueued, 0, sizeof pipeline->ctxqueued);
     pipeline->buf_done_callback = NULL;
+    pipeline->collections = MCREQ_COLLECTIONS_UNKNOWN;
 
     netbuf_default_settings(&settings);
 

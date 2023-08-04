@@ -273,7 +273,20 @@ bool Server::handle_unknown_collection(MemcachedResponse &resp, mc_PACKET *oldpk
         return true;
     }
 
-    uint32_t cid = mcreq_get_cid(instance, oldpkt);
+    int cid_set = 0;
+    uint32_t cid = mcreq_get_cid(instance, oldpkt, &cid_set);
+    if ((collections == MCREQ_COLLECTIONS_UNSUPPORTTED && cid_set) /* we need to strip collection and retry */
+        || (collections == MCREQ_COLLECTIONS_SUPPORTED && !cid_set) /* we need to prepend collection and retry */) {
+        lcb_log(LOGARGS_T(WARN),
+                LOGFMT
+                "UNKNOWN_COLLECTION. Packet=%p (M=0x%x, S=%u, OP=0x%x), CID=%u, collections=%d (set=%d). Retrying",
+                LOGID_T(), (void *)oldpkt, (int)req.request.magic, oldpkt->opaque, (int)req.request.opcode,
+                (unsigned)cid, (int)collections, cid_set);
+        mc_PACKET *newpkt = mcreq_renew_packet(oldpkt);
+        newpkt->flags &= ~MCREQ_STATE_FLAGS;
+        instance->retryq->ucadd((mc_EXPACKET *)newpkt, LCB_ERR_TIMEOUT, orig_status);
+        return true;
+    }
     std::string name = instance->collcache->id_to_name(cid);
 
     packet_wrapper wrapper;
@@ -1082,14 +1095,17 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
             sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF);
         config_with_known_version =
             sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION);
+        collections = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_COLLECTIONS) ? MCREQ_COLLECTIONS_SUPPORTED
+                                                                                 : MCREQ_COLLECTIONS_UNSUPPORTTED;
         lcb_log(
             LOGARGS_T(TRACE),
-            R"(<%s:%s> (SRV=%p) Got new KV connection (json=%s, snappy=%s, mt=%s, durability=%s, config_push=%s, config_ver=%s, bucket=%s "%s"%s%s))",
-            curhost->host, curhost->port, (void *)this, jsonsupport ? "yes" : "no", compsupport ? "yes" : "no",
-            mutation_tokens ? "yes" : "no", new_durability ? "yes" : "no",
-            clustermap_change_notification ? "yes" : "no", config_with_known_version ? "yes" : "no",
-            selected_bucket ? "yes" : "no", selected_bucket ? bucket.c_str() : "-",
-            try_to_select_bucket ? " selecting " : "", try_to_select_bucket ? settings->bucket : "");
+            R"(<%s:%s> (SRV=%p) Got new KV connection (collections=%s, json=%s, snappy=%s, mt=%s, durability=%s, config_push=%s, config_ver=%s, bucket=%s "%s"%s%s))",
+            curhost->host, curhost->port, (void *)this, collections == MCREQ_COLLECTIONS_SUPPORTED ? "yes" : "no",
+            jsonsupport ? "yes" : "no", compsupport ? "yes" : "no", mutation_tokens ? "yes" : "no",
+            new_durability ? "yes" : "no", clustermap_change_notification ? "yes" : "no",
+            config_with_known_version ? "yes" : "no", selected_bucket ? "yes" : "no",
+            selected_bucket ? bucket.c_str() : "-", try_to_select_bucket ? " selecting " : "",
+            try_to_select_bucket ? settings->bucket : "");
     }
 
     lcbio_CTXPROCS procs{};

@@ -273,12 +273,13 @@ void RetryQueue::flush(bool throttle)
                 fail(op, LCB_ERR_NO_MATCHING_SERVER, now);
             }
         } else {
-            uint32_t cid = mcreq_get_cid(get_instance(), op->pkt);
+            int cid_set = 0;
+            uint32_t cid = mcreq_get_cid(get_instance(), op->pkt, &cid_set);
             lcb_log(LOGARGS(this, TRACE),
-                    "Flush PKT=%p to network. retries=%u, cid=%u, opaque=%u, IX=%d, spent=%" PRIu64
+                    "Flush PKT=%p to network. retries=%u, cid=%u (%s), opaque=%u, IX=%d, spent=%" PRIu64
                     "us, deadline_in=%" PRIu64 "us",
-                    (void *)op->pkt, op->pkt->retries, cid, op->pkt->opaque, srvix, LCB_NS2US(now - op->start),
-                    LCB_NS2US(op->deadline - now));
+                    (void *)op->pkt, op->pkt->retries, cid, cid_set ? "set" : "unset", op->pkt->opaque, srvix,
+                    LCB_NS2US(now - op->start), LCB_NS2US(op->deadline - now));
             mc_PIPELINE *newpl = cq->pipelines[srvix];
             mcreq_enqueue_packet(newpl, op->pkt);
             newpl->flush_start(newpl);
@@ -422,12 +423,13 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, protocol_binary_res
     lcb_list_add_sorted(&schedops, static_cast<SchedNode *>(op), cmpfn_retry);
     lcb_list_add_sorted(&tmoops, static_cast<TmoNode *>(op), cmpfn_tmo);
 
-    uint32_t cid = mcreq_get_cid(get_instance(), &pkt->base);
+    int cid_set = 0;
+    uint32_t cid = mcreq_get_cid(get_instance(), op->pkt, &cid_set);
     lcb_log(LOGARGS(this, DEBUG),
-            "Adding PKT=%p to retry queue. retries=%u, cid=%u, opaque=%u, now=%" PRIu64 "ms, spent=%" PRIu64
+            "Adding PKT=%p to retry queue. retries=%u, cid=%u (%s), opaque=%u, now=%" PRIu64 "ms, spent=%" PRIu64
             "us, deadline_in=%" PRIu64 "us, status=0x%02x, rc=%s",
-            (void *)pkt, pkt->base.retries, cid, pkt->base.opaque, LCB_NS2MS(now), LCB_NS2US(now - op->start),
-            LCB_NS2US(op->deadline - now), status, lcb_strerror_short(err));
+            (void *)pkt, pkt->base.retries, cid, cid_set ? "set" : "unset", pkt->base.opaque, LCB_NS2MS(now),
+            LCB_NS2US(now - op->start), LCB_NS2US(op->deadline - now), status, lcb_strerror_short(err));
     schedule();
 
     if (settings->metrics) {
