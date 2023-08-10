@@ -112,6 +112,9 @@
 #ifndef EFTYPE
 #define EFTYPE EAI_FAIL
 #endif
+#ifndef EUNATCH
+#define EUNATCH EAI_FAIL
+#endif
 
 #define OK 0
 
