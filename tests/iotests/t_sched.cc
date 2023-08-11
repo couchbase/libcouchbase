@@ -318,7 +318,11 @@ TEST_F(SchedUnitTests, testScheduleQueryBeforeConnection)
 
     lcb_CMDQUERY *cmd;
     lcb_cmdquery_create(&cmd);
-    std::string statement("SELECT 'hello' AS greeting");
+
+    // the statement must be valid, and always return success, otherwise the library might try to refresh config, which
+    // will interfere with has_pending() check
+    std::string statement =
+        MockEnvironment::getInstance()->isRealCluster() ? "SELECT 'hello' AS greeting" : "SELECT mockrow";
     lcb_cmdquery_statement(cmd, statement.c_str(), statement.size());
     lcb_cmdquery_callback(cmd, queryCallback);
     size_t counter = 0;
@@ -333,11 +337,7 @@ TEST_F(SchedUnitTests, testScheduleQueryBeforeConnection)
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
     ASSERT_FALSE(instance->has_deferred_operations());
     ASSERT_FALSE(hasPendingOps(instance));
-    if (MockEnvironment::getInstance()->isRealCluster()) {
-        ASSERT_EQ(2, counter); /* single row + meta */
-    } else {
-        ASSERT_EQ(1, counter); /* reduced implementation */
-    }
+    ASSERT_EQ(2, counter); /* single row + meta */
 }
 
 static void searchCallback(lcb_INSTANCE *, int, const lcb_RESPSEARCH *resp)
@@ -433,6 +433,10 @@ TEST_F(SchedUnitTests, testScheduleViewBeforeConnection)
     lcb_STATUS rc;
 
     MockEnvironment::getInstance()->createConnection(hw, &instance);
+
+    /* disable config refresh after http failure to make pending request check more predictable */
+    int enable = 0;
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR, &enable);
 
     lcb_CMDVIEW *cmd;
     lcb_cmdview_create(&cmd);
