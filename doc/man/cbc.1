@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "CBC" "1" "December 2020" "" ""
+.TH "CBC" "1" "August 2023" "" ""
 .
 .SH "NAME"
 \fBcbc\fR \- Couchbase Client Commandline Utility
@@ -59,6 +59,9 @@
 .
 .br
 \fBcbc admin\fR \fI\-P PASSWORD\fR \fIRESTAPI\fR [\fIOPTIONS\fR]
+.
+.br
+\fBcbc bucket\-list\fR \fI\-P PASSWORD\fR [\fIOPTIONS\fR]
 .
 .br
 \fBcbc bucket\-create\fR \fI\-P PASSWORD\fR \fINAME\fR [\fIOPTIONS\fR]
@@ -487,6 +490,16 @@ In addition to the \fIOPTIONS\fR specified above, the following options are reco
 .TP
 \fB\-X\fR, \fB\-\-method\fR=\fIGET|PUT|POST|DELETE\fR
 Specify the HTTP method to use for the specific request\. The default method is \fBGET\fR\.
+.
+.SS "bucket\-list"
+List the buckets in the cluster
+.
+.P
+In addition to the \fIOPTIONS\fR specified above, the following options are recognized:
+.
+.TP
+\fB\-r\fR, \fB\-\-raw\fR
+Print unformatted server response in JSON form\.
 .
 .SS "bucket\-create"
 Create a bucket in the cluster\.

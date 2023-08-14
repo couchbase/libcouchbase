@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "CBC\-PILLOWFIGHT" "1" "April 2019" "" ""
+.TH "CBC\-PILLOWFIGHT" "1" "August 2023" "" ""
 .
 .SH "NAME"
 \fBcbc\-pillowfight\fR \- Stress Test for Couchbase Client and Cluster
@@ -63,6 +63,10 @@ Set the \fItotal\fR number of items the workload will access within the cluster\
 .TP
 \fB\-p\fR, \fB\-\-key\-prefix\fR=\fIPREFIX\fR
 Set the prefix to prepend to all keys in the cluster\. Useful if you do not wish the items to conflict with existing data\.
+.
+.TP
+\fB\-\-collection\fR=\fIscopeName\.collectionName\fR
+Access data based on full collection name path\. Multiple \fB\-\-collection\fR filters can specify the different scopes with different collection names\. Note that default collection will not be used if the collection was specified, to enable default collection along with the named ones, it should be specified explicitly \fB\-\-collection=_default\._default\fR\.
 .
 .TP
 \fB\-t\fR, \fB\-\-num\-threads\fR=\fINTHREADS\fR
@@ -433,6 +437,20 @@ Run against a bucket (\fBa_bucket\fR) on a cluster on a remote host:
 .nf
 
 cbc\-pillowfight \-U couchbase://192\.168\.33\.101/a_bucket
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Run against a bucket (\fBa_bucket\fR) and use collections \fBapp\.users\fR and \fBbackup\.stage\fR:
+.
+.IP "" 4
+.
+.nf
+
+cbc\-pillowfight \-\-spec couchbase://127\.0\.0\.1/a_bucket \-\-username Administrator \-\-password password \e
+                \-\-collection app\.users \-\-collection backup\.stage
 .
 .fi
 .

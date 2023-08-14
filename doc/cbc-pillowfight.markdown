@@ -69,6 +69,12 @@ The following options control workload generation:
   Set the prefix to prepend to all keys in the cluster. Useful if you do not wish the items
   to conflict with existing data.
 
+* `--collection`=_scopeName.collectionName_:
+  Access data based on full collection name path. Multiple `--collection` filters can
+  specify the different scopes with different collection names. Note that default
+  collection will not be used if the collection was specified, to enable default collection
+  along with the named ones, it should be specified explicitly `--collection=_default._default`.
+
 * `-t`, `--num-threads`=_NTHREADS_:
   Set the number of threads (and thus the number of client instances) to run
   concurrently. Each thread is assigned its own client object.
@@ -259,6 +265,11 @@ Connect to an SSL cluster at `secure.net`:
 Run against a bucket (`a_bucket`) on a cluster on a remote host:
 
     cbc-pillowfight -U couchbase://192.168.33.101/a_bucket
+
+Run against a bucket (`a_bucket`) and use collections `app.users` and `backup.stage`:
+
+    cbc-pillowfight --spec couchbase://127.0.0.1/a_bucket --username Administrator --password password \
+                    --collection app.users --collection backup.stage
 
 ### BENCHMARK EXAMPLES
 
