@@ -1,5 +1,21 @@
 # Release Notes
 
+# 3.3.8 (2023-08-16)
+
+* CCBC-1584: Update documentation on how to use collections with pillowfight
+
+* CCBC-1607: Fix collection id encoding in mixed cluster
+
+* CCBC-1602: Implement Faster Failover.
+
+  This implements the set of protocol optimizations that help the SDK to save
+  network traffic when tracking cluster topology. The feature will be only
+  activated if the server supports it (7.6+).
+
+CCBC-1603: Do not log if logger is not accessible in `iotssl_log_errors`.
+
+CCBC-1599: Account NUL-byte when format IPv6 address (fixes potential invalid memory access).
+
 ## 3.3.7 (2023-05-11)
 
 * CCBC-1596: replace unsafe sprintf with snprintf.
