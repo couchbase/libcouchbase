@@ -88,6 +88,8 @@ typedef struct {
     (span)->offset = NETBUF_INVALID_OFFSET;                                                                            \
     (span)->size = len;
 
+#define IS_STANDALONE_SPAN(span) (span)->offset == NETBUF_INVALID_OFFSET
+
 /** @private */
 typedef struct {
     sllist_node slnode;
