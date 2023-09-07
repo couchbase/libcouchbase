@@ -376,7 +376,7 @@ void mcreq_wipe_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
         return;
     }
 
-    if ((packet->flags & MCREQ_F_DETACHED) || IS_STANDALONE_SPAN(&packet->kh_span)) {
+    if (packet->flags & MCREQ_F_DETACHED) {
         free(SPAN_BUFFER(&packet->u_value.single));
     } else {
         netbuf_mblock_release(&pipeline->nbmgr, &packet->u_value.single);
@@ -651,8 +651,11 @@ void mcreq_set_cid(mc_PIPELINE *pipeline, mc_PACKET *packet, uint32_t cid)
     char *key = header_and_key + header_size;
 
     // parse old collection id and determine its length
-    uint32_t old_collection_id;
-    int old_collection_id_length = leb128_decode((uint8_t *)key, key_length, &old_collection_id);
+    uint32_t old_collection_id = 0;
+    int old_collection_id_length = 0;
+    if ((packet->flags & MCREQ_F_HASCID) != 0) {
+        old_collection_id_length = leb128_decode((uint8_t *)key, key_length, &old_collection_id);
+    }
 
     // encode new collection id
     uint8_t collection_id[5] = {0};
@@ -660,25 +663,25 @@ void mcreq_set_cid(mc_PIPELINE *pipeline, mc_PACKET *packet, uint32_t cid)
 
     // fix field lengths in the packet
     int diff = collection_id_length - old_collection_id_length;
-    size_t new_header_and_key_size = old_span.size + diff;
     req.request.bodylen = htonl(ntohl(req.request.bodylen) + diff);
-    size_t new_klen = key_length + diff;
+    size_t new_key_length = key_length + diff;
     if (req.request.magic == PROTOCOL_BINARY_AREQ) {
-        req.request.keylen = (new_klen << 8) | (flexible_extras_length & 0xff);
+        req.request.keylen = (new_key_length << 8) | (flexible_extras_length & 0xff);
     } else {
-        req.request.keylen = htons(new_klen);
+        req.request.keylen = htons(new_key_length);
     }
 
     // copy old header fields, with only collection id updated
-    netbuf_mblock_reserve(&pipeline->nbmgr, &packet->kh_span);
-    char *new_header_and_key = SPAN_BUFFER(&packet->kh_span);
+    char *new_header_and_key = malloc(old_span.size + diff);
+    CREATE_STANDALONE_SPAN(&packet->kh_span, new_header_and_key, old_span.size + diff);
+
     const char *ptr = header_and_key;
     memcpy(new_header_and_key, ptr, header_size);
+    // update header with new length values
     memcpy(new_header_and_key, req.bytes, sizeof(req.bytes));
-    ptr += header_size + old_collection_id_length;
     memcpy(new_header_and_key + header_size, collection_id, collection_id_length);
-    memcpy(new_header_and_key + header_size + collection_id_length, ptr,
-           new_header_and_key_size - collection_id_length - header_size);
+    ptr += header_size + old_collection_id_length;
+    memcpy(new_header_and_key + header_size + collection_id_length, ptr, key_length - old_collection_id_length);
 
     // deallocate the old span
     if (IS_STANDALONE_SPAN(&old_span)) {
@@ -689,6 +692,7 @@ void mcreq_set_cid(mc_PIPELINE *pipeline, mc_PACKET *packet, uint32_t cid)
     }
 
     packet->flags |= MCREQ_F_HASCID;
+    packet->flags &= ~MCREQ_F_KEY_NOCOPY;
 }
 
 uint32_t mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet, int *cid_set)
@@ -725,7 +729,7 @@ uint32_t mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet, int *cid
     return 0;
 }
 
-void mcreq_get_key(lcb_INSTANCE *instance, const mc_PACKET *packet, const char **key, size_t *nkey)
+void mcreq_get_key(const mc_PACKET *packet, const char **key, size_t *nkey)
 {
     uint8_t ffext = 0;
     uint16_t nk = 0;
@@ -743,7 +747,7 @@ void mcreq_get_key(lcb_INSTANCE *instance, const mc_PACKET *packet, const char *
         nk = ntohs(req.request.keylen);
     }
     k = kh + sizeof(req) + req.request.extlen + ffext;
-    if ((packet->flags & MCREQ_F_NOCID) == 0 && instance && LCBT_SETTING(instance, use_collections)) {
+    if ((packet->flags & MCREQ_F_HASCID) != 0) {
         ncid = leb128_decode((uint8_t *)k, nk, &cid);
         (void)cid;
     }

@@ -250,7 +250,7 @@ TEST_F(McFwd, testNoMap)
     // Get the key
     const char *key;
     size_t nkey;
-    mcreq_get_key(NULL, pkt_tmp, &key, &nkey);
+    mcreq_get_key(pkt_tmp, &key, &nkey);
     ASSERT_EQ(0, nkey);
 
     // Ensure we have no vBucket stamping

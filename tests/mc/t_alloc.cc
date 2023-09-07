@@ -144,7 +144,7 @@ TEST_F(McAlloc, testKeyAlloc)
     const char *key;
     size_t nkey;
     // Get back the key we just placed inside the header
-    mcreq_get_key(nullptr, packet, &key, &nkey);
+    mcreq_get_key(packet, &key, &nkey);
     ASSERT_EQ(5, nkey);
     ASSERT_EQ(0, memcmp(key, "Hello", 5));
 

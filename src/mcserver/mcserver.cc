@@ -290,7 +290,7 @@ bool Server::handle_unknown_collection(MemcachedResponse &resp, mc_PACKET *oldpk
     std::string name = instance->collcache->id_to_name(cid);
 
     packet_wrapper wrapper;
-    mcreq_get_key(instance, oldpkt, (const char **)&wrapper.key.contig.bytes, &wrapper.key.contig.nbytes);
+    mcreq_get_key(oldpkt, (const char **)&wrapper.key.contig.bytes, &wrapper.key.contig.nbytes);
 
     lcb_log(LOGARGS_T(WARN), LOGFMT "UNKNOWN_COLLECTION. Packet=%p (M=0x%x, S=%u, OP=0x%x), CID=%u, CNAME=%s",
             LOGID_T(), (void *)oldpkt, (int)req.request.magic, oldpkt->opaque, (int)req.request.opcode, (unsigned)cid,

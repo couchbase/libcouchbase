@@ -214,7 +214,7 @@ static int iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, v
 
         /* XXX: We ignore hashkey. This is going away soon, and is probably
          * better than simply failing the items. */
-        mcreq_get_key(instance, oldpkt, &key, &nkey);
+        mcreq_get_key(oldpkt, &key, &nkey);
         lcbvb_map_key(cq->config, key, nkey, &tmpid, &newix);
     }
 

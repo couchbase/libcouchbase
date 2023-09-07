@@ -271,7 +271,7 @@ void init_resp(lcb_INSTANCE *instance, mc_PIPELINE *pipeline, const MemcachedRes
     resp->cookie = const_cast<void *>(MCREQ_PKT_COOKIE(req));
     const char *key = nullptr;
     size_t key_len = 0;
-    mcreq_get_key(instance, req, &key, &key_len);
+    mcreq_get_key(req, &key, &key_len);
     if (key != nullptr) {
         resp->ctx.key.assign(key, key_len);
     }

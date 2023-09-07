@@ -688,7 +688,7 @@ lcb_STATUS mcreq_basic_packet(mc_CMDQUEUE *queue, const lcb_KEYBUF *key, uint32_
  * @param[out] key
  * @param[out] nkey
  */
-void mcreq_get_key(lcb_INSTANCE *instance, const mc_PACKET *packet, const char **key, size_t *nkey);
+void mcreq_get_key(const mc_PACKET *packet, const char **key, size_t *nkey);
 
 /** @brief Returns the size of the key, in bytes */
 uint16_t mcreq_get_key_size(protocol_binary_request_header *hdr);
