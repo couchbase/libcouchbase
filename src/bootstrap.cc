@@ -265,7 +265,7 @@ lcb_STATUS Bootstrap::bootstrap(unsigned options)
                 "Not requesting a config refresh because of throttling parameters. Next refresh possible in %" PRIu64
                 "ms or %u errors. "
                 "See LCB_CNTL_CONFDELAY_THRESH and LCB_CNTL_CONFERRTHRESH to modify the throttling settings",
-                LCB_NS2US(next_ts - now) / 1000, (unsigned)errthresh - errcounter);
+                LCB_NS2US(next_ts - now) / 1000, errthresh - errcounter);
             return LCB_SUCCESS;
         }
     }

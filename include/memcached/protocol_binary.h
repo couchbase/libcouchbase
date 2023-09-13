@@ -113,6 +113,9 @@ typedef enum {
     /** The requested resource is locked */
     PROTOCOL_BINARY_RESPONSE_LOCKED = 0x09,
 
+    /** The node cannot execute operation, because the bucket is in config-only mode */
+    PROTOCOL_BINARY_RESPONSE_CONFIG_ONLY = 0x0d,
+
     /** The authentication context is stale. You should reauthenticate*/
     PROTOCOL_BINARY_RESPONSE_AUTH_STALE = 0x1f,
     /** Authentication failure (invalid user/password combination,

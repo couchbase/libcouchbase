@@ -220,6 +220,7 @@ class Server : public mc_PIPELINE
     bool handle_unknown_collection(MemcachedResponse &resinfo, mc_PACKET *oldpkt);
     void handle_server_request(const MemcachedResponse &request);
     void handle_clustermap_notification(const MemcachedResponse &request);
+    void handle_config_only(const mc_PACKET *oldpkt);
 
     bool maybe_retry_packet(mc_PACKET *pkt, lcb_STATUS err, protocol_binary_response_status status);
     bool maybe_reconnect_on_fake_timeout(lcb_STATUS received_error);

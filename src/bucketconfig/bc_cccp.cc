@@ -171,14 +171,15 @@ void CccpProvider::stop_current_request(bool is_clean)
  */
 lcb_STATUS CccpProvider::expect_config_with_version(const lcb_host_t *origin, config_version requested)
 {
-
     auto current = parent->get_current_version();
     auto previous_expected = expected_config_version;
-    if (current < requested && previous_expected < requested) {
+    if (expected_config_version < requested) {
+        expected_config_version = requested;
+    }
+    if (current < expected_config_version) {
         /*
          * The requested version is newer than we've seen so far (both current and previously requested)
          */
-        expected_config_version = requested;
         if (has_pending_request()) {
             /*
              * Only one configuration request could be in-flight, but the version is stored in expected_config_version
@@ -303,7 +304,19 @@ lcb_STATUS lcb::clconfig::cccp_update(Provider *provider, const char *host, cons
 
 lcb_STATUS lcb::clconfig::schedule_get_config(Provider *provider, const lcb_host_t *origin, config_version version)
 {
+    if (provider->type != CLCONFIG_CCCP) {
+        return LCB_ERR_INVALID_ARGUMENT;
+    }
     return static_cast<CccpProvider *>(provider)->expect_config_with_version(origin, version);
+}
+
+lcb_STATUS lcb::clconfig::schedule_get_config(Provider *provider)
+{
+    if (provider->type != CLCONFIG_CCCP) {
+        return LCB_ERR_INVALID_ARGUMENT;
+    }
+    return static_cast<CccpProvider *>(provider)->schedule_next_request(LCB_SUCCESS, /* can_rollover */ true,
+                                                                        /* skip_if_push_supported */ false);
 }
 
 lcb_STATUS CccpProvider::update(const char *host, const std::string &config_json)

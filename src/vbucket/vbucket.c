@@ -934,7 +934,7 @@ char *lcbvb_save_json(lcbvb_CONFIG *cfg)
     cJSON *root = cJSON_CreateObject();
 
     switch (cfg->dtype) {
-        case  LCBVB_DIST_VBUCKET:
+        case LCBVB_DIST_VBUCKET:
             tmp = cJSON_CreateString("vbucket");
             break;
         case LCBVB_DIST_KETAMA:

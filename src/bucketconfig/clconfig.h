@@ -733,6 +733,8 @@ void cccp_update(const void *cookie, lcb_STATUS err, const lcb_host_t *origin, c
 
 lcb_STATUS schedule_get_config(Provider *provider, const lcb_host_t *origin, config_version version);
 
+lcb_STATUS schedule_get_config(Provider *provider);
+
 /**
  * @brief record status of SELECT_BUCKET command
  * @param cookie_

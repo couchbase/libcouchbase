@@ -502,6 +502,29 @@ void Server::handle_clustermap_notification(const MemcachedResponse &request)
                                        lcb::clconfig::config_version{epoch, revision});
 }
 
+void Server::handle_config_only(const mc_PACKET *oldpkt)
+{
+    const auto *address = has_valid_host() ? &get_host() : nullptr;
+
+    lcb_log(LOGARGS_T(DEBUG),
+            LOGFMT "The bucket is configured in config-only mode on " LCB_HOST_FMT
+                   ", refresh configuration and retry operation",
+            LOGID_T(), LCB_HOST_ARG(this->settings, address));
+
+    auto *cccp = instance->confmon->get_provider(lcb::clconfig::CLCONFIG_CCCP);
+    if (cccp != nullptr && cccp->enabled) {
+        lcb::clconfig::schedule_get_config(cccp);
+    } else {
+        lcb_log(LOGARGS_T(DEBUG), LOGFMT "CCCP configuration provider is not enabled, using next available provider",
+                LOGID_T());
+        instance->confmon->do_next_provider();
+    }
+
+    mc_PACKET *newpkt = mcreq_renew_packet(oldpkt);
+    newpkt->flags &= ~MCREQ_STATE_FLAGS;
+    instance->retryq->config_only_add((mc_EXPACKET *)newpkt);
+}
+
 /**
  * Handles requests that are initiated by the KV engine. It only happens when PROTOCOL_BINARY_FEATURE_DUPLEX (0x0c) is
  * enabled for the connection.
@@ -645,6 +668,12 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
         if (!handle_nmv(mcresp, request)) {
             mcreq_dispatch_response(this, request, &mcresp, LCB_ERR_NOT_MY_VBUCKET);
         }
+        DO_SWALLOW_PAYLOAD()
+        goto GT_DONE;
+    } else if (status == PROTOCOL_BINARY_RESPONSE_CONFIG_ONLY) {
+        /* consume the header */
+        DO_ASSIGN_PAYLOAD()
+        handle_config_only(request);
         DO_SWALLOW_PAYLOAD()
         goto GT_DONE;
     } else if (status == PROTOCOL_BINARY_RESPONSE_UNKNOWN_COLLECTION ||

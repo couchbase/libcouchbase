@@ -88,6 +88,7 @@ class RetryQueue
      */
     void nmvadd(mc_EXPACKET *detchpkt);
     void ucadd(mc_EXPACKET *pkt, lcb_STATUS orig_err, protocol_binary_response_status status);
+    void config_only_add(mc_EXPACKET *pkt);
 
     /**
      * @brief Retry all queued operations

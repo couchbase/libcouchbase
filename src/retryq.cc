@@ -474,6 +474,11 @@ void RetryQueue::ucadd(mc_EXPACKET *pkt, lcb_STATUS orig_err, protocol_binary_re
     add(pkt, orig_err, status, nullptr, 0);
 }
 
+void RetryQueue::config_only_add(mc_EXPACKET *pkt)
+{
+    add(pkt, LCB_ERR_UNSUPPORTED_OPERATION, PROTOCOL_BINARY_RESPONSE_CONFIG_ONLY, nullptr, 0);
+}
+
 static void fallback_handler(mc_CMDQUEUE *cq, mc_PACKET *pkt)
 {
     auto *instance = reinterpret_cast<lcb_INSTANCE *>(cq->cqdata);
