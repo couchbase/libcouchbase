@@ -566,7 +566,7 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
         // Needs its own scope because there are prior GOTOs
         io::Pool::Options pool_opts;
         pool_opts.maxidle = 1;
-        pool_opts.tmoidle = LCB_MS2US(10000); // 10 seconds
+        pool_opts.tmoidle = LCB_DEFAULT_HTTP_POOL_TIMEOUT;
         obj->memd_sockpool->set_options(pool_opts);
         obj->http_sockpool->set_options(pool_opts);
     }

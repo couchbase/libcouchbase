@@ -114,6 +114,9 @@
 
 #define LCB_DEFAULT_PERSISTENCE_TIMEOUT_FLOOR 1500000
 
+/* 1 second */
+#define LCB_DEFAULT_HTTP_POOL_TIMEOUT LCB_MS2US(1000)
+
 #include "config.h"
 #include <libcouchbase/couchbase.h>
 #include <libcouchbase/metrics.h>
