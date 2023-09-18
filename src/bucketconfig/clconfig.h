@@ -145,6 +145,13 @@ enum State {
     CONFMON_S_ITERGRACE = 1 << 1
 };
 
+enum Mode {
+    /** Periodically poll for configuration */
+    CONFMON_M_POLL,
+    /** Subscribe for notifications from the server */
+    CONFMON_M_PUSH,
+};
+
 struct Provider;
 struct Listener;
 class ConfigInfo;
@@ -398,6 +405,8 @@ struct Confmon {
 
     /* CONFMON_S_* values. Used internally */
     int state;
+
+    Mode mode{CONFMON_M_POLL};
 
     /** Last time the provider was stopped. As a microsecond timestamp */
     lcb_uint64_t last_stop_us;

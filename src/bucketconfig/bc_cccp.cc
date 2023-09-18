@@ -220,6 +220,7 @@ lcb_STATUS CccpProvider::schedule_next_request(lcb_STATUS err, bool can_rollover
     if (skip_if_push_supported && nodes->all_hosts_support_config_push()) {
         /* all nodes support configuration push, and this function invoked from periodic poller, so nothing has to be
          * done here */
+        parent->mode = CONFMON_M_PUSH;
         parent->stop();
         return LCB_SUCCESS;
     }
@@ -254,6 +255,7 @@ lcb_STATUS CccpProvider::schedule_next_request(lcb_STATUS err, bool can_rollover
             /* we found the server, but at the same time all sockets support push, so we can stop polling and just
              * expect notifications from KV engine */
             lcb_log(LOGARGS(this, DEBUG), "Stop background polling, as all nodes support configuration push");
+            parent->mode = CONFMON_M_PUSH;
             parent->stop();
             return LCB_SUCCESS;
         }
