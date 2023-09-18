@@ -354,7 +354,7 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, protocol_binary_res
                 op->deadline -= LCB_US2NS(diff);
             }
         }
-        mcreq_epkt_insert(pkt, op);
+        lcb_assert(mcreq_epkt_insert(pkt, op) == 0);
     }
 
     if (op->pkt) {
@@ -427,9 +427,11 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, protocol_binary_res
     uint32_t cid = mcreq_get_cid(get_instance(), op->pkt, &cid_set);
     lcb_log(LOGARGS(this, DEBUG),
             "Adding PKT=%p to retry queue. retries=%u, cid=%u (%s), opaque=%u, now=%" PRIu64 "ms, spent=%" PRIu64
-            "us, deadline_in=%" PRIu64 "us, status=0x%02x, rc=%s",
+            "us, deadline_in=%s%" PRIu64 "us, status=0x%02x, rc=%s",
             (void *)pkt, pkt->base.retries, cid, cid_set ? "set" : "unset", pkt->base.opaque, LCB_NS2MS(now),
-            LCB_NS2US(now - op->start), LCB_NS2US(op->deadline - now), status, lcb_strerror_short(err));
+            LCB_NS2US(now - op->start), op->deadline > now ? "+" : "-",
+            op->deadline > now ? LCB_NS2US(op->deadline - now) : LCB_NS2US(now - op->deadline), status,
+            lcb_strerror_short(err));
     schedule();
 
     if (settings->metrics) {

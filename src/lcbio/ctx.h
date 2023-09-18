@@ -167,7 +167,7 @@ typedef struct lcbio_CTX {
  * @param procs callback table
  * @return a new context object.
  */
-lcbio_CTX *lcbio_ctx_new(lcbio_SOCKET *sock, void *data, const lcbio_CTXPROCS *procs);
+lcbio_CTX *lcbio_ctx_new(lcbio_SOCKET *sock, void *data, const lcbio_CTXPROCS *procs, const char *subsys);
 
 /**
  * Callback invoked when the connection is about to be release

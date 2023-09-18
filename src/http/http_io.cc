@@ -253,9 +253,8 @@ static void on_connected(lcbio_SOCKET *sock, void *arg, lcb_STATUS err, lcbio_OS
 
     procs.cb_err = io_error;
     procs.cb_read = io_read;
-    req->ioctx = lcbio_ctx_new(sock, arg, &procs);
+    req->ioctx = lcbio_ctx_new(sock, arg, &procs, "mgmt/capi");
     sock->service = service;
-    req->ioctx->subsys = "mgmt/capi";
     lcbio_ctx_put(req->ioctx, &req->preamble[0], req->preamble.size());
     if (!req->body.empty()) {
         lcbio_ctx_put(req->ioctx, &req->body[0], req->body.size());

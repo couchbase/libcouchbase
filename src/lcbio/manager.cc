@@ -326,8 +326,8 @@ void PoolRequest::invoke()
         PoolConnInfo *info = PoolConnInfo::from_sock(sock);
         info->set_leased();
         state = ASSIGNED;
-        lcb_log(LOGARGS(info->parent->parent, DEBUG), HE_LOGFMT "Assigning R=%p SOCKET=%p", HE_LOGID(info->parent),
-                (void *)this, (void *)sock);
+        lcb_log(LOGARGS(info->parent->parent, DEBUG), HE_LOGFMT "Assigning R=%p SOCKET=%p, SOCK=%016" PRIx64,
+                HE_LOGID(info->parent), (void *)this, (void *)sock, sock->id);
     }
 
     callback(sock, arg, err, 0);

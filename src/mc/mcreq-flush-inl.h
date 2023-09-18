@@ -60,6 +60,7 @@ static nb_SIZE mcreq__pktflush_callback(void *p, nb_SIZE hint, void *arg)
     }
 
     /** Packet is flushed */
+    lcb_assert((pkt->flags & MCREQ_F_FLUSHED) == 0);
     pkt->flags |= MCREQ_F_FLUSHED;
 
     if (pkt->flags & MCREQ_F_INVOKED) {

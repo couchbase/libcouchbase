@@ -18,6 +18,10 @@
 #define CBSASL_UTIL_H_ 1
 #include <config.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Encode hexadecimal representation of bytes from src into dest.
  * Will write srclen * 2 bytes. */
 void cbsasl_hex_encode(char *dest, const char *src, size_t srclen);
@@ -27,5 +31,8 @@ int cbsasl_secure_compare(const char *a, size_t alen, const char *b, size_t blen
 
 cbsasl_error_t cbsasl_secure_random(char *dest, size_t len);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /*  CBSASL_UTIL_H_ */

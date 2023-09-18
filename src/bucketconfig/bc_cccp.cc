@@ -202,9 +202,9 @@ lcb_STATUS CccpProvider::expect_config_with_version(const lcb_host_t *origin, co
          */
         lcb_log(LOGARGS(this, TRACE),
                 "Ignore configuration request " LCB_HOST_FMT ": expected=%" PRId64 ":%" PRId64 ", current=%" PRId64
-                ":%" PRId64 ", requested=%" PRId64 ":%" PRId64,
+                ":%" PRId64 ", requested=%" PRId64 ":%" PRId64 ", has_pending_request=%d",
                 LCB_HOST_ARG(parent->settings, origin), previous_expected.epoch, previous_expected.revision,
-                current.epoch, current.revision, requested.epoch, requested.revision);
+                current.epoch, current.revision, requested.epoch, requested.revision, has_pending_request());
     }
     return LCB_SUCCESS;
 }
@@ -423,8 +423,7 @@ static void on_connected(lcbio_SOCKET *sock, void *data, lcb_STATUS err, lcbio_O
 
     ioprocs.cb_err = io_error_handler;
     ioprocs.cb_read = io_read_handler;
-    cccp->ioctx = lcbio_ctx_new(sock, data, &ioprocs);
-    cccp->ioctx->subsys = "bc_cccp";
+    cccp->ioctx = lcbio_ctx_new(sock, data, &ioprocs, "bc_cccp");
     sock->service = LCBIO_SERVICE_CFG;
     cccp->request_config();
 }

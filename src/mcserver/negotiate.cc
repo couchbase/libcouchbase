@@ -772,9 +772,9 @@ GT_NEXT_PACKET:
         }
 
         default: {
-            lcb_log(LOGARGS(this, ERROR), LOGFMT "Received unknown response. OP=0x%x. RC=0x%x", LOGID(this),
-                    resp.opcode(), resp.status());
-            set_error(LCB_ERR_UNSUPPORTED_OPERATION, "Received unknown response", &resp);
+            lcb_log(LOGARGS(this, ERROR), LOGFMT "Received unexpected response. OP=0x%x. RC=0x%x, completed=%d",
+                    LOGID(this), resp.opcode(), resp.status(), completed);
+            set_error(LCB_ERR_PROTOCOL_ERROR, "Received unexpected response", &resp);
             break;
         }
     }
@@ -819,8 +819,7 @@ void SessionRequestImpl::start(lcbio_SOCKET *sock)
     lcbio_CTXPROCS procs{};
     procs.cb_err = ::handle_ioerr;
     procs.cb_read = ::handle_read;
-    ctx = lcbio_ctx_new(sock, this, &procs);
-    ctx->subsys = "sasl";
+    ctx = lcbio_ctx_new(sock, this, &procs, "sasl");
 
     const lcb_host_t *curhost = lcbio_get_host(sock);
     lcbio_NAMEINFO nistrs{};

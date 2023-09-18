@@ -1029,7 +1029,8 @@ void Server::io_timeout()
     int npurged = purge(LCB_ERR_TIMEOUT, now, Server::REFRESH_ONFAILED);
     if (npurged) {
         MC_INCR_METRIC(this, packets_timeout, npurged);
-        lcb_log(LOGARGS_T(DEBUG), LOGFMT "Server timed out. Some commands have failed", LOGID_T());
+        lcb_log(LOGARGS_T(DEBUG), LOGFMT "Server timed out. Some commands have failed (npurged=%d)", LOGID_T(),
+                npurged);
     }
 
     uint32_t next_us = next_timeout();
@@ -1099,8 +1100,8 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
     /** Do we need sasl? */
     SessionInfo *sessinfo = SessionInfo::get(sock);
     if (sessinfo == nullptr) {
-        lcb_log(LOGARGS_T(TRACE), "<%s:%s> (SRV=%p) Session not yet negotiated. Negotiating", curhost->host,
-                curhost->port, (void *)this);
+        lcb_log(LOGARGS_T(TRACE), "<%s:%s> (SRV=%p, SOCK=%016" PRIx64 ") Session not yet negotiated. Negotiating",
+                curhost->host, curhost->port, (void *)this, sock->id);
         connreq = SessionRequest::start(sock, settings, settings->config_node_timeout, on_connected, this);
         return;
     } else {
@@ -1142,8 +1143,7 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
     procs.cb_read = on_read;
     procs.cb_flush_done = on_flush_done;
     procs.cb_flush_ready = on_flush_ready;
-    connctx = lcbio_ctx_new(sock, this, &procs);
-    connctx->subsys = "memcached";
+    connctx = lcbio_ctx_new(sock, this, &procs, "memcached");
     sock->service = LCBIO_SERVICE_KV;
     flush_start = (mcreq_flushstart_fn)mcserver_flush;
     if (try_to_select_bucket) {

@@ -129,13 +129,20 @@ static void get_callback(lcb_INSTANCE *instance, int, const lcb_RESPGET *resp)
 
     rc = lcb_respget_status(resp);
     if (rc != LCB_SUCCESS) {
+        const lcb_KEY_VALUE_ERROR_CONTEXT *ctx{};
+        lcb_respget_error_context(resp, &ctx);
+        const char *endpoint{};
+        size_t endpoint_length{};
+        if (ctx != nullptr) {
+            lcb_errctx_kv_endpoint(ctx, &endpoint, &endpoint_length);
+        }
         if (rc == LCB_ERR_DOCUMENT_NOT_FOUND) {
             std::cerr << "unable to get \"" << std::string(key, key_len) << "\". rc: " << lcb_strerror_short(rc)
-                      << ". Creating new document\n";
+                      << ", endpoint: " << std::string(endpoint, endpoint_length) << ". Creating new document\n";
             upsert_key(instance, key, key_len);
         } else {
             std::cerr << "unable to get \"" << std::string(key, key_len) << "\". rc: " << lcb_strerror_short(rc)
-                      << "\n";
+                      << ", endpoint: " << std::string(endpoint, endpoint_length) << "\n";
         }
     }
 

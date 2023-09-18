@@ -203,6 +203,9 @@ void Connstart::state_signal(State next_state, lcb_STATUS err)
     } else if (last_error == LCB_SUCCESS) {
         /* set error code only if previous code was not a failure */
         last_error = err;
+    } else {
+        lcb_log(LOGARGS_T(DEBUG), CSLOGFMT "Do not override last_error. current: %s, new: %s", CSLOGID_T(),
+                lcb_strerror_short(last_error), lcb_strerror_short(err));
     }
 
     state = next_state;

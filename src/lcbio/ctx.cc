@@ -64,7 +64,7 @@ static lcb_STATUS convert_lcberr(const lcbio_CTX *ctx, lcbio_IOSTATUS status)
     }
 }
 
-lcbio_CTX *lcbio_ctx_new(lcbio_SOCKET *sock, void *data, const lcbio_CTXPROCS *procs)
+lcbio_CTX *lcbio_ctx_new(lcbio_SOCKET *sock, void *data, const lcbio_CTXPROCS *procs, const char *subsys)
 {
     auto *ctx = new lcbio_CTX{};
     ctx->sock = sock;
@@ -74,7 +74,7 @@ lcbio_CTX *lcbio_ctx_new(lcbio_SOCKET *sock, void *data, const lcbio_CTXPROCS *p
     ctx->procs = *procs;
     ctx->state = ES_ACTIVE;
     ctx->as_err = lcbio_timer_new(ctx->io, ctx, err_handler);
-    ctx->subsys = "unknown";
+    ctx->subsys = subsys == nullptr ? "unknown" : subsys;
     sock->service = LCBIO_SERVICE_UNSPEC;
     sock->atime = LCB_NS2US(gethrtime());
 
@@ -361,7 +361,7 @@ static void Cr_handler(lcb_sockdata_t *sd, lcb_ssize_t nr, void *arg)
                 {
                     char *b64 = nullptr;
                     lcb_SIZE nb64 = 0;
-                    char *buf = calloc(total, sizeof(char));
+                    char *buf = (char *)calloc(total, sizeof(char));
                     rdb_copyread(&ctx->ior, buf, total);
                     lcb_base64_encode2(buf, total, &b64, &nb64);
                     lcb_log(LOGARGS(ctx, TRACE), CTX_LOGFMT "pkt,rcv: size=%d, %.*s", CTX_LOGID(ctx), (int)nb64,

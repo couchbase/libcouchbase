@@ -95,7 +95,7 @@ void ESocket::assign(lcbio_SOCKET *s, lcb_STATUS err)
     procs.cb_flush_done = ctx_flush_done;
     procs.cb_flush_ready = ctx_flush_ready;
     sock = s;
-    ctx = lcbio_ctx_new(s, this, &procs);
+    ctx = lcbio_ctx_new(s, this, &procs, nullptr);
 }
 
 extern "C" {
