@@ -63,7 +63,7 @@ struct HttpProvider : Provider {
 
     /* Overrides */
     bool pause() override;
-    lcb_STATUS refresh() override;
+    lcb_STATUS refresh(unsigned options = 0) override;
     ConfigInfo *get_cached() override;
     void config_updated(lcbvb_CONFIG *) override;
     void configure_nodes(const lcb::Hostlist &) override;

@@ -49,8 +49,9 @@ class StaticProvider : public Provider
         return config;
     }
 
-    lcb_STATUS refresh() override
+    lcb_STATUS refresh(unsigned options = 0) override
     {
+        (void)options;
         async.signal();
         return LCB_SUCCESS;
     }

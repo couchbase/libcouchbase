@@ -67,7 +67,7 @@ struct CccpProvider : public Provider {
     void configure_nodes(const lcb::Hostlist &) override;
     void config_updated(lcbvb_CONFIG *) override;
     void dump(FILE *) const override;
-    lcb_STATUS refresh() override;
+    lcb_STATUS refresh(unsigned options = 0) override;
 
     ConfigInfo *get_cached() override
     {
@@ -430,13 +430,14 @@ static void on_connected(lcbio_SOCKET *sock, void *data, lcb_STATUS err, lcbio_O
     cccp->request_config();
 }
 
-lcb_STATUS CccpProvider::refresh()
+lcb_STATUS CccpProvider::refresh(unsigned options)
 {
     if (has_pending_request()) {
         return LCB_ERR_BUSY;
     }
 
-    return schedule_next_request(LCB_SUCCESS, /* can_rollover */ true, /* skip_if_push_supported */ true);
+    return schedule_next_request(LCB_SUCCESS, /* can_rollover */ true,
+                                 /* skip_if_push_supported */ (options & lcb::BS_REFRESH_INCRERR) == 0);
 }
 
 bool CccpProvider::pause()

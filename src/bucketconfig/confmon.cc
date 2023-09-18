@@ -306,7 +306,7 @@ void Confmon::do_next_provider()
     cur_provider->refresh();
 }
 
-void Confmon::start(bool refresh)
+void Confmon::start(unsigned options)
 {
     lcb_U32 tmonext = 0;
     as_stop.cancel();
@@ -325,10 +325,10 @@ void Confmon::start(bool refresh)
         }
     }
 
-    if (refresh) {
+    if (options) {
         lcb_log(LOGARGS(this, TRACE), "Refreshing current cluster map (bucket: \"%s\"), next update in %dus",
                 settings->bucket, tmonext);
-        cur_provider->refresh();
+        cur_provider->refresh(options);
     }
     as_start.rearm(tmonext);
 }

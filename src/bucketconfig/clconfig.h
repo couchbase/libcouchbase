@@ -239,7 +239,7 @@ struct Confmon {
      * @see #stop()
      * @see #is_refreshing()
      */
-    void start(bool refresh = false);
+    void start(unsigned options = 0);
 
     /**
      * @brief Cancel a pending configuration refresh.
@@ -450,7 +450,7 @@ struct Provider {
      * should implement a timeout mechanism of its choice to promptly deliver
      * a success or failure.
      */
-    virtual lcb_STATUS refresh() = 0;
+    virtual lcb_STATUS refresh(unsigned options = 0) = 0;
 
     /**
      * Callback invoked to the provider to indicate that it should cease

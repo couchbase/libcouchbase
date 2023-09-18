@@ -295,7 +295,7 @@ lcb_STATUS Bootstrap::bootstrap(unsigned options)
         last_refresh = now;
     }
     if (parent->settings->bucket) {
-        options &= BS_REFRESH_OPEN_BUCKET;
+        options |= BS_REFRESH_OPEN_BUCKET;
     }
     parent->confmon->start(options);
     return LCB_SUCCESS;

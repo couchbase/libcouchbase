@@ -403,7 +403,7 @@ bool HttpProvider::pause()
     return LCB_SUCCESS;
 }
 
-lcb_STATUS HttpProvider::refresh()
+lcb_STATUS HttpProvider::refresh(unsigned /* options */)
 {
     /**
      * We want a grace interval here because we might already be fetching a
