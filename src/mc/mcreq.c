@@ -247,10 +247,10 @@ void mcreq_reenqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
     sllist_insert_sorted(reqs, &packet->slnode, pkt_tmo_compar);
 }
 
-static void check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
+static mc_PACKET *check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
 {
     if ((packet->flags & MCREQ_F_NOCID) != 0) {
-        return;
+        return packet;
     }
 
     // before adding packet to pipeline lets see if we need add or remove collection id prefix
@@ -267,7 +267,7 @@ static void check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
         key_length = ntohs(request->request.keylen);
     }
     if (key_length == 0) {
-        return;
+        return packet;
     }
 
     char *key = header_and_key + sizeof(*request) + request->request.extlen + flexible_extras_length;
@@ -285,7 +285,7 @@ static void check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
             if (collection_id_length == 0) {
                 // but collection id prefix was not encoded, we should assume default collection and prepend zero as
                 // a collection identifier
-                mcreq_set_cid(pipeline, packet, 0);
+                packet = mcreq_set_cid(packet, 0);
             }
             break;
 
@@ -322,6 +322,7 @@ static void check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
             }
             break;
     }
+    return packet;
 }
 
 void mcreq_enqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
@@ -329,7 +330,7 @@ void mcreq_enqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
     nb_SPAN *vspan = &packet->u_value.single;
     sllist_append(&pipeline->requests, &packet->slnode);
 
-    check_collection_id(pipeline, packet);
+    packet = check_collection_id(pipeline, packet);
     netbuf_enqueue_span(&pipeline->nbmgr, &packet->kh_span, packet);
     MC_INCR_METRIC(pipeline, bytes_queued, packet->kh_span.size);
 
@@ -357,7 +358,7 @@ GT_ENQUEUE_PDU:
 void mcreq_wipe_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 {
     if (!(packet->flags & MCREQ_F_KEY_NOCOPY)) {
-        if ((packet->flags & MCREQ_F_DETACHED) || IS_STANDALONE_SPAN(&packet->kh_span)) {
+        if ((packet->flags & MCREQ_F_DETACHED)) {
             free(SPAN_BUFFER(&packet->kh_span));
         } else {
             netbuf_mblock_release(&pipeline->nbmgr, &packet->kh_span);
@@ -629,7 +630,7 @@ lcb_STATUS mcreq_basic_packet(mc_CMDQUEUE *queue, const lcb_KEYBUF *key, uint32_
     return LCB_SUCCESS;
 }
 
-void mcreq_set_cid(mc_PIPELINE *pipeline, mc_PACKET *packet, uint32_t cid)
+static void mcreq_set_cid_field(mc_PACKET *packet, uint32_t cid)
 {
     nb_SPAN old_span = packet->kh_span;
 
@@ -684,15 +685,19 @@ void mcreq_set_cid(mc_PIPELINE *pipeline, mc_PACKET *packet, uint32_t cid)
     memcpy(new_header_and_key + header_size + collection_id_length, ptr, key_length - old_collection_id_length);
 
     // deallocate the old span
-    if (IS_STANDALONE_SPAN(&old_span)) {
-        /* standalone buffer */
-        free(SPAN_BUFFER(&old_span));
-    } else {
-        netbuf_mblock_release(&pipeline->nbmgr, &old_span);
-    }
+    lcb_assert(IS_STANDALONE_SPAN(&old_span));
+    free(SPAN_BUFFER(&old_span));
 
     packet->flags |= MCREQ_F_HASCID;
-    packet->flags &= ~MCREQ_F_KEY_NOCOPY;
+}
+
+mc_PACKET *mcreq_set_cid(mc_PACKET *packet, uint32_t cid)
+{
+    if ((packet->flags & MCREQ_F_DETACHED) == 0) {
+        packet = mcreq_renew_packet(packet);
+    }
+    mcreq_set_cid_field(packet, cid);
+    return packet;
 }
 
 uint32_t mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet, int *cid_set)
