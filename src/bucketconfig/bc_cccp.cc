@@ -541,6 +541,11 @@ void CccpProvider::on_io_read()
             case PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED:
             case PROTOCOL_BINARY_RESPONSE_UNKNOWN_COMMAND:
                 return_error(LCB_ERR_UNSUPPORTED_OPERATION);
+            case PROTOCOL_BINARY_RATE_LIMITED_NETWORK_INGRESS:
+            case PROTOCOL_BINARY_RATE_LIMITED_NETWORK_EGRESS:
+            case PROTOCOL_BINARY_RATE_LIMITED_MAX_CONNECTIONS:
+            case PROTOCOL_BINARY_RATE_LIMITED_MAX_COMMANDS:
+                return_error(LCB_ERR_RATE_LIMITED);
             default:
                 return_error(LCB_ERR_PROTOCOL_ERROR);
         }
