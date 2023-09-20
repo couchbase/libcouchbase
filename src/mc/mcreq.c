@@ -23,6 +23,9 @@
 #define LOGARGS(pipeline, lvl)                                                                                         \
     ((lcb_INSTANCE *)((pipeline)->parent->cqdata))->settings, "mcreq", LCB_LOG_##lvl, __FILE__, __LINE__
 
+#define LOGFMT "(SRV=%p,IX=%d) "
+#define LOGID(pipeline) (void *)(pipeline), (pipeline)->index
+
 #define PKT_HDRSIZE(pkt) (MCREQ_PKT_BASESIZE + (pkt)->extlen)
 
 lcb_STATUS mcreq_reserve_header(mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize)
@@ -309,7 +312,9 @@ static mc_PACKET *check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
                     }
                 } else if (pipeline->parent->cqdata) {
                     lcb_log(LOGARGS(pipeline, DEBUG),
-                            "Custom collection id has been dispatched to the node, that does not support collections");
+                            LOGFMT
+                            "Custom collection id has been dispatched to the node, that does not support collections",
+                            LOGID(pipeline));
                 }
             }
             break;
@@ -318,7 +323,8 @@ static mc_PACKET *check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
             // the pipeline hadn't completed handshake yet, so trust global settings, and let operation be fixed
             // when it will be retried in case of misprediction.
             if (pipeline->parent->cqdata) {
-                lcb_log(LOGARGS(pipeline, DEBUG), "Collections has not been negotiated for the pipeline yet");
+                lcb_log(LOGARGS(pipeline, DEBUG), LOGFMT "Collections has not been negotiated for the pipeline yet",
+                        LOGID(pipeline));
             }
             break;
     }

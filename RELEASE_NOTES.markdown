@@ -1,5 +1,23 @@
 # Release Notes
 
+# 3.3.9 (2023-09-20)
+
+* CCBC-1608: reduce timeout for idle HTTP connections to 1 second
+
+* CCBC-1615: handle rate limit codes during bootstrap
+
+* CCBC-1612: Improve recovery time during rebalance for upcoming Server 7.6.
+    * do not throttle CCCP provider in faster failover mode.
+    * try to refresh configuration in case of network errors to speed up the recovery process during failover.
+
+* CCBC-1611: Handle `0x0d` (`ECONFIG_ONLY`) status code. Treat this status code as a signal to refresh configuration.
+  The new or failed over nodes are set into config-only mode, where all data operatios will be failed with code 0x0d. It
+  is possible that the SDK might be using stale configuration and send requests to the node, that is not part of the
+  cluster anymore, so to work around this, the library will update the configuration and retry the operation.
+
+* CCBC-1610: Fix memory issues when setting collection id in the cluster with mixed server versions, where some of the
+  nodes do not support collections.
+
 # 3.3.8 (2023-08-16)
 
 * CCBC-1584: Update documentation on how to use collections with pillowfight
