@@ -81,10 +81,7 @@ class Server : public mc_PIPELINE
      * Returns true or false depending on whether there are pending commands on
      * this server
      */
-    bool has_pending() const
-    {
-        return !SLLIST_IS_EMPTY(&requests);
-    }
+    bool has_pending(bool ignore_cfgreq = false) const;
 
     int get_index() const
     {

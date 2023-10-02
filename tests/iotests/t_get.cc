@@ -583,6 +583,8 @@ TEST_F(GetUnitTest, testFailoverAndGetReplica)
     lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
     // Reduce configuration poll interval to get new configuration sooner
     lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFIG_POLL_INTERVAL, &tmoval);
+    std::uint32_t yes = 1;
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_WAIT_FOR_CONFIG, &yes);
 
     // store keys
     size_t counter = 0;

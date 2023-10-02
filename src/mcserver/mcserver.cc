@@ -1382,3 +1382,30 @@ bool Server::check_closed()
     finalize_errored_ctx();
     return true;
 }
+
+bool Server::has_pending(bool ignore_cfgreq) const
+{
+    if (ignore_cfgreq) {
+        sllist_node *ll;
+        SLLIST_FOREACH(&requests, ll)
+        {
+            const mc_PACKET *pkt = SLLIST_ITEM(ll, mc_PACKET, slnode);
+            protocol_binary_request_header hdr = {};
+            mcreq_read_hdr(pkt, &hdr);
+            /*
+             * return true immediately if there is a pending request, that is not related to
+             * configuration updates
+             */
+            if (hdr.request.opcode != PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG &&
+                hdr.request.opcode != PROTOCOL_BINARY_CMD_SELECT_BUCKET) {
+                return true;
+            }
+        }
+        /*
+         * the pending requests list is empty or contains only configuration update requests
+         * in any case consider it empty, because of ignore_cfgreq flag
+         */
+        return false;
+    }
+    return !SLLIST_IS_EMPTY(&requests);
+}

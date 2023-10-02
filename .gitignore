@@ -26,6 +26,7 @@
 .deps/
 .libs/
 /INSTALL
+/.cache
 /Makefile
 /Makefile.in
 /aclocal.m4

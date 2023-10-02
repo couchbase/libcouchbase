@@ -32,7 +32,7 @@ static bool has_pending(lcb_INSTANCE *instance)
     }
 
     for (size_t ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
-        if (instance->get_server(ii)->has_pending()) {
+        if (instance->get_server(ii)->has_pending(!LCBT_SETTING(instance, wait_for_config))) {
             return true;
         }
     }
