@@ -1,5 +1,14 @@
 # Release Notes
 
+# 3.3.10 (2023-10-10)
+
+* CCBC-1616: apply `wait_for_config` check for all pipelines. Previously, the `lcb_wait` function would wait for the
+  pending configuration updates, but don't do it if the configuration update operation is being retried for some reason.
+  Now, the operation also will not wait for pending configuration updates, and rather return from `lcb_wait` as soon as
+  the operation completes. The old behaviour still works when `wait_for_config=true` is passed in connection string (or
+  `LCB_CNTL_WAIT_FOR_CONFIG` set to non-zero value), in this case the library will wait for the configuration. This
+  setting does not affect the mode, when the event loop is executed by the application, and without `lcb_wait`.
+
 # 3.3.9 (2023-09-20)
 
 * CCBC-1608: reduce timeout for idle HTTP connections to 1 second
