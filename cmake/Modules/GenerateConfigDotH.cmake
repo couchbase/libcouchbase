@@ -34,3 +34,6 @@ ENDIF()
 CONFIGURE_FILE(
     ${PROJECT_SOURCE_DIR}/cmake/config-cmake.h.in
     ${LCB_GENSRCDIR}/config.h)
+CONFIGURE_FILE(
+    ${PROJECT_SOURCE_DIR}/cmake/build-timestamp.h.in
+    ${LCB_GENSRCDIR}/build-timestamp.h)

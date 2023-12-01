@@ -2,7 +2,7 @@ INCLUDE_DIRECTORIES(${SOURCE_ROOT}/contrib/cliopts)
 FILE(GLOB T_COMMONSRC common/*.cc)
 ADD_LIBRARY(lcbtools OBJECT ${T_COMMONSRC})
 
-ADD_EXECUTABLE(cbc cbc.cc
+ADD_EXECUTABLE(cbc cbc.cc cbc-timestamp.cc
     $<TARGET_OBJECTS:lcbtools> $<TARGET_OBJECTS:cliopts> $<TARGET_OBJECTS:lcb_jsoncpp>)
 TARGET_LINK_LIBRARIES(cbc couchbase)
 

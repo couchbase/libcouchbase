@@ -35,6 +35,7 @@
 #include "common/options.h"
 #include "common/histogram.h"
 #include "cbc-handlers.h"
+#include "cbc-timestamp.h"
 #include "connspec.h"
 #include "rnd.h"
 #include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
@@ -1227,7 +1228,7 @@ void VersionHandler::run()
     printf("cbc:\n");
     printf("  Runtime: Version=%s, Changeset=%s\n", lcb_get_version(nullptr), changeset);
     printf("  Headers: Version=%s, Changeset=%s\n", LCB_VERSION_STRING, LCB_VERSION_CHANGESET);
-    printf("  Build Timestamp: %s\n", LCB_BUILD_TIMESTAMP);
+    printf("  Build Timestamp: %s\n", lcb_build_timestamp);
 #ifdef CMAKE_BUILD_TYPE
     printf("  CMake Build Type: %s\n", CMAKE_BUILD_TYPE);
 #endif
