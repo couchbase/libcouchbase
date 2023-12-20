@@ -386,15 +386,31 @@ lcb_RETRY_ACTION lcb_QUERY_HANDLE_::has_retriable_error(lcb_STATUS &rc)
                 lcb_strerror_short(rc), first_error.code, first_error.message.c_str());
         return {1, default_backoff};
     }
-    if (first_error.code == 13014 &&
-        LCBT_SETTING(instance_, auth)->mode() == LCBAUTH_MODE_DYNAMIC) { // datastore.couchbase.insufficient_credentials
-        auto result = request_credentials(LCBAUTH_REASON_AUTHENTICATION_FAILURE);
-        bool credentials_found = result == LCBAUTH_RESULT_OK;
-        lcb_log(LOGARGS(this, TRACE),
-                LOGFMT "Invalidate credentials and retry request. creds: %s, rc: %s, code: %d, msg: %s", LOGID(this),
-                credentials_found ? "ok" : "not_found", lcb_strerror_short(rc), first_error.code,
-                first_error.message.c_str());
-        return {credentials_found, default_backoff};
+    if (LCBT_SETTING(instance_, auth)->mode() == LCBAUTH_MODE_DYNAMIC) {
+        lcbauth_REASON reason_to_refresh_credentials{};
+        switch (first_error.code) {
+            case 13014: /* E_DATASTORE_INSUFFICIENT_CREDENTIALS */
+            case 12037: /* E_ACCESS_DENIED */
+                reason_to_refresh_credentials = LCBAUTH_REASON_AUTHORIZATION_FAILURE;
+                break;
+
+            case 2120: /* E_ADMIN_AUTH */
+                reason_to_refresh_credentials = LCBAUTH_REASON_AUTHENTICATION_FAILURE;
+                break;
+
+            default:
+                break;
+        }
+
+        if (reason_to_refresh_credentials) {
+            auto result = request_credentials(reason_to_refresh_credentials);
+            bool credentials_found = result == LCBAUTH_RESULT_OK;
+            lcb_log(LOGARGS(this, TRACE),
+                    LOGFMT "Invalidate credentials and retry request. creds: %s, rc: %s, code: %d, msg: %s",
+                    LOGID(this), credentials_found ? "ok" : "not_found", lcb_strerror_short(rc), first_error.code,
+                    first_error.message.c_str());
+            return {credentials_found, default_backoff};
+        }
     }
     if (!first_error.message.empty()) {
         for (const auto &magic_string : wtf_magic_strings) {

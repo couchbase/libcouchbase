@@ -315,6 +315,7 @@ LIBCOUCHBASE_API lcbauth_SERVICE lcbauth_credentials_service(const lcbauth_CREDE
 typedef enum {
     LCBAUTH_REASON_NEW_OPERATION = 0,
     LCBAUTH_REASON_AUTHENTICATION_FAILURE,
+    LCBAUTH_REASON_AUTHORIZATION_FAILURE,
 } lcbauth_REASON;
 
 /**
