@@ -1,5 +1,10 @@
 # Release Notes
 
+# 3.3.11 (2023-12-21)
+
+* CCBC-1618: update query error codes for dynamic authenticator. The dynamic authenticator is part of the internal API,
+  and is not being used by default.
+
 # 3.3.10 (2023-10-10)
 
 * CCBC-1616: apply `wait_for_config` check for all pipelines. Previously, the `lcb_wait` function would wait for the
