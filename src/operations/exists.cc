@@ -165,7 +165,7 @@ static lcb_STATUS exists_schedule(lcb_INSTANCE *instance, std::shared_ptr<lcb_CM
 
     hdr.request.opcode = PROTOCOL_BINARY_CMD_GET_META;
     hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    hdr.request.bodylen = ntohl(mcreq_get_key_size(&hdr));
+    hdr.request.bodylen = ntohl(mcreq_get_key_size(&hdr) + framing_extras.size());
     hdr.request.opaque = pkt->opaque;
     hdr.request.cas = 0;
 

@@ -409,7 +409,7 @@ static lcb_STATUS get_replica_schedule(lcb_INSTANCE *instance, std::shared_ptr<l
         mcreq_reserve_key(pl, pkt, sizeof(req.bytes) + ffextlen, &keybuf, cmd->collection().collection_id());
         size_t nkey = pkt->kh_span.size - MCREQ_PKT_BASESIZE + pkt->extlen;
         req.request.keylen = htons((uint16_t)nkey);
-        req.request.bodylen = htonl((uint32_t)nkey);
+        req.request.bodylen = htonl((uint32_t)nkey + framing_extras.size());
         req.request.opaque = pkt->opaque;
         rck->remaining++;
         mcreq_write_hdr(pkt, &req);
