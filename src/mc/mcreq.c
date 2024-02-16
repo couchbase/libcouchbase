@@ -333,10 +333,11 @@ static mc_PACKET *check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
 
 void mcreq_enqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 {
+    packet = check_collection_id(pipeline, packet);
+
     nb_SPAN *vspan = &packet->u_value.single;
     sllist_append(&pipeline->requests, &packet->slnode);
 
-    packet = check_collection_id(pipeline, packet);
     netbuf_enqueue_span(&pipeline->nbmgr, &packet->kh_span, packet);
     MC_INCR_METRIC(pipeline, bytes_queued, packet->kh_span.size);
 
