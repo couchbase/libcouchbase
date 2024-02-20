@@ -248,7 +248,7 @@ static lcb_STATUS reschedule_destroy(packet_wrapper *wrapper)
     return LCB_SUCCESS;
 }
 
-bool Server::handle_unknown_collection(MemcachedResponse &resp, mc_PACKET *oldpkt)
+bool Server::handle_unknown_collection(mc_PIPELINE *pipeline, MemcachedResponse &resp, mc_PACKET *oldpkt)
 {
     auto orig_status = static_cast<protocol_binary_response_status>(resp.status());
     lcb_STATUS orig_err = resp.status() == PROTOCOL_BINARY_RESPONSE_UNKNOWN_SCOPE ? LCB_ERR_SCOPE_NOT_FOUND
@@ -299,9 +299,9 @@ bool Server::handle_unknown_collection(MemcachedResponse &resp, mc_PACKET *oldpk
     wrapper.pkt = mcreq_renew_packet(oldpkt);
     wrapper.instance = instance;
     wrapper.timeout = LCB_NS2US(MCREQ_PKT_RDATA(wrapper.pkt)->deadline - now);
-    auto operation = [orig_status](const lcb_RESPGETCID *, packet_wrapper *wrp) {
+    auto operation = [orig_status, &pipeline](const lcb_RESPGETCID *, packet_wrapper *wrp) {
         if ((wrp->pkt->flags & MCREQ_F_NOCID) == 0) {
-            wrp->pkt = mcreq_set_cid(wrp->pkt, wrp->cid);
+            wrp->pkt = mcreq_set_cid(pipeline, wrp->pkt, wrp->cid);
         }
         /** Reschedule the packet again .. */
         wrp->pkt->flags &= ~MCREQ_STATE_FLAGS;
@@ -680,7 +680,7 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
                status == PROTOCOL_BINARY_RESPONSE_UNKNOWN_SCOPE) {
         /* consume the header */
         DO_ASSIGN_PAYLOAD()
-        if (!handle_unknown_collection(mcresp, request)) {
+        if (!handle_unknown_collection(this, mcresp, request)) {
             mcreq_dispatch_response(this, request, &mcresp, LCB_ERR_TIMEOUT);
         }
         DO_SWALLOW_PAYLOAD()

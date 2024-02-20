@@ -705,7 +705,7 @@ uint32_t mcreq_get_size(const mc_PACKET *packet);
 
 uint32_t mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet, int *cid_set);
 
-mc_PACKET *mcreq_set_cid(mc_PACKET *packet, uint32_t cid);
+mc_PACKET *mcreq_set_cid(mc_PIPELINE *pipelin, mc_PACKET *packet, uint32_t cid);
 
 /**
  * @brief Get the vBucket for the request

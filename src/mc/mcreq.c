@@ -28,6 +28,7 @@
 
 #define PKT_HDRSIZE(pkt) (MCREQ_PKT_BASESIZE + (pkt)->extlen)
 
+
 lcb_STATUS mcreq_reserve_header(mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize)
 {
     int rv;
@@ -288,7 +289,7 @@ static mc_PACKET *check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
             if (collection_id_length == 0) {
                 // but collection id prefix was not encoded, we should assume default collection and prepend zero as
                 // a collection identifier
-                packet = mcreq_set_cid(packet, 0);
+                packet = mcreq_set_cid(pipeline, packet, 0);
             }
             break;
 
@@ -333,10 +334,11 @@ static mc_PACKET *check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
 
 void mcreq_enqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 {
+    packet = check_collection_id(pipeline, packet);
+
     nb_SPAN *vspan = &packet->u_value.single;
     sllist_append(&pipeline->requests, &packet->slnode);
 
-    packet = check_collection_id(pipeline, packet);
     netbuf_enqueue_span(&pipeline->nbmgr, &packet->kh_span, packet);
     MC_INCR_METRIC(pipeline, bytes_queued, packet->kh_span.size);
 
@@ -401,7 +403,6 @@ mc_PACKET *mcreq_allocate_packet(mc_PIPELINE *pipeline)
     if (rv != 0) {
         return NULL;
     }
-
     ret = (void *)SPAN_MBUFFER_NC(&span);
     ret->alloc_parent = span.parent;
     ret->flags = 0;
@@ -697,10 +698,19 @@ static void mcreq_set_cid_field(mc_PACKET *packet, uint32_t cid)
     packet->flags |= MCREQ_F_HASCID;
 }
 
-mc_PACKET *mcreq_set_cid(mc_PACKET *packet, uint32_t cid)
+mc_PACKET *mcreq_set_cid(mc_PIPELINE *pipeline,mc_PACKET *packet, uint32_t cid)
 {
     if ((packet->flags & MCREQ_F_DETACHED) == 0) {
+        mc_PACKET *old_packet = packet;
         packet = mcreq_renew_packet(packet);
+        if(packet != old_packet){
+            netbuf_mblock_release(&pipeline->reqpool, &old_packet->kh_span);
+            nb_SPAN span;
+            span.size = sizeof(*old_packet);
+            span.parent = old_packet->alloc_parent;
+            span.offset = (char *)packet - old_packet->alloc_parent->root;
+            netbuf_mblock_release(&pipeline->reqpool,&span);
+        }
     }
     mcreq_set_cid_field(packet, cid);
     return packet;

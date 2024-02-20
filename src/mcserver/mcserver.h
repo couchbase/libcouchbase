@@ -214,7 +214,7 @@ class Server : public mc_PIPELINE
     ReadState try_read(lcbio_CTX *ctx, rdb_IOROPE *ior);
     int handle_unknown_error(const mc_PACKET *request, const MemcachedResponse &resinfo, lcb_STATUS &newerr);
     bool handle_nmv(MemcachedResponse &resinfo, mc_PACKET *oldpkt);
-    bool handle_unknown_collection(MemcachedResponse &resinfo, mc_PACKET *oldpkt);
+    bool handle_unknown_collection(mc_PIPELINE *pipeline, MemcachedResponse &resinfo, mc_PACKET *oldpkt);
     void handle_server_request(const MemcachedResponse &request);
     void handle_clustermap_notification(const MemcachedResponse &request);
     void handle_config_only(const mc_PACKET *oldpkt);
