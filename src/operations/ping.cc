@@ -418,6 +418,11 @@ static void handle_ping(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_CALLBACK_TYPE
 
     if (err != LCB_ERR_REQUEST_CANCELED && ck->needMetrics()) {
         lcb_PINGSVC svc = {};
+        {
+            char id[20] = {0};
+            snprintf(id, sizeof(id), "%p", (void *)pipeline);
+            svc.id = lcb_strdup(id);
+        }
         if (server->has_valid_host()) {
             const lcb_host_t &remote = server->get_host();
             std::string hh;
@@ -444,10 +449,7 @@ static void handle_ping(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_CALLBACK_TYPE
         }
         lcbio_CTX *ctx = server->connctx;
         if (ctx) {
-            char id[20] = {0};
             svc.local = lcb_strdup(ctx->sock->info->ep_local_host_and_port);
-            snprintf(id, sizeof(id), "%p", (void *)ctx->sock);
-            svc.id = lcb_strdup(id);
         }
         svc.scope = server->get_instance()->get_bucketname();
 

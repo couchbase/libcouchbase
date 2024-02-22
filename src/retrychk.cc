@@ -72,16 +72,22 @@ static int mc_is_idempotent(uint8_t opcode)
 
 lcb_RETRY_ACTION lcb_kv_should_retry(const lcb_settings *settings, const mc_PACKET *pkt, lcb_STATUS err)
 {
+    lcb_RETRY_ACTION retry_action{};
     protocol_binary_request_header hdr;
 
     mcreq_read_hdr(pkt, &hdr);
+
+    if (hdr.request.opcode == PROTOCOL_BINARY_CMD_NOOP) {
+        // do not retry NOOP, it should fast fail to capture connection errors
+        retry_action.should_retry = 0;
+        return retry_action;
+    }
 
     lcb_RETRY_REASON retry_reason = mc_code_to_reason(err);
     lcb_RETRY_REQUEST retry_req;
     retry_req.operation_cookie = const_cast<void *>(MCREQ_PKT_COOKIE(pkt));
     retry_req.is_idempotent = mc_is_idempotent(hdr.request.opcode);
     retry_req.retry_attempts = pkt->retries;
-    lcb_RETRY_ACTION retry_action{};
 
     if (err == LCB_ERR_AUTHENTICATION_FAILURE || err == LCB_ERR_TOPOLOGY_CHANGE || err == LCB_ERR_BUCKET_NOT_FOUND) {
         /* spurious auth error */

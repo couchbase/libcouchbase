@@ -457,8 +457,9 @@ static void ping_callback(lcb_INSTANCE *, int, const lcb_RESPPING *resp)
 {
     lcb_STATUS rc = lcb_respping_status(resp);
     if (rc != LCB_SUCCESS) {
-        fprintf(stderr, "failed: %s\n", lcb_strerror_short(rc));
-    } else {
+        fprintf(stderr, "Overall status: %s\n", lcb_strerror_short(rc));
+    }
+    {
         const char *json;
         size_t njson;
         lcb_respping_value(resp, &json, &njson);
@@ -494,8 +495,9 @@ static void ping_table_callback(lcb_INSTANCE *, int, const lcb_RESPPING *resp)
 {
     lcb_STATUS rc = lcb_respping_status(resp);
     if (rc != LCB_SUCCESS) {
-        fprintf(stderr, "failed: %s\n", lcb_strerror_short(rc));
-    } else {
+        fprintf(stderr, "Overall status: %s\n", lcb_strerror_short(rc));
+    }
+    {
         const char *json;
         size_t njson = 0;
         lcb_respping_value(resp, &json, &njson);
