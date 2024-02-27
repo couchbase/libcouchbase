@@ -288,7 +288,7 @@ static mc_PACKET *check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
             if (collection_id_length == 0) {
                 // but collection id prefix was not encoded, we should assume default collection and prepend zero as
                 // a collection identifier
-                packet = mcreq_set_cid(packet, 0);
+                packet = mcreq_set_cid(pipeline, packet, 0);
             }
             break;
 
@@ -698,10 +698,13 @@ static void mcreq_set_cid_field(mc_PACKET *packet, uint32_t cid)
     packet->flags |= MCREQ_F_HASCID;
 }
 
-mc_PACKET *mcreq_set_cid(mc_PACKET *packet, uint32_t cid)
+mc_PACKET *mcreq_set_cid(mc_PIPELINE *pipeline, mc_PACKET *packet, uint32_t cid)
 {
     if ((packet->flags & MCREQ_F_DETACHED) == 0) {
-        packet = mcreq_renew_packet(packet);
+        mc_PACKET *copy = mcreq_renew_packet(packet);
+        mcreq_wipe_packet(pipeline, packet);
+        mcreq_release_packet(pipeline, packet);
+        packet = copy;
     }
     mcreq_set_cid_field(packet, cid);
     return packet;
