@@ -1,5 +1,25 @@
 # Release Notes
 
+# 3.3.12 (2024-03-02)
+
+* CCBC-1636: Deallocate old packet when updating collection ID.
+  `mcreq_renew_packet()` requires the caller to deallocate original copy, otherwise the memory will
+  be only released by pipeline destructor.
+
+* CCBC-1634: Fix reporting unresponsive nodes in `lcb_ping()`.
+  * do not retry NOOP commands, as they might be routed to different pipeline, instead fail fast
+    NOOPs to reflect network issues more precisely.
+  * use pipeline address as ping entry identifier instead of socket address, as socket might not be
+    existing (not connected) due to network failures.
+  * `lcb_ping` still have report even when overall status is not `LCB_SUCCESS`, so cbc-ping should
+    still try to print report instead just printing overall status code.
+
+* CCBC-1630: Check collection id before storing packet to pipeline.
+  Every time `check_collection_id()` is invoked, the caller should ensure that this function
+  potentially is rewriting the packet, if it decides to insert/update encoded collection ID.
+
+* CCBC-1627: Fix `bodylen` value when `ffextlen` (flexible frame extra length) is not zero.
+
 # 3.3.11 (2023-12-21)
 
 * CCBC-1618: update query error codes for dynamic authenticator. The dynamic authenticator is part of the internal API,
