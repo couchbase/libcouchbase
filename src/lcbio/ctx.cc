@@ -21,6 +21,10 @@
 #include "ioutils.h"
 #include <lcbio/ssl.h>
 
+#ifdef LCB_DUMP_PACKETS
+#include "strcodecs/strcodecs.h"
+#endif
+
 #define CTX_FD(ctx) (ctx)->fd
 #define CTX_SD(ctx) (ctx)->sd
 #define CTX_IOT(ctx) (ctx)->io

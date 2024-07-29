@@ -32,6 +32,10 @@
 #include "sllist-inl.h"
 #include "mc/compress.h"
 
+#ifdef LCB_DUMP_PACKETS
+#include "strcodecs/strcodecs.h"
+#endif
+
 #define LOGARGS(c, lvl) (c)->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOGARGS_T(lvl) LOGARGS(this, lvl)
 
