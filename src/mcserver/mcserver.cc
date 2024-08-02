@@ -1091,6 +1091,7 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
                 LOGID_T(), lcb_strerror_short(err), syserr, strerror(syserr));
         MC_INCR_METRIC(this, iometrics.io_error, 1);
         if (!maybe_reconnect_on_fake_timeout(err)) {
+            lcb_log(LOGARGS_T(DEBUG), LOGFMT "Declare socket failed: %s", LOGID_T(), lcb_strerror_short(err));
             socket_failed(err);
         }
         return;
@@ -1275,6 +1276,18 @@ void Server::close()
     start_errored_ctx(S_CLOSED);
 }
 
+/**Marks any unflushed data inside this server as being already flushed. This
+ * should be done within error handling. If subsequent data is flushed on this
+ * pipeline to the same connection, the results are undefined. */
+void Server::flush_unflushed_data()
+{
+    unsigned toflush;
+    nb_IOV iov;
+    while ((toflush = mcreq_flush_iov_fill(this, &iov, 1, nullptr))) {
+        mcreq_flush_done(this, toflush, toflush);
+    }
+}
+
 /**
  * Call to signal an error or similar on the current socket.
  * @param server The server
@@ -1305,6 +1318,7 @@ void Server::start_errored_ctx(State next_state)
                     /* TODO: Maybe throttle reconnection attempts? */
                     lcbio_timer_rearm(io_timer, default_timeout());
                 }
+                flush_unflushed_data();
                 connect();
             } else {
                 // Connect once someone actually wants a connection.
@@ -1335,29 +1349,25 @@ void Server::start_errored_ctx(State next_state)
  * ctx has pending operations remaining then this function returns immediately.
  * Otherwise this will either reinitialize the connection or free the server
  * object depending on the actual object state (i.e. if it was closed or
- * simply errored).
+ * simply errored). The only exception is the case, when the context did not
+ * have a chance to be connected, in which case we have to flush everything,
+ * close the context and reconnect.
  */
 void Server::finalize_errored_ctx()
 {
-    if (connctx->npending) {
-        return;
+    if (connctx != nullptr) {
+        if (connreq != nullptr && connctx->npending) {
+            return;
+        }
+
+        lcb_log(LOGARGS_T(DEBUG), LOGFMT "Finalizing context", LOGID_T());
+
+        /* Always close the existing context. */
+        lcbio_ctx_close(connctx, close_cb, nullptr);
+        connctx = nullptr;
     }
 
-    lcb_log(LOGARGS_T(DEBUG), LOGFMT "Finalizing context", LOGID_T());
-
-    /* Always close the existing context. */
-    lcbio_ctx_close(connctx, close_cb, nullptr);
-    connctx = nullptr;
-
-    /**Marks any unflushed data inside this server as being already flushed. This
-     * should be done within error handling. If subsequent data is flushed on this
-     * pipeline to the same connection, the results are undefined. */
-
-    unsigned toflush;
-    nb_IOV iov;
-    while ((toflush = mcreq_flush_iov_fill(this, &iov, 1, nullptr))) {
-        mcreq_flush_done(this, toflush, toflush);
-    }
+    flush_unflushed_data();
 
     if (state == Server::S_CLOSED) {
         /* If the server is closed, time to free it */
@@ -1382,8 +1392,8 @@ bool Server::check_closed()
     if (state == Server::S_CLEAN) {
         return false;
     }
-    lcb_log(LOGARGS_T(INFO), LOGFMT "Got handler after close. Checking pending calls (pending=%u)", LOGID_T(),
-            connctx->npending);
+    lcb_log(LOGARGS_T(INFO), LOGFMT "Got handler after close. Checking pending calls (pending=%d)", LOGID_T(),
+            (int)(connctx ? connctx->npending : -1));
     finalize_errored_ctx();
     return true;
 }

@@ -196,6 +196,8 @@ class Server : public mc_PIPELINE
     uint32_t next_timeout() const;
 
     bool check_closed();
+
+    void flush_unflushed_data();
     void start_errored_ctx(State next_state);
     void finalize_errored_ctx();
     void socket_failed(lcb_STATUS);
