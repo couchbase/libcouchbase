@@ -567,6 +567,7 @@ void lcbio_ssl_free(lcbio_pSSLCTX ctx)
     free(ctx);
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x1010100fL
 /**
  * According to https://www.openssl.org/docs/crypto/threads.html we need
  * to install two functions for locking support, a function that returns
@@ -642,6 +643,7 @@ static void ossl_init_locks(void)
     CRYPTO_set_locking_callback(ossl_lockfn);
     (void)ossl_lockfn;
 }
+#endif
 
 static volatile int ossl_initialized = 0;
 void lcbio_ssl_global_init(void)
@@ -651,8 +653,14 @@ void lcbio_ssl_global_init(void)
     }
     ossl_initialized = 1;
     SSL_library_init();
+    // As of version 1.1.0, OpenSSL automatically allocate all resources that it
+    // needs, so explicit initialization is not necessary.
+    // More info at OPENSSL_init_ssl(3)
+#if OPENSSL_VERSION_NUMBER < 0x1010100fL
+    SSL_library_init();
     SSL_load_error_strings();
     ossl_init_locks();
+#endif
 }
 
 lcb_STATUS lcbio_sslify_if_needed(lcbio_SOCKET *sock, lcb_settings *settings)
