@@ -122,6 +122,9 @@ bool lcb_QUERY_HANDLE_::parse_meta(const char *row, size_t row_len, lcb_STATUS &
         if (code.isNumeric()) {
             first_error.code = code.asUInt();
             switch (first_error.code) {
+                case 1080:
+                    rc = LCB_ERR_TIMEOUT;
+                    break;
                 case 3000:
                     rc = LCB_ERR_PARSING_FAILURE;
                     break;

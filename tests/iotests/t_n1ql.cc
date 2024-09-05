@@ -1162,3 +1162,32 @@ TEST_F(QueryUnitTest, testReadOnlyWithNoResults)
     ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
     ASSERT_EQ(0, res.rows.size());
 }
+
+TEST_F(QueryUnitTest, testQueryServerTimeout)
+{
+    SKIP_IF_MOCK()
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
+
+    // Setting a very large grace period so the server-side timeout is returned before the client times out
+    lcb_cntl_setu32(instance, LCB_CNTL_QUERY_GRACE_PERIOD, 100000000);
+
+    N1QLResult res;
+    lcb_CMDQUERY *cmd;
+    lcb_cmdquery_create(&cmd);
+    string query = "WITH x AS (ARRAY_RANGE(0,100000)) SELECT * FROM x";
+    lcb_cmdquery_statement(cmd, query.c_str(), query.size());
+    lcb_cmdquery_timeout(cmd, 10000);
+    lcb_cmdquery_callback(cmd, rowcb);
+
+    lcb_QUERY_HANDLE *handle = nullptr;
+    lcb_cmdquery_handle(cmd, &handle);
+    lcb_STATUS rc = lcb_query(instance, &res, cmd);
+    lcb_cmdquery_destroy(cmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
+    ASSERT_TRUE(handle != nullptr);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_TRUE(res.called);
+    ASSERT_STATUS_EQ(LCB_ERR_TIMEOUT, res.rc) << "http=" << res.htcode << ", meta=" << res.meta;
+}
