@@ -1,5 +1,17 @@
 # Release Notes
 
+# 3.3.13 (2024-09-13)
+
+* CCBC-1647: Handle server-side query timeout (status 1080).
+
+* CCBC-1643: fix memory leak of pending buffers in IO context.
+
+* CCBC-1645: do not use explicit initialization for OpenSSL 1.1+.
+
+* Fix build with `-DLCB_DUMP_PACKETS=ON`
+
+* Fix pkg-config for MacOS
+
 # 3.3.12 (2024-03-02)
 
 * CCBC-1636: Deallocate old packet when updating collection ID.
