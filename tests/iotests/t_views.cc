@@ -41,6 +41,10 @@ static void bktCreateCb(lcb_INSTANCE *, int, const lcb_RESPHTTP *resp)
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_resphttp_status(resp));
     uint16_t status;
     lcb_resphttp_http_status(resp, &status);
+    const char *body = nullptr;
+    std::size_t body_len = 0;
+    lcb_resphttp_body(resp, &body, &body_len);
+    fprintf(stderr, "-----\n\n%d\n%.*s\n\n-----\n", (int)status, (int)body_len, body);
     ASSERT_TRUE(status > 199 && status < 300);
 }
 }
@@ -107,6 +111,7 @@ void ViewsUnitTest::connectBeerSample(HandleWrap &hw, lcb_INSTANCE **instance, b
     lcb_wait(*instance, LCB_WAIT_DEFAULT);
     hw.destroy();
 
+    sleep(5);
     // Now it should all be good, so we can call recursively..
     connectBeerSample(hw, instance, false);
 }

@@ -113,6 +113,8 @@ typedef enum {
     /** The requested resource is locked */
     PROTOCOL_BINARY_RESPONSE_LOCKED = 0x09,
 
+    /** The requested resource is not locked */
+    PROTOCOL_BINARY_RESPONSE_NOT_LOCKED = 0x0e,
     /** The node cannot execute operation, because the bucket is in config-only mode */
     PROTOCOL_BINARY_RESPONSE_CONFIG_ONLY = 0x0d,
 

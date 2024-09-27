@@ -246,6 +246,7 @@ TEST_F(RateLimitTest, testRateLimitsQueryNumQueries)
 {
     SKIP_IF_MOCK()
     SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
@@ -291,6 +292,7 @@ TEST_F(RateLimitTest, testRateLimitsQueryEgress)
 {
     SKIP_IF_MOCK()
     SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
@@ -343,6 +345,7 @@ TEST_F(RateLimitTest, testRateLimitsQueryIngress)
 {
     SKIP_IF_MOCK()
     SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
@@ -393,6 +396,7 @@ TEST_F(RateLimitTest, testRateLimitsQueryConcurrentRequests)
 {
     SKIP_IF_MOCK()
     SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);

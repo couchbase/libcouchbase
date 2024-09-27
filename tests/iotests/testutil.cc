@@ -248,10 +248,11 @@ std::ostream &operator<<(std::ostream &out, const Item &item)
 
 struct http_result {
     lcb_STATUS rc{LCB_SUCCESS};
-    uint16_t status{0};
+    std::uint16_t status{0};
     std::string path{};
     std::string body{};
     std::map<std::string, std::string> headers{};
+    std::uint16_t expected_status{200};
 };
 
 struct manifest_result {
@@ -290,7 +291,9 @@ static void http_callback(lcb_INSTANCE * /* instance */, int /* cbtype */, const
         }
     }
 
-    EXPECT_EQ(200, result->status) << result->path << ": " << result->body;
+    if (result->expected_status > 0) {
+        EXPECT_EQ(result->expected_status, result->status) << result->path << ": " << result->body;
+    }
 }
 
 static void get_manifest_callback(lcb_INSTANCE *, int, const lcb_RESPGETMANIFEST *resp)
@@ -348,7 +351,7 @@ static void wait_for_manifest_uid(lcb_INSTANCE *instance, std::uint64_t uid)
 
 void create_scope(lcb_INSTANCE *instance, const std::string &scope, bool wait)
 {
-    (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
+    auto *old_http_callback = lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 
     lcb_CMDHTTP *cmd;
     std::string path = "/pools/default/buckets/" + MockEnvironment::getInstance()->getBucket() + "/scopes";
@@ -374,11 +377,12 @@ void create_scope(lcb_INSTANCE *instance, const std::string &scope, bool wait)
     if (wait) {
         wait_for_manifest_uid(instance, uid);
     }
+    (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)old_http_callback);
 }
 
 void create_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection, bool wait)
 {
-    (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
+    auto *old_http_callback = lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 
     lcb_CMDHTTP *cmd;
     std::string path =
@@ -406,11 +410,12 @@ void create_collection(lcb_INSTANCE *instance, const std::string &scope, const s
     if (wait) {
         wait_for_manifest_uid(instance, uid);
     }
+    (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)old_http_callback);
 }
 
 void drop_scope(lcb_INSTANCE *instance, const std::string &scope, bool wait)
 {
-    (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
+    auto *old_http_callback = lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 
     lcb_CMDHTTP *cmd;
     std::string path = "/pools/default/buckets/default/scopes/" + scope;
@@ -433,11 +438,12 @@ void drop_scope(lcb_INSTANCE *instance, const std::string &scope, bool wait)
     if (wait) {
         wait_for_manifest_uid(instance, uid);
     }
+    (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)old_http_callback);
 }
 
 void drop_collection(lcb_INSTANCE *instance, const std::string &scope, const std::string &collection, bool wait)
 {
-    (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
+    auto *old_http_callback = lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)http_callback);
 
     lcb_CMDHTTP *cmd;
     std::string path = "/pools/default/buckets/default/scopes/" + scope + "/collections/" + collection;
@@ -460,6 +466,7 @@ void drop_collection(lcb_INSTANCE *instance, const std::string &scope, const std
     if (wait) {
         wait_for_manifest_uid(instance, uid);
     }
+    (void)lcb_install_callback(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)old_http_callback);
 }
 
 std::string unique_name(const std::string &prefix)
