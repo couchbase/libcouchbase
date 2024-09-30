@@ -110,6 +110,7 @@ typedef struct {
     char *alt_hostname;         /**< selected alternative hostname for the node */
     lcbvb_SERVICES alt_svc;     /**< selected alternative plain services */
     lcbvb_SERVICES alt_svc_ssl; /**< selected alternative SSL Services */
+    char *server_group;         /**< the group name or NULL */
 } lcbvb_SERVER;
 
 /**@volatile. ABI/API compatibility not guaranteed between versions */

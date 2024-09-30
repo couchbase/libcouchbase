@@ -320,7 +320,7 @@ static void rget_callback(lcb_INSTANCE *instance, int, const lcb_RESPGETREPLICA 
     }
 
     lcb_STATUS rc = lcb_respgetreplica_status(resp);
-    ASSERT_EQ(rck->expectrc, rc);
+    ASSERT_EQ(rck->expectrc, rc) << lcb_strerror_short(rck->expectrc) << " != " << lcb_strerror_short(rc);
     ASSERT_NE(0, rck->remaining);
     rck->remaining--;
 
@@ -1321,5 +1321,144 @@ TEST_F(GetUnitTest, testTouchWithZeroExpiryResetsExpiry)
         ASSERT_TRUE(res.called);
         ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
         ASSERT_EQ(value, res.value);
+    }
+}
+
+extern "C" {
+struct store_result {
+    bool hit{false};
+    lcb_STATUS rc{LCB_SUCCESS};
+};
+
+static void grwg_store_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
+{
+    store_result *result{nullptr};
+    lcb_respstore_cookie(resp, (void **)&result);
+    result->hit = true;
+    result->rc = lcb_respstore_status(resp);
+}
+
+struct get_result {
+    std::size_t hit_active{0};
+    std::size_t hit_replica{0};
+    lcb_STATUS rc{LCB_SUCCESS};
+};
+
+static void grwg_get_callback(lcb_INSTANCE *instance, int, const lcb_RESPGETREPLICA *resp)
+{
+    get_result *result{nullptr};
+    lcb_respgetreplica_cookie(resp, (void **)&result);
+    if (lcb_respgetreplica_is_active(resp)) {
+        result->hit_active++;
+    } else {
+        result->hit_replica++;
+    }
+    result->rc = lcb_respgetreplica_status(resp);
+}
+}
+
+TEST_F(GetUnitTest, testGetReplicaWithGroups)
+{
+    SKIP_IF_MOCK()
+
+    std::int32_t number_of_replicas{};
+    std::size_t number_of_nodes{};
+    std::set<std::string> server_groups{};
+
+    {
+        HandleWrap hw;
+        lcb_INSTANCE *instance{nullptr};
+
+        createConnection(hw, &instance);
+
+        number_of_replicas = lcb_get_num_replicas(instance);
+        if (number_of_replicas < 1) {
+            char buf[256]{};
+            snprintf(buf, 256, "not enough replicas (%d), skipping", number_of_replicas);
+            MockEnvironment::printSkipMessage(__FILE__, __LINE__, buf);
+            return;
+        }
+
+        number_of_nodes = instance->cmdq.config->nsrv;
+        if (number_of_nodes <= static_cast<std::size_t>(number_of_replicas)) {
+            char buf[256]{};
+            snprintf(buf, 256, "number of nodes (%d) is less or equal to number of replicas",
+                     static_cast<int>(number_of_nodes), number_of_replicas);
+            MockEnvironment::printSkipMessage(__FILE__, __LINE__, buf);
+            return;
+        }
+
+        for (int i = 0; i < instance->cmdq.config->nsrv; ++i) {
+            const char *group = instance->cmdq.config->servers[i].server_group;
+            if (group != nullptr) {
+                server_groups.insert(group);
+            }
+        }
+
+        if (server_groups.size() != 2) {
+            char buf[256]{};
+            snprintf(
+                buf, 256,
+                "this test expects exactly 2 server groups (found %d) and at least one replica (found %d), skipping",
+                static_cast<int>(server_groups.size()), number_of_replicas);
+            MockEnvironment::printSkipMessage(__FILE__, __LINE__, buf);
+            return;
+        }
+    }
+
+    {
+        HandleWrap hw;
+        lcb_INSTANCE *instance{nullptr};
+
+        lcb_CREATEOPTS *connection_options{nullptr};
+        MockEnvironment::getInstance()->makeConnectParams(connection_options, nullptr, LCB_TYPE_BUCKET);
+        std::string connstr{connection_options->connstr};
+        connstr += "&preferred_server_group=" + *server_groups.begin(); // first group
+        connection_options->connstr = connstr.c_str();
+        ASSERT_EQ(LCB_SUCCESS, tryCreateConnection(hw, &instance, connection_options));
+        lcb_createopts_destroy(connection_options);
+
+        std::string key("key_for_test_with_group");
+        std::string val("a_value");
+        {
+            store_result result{};
+            lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)grwg_store_callback);
+
+            lcb_CMDSTORE *cmd{nullptr};
+            lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
+            lcb_cmdstore_key(cmd, key.data(), key.size());
+            lcb_cmdstore_value(cmd, val.data(), val.size());
+            lcb_cmdstore_durability_observe(cmd, number_of_replicas + 1, number_of_replicas);
+            ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &result, cmd));
+            lcb_cmdstore_destroy(cmd);
+            lcb_wait(instance, LCB_WAIT_NOCHECK);
+            ASSERT_TRUE(result.hit);
+            ASSERT_EQ(LCB_SUCCESS, result.rc);
+        }
+        {
+            get_result result{};
+            lcb_install_callback(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)grwg_get_callback);
+
+            lcb_CMDGETREPLICA *cmd{nullptr};
+            lcb_cmdgetreplica_create(&cmd, LCB_REPLICA_MODE_ALL);
+            lcb_cmdgetreplica_key(cmd, key.c_str(), key.size());
+            ASSERT_EQ(LCB_SUCCESS, lcb_getreplica(instance, &result, cmd));
+            lcb_cmdgetreplica_destroy(cmd);
+            lcb_wait(instance, LCB_WAIT_DEFAULT);
+            ASSERT_EQ(result.hit_active + result.hit_replica, number_of_replicas + 1);
+        }
+        {
+            get_result result{};
+            lcb_install_callback(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)grwg_get_callback);
+
+            lcb_CMDGETREPLICA *cmd{nullptr};
+            lcb_cmdgetreplica_create(&cmd, LCB_REPLICA_MODE_ALL);
+            lcb_cmdgetreplica_key(cmd, key.c_str(), key.size());
+            lcb_cmdgetreplica_read_preference(cmd, LCB_REPLICA_READ_PREFERENCE_SELECTED_SERVER_GROUP);
+            ASSERT_EQ(LCB_SUCCESS, lcb_getreplica(instance, &result, cmd));
+            lcb_cmdgetreplica_destroy(cmd);
+            lcb_wait(instance, LCB_WAIT_DEFAULT);
+            ASSERT_EQ(result.hit_active + result.hit_replica, 1);
+        }
     }
 }

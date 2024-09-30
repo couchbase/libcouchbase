@@ -1327,10 +1327,26 @@ typedef enum {
 #define LCB_CNTL_ENABLE_OP_METRICS 0x67
 
 /**
+ * Select server group to use for replica APIs.
+ *
+ * For some use-cases it might be necessary to restrict list of the nodes,
+ * that are used in replica read APIs to single server group to optimize
+ * network costs.
+ *
+ * Use `preferred_server_group` in the connection string.
+ *
+ * @committed
+ * @cntl_arg_both{const char*}
+ *
+ * @see https://docs.couchbase.com/server/current/manage/manage-groups/manage-groups.html
+ */
+#define LCB_CNTL_PREFERRED_SERVER_GROUP 0x68
+
+/**
  * This is not a command, but rather an indicator of the last item.
  * @internal
  */
-#define LCB_CNTL__MAX 0x68
+#define LCB_CNTL__MAX 0x69
 /**@}*/
 
 #ifdef __cplusplus

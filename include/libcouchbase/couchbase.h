@@ -793,6 +793,11 @@ typedef enum {
     LCB_REPLICA_MODE__MAX
 } lcb_REPLICA_MODE;
 
+typedef enum {
+    LCB_REPLICA_READ_PREFERENCE_NONE = 0x00,
+    LCB_REPLICA_READ_PREFERENCE_SELECTED_SERVER_GROUP = 0x01,
+} lcb_REPLICA_READ_PREFERENCE;
+
 typedef struct lcb_RESPGETREPLICA_ lcb_RESPGETREPLICA;
 
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_status(const lcb_RESPGETREPLICA *resp);
@@ -817,6 +822,8 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetreplica_collection(lcb_CMDGETREPLICA *cmd,
                                                          const char *collection, size_t collection_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetreplica_key(lcb_CMDGETREPLICA *cmd, const char *key, size_t key_len);
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetreplica_timeout(lcb_CMDGETREPLICA *cmd, uint32_t timeout);
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetreplica_read_preference(lcb_CMDGETREPLICA *cmd,
+                                                              lcb_REPLICA_READ_PREFERENCE preference);
 /**
  * @internal Internal: This should never be used and is not supported.
  */

@@ -747,6 +747,22 @@ HANDLER(network_handler)
     return LCB_SUCCESS;
 }
 
+HANDLER(preferred_server_group_handler)
+{
+    if (mode == LCB_CNTL_SET) {
+        const char *val = reinterpret_cast<const char *>(arg);
+        free(LCBT_SETTING(instance, preferred_server_group));
+        LCBT_SETTING(instance, network) = nullptr;
+        if (val) {
+            LCBT_SETTING(instance, preferred_server_group) = lcb_strdup(val);
+        }
+    } else {
+        *(const char **)arg = LCBT_SETTING(instance, preferred_server_group);
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 HANDLER(durable_write_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, enable_durable_write))}
 
 HANDLER(unordered_execution_handler)
@@ -860,6 +876,7 @@ static ctl_handler handlers[] = {
     enable_errmap_handler,                /* LCB_CNTL_ENABLE_ERRMAP */
     timeout_common,                       /* LCB_CNTL_OP_METRICS_FLUSH_INTERVAL */
     enable_op_metrics_handler,            /* LCB_CNTL_ENABLE_OP_METRICS */
+    preferred_server_group_handler,       /* LCB_CNTL_PREFERRED_SERVER_GROUP */
     nullptr
 };
 /* clang-format on */
@@ -1101,6 +1118,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"enable_errmap", LCB_CNTL_ENABLE_ERRMAP, convert_intbool},
     {"operation_metrics_flush_interval", LCB_CNTL_OP_METRICS_FLUSH_INTERVAL, convert_timevalue},
     {"enable_operation_metrics", LCB_CNTL_ENABLE_OP_METRICS, convert_intbool},
+    {"preferred_server_group", LCB_CNTL_PREFERRED_SERVER_GROUP, convert_passthru},
     {nullptr, -1}};
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))

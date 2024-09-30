@@ -237,6 +237,7 @@ typedef struct lcb_settings_st {
     char *network; /** network resolution, AKA "Multi Network Configurations" */
     lcb_U32 op_metrics_flush_interval;
     unsigned op_metrics_enabled : 1;
+    char *preferred_server_group;
 } lcb_settings;
 
 LCB_INTERNAL_API

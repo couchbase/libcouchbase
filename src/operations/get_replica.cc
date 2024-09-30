@@ -24,6 +24,9 @@
 #include "capi/cmd_get.hh"
 #include "capi/cmd_get_replica.hh"
 
+#include <random>
+#include <algorithm>
+
 LIBCOUCHBASE_API lcb_STATUS lcb_respgetreplica_status(const lcb_RESPGETREPLICA *resp)
 {
     return resp->ctx.rc;
@@ -139,6 +142,12 @@ LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetreplica_key(lcb_CMDGETREPLICA *cmd, const 
     return cmd->key(std::string(key, key_len));
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetreplica_read_preference(lcb_CMDGETREPLICA *cmd,
+                                                              lcb_REPLICA_READ_PREFERENCE preference)
+{
+    return cmd->read_preference(preference);
+}
+
 LIBCOUCHBASE_API lcb_STATUS lcb_cmdgetreplica_on_behalf_of(lcb_CMDGETREPLICA *cmd, const char *data, size_t data_len)
 {
     return cmd->on_behalf_of(std::string(data, data_len));
@@ -243,6 +252,90 @@ RGetCookie::RGetCookie(void *cookie_, lcb_INSTANCE *instance_, get_replica_mode 
 {
 }
 
+struct readable_node {
+    bool is_replica;
+    std::size_t node_index;    // index of the node in configuration
+    std::size_t replica_index; // zero-based index of the replica
+};
+
+template <typename COMMAND>
+static std::vector<readable_node> select_effective_node_indexes(lcb_INSTANCE *instance, COMMAND cmd)
+{
+    mc_CMDQUEUE *cq = &instance->cmdq;
+    int vbid;
+    int active_index;
+    lcb_KEYBUF keybuf{LCB_KV_COPY, {cmd->key().c_str(), cmd->key().size()}};
+    mcreq_map_key(cq, &keybuf, MCREQ_PKT_BASESIZE, &vbid, &active_index);
+
+    if (active_index < 0) {
+        return {};
+    }
+
+    std::vector<readable_node> effective_nodes{};
+
+    if (cmd->mode() == get_replica_mode::select) {
+        int replica_index = cmd->selected_replica_index();
+        int node_index = lcbvb_vbreplica(cq->config, vbid, replica_index);
+        if (node_index >= 0) {
+            effective_nodes.push_back(
+                {true, static_cast<std::size_t>(node_index), static_cast<std::size_t>(replica_index)});
+        }
+        return effective_nodes;
+    }
+
+    std::string preferred_server_group{};
+    bool use_preferred_server_group{cmd->read_preference() == LCB_REPLICA_READ_PREFERENCE_SELECTED_SERVER_GROUP};
+
+    if (use_preferred_server_group) {
+        if (instance->settings->preferred_server_group == nullptr) {
+            return {};
+        } else {
+            preferred_server_group = instance->settings->preferred_server_group;
+        }
+    }
+
+    /* Make sure they're all online */
+    for (std::size_t ii = 0; ii < LCBT_NREPLICAS(instance); ii++) {
+        int node_index = lcbvb_vbreplica(cq->config, vbid, ii);
+        if (node_index < 0) {
+            if (cmd->mode() == get_replica_mode::all) {
+                return {};
+            }
+            continue;
+        }
+        if (use_preferred_server_group) {
+            const char *server_group = cq->config->servers[node_index].server_group;
+            if (server_group != nullptr && preferred_server_group == server_group) {
+                effective_nodes.push_back({true, static_cast<std::size_t>(node_index), ii});
+            }
+        } else {
+            effective_nodes.push_back({true, static_cast<std::size_t>(node_index), ii});
+        }
+    }
+
+    if (cmd->mode() == get_replica_mode::any) {
+        if (effective_nodes.empty()) {
+            return {};
+        }
+        static std::random_device rd;
+        std::mt19937 g(rd());
+        std::shuffle(effective_nodes.begin(), effective_nodes.end(), g);
+        return {effective_nodes.front()};
+    }
+
+    /* read from active */
+    if (use_preferred_server_group) {
+        const char *active_server_group = cq->config->servers[active_index].server_group;
+        if (active_server_group != nullptr && preferred_server_group == active_server_group) {
+            effective_nodes.push_back({false, static_cast<std::size_t>(active_index), 0xff});
+        }
+    } else {
+        effective_nodes.push_back({false, static_cast<std::size_t>(active_index), 0xff});
+    }
+
+    return effective_nodes;
+}
+
 static lcb_STATUS get_replica_validate(lcb_INSTANCE *instance, const lcb_CMDGETREPLICA *cmd)
 {
     if (cmd->key().empty()) {
@@ -283,6 +376,13 @@ static lcb_STATUS get_replica_validate(lcb_INSTANCE *instance, const lcb_CMDGETR
             break;
 
         case get_replica_mode::all:
+            if (cmd->read_preference() == LCB_REPLICA_READ_PREFERENCE_SELECTED_SERVER_GROUP) {
+                auto effective_nodes = select_effective_node_indexes(instance, cmd);
+                if (effective_nodes.empty()) {
+                    return LCB_ERR_DOCUMENT_UNRETRIEVABLE;
+                }
+            }
+
             r0 = 0;
             r1 = LCBT_NREPLICAS(instance);
             /* Make sure they're all online */
@@ -309,7 +409,6 @@ static lcb_STATUS get_replica_schedule(lcb_INSTANCE *instance, std::shared_ptr<l
      */
     mc_CMDQUEUE *cq = &instance->cmdq;
     int vbid, ixtmp;
-    protocol_binary_request_header req{};
     unsigned r0 = 0, r1 = 0;
 
     lcb_KEYBUF keybuf{LCB_KV_COPY, {cmd->key().c_str(), cmd->key().size()}};
@@ -355,6 +454,11 @@ static lcb_STATUS get_replica_schedule(lcb_INSTANCE *instance, std::shared_ptr<l
         return LCB_ERR_NO_MATCHING_SERVER;
     }
 
+    const auto effective_nodes = select_effective_node_indexes(instance, cmd);
+    if (effective_nodes.empty()) {
+        return LCB_ERR_DOCUMENT_UNRETRIEVABLE;
+    }
+
     std::vector<std::uint8_t> framing_extras;
     if (cmd->want_impersonation()) {
         lcb_STATUS err = lcb::flexible_framing_extras::encode_impersonate_user(cmd->impostor(), framing_extras);
@@ -376,8 +480,8 @@ static lcb_STATUS get_replica_schedule(lcb_INSTANCE *instance, std::shared_ptr<l
         rck->start + cmd->timeout_or_default_in_nanoseconds(LCB_US2NS(LCBT_SETTING(instance, operation_timeout)));
 
     /* Initialize the packet */
+    protocol_binary_request_header req{};
     req.request.magic = framing_extras.empty() ? PROTOCOL_BINARY_REQ : PROTOCOL_BINARY_AREQ;
-    req.request.opcode = PROTOCOL_BINARY_CMD_GET_REPLICA;
     req.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     req.request.vbucket = htons(static_cast<std::uint16_t>(vbid));
     req.request.cas = 0;
@@ -385,59 +489,58 @@ static lcb_STATUS get_replica_schedule(lcb_INSTANCE *instance, std::shared_ptr<l
 
     auto ffextlen = static_cast<std::uint8_t>(framing_extras.size());
 
-    rck->r_cur = r0;
-    do {
-        int curix;
-        mc_PIPELINE *pl;
-        mc_PACKET *pkt;
+    for (auto node : effective_nodes) {
+        if (node.is_replica) {
+            req.request.opcode = PROTOCOL_BINARY_CMD_GET_REPLICA;
+            rck->r_cur = node.replica_index;
+            mc_PIPELINE *pl;
+            mc_PACKET *pkt;
 
-        curix = lcbvb_vbreplica(cq->config, vbid, r0);
-        /* XXX: this is always expected to be in range. For the FIRST mode
-         * it will seek to the first valid index (checked above), and for the
-         * ALL mode, it will fail if not all replicas are already online
-         * (also checked above) */
-        pl = cq->pipelines[curix];
-        pkt = mcreq_allocate_packet(pl);
-        if (!pkt) {
-            delete rck;
-            return LCB_ERR_NO_MEMORY;
-        }
+            /* XXX: this is always expected to be in range. For the FIRST mode
+             * it will seek to the first valid index (checked above), and for the
+             * ALL mode, it will fail if not all replicas are already online
+             * (also checked above) */
+            pl = cq->pipelines[node.node_index];
+            pkt = mcreq_allocate_packet(pl);
+            if (!pkt) {
+                delete rck;
+                return LCB_ERR_NO_MEMORY;
+            }
 
-        pkt->u_rdata.exdata = rck;
-        pkt->flags |= MCREQ_F_REQEXT;
+            pkt->u_rdata.exdata = rck;
+            pkt->flags |= MCREQ_F_REQEXT;
 
-        mcreq_reserve_key(pl, pkt, sizeof(req.bytes) + ffextlen, &keybuf, cmd->collection().collection_id());
-        size_t nkey = pkt->kh_span.size - MCREQ_PKT_BASESIZE + pkt->extlen;
-        req.request.keylen = htons((uint16_t)nkey);
-        req.request.bodylen = htonl((uint32_t)nkey + framing_extras.size());
-        req.request.opaque = pkt->opaque;
-        rck->remaining++;
-        mcreq_write_hdr(pkt, &req);
-        if (!framing_extras.empty()) {
-            memcpy(SPAN_BUFFER(&pkt->kh_span) + sizeof(req.bytes), framing_extras.data(), framing_extras.size());
+            mcreq_reserve_key(pl, pkt, sizeof(req.bytes) + ffextlen, &keybuf, cmd->collection().collection_id());
+            size_t nkey = pkt->kh_span.size - MCREQ_PKT_BASESIZE + pkt->extlen;
+            req.request.keylen = htons((uint16_t)nkey);
+            req.request.bodylen = htonl((uint32_t)nkey + framing_extras.size());
+            req.request.opaque = pkt->opaque;
+            rck->remaining++;
+            mcreq_write_hdr(pkt, &req);
+            if (!framing_extras.empty()) {
+                memcpy(SPAN_BUFFER(&pkt->kh_span) + sizeof(req.bytes), framing_extras.data(), framing_extras.size());
+            }
+            mcreq_sched_add(pl, pkt);
+        } else {
+            req.request.opcode = PROTOCOL_BINARY_CMD_GET;
+            mc_PIPELINE *pl;
+            mc_PACKET *pkt;
+            lcb_STATUS err = mcreq_basic_packet(cq, &keybuf, cmd->collection().collection_id(), &req, 0, ffextlen, &pkt,
+                                                &pl, MCREQ_BASICPACKET_F_FALLBACKOK);
+            if (err != LCB_SUCCESS) {
+                delete rck;
+                return err;
+            }
+            req.request.opaque = pkt->opaque;
+            pkt->u_rdata.exdata = rck;
+            pkt->flags |= MCREQ_F_REQEXT;
+            rck->remaining++;
+            mcreq_write_hdr(pkt, &req);
+            if (!framing_extras.empty()) {
+                memcpy(SPAN_BUFFER(&pkt->kh_span) + sizeof(req.bytes), framing_extras.data(), framing_extras.size());
+            }
+            mcreq_sched_add(pl, pkt);
         }
-        mcreq_sched_add(pl, pkt);
-    } while (++r0 < r1);
-
-    if (cmd->need_get_active()) {
-        req.request.opcode = PROTOCOL_BINARY_CMD_GET;
-        mc_PIPELINE *pl;
-        mc_PACKET *pkt;
-        lcb_STATUS err = mcreq_basic_packet(cq, &keybuf, cmd->collection().collection_id(), &req, 0, ffextlen, &pkt,
-                                            &pl, MCREQ_BASICPACKET_F_FALLBACKOK);
-        if (err != LCB_SUCCESS) {
-            delete rck;
-            return err;
-        }
-        req.request.opaque = pkt->opaque;
-        pkt->u_rdata.exdata = rck;
-        pkt->flags |= MCREQ_F_REQEXT;
-        rck->remaining++;
-        mcreq_write_hdr(pkt, &req);
-        if (!framing_extras.empty()) {
-            memcpy(SPAN_BUFFER(&pkt->kh_span) + sizeof(req.bytes), framing_extras.data(), framing_extras.size());
-        }
-        mcreq_sched_add(pl, pkt);
     }
 
     MAYBE_SCHEDLEAVE(instance)

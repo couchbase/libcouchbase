@@ -85,6 +85,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->use_errmap = 1;
     settings->op_metrics_flush_interval = LCB_DEFAULT_OP_METRICS_FLUSH_INTERVAL;
     settings->op_metrics_enabled = 1;
+    settings->preferred_server_group = nullptr;
 }
 
 LCB_INTERNAL_API
@@ -111,6 +112,7 @@ void lcb_settings_unref(lcb_settings *settings)
     free(settings->keypath);
     free(settings->client_string);
     free(settings->network);
+    free(settings->preferred_server_group);
 
     lcbauth_unref(settings->auth);
     lcb_errmap_free(settings->errmap);

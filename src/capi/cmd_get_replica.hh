@@ -75,6 +75,17 @@ struct lcb_CMDGETREPLICA_ {
         return LCB_SUCCESS;
     }
 
+    lcb_STATUS read_preference(lcb_REPLICA_READ_PREFERENCE preference)
+    {
+        read_preference_ = preference;
+        return LCB_SUCCESS;
+    }
+
+    lcb_REPLICA_READ_PREFERENCE read_preference() const
+    {
+        return read_preference_;
+    }
+
     lcb_STATUS collection(lcb::collection_qualifier collection)
     {
         collection_ = std::move(collection);
@@ -194,6 +205,7 @@ struct lcb_CMDGETREPLICA_ {
     int select_index_{0};
     std::string impostor_{};
     std::vector<std::string> extra_privileges_{};
+    lcb_REPLICA_READ_PREFERENCE read_preference_{LCB_REPLICA_READ_PREFERENCE_NONE};
 };
 
 struct lcb_RESPGETREPLICA_ {

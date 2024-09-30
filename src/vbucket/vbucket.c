@@ -401,6 +401,12 @@ static int build_server_3x(lcbvb_CONFIG *cfg, lcbvb_SERVER *server, cJSON *js, c
         SET_ERRSTR(cfg, "Couldn't allocate memory");
         goto GT_ERR;
     }
+    if (get_jstr(js, "serverGroup", &htmp)) {
+        if (!(server->server_group = lcb_strdup(htmp))) {
+            SET_ERRSTR(cfg, "Couldn't allocate memory");
+            goto GT_ERR;
+        }
+    }
 
     if (!get_jobj(js, "services", &jsvcs)) {
         SET_ERRSTR(cfg, "Couldn't find 'services'");
@@ -885,6 +891,7 @@ void lcbvb_destroy(lcbvb_CONFIG *conf)
         free(srv->alt_hostname);
         free_service_strs(&srv->alt_svc);
         free_service_strs(&srv->alt_svc_ssl);
+        free(srv->server_group);
     }
     free(conf->servers);
     free(conf->continuum);
