@@ -40,7 +40,7 @@
 * `-y`, `--compress`:
   Enable compressing of documents. When the library is compiled with compression
   support, this option will enable Snappy compression for outgoing data.
-  Incoming compressed data handled automatically regardless of this option.
+  Incoming compressed data is handled automatically regardless of this option.
   Note, that because the compression support have to be negotiated with the
   server, first packets might be sent uncompressed even when this switch
   was specified. This is because the library might queue data commands before
