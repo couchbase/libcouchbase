@@ -966,7 +966,8 @@ void mcreq_sched_add(mc_PIPELINE *pipeline, mc_PACKET *pkt)
     mc_CMDQUEUE *cq = pipeline->parent;
     if (MCREQ_PKT_RDATA(pkt)->deadline == 0) {
         lcb_INSTANCE *instance = (lcb_INSTANCE *)pipeline->parent->cqdata;
-        MCREQ_PKT_RDATA(pkt)->deadline = instance ? LCBT_SETTING(instance, operation_timeout) : LCB_DEFAULT_TIMEOUT;
+        MCREQ_PKT_RDATA(pkt)->deadline =
+            gethrtime() + LCB_US2NS(instance ? LCBT_SETTING(instance, operation_timeout) : LCB_DEFAULT_TIMEOUT);
     }
     lcb_assert(pipeline->index >= 0 && pipeline->index < (int)cq->_npipelines_ex);
     if (!cq->scheds[pipeline->index]) {
@@ -1038,6 +1039,7 @@ void mcreq_reset_timeouts(mc_PIPELINE *pl, lcb_U64 nstime)
     SLLIST_ITERBASIC(&pl->requests, nn)
     {
         mc_PACKET *pkt = SLLIST_ITEM(nn, mc_PACKET, slnode);
+        lcb_assert(MCREQ_PKT_RDATA(pkt)->deadline >= MCREQ_PKT_RDATA(pkt)->start);
         hrtime_t old_timeout = (MCREQ_PKT_RDATA(pkt)->deadline - MCREQ_PKT_RDATA(pkt)->start);
         MCREQ_PKT_RDATA(pkt)->start = nstime;
         MCREQ_PKT_RDATA(pkt)->deadline = nstime + old_timeout;
@@ -1056,6 +1058,22 @@ unsigned mcreq_pipeline_timeout(mc_PIPELINE *pl, lcb_STATUS err, mcreq_pktfail_f
         if (now == 0 || rd->deadline <= now) {
             sllist_iter_remove(&pl->requests, &iter);
             failcb(pl, pkt, err, cbarg);
+            if ((pkt->flags & MCREQ_F_FLUSHED) == 0) {
+                /* the packet has not been flushed yet, remove it from sendq */
+                nb_SENDQ *q = &pl->nbmgr.sendq;
+                sllist_iterator i;
+                SLLIST_ITERFOR(&q->pdus, &i)
+                {
+                    mc_PACKET *p = SLLIST_ITEM(i.cur, mc_PACKET, sl_flushq);
+                    if (p == pkt) {
+                        sllist_iter_remove(&q->pdus, &i);
+                        break;
+                    }
+                }
+                /* allow to release the packet */
+                pkt->flags |= MCREQ_F_FLUSHED;
+            }
+
             mcreq_packet_handled(pl, pkt);
             count++;
         }
