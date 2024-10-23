@@ -20,7 +20,7 @@
  *
  * All probes provided by libcouchbase can be listed using following command:
  *
- * stap -L 'process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("*")'
+ * stap -L 'process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("*")'
  */
 
 
@@ -125,7 +125,7 @@ function libcouchbase_http_method:string(method:long)
  *   [0xf20d90] opcode: GET, vbucket: 115, key: foo
  */
 probe libcouchbase.kv.get.begin =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("get_begin")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("get_begin")
 {
     lcb = $arg1
     opaque = $arg2
@@ -163,7 +163,7 @@ probe libcouchbase.kv.get.begin =
  *   [0x1b58dd0] opcode: GET, rc: 0, cas: 0x150268ca90610000, key: foo, value: {"foo":"bar"}
  */
 probe libcouchbase.kv.get.end =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("get_end")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("get_end")
 {
     lcb = $arg1
     opaque = $arg2
@@ -202,7 +202,7 @@ probe libcouchbase.kv.get.end =
  *   [0x117bdd0] opcode: INCREMENT, delta: 3, initial: 42, key: cnt
  */
 probe libcouchbase.kv.arithmetic.begin =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("arithmetic_begin")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("arithmetic_begin")
 {
     lcb = $arg1
     opaque = $arg2
@@ -239,7 +239,7 @@ probe libcouchbase.kv.arithmetic.begin =
  *   [0x6cf0b0] opcode: DECREMENT, rc: 0, cas: 0x15026f100ece0000, key: cnt, value: 42
  */
 probe libcouchbase.kv.arithmetic.end =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("arithmetic_end")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("arithmetic_end")
 {
     lcb = $arg1
     opaque = $arg2
@@ -273,7 +273,7 @@ probe libcouchbase.kv.arithmetic.end =
  *   [0x9280c0] opcode: DELETE, key: cnt
  */
 probe libcouchbase.kv.remove.begin =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("remove_begin")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("remove_begin")
 {
     lcb = $arg1
     opaque = $arg2
@@ -306,7 +306,7 @@ probe libcouchbase.kv.remove.begin =
  *   [0x9280c0] opcode: DELETE, rc: 0, cas: 0x15026f2ec2c90000, key: cnt
  */
 probe libcouchbase.kv.remove.end =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("remove_end")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("remove_end")
 {
     lcb = $arg1
     opaque = $arg2
@@ -344,7 +344,7 @@ probe libcouchbase.kv.remove.end =
  *   [0x7e0070] opcode: SET, key: foo, value: {"foo":"bar"}, expiration: 30
  */
 probe libcouchbase.kv.store.begin =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("store_begin")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("store_begin")
 {
     lcb = $arg1
     opaque = $arg2
@@ -382,7 +382,7 @@ probe libcouchbase.kv.store.begin =
  *   [0x7e0070] opcode: SET, rc: 0, cas: 0x15026f8450790000, key: foo
  */
 probe libcouchbase.kv.store.end =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("store_end")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("store_end")
 {
     lcb = $arg1
     opaque = $arg2
@@ -415,7 +415,7 @@ probe libcouchbase.kv.store.end =
  *   [0x20d7100] opcode: UNLOCK_KEY, key: foo
  */
 probe libcouchbase.kv.unlock.begin =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("unlock_begin")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("unlock_begin")
 {
     lcb = $arg1
     opaque = $arg2
@@ -447,7 +447,7 @@ probe libcouchbase.kv.unlock.begin =
  *   [0x20d7100] opcode: UNLOCK_KEY, rc: 0, key: foo
  */
 probe libcouchbase.kv.unlock.end =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("unlock_end")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("unlock_end")
 {
     lcb = $arg1
     opaque = $arg2
@@ -480,7 +480,7 @@ probe libcouchbase.kv.unlock.end =
  *   [0x141edb0] opcode: TOUCH, rc: 0, cas: 0x150290b309ad0000, key: foo
  */
 probe libcouchbase.kv.touch.begin =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("touch_begin")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("touch_begin")
 {
     lcb = $arg1
     opaque = $arg2
@@ -514,7 +514,7 @@ probe libcouchbase.kv.touch.begin =
  *   [0x141edb0] opcode: TOUCH, rc: 0, cas: 0x150290b309ad0000, key: foo
  */
 probe libcouchbase.kv.touch.end =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("touch_end")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("touch_end")
 {
     lcb = $arg1
     opaque = $arg2
@@ -587,7 +587,7 @@ probe libcouchbase.kv.touch.end =
  *      vbucket: 767, nkey: 3, key: bar
  */
 probe libcouchbase.kv.observe.begin =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("observe_begin")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("observe_begin")
 {
     lcb = $arg1
     opaque = $arg2
@@ -640,7 +640,7 @@ probe libcouchbase.kv.observe.begin =
  *   [0xb33dc0] opcode: OBSERVE, opaque: 2, rc: 0, key: bar, status: 1, master: false
  */
 probe libcouchbase.kv.observe.progress =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("observe_progress")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("observe_progress")
 {
     lcb = $arg1
     opaque = $arg2
@@ -689,7 +689,7 @@ probe libcouchbase.kv.observe.progress =
  *   [0xb33dc0] opcode: OBSERVE, opaque: 2, rc: 0
  */
 probe libcouchbase.kv.observe.end =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("observe_end")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("observe_end")
 {
     lcb = $arg1
     opaque = $arg2
@@ -734,7 +734,7 @@ probe libcouchbase.kv.observe.end =
  *   [0x1af6de0] req: 0x1b12250, type: N1QL, url: http://192.168.1.104:8093/query/service, host: 192.168.1.104, port: 8093
  */
 probe libcouchbase.http.begin =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("http_begin")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("http_begin")
 {
     lcb = $arg1
     req = $arg2
@@ -784,7 +784,7 @@ probe libcouchbase.http.begin =
  *   [0x1af6de0] req: 0x1b12250, type: N1QL, url: http://192.168.1.104:8093/query/service, host: 192.168.1.104, port: 8093, rc: 0, status: 200
  */
 probe libcouchbase.http.end =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("http_end")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("http_end")
 {
     lcb = $arg1
     req = $arg2
@@ -820,7 +820,7 @@ probe libcouchbase.http.end =
  *   [0xd2e790] NEW CONFIG revid: 14, bucket: default, uuid: 44bb7edf04fd3aa86d00a644b2794eea
  */
 probe libcouchbase.config.new =
-    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("new_config")
+    process("${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("new_config")
 {
     lcb = $arg1
     revid = $arg2
