@@ -233,6 +233,11 @@ struct lcb_ANALYTICS_HANDLE_ : lcb::jsparse::Parser::Actions {
         return retries_;
     }
 
+    lcb_U32 timeout_us() const
+    {
+        return timeout_;
+    }
+
   private:
     const lcb_RESPHTTP *http_response_{nullptr};
     lcb_HTTP_HANDLE *http_request_{nullptr};

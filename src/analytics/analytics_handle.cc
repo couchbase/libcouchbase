@@ -189,14 +189,14 @@ lcb_ANALYTICS_HANDLE_::lcb_ANALYTICS_HANDLE_(lcb_INSTANCE *obj, void *user_cooki
     }
     priority_ = cmd->priority();
 
+    timeout_ = cmd->timeout_or_default_in_microseconds(LCBT_SETTING(obj, analytics_timeout));
     Json::Value &tmoval = json["timeout"];
     if (tmoval.isNull()) {
         // Set the default timeout as the server-side query timeout if no
         // other timeout is used.
         char buf[64] = {0};
-        snprintf(buf, sizeof(buf), "%uus", LCBT_SETTING(obj, analytics_timeout));
-        tmoval = buf;
-        timeout_ = LCBT_SETTING(obj, analytics_timeout);
+        snprintf(buf, sizeof(buf), "%uus", timeout_);
+        json["timeout"] = buf;
     } else if (tmoval.isString()) {
         try {
             auto tmo_ns = lcb_parse_golang_duration(tmoval.asString());
