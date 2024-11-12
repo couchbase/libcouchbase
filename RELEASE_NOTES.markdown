@@ -1,5 +1,19 @@
 # Release Notes
 
+# 3.3.14 (2024-11-12)
+
+* CCBC-1653: Fix setting timeout for analytics query.
+
+* CCBC-1651: Ensure that purged packets get their memory released, it fixes memory leak in case of network issues.
+
+* CCBC-1646: Server groups for replica reads.
+
+* CCBC-1555: Remove extra prefix in tapset probes.
+
+* CCBC-1598: Fix documentation for cbc tools.
+
+* Fix tests on 7.6 server
+
 # 3.3.13 (2024-09-13)
 
 * CCBC-1647: Handle server-side query timeout (status 1080).
