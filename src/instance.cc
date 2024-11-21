@@ -129,7 +129,7 @@ const void *lcb_get_cookie(lcb_INSTANCE *instance)
 LIBCOUCHBASE_API
 void lcb_set_auth(lcb_INSTANCE *instance, lcb_AUTHENTICATOR *auth)
 {
-    if (LCBT_SETTING(instance, keypath)) {
+    if (LCBT_SETTING(instance, keypath) && !LCBT_SETTING(instance, use_credentials_with_client_certificate)) {
         lcb_log(LOGARGS(instance, WARN),
                 "Custom authenticator ignored when SSL client certificate authentication in use");
         return;

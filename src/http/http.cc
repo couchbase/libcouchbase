@@ -230,8 +230,7 @@ void Request::finish_or_retry(lcb_STATUS rc)
         finish(rc);
         return;
     }
-    struct http_parser_url next_info {
-    };
+    struct http_parser_url next_info{};
     if (_lcb_http_parser_parse_url(nextnode, strlen(nextnode), 0, &next_info)) {
         lcb_log(LOGARGS(this, WARN), LOGFMT "Not retrying. Invalid API endpoint", LOGID(this));
         finish(LCB_ERR_INVALID_ARGUMENT);
@@ -646,9 +645,10 @@ lcb_STATUS Request::setup_inputs(const lcb_CMDHTTP *cmd)
             }
         }
 
-        if ((cmd->cmdflags & LCB_CMDHTTP_F_NOUPASS) || instance->settings->keypath) {
+        if ((cmd->cmdflags & LCB_CMDHTTP_F_NOUPASS) ||
+            (instance->settings->keypath && !instance->settings->use_credentials_with_client_certificate)) {
             // explicitly asked to skip Authorization header,
-            // or using SSL client certificate to authenticate
+            // or using SSL client certificate to authenticate with use_credentials_with_client_certificate=false
             username.clear();
             password.clear();
         } else if (username.empty() && password.empty()) {

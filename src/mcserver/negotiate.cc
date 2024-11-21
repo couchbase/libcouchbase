@@ -270,7 +270,7 @@ SessionRequestImpl::MechStatus SessionRequestImpl::set_chosen_mech(std::string &
     cbsasl_error_t saslerr;
 
     if (mechlist.empty()) {
-        lcb_log(LOGARGS(this, WARN), LOGFMT "Server does not support SASL (no mechanisms supported)", LOGID(this));
+        lcb_log(LOGARGS(this, WARN), LOGFMT "Server does not support SASL (no mechanisms supported, empty list)", LOGID(this));
         return MECH_NOT_NEEDED;
     }
 
@@ -329,7 +329,7 @@ SessionRequestImpl::MechStatus SessionRequestImpl::set_chosen_mech(std::string &
             info->mech.assign(chosenmech);
             return MECH_OK;
         case SASL_NOMECH:
-            lcb_log(LOGARGS(this, WARN), LOGFMT "Server does not support SASL (no mechanisms supported)", LOGID(this));
+            lcb_log(LOGARGS(this, WARN), LOGFMT "Server does not support SASL (no mechanisms supported, SASL_NOMECH)", LOGID(this));
             return MECH_UNAVAILABLE;
         default:
             lcb_log(LOGARGS(this, ERROR), LOGFMT "cbsasl_client_start returned %d", LOGID(this), saslerr);
@@ -710,7 +710,7 @@ GT_NEXT_PACKET:
                 lcb_log(LOGARGS(this, TRACE), LOGFMT "GET_ERRORMAP unsupported/disabled", LOGID(this));
             }
 
-            if (settings->keypath) {
+            if (settings->keypath && !settings->use_credentials_with_client_certificate) {
                 completed = !expecting_error_map && !maybe_select_bucket();
             }
             break;
@@ -727,7 +727,7 @@ GT_NEXT_PACKET:
                         status);
                 set_error(LCB_ERR_PROTOCOL_ERROR, "GET_ERRMAP response unexpected", &resp);
             }
-            if (settings->keypath) {
+            if (settings->keypath && !settings->use_credentials_with_client_certificate) {
                 completed = !maybe_select_bucket();
             }
             // Note, there is no explicit state transition here. LIST_MECHS is
@@ -838,7 +838,7 @@ void SessionRequestImpl::start(lcbio_SOCKET *sock)
     } else {
         lcb_log(LOGARGS(this, TRACE), LOGFMT "GET_ERRORMAP disabled", LOGID(this));
     }
-    if (!settings->keypath) {
+    if (!settings->keypath || settings->use_credentials_with_client_certificate) {
         send_list_mechs();
     }
     LCBIO_CTX_RSCHEDULE(ctx, 24);

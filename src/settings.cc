@@ -86,6 +86,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->op_metrics_flush_interval = LCB_DEFAULT_OP_METRICS_FLUSH_INTERVAL;
     settings->op_metrics_enabled = 1;
     settings->preferred_server_group = nullptr;
+    settings->use_credentials_with_client_certificate = 0;
 }
 
 LCB_INTERNAL_API

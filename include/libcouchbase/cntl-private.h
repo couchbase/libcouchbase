@@ -298,4 +298,12 @@ struct lcb_cntl_rdballocfactory {
  */
 #define LCB_CNTL_QUERY_GRACE_PERIOD 0x64
 
+/**
+ * @brief Allow using SASL and BasicAuth with client certificate (assumes username/password provided and valid).
+ *
+ * @cntl_arg_both{lcb_U32*}
+ * @volatile
+ */
+#define LCB_CNTL_USE_CREDENTIALS_WITH_CLIENT_CERTIFICATE 0x69
+
 /**@}*/

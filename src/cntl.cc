@@ -770,6 +770,11 @@ HANDLER(unordered_execution_handler)
     RETURN_GET_SET(int, LCBT_SETTING(instance, enable_unordered_execution))
 }
 
+HANDLER(use_credentials_with_client_certificate)
+{
+    RETURN_GET_SET(int, LCBT_SETTING(instance, use_credentials_with_client_certificate))
+}
+
 /* clang-format off */
 static ctl_handler handlers[] = {
     timeout_common,                       /* LCB_CNTL_OP_TIMEOUT */
@@ -877,6 +882,7 @@ static ctl_handler handlers[] = {
     timeout_common,                       /* LCB_CNTL_OP_METRICS_FLUSH_INTERVAL */
     enable_op_metrics_handler,            /* LCB_CNTL_ENABLE_OP_METRICS */
     preferred_server_group_handler,       /* LCB_CNTL_PREFERRED_SERVER_GROUP */
+    use_credentials_with_client_certificate, /* LCB_CNTL_USE_CREDENTIALS_WITH_CLIENT_CERTIFICATE */
     nullptr
 };
 /* clang-format on */
@@ -1119,6 +1125,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"operation_metrics_flush_interval", LCB_CNTL_OP_METRICS_FLUSH_INTERVAL, convert_timevalue},
     {"enable_operation_metrics", LCB_CNTL_ENABLE_OP_METRICS, convert_intbool},
     {"preferred_server_group", LCB_CNTL_PREFERRED_SERVER_GROUP, convert_passthru},
+    {"use_credentials_with_client_certificate", LCB_CNTL_USE_CREDENTIALS_WITH_CLIENT_CERTIFICATE, convert_intbool},
     {nullptr, -1}};
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))

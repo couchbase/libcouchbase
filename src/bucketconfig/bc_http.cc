@@ -255,7 +255,7 @@ lcb_STATUS HttpProvider::setup_request_header(const lcb_host_t &host)
     }
 
     request_buf.append(" HTTP/1.1\r\n");
-    if (!settings().keypath) {
+    if (!settings().keypath || settings().use_credentials_with_client_certificate) {
         // not using SSL client certificate to authenticate
         auto creds = settings().auth->credentials_for(LCBAUTH_SERVICE_MANAGEMENT, LCBAUTH_REASON_NEW_OPERATION,
                                                       host.host, host.port, settings().bucket);
