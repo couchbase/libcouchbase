@@ -1,5 +1,9 @@
 # Release Notes
 
+# 3.3.15 (2024-12-13)
+
+* CCBC-1652: Allow to force SASL when client certificate is being used.
+
 # 3.3.14 (2024-11-12)
 
 * CCBC-1653: Fix setting timeout for analytics query.
