@@ -24,6 +24,7 @@
 #include "logging.h"
 #include <openssl/err.h>
 #include <openssl/opensslv.h>
+#include <openssl/ssl.h>
 
 #if OPENSSL_VERSION_NUMBER >= 0x1010100fL
 #define HAVE_CIPHERSUITES 1
@@ -370,8 +371,26 @@ GT_CLEANUP:
     return rc;
 }
 
-lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *keyfile, int noverify, lcb_STATUS *errp,
-                            lcb_settings *settings)
+struct tls_key_secret {
+    const char *password;
+    size_t password_len;
+};
+
+static int keyfile_password_cb(char *buf, int size, int rwflag, void *userdata)
+{
+    (void)rwflag;
+
+    struct tls_key_secret *secret = (struct tls_key_secret *)userdata;
+    if (secret->password_len > (size_t)size) {
+        return 0;
+    }
+
+    memcpy(buf, secret->password, secret->password_len);
+    return secret->password_len;
+}
+
+lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *keyfile, const char *keypass,
+                            size_t keypass_len, int noverify, lcb_STATUS *errp, lcb_settings *settings)
 {
     lcb_STATUS err_s;
     lcbio_pSSLCTX ret;
@@ -444,10 +463,16 @@ lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *
     }
 
     if (cafile && keyfile) {
-        lcb_log(LOGARGS_S(settings, LCB_LOG_DEBUG), "Authenticate with key \"%s\", cert \"%s\"", keyfile, cafile);
+        lcb_log(LOGARGS_S(settings, LCB_LOG_DEBUG), "Authenticate with key \"%s\"%s, cert \"%s\"", keyfile,
+                keypass ? " (encrypted)" : "", cafile);
         if (!SSL_CTX_use_certificate_chain_file(ret->ctx, cafile)) {
             *errp = LCB_ERR_SSL_ERROR;
             goto GT_ERR;
+        }
+        struct tls_key_secret secret = {keypass, keypass_len};
+        if (keypass) {
+            SSL_CTX_set_default_passwd_cb(ret->ctx, keyfile_password_cb);
+            SSL_CTX_set_default_passwd_cb_userdata(ret->ctx, (void *)&secret);
         }
         if (!SSL_CTX_use_PrivateKey_file(ret->ctx, keyfile, SSL_FILETYPE_PEM)) {
             lcb_log(LOGARGS_S(settings, LCB_LOG_ERROR), "Unable to load private key \"%s\"", keyfile);

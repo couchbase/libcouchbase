@@ -271,6 +271,10 @@ LIBCOUCHBASE_API lcb_STATUS lcb_createopts_io(lcb_CREATEOPTS *options, struct lc
 LIBCOUCHBASE_API lcb_STATUS lcb_createopts_meter(lcb_CREATEOPTS *options, const lcbmetrics_METER *metrics);
 
 LIBCOUCHBASE_API lcb_STATUS lcb_createopts_tracer(lcb_CREATEOPTS *options, lcbtrace_TRACER *tracer);
+
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_tls_key_password(lcb_CREATEOPTS *options, const char *password,
+                                                            size_t password_len);
+
 /**
  * @brief Create an instance of lcb.
  * @param instance Where the instance should be returned

@@ -59,7 +59,8 @@ typedef struct lcbio_SSLCTX *lcbio_pSSLCTX;
  */
 int lcbio_ssl_supported(void);
 
-lcbio_pSSLCTX lcbio_ssl_new__fallback(const char *, const char *, const char *, int, lcb_STATUS *, lcb_settings *);
+lcbio_pSSLCTX lcbio_ssl_new__fallback(const char *, const char *, const char *, const char *, size_t, int, lcb_STATUS *,
+                                      lcb_settings *);
 
 #ifndef LCB_NO_SSL
 /**
@@ -67,14 +68,16 @@ lcbio_pSSLCTX lcbio_ssl_new__fallback(const char *, const char *, const char *, 
  * @param tsfile Path to trusted store file
  * @param cafile Optional path to CA file
  * @param keyfile Path to private key file
+ * @param keypass password for key file or NULL.
+ * @param keypass_len length of the password for key file or 0.
  * @param noverify To not attempt to verify server's certificate
  * @param errp a pointer to contain the error code if initialization failed
  * @param settings settings structure, used for logging.
  *
  * @return A new SSL context, or NULL on error.
  */
-lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *keyfile, int noverify, lcb_STATUS *errp,
-                            lcb_settings *settings);
+lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *keyfile, const char *keypass,
+                            size_t keypass_len, int noverify, lcb_STATUS *errp, lcb_settings *settings);
 #else
 #define lcbio_ssl_new lcbio_ssl_new__fallback
 #endif

@@ -102,6 +102,14 @@ LIBCOUCHBASE_API lcb_STATUS lcb_createopts_meter(lcb_CREATEOPTS *options, const 
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API lcb_STATUS lcb_createopts_tls_key_password(lcb_CREATEOPTS *options, const char *password,
+                                                            size_t password_len)
+{
+    options->tls_key_password = password;
+    options->tls_key_password_len = password_len;
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API
 const char *lcb_get_version(lcb_uint32_t *version)
 {
@@ -313,7 +321,7 @@ static lcb_STATUS init_providers(lcb_INSTANCE *obj, const Connspec &spec)
     return LCB_SUCCESS;
 }
 
-static lcb_STATUS setup_ssl(lcb_INSTANCE *obj, const Connspec &params)
+static lcb_STATUS setup_ssl(lcb_INSTANCE *obj, const Connspec &params, const char *keypass, size_t keypass_len)
 {
     char optbuf[4096];
     long env_policy = -1;
@@ -368,8 +376,8 @@ static lcb_STATUS setup_ssl(lcb_INSTANCE *obj, const Connspec &params)
             lcb_log(LOGARGS(obj, ERR), "SSL key have to be specified with certificate");
             return LCB_ERR_INVALID_ARGUMENT;
         }
-        settings->ssl_ctx = lcbio_ssl_new(settings->truststorepath, settings->certpath, settings->keypath,
-                                          settings->sslopts & LCB_SSL_NOVERIFY, &err, settings);
+        settings->ssl_ctx = lcbio_ssl_new(settings->truststorepath, settings->certpath, settings->keypath, keypass,
+                                          keypass_len, settings->sslopts & LCB_SSL_NOVERIFY, &err, settings);
         if (!settings->ssl_ctx) {
             return err;
         }
@@ -452,11 +460,18 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
     lcb_INSTANCE *obj = nullptr;
     lcb_STATUS err;
     lcb_settings *settings;
+    std::string effective_connstr;
+    const char *keypass = nullptr;
+    std::size_t keypass_len = 0;
 
     if (options) {
         io_priv = options->io;
         type = options->type;
         err = spec.load(*options);
+        if (options->tls_key_password != nullptr && options->tls_key_password_len > 0) {
+            keypass = options->tls_key_password;
+            keypass_len = options->tls_key_password_len;
+        }
     } else {
         const char *errmsg;
         const char *default_connstr = "couchbase://";
@@ -543,8 +558,26 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
     }
 
     lcb_log(LOGARGS(obj, INFO), "Version=%s, Changeset=%s", lcb_get_version(nullptr), LCB_VERSION_CHANGESET);
+    effective_connstr = spec.connstr();
+    {
+        std::vector<std::string> sensitive_params{
+            "password=",
+        };
+
+        for (const auto &param : sensitive_params) {
+            auto start = effective_connstr.find(param);
+            if (start != std::string::npos) {
+                auto value_start = start + param.size();
+                auto end = effective_connstr.find('&', value_start);
+                if (end == std::string::npos) {
+                    end = effective_connstr.size();
+                }
+                effective_connstr.replace(value_start, end - value_start, "[REDACTED]");
+            }
+        }
+    }
     lcb_log(LOGARGS(obj, INFO), "Effective connection string: " LCB_LOG_SPEC("%s") ". Bucket=" LCB_LOG_SPEC("%s"),
-            settings->log_redaction ? LCB_LOG_SD_OTAG : "", spec.connstr().c_str(),
+            settings->log_redaction ? LCB_LOG_SD_OTAG : "", effective_connstr.c_str(),
             settings->log_redaction ? LCB_LOG_SD_CTAG : "", settings->log_redaction ? LCB_LOG_MD_OTAG : "",
             settings->bucket, settings->log_redaction ? LCB_LOG_MD_CTAG : "");
 
@@ -580,7 +613,7 @@ lcb_STATUS lcb_create(lcb_INSTANCE **instance, const lcb_CREATEOPTS *options)
     lcb_aspend_init(&obj->pendops);
     obj->collcache = new lcb::CollectionCache();
 
-    if ((err = setup_ssl(obj, spec)) != LCB_SUCCESS) {
+    if ((err = setup_ssl(obj, spec, keypass, keypass_len)) != LCB_SUCCESS) {
         goto GT_DONE;
     }
 

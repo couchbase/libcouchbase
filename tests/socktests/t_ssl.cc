@@ -35,7 +35,7 @@ class SSLTest : public SockTest
 
         SockTest::SetUp();
         loop->settings->sslopts = LCB_SSL_ENABLED | LCB_SSL_NOVERIFY;
-        loop->settings->ssl_ctx = lcbio_ssl_new(nullptr, nullptr, nullptr, 1, &errp, loop->settings);
+        loop->settings->ssl_ctx = lcbio_ssl_new(nullptr, nullptr, nullptr, nullptr, 0, 1, &errp, loop->settings);
         loop->server->factory = TestServer::sslSocketFactory;
         EXPECT_FALSE(loop->settings->ssl_ctx == nullptr) << lcb_strerror_short(errp);
     }

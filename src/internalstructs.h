@@ -55,6 +55,8 @@ struct lcb_CREATEOPTS_ {
     size_t bucket_len;
     lcbtrace_TRACER *tracer;
     const lcbmetrics_METER *meter;
+    const char *tls_key_password;
+    size_t tls_key_password_len;
 };
 
 /**
