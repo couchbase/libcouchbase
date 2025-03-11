@@ -335,7 +335,11 @@ cbsasl_error_t cbsasl_client_step(cbsasl_conn_t *conn, const char *serverin, uns
             break;
     }
     *clientout = conn->c.client.userdata;
-    *clientoutlen = strlen(conn->c.client.userdata);
+    if (conn->c.client.userdata != NULL) {
+        *clientoutlen = strlen(conn->c.client.userdata);
+    } else {
+        *clientoutlen = 0;
+    }
 
     return SASL_CONTINUE;
 }

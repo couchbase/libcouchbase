@@ -1382,7 +1382,7 @@ TEST_F(GetUnitTest, testGetReplicaWithGroups)
         number_of_nodes = instance->cmdq.config->nsrv;
         if (number_of_nodes <= static_cast<std::size_t>(number_of_replicas)) {
             char buf[256]{};
-            snprintf(buf, 256, "number of nodes (%d) is less or equal to number of replicas",
+            snprintf(buf, 256, "number of nodes (%d) is less or equal to number of replicas (%d)",
                      static_cast<int>(number_of_nodes), number_of_replicas);
             MockEnvironment::printSkipMessage(__FILE__, __LINE__, buf);
             return;

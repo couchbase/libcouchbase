@@ -384,6 +384,9 @@ HANDLER(force_sasl_mech_handler)
         if (arg) {
             const char *s = reinterpret_cast<const char *>(arg);
             instance->settings->sasl_mech_force = lcb_strdup(s);
+            if (instance->settings->sasl_mech_force == nullptr) {
+                return LCB_ERR_NO_MEMORY;
+            }
             for (char *p = instance->settings->sasl_mech_force; *p != '\0'; p++) {
                 if (*p == ',') {
                     *p = ' ';
