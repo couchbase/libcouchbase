@@ -117,6 +117,16 @@ class MemcachedResponse
         return res.response.opcode;
     }
 
+    bool server_response() const
+    {
+        return res.response.magic == PROTOCOL_BINARY_ARES || res.response.magic == PROTOCOL_BINARY_RES;
+    }
+
+    uint8_t magic() const
+    {
+        return res.response.magic;
+    }
+
     /**
      * Gets the CAS for the packet
      */
@@ -135,7 +145,7 @@ class MemcachedResponse
 
 #define FRAMING_EXTRAS_TRACING 0x00
 #if defined(_MSC_VER)
-#define __lcb_round(d) ((d) > 0.0) ? ((d) + 0.5) : ((d)-0.5)
+#define __lcb_round(d) ((d) > 0.0) ? ((d) + 0.5) : ((d) - 0.5)
 #else
 #define __lcb_round(d) round(d)
 #endif

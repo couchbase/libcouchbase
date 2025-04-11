@@ -38,8 +38,8 @@ using namespace lcb;
 static void cleanup_negotiated(SessionInfo *info);
 static void handle_ioerr(lcbio_CTX *ctx, lcb_STATUS err);
 
-#define LOGFMT CTX_LOGFMT_PRE ",SASLREQ=%p) "
-#define LOGID(s) CTX_LOGID(s->ctx), (void *)s
+#define LOGFMT CTX_LOGFMT_PRE ",SOCK=%016" PRIx64 ",SASLREQ=%p) "
+#define LOGID(s) CTX_LOGID(s->ctx), ((s->ctx && s->ctx->sock) ? s->ctx->sock->id : 0), (void *)s
 
 static void timeout_handler(void *arg);
 
@@ -270,7 +270,8 @@ SessionRequestImpl::MechStatus SessionRequestImpl::set_chosen_mech(std::string &
     cbsasl_error_t saslerr;
 
     if (mechlist.empty()) {
-        lcb_log(LOGARGS(this, WARN), LOGFMT "Server does not support SASL (no mechanisms supported, empty list)", LOGID(this));
+        lcb_log(LOGARGS(this, WARN), LOGFMT "Server does not support SASL (no mechanisms supported, empty list)",
+                LOGID(this));
         return MECH_NOT_NEEDED;
     }
 
@@ -329,7 +330,8 @@ SessionRequestImpl::MechStatus SessionRequestImpl::set_chosen_mech(std::string &
             info->mech.assign(chosenmech);
             return MECH_OK;
         case SASL_NOMECH:
-            lcb_log(LOGARGS(this, WARN), LOGFMT "Server does not support SASL (no mechanisms supported, SASL_NOMECH)", LOGID(this));
+            lcb_log(LOGARGS(this, WARN), LOGFMT "Server does not support SASL (no mechanisms supported, SASL_NOMECH)",
+                    LOGID(this));
             return MECH_UNAVAILABLE;
         default:
             lcb_log(LOGARGS(this, ERROR), LOGFMT "cbsasl_client_start returned %d", LOGID(this), saslerr);
@@ -772,9 +774,17 @@ GT_NEXT_PACKET:
         }
 
         default: {
-            lcb_log(LOGARGS(this, ERROR), LOGFMT "Received unexpected response. OP=0x%x. RC=0x%x, completed=%d",
-                    LOGID(this), resp.opcode(), resp.status(), completed);
-            set_error(LCB_ERR_PROTOCOL_ERROR, "Received unexpected response", &resp);
+            if (resp.server_response()) {
+                lcb_log(LOGARGS(this, ERROR),
+                        LOGFMT "Received unexpected response. OP=0x%x. RC=0x%x, SEQ=%u, completed=%d", LOGID(this),
+                        (int)resp.opcode(), (int)resp.status(), (int)resp.opaque(), completed);
+                set_error(LCB_ERR_PROTOCOL_ERROR, "Received unexpected response", &resp);
+            } else {
+                lcb_log(LOGARGS(this, DEBUG),
+                        LOGFMT "Received unexpected message. MAGIC=0x%02x, OP=0x%x. RC=0x%x, SEQ=%u, completed=%d",
+                        LOGID(this), (int)resp.magic(), (int)resp.opcode(), (int)resp.status(), (int)resp.opaque(),
+                        completed);
+            }
             break;
         }
     }
