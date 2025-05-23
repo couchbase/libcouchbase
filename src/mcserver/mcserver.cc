@@ -746,6 +746,9 @@ static void on_read(lcbio_CTX *ctx, unsigned)
 
     while (server->try_read(ctx, ior) == Server::PKT_READ_COMPLETE)
         ;
+    if (server->supports_duplex()) {
+        lcbio_ctx_rwant(ctx, 24);
+    }
     lcbio_ctx_schedule(ctx);
     lcb_maybe_breakout(server->instance);
 }
@@ -1127,6 +1130,7 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
         } else if (settings->conntype == LCB_TYPE_BUCKET && settings->bucket) {
             try_to_select_bucket = true;
         }
+        duplex = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_DUPLEX);
         clustermap_change_notification =
             sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF);
         config_with_known_version =

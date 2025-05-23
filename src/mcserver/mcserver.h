@@ -141,6 +141,11 @@ class Server : public mc_PIPELINE
         return clustermap_change_notification;
     }
 
+    bool supports_duplex() const
+    {
+        return duplex;
+    }
+
     /**
      * If true, the library will always send version of current configuration, which allows KV engine skip payload in
      * response, if it does not have newer version.
@@ -257,6 +262,9 @@ class Server : public mc_PIPELINE
 
     /** Whether GetClusterConfigWithKnownVersion is supported */
     short config_with_known_version{0};
+
+    /** Whether the connection supports unsolicited packets from the server */
+    short duplex{0};
 
     lcbio_CTX *connctx;
     lcb::io::ConnectionRequest *connreq{};
