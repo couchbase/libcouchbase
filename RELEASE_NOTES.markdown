@@ -1,5 +1,20 @@
 # Release Notes
 
+# 3.3.16 (2025-05-30)
+
+* CCBC-1664: Register read event watcher for KV socket if duplex is enabled.
+  Fixes missing configuration updates on newer server versions (7.6.5+).
+
+* CCBC-1662: Ignore server-side notification during bootstrap.
+  Libcouchbase reports protocol error and stop bootstrapping the connection if
+  the server sends configuration notification during the initial handshake.
+
+* Define `LCB_CC_STRING` for MS VS 17 to fix packaging scripts.
+
+* CCBC-1658: Add support for encrypted TLS keys.
+  The key password should be specified in connection options with
+  `lcb_createopts_tls_key_password()`.
+
 # 3.3.15 (2024-12-13)
 
 * CCBC-1652: Allow to force SASL when client certificate is being used.
