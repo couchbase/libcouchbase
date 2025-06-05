@@ -214,6 +214,12 @@ int Confmon::do_set_next(ConfigInfo *new_config, bool notify_miss)
 
 void Confmon::provider_failed(Provider *provider, lcb_STATUS reason)
 {
+    if (instance->destroying) {
+        lcb_log(LOGARGS(this, INFO), "Provider '%s' failed: %s, but the instance is destroying ignoring the error",
+                provider_string(provider->type), lcb_strerror_short(reason));
+        stop();
+        return;
+    }
     lcb_log(LOGARGS(this, INFO), "Provider '%s' failed: %s", provider_string(provider->type),
             lcb_strerror_short(reason));
 
