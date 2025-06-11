@@ -1,5 +1,12 @@
 # Release Notes
 
+# 3.3.17 (2025-06-11)
+
+* CCBC-1666: Do not schedule config request during shutdown. With
+  completion-based IO (libuv, Windows IOCP), the library might try to schedule
+  configuration update on already deallocated pipeline and cause
+  use-after-free condition.
+
 # 3.3.16 (2025-05-30)
 
 * CCBC-1664: Register read event watcher for KV socket if duplex is enabled.
