@@ -16,13 +16,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-# centos-7:      2.8.12
-# amazonlinux-2: 2.8.12.2
-# ubuntu-16.04:  3.5.1
-# debian-9:      3.7.2
-# amazonlinux-2: 3.13.1 (cmake3 package)
-# centos-7:      3.17.3 (cmake3 package from epel-release)
-CMAKE_MINIMUM_REQUIRED(VERSION 3.5.1)
+# amazonlinux:2023  3.22.2
+# amazonlinux:2     3.17.5 (cmake3 package)
+# ubuntu:22.04      3.22.1
+# ubuntu:24.04      3.28.3
+# debian:12         3.25.1
+# debian:11         3.18.4
+# rockylinux:8      3.26.5
+# rockylinux:9      3.26.5
+CMAKE_MINIMUM_REQUIRED(VERSION 3.17)
 
 ### BEGIN CONFIGURABLES ###
 # These variables can be modified as needed

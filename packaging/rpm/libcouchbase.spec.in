@@ -8,9 +8,9 @@ License: ASL 2.0
 BuildRequires: gcc, gcc-c++
 
 %if %{?rhel}%{!?rhel:0} < 8
-BuildRequires: cmake3 >= 3.5.1
+BuildRequires: cmake3 >= 3.17
 %else
-BuildRequires: cmake >= 3.5.1
+BuildRequires: cmake >= 3.17
 %endif
 
 BuildRequires: pkgconfig(libevent) >= 2
