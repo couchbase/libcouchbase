@@ -295,6 +295,9 @@ lcb_STATUS CccpProvider::mcio_error(lcb_STATUS err)
         parent->provider_failed(this, err);
         return err;
     }
+    if (instance->destroying) {
+        return err;
+    }
     return schedule_next_request(err, /* can_rollover */ false, /* skip_if_push_supported */ false);
 }
 
