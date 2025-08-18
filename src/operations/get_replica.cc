@@ -267,10 +267,6 @@ static std::vector<readable_node> select_effective_node_indexes(lcb_INSTANCE *in
     lcb_KEYBUF keybuf{LCB_KV_COPY, {cmd->key().c_str(), cmd->key().size()}};
     mcreq_map_key(cq, &keybuf, MCREQ_PKT_BASESIZE, &vbid, &active_index);
 
-    if (active_index < 0) {
-        return {};
-    }
-
     std::vector<readable_node> effective_nodes{};
 
     if (cmd->mode() == get_replica_mode::select) {
@@ -323,14 +319,16 @@ static std::vector<readable_node> select_effective_node_indexes(lcb_INSTANCE *in
         return {effective_nodes.front()};
     }
 
-    /* read from active */
-    if (use_preferred_server_group) {
-        const char *active_server_group = cq->config->servers[active_index].server_group;
-        if (active_server_group != nullptr && preferred_server_group == active_server_group) {
+    /* read from active, if it is accessible */
+    if (active_index >= 0) {
+        if (use_preferred_server_group) {
+            const char *active_server_group = cq->config->servers[active_index].server_group;
+            if (active_server_group != nullptr && preferred_server_group == active_server_group) {
+                effective_nodes.push_back({false, static_cast<std::size_t>(active_index), 0xff});
+            }
+        } else {
             effective_nodes.push_back({false, static_cast<std::size_t>(active_index), 0xff});
         }
-    } else {
-        effective_nodes.push_back({false, static_cast<std::size_t>(active_index), 0xff});
     }
 
     return effective_nodes;
