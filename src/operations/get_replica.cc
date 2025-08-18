@@ -294,9 +294,6 @@ static std::vector<readable_node> select_effective_node_indexes(lcb_INSTANCE *in
     for (std::size_t ii = 0; ii < LCBT_NREPLICAS(instance); ii++) {
         int node_index = lcbvb_vbreplica(cq->config, vbid, ii);
         if (node_index < 0) {
-            if (cmd->mode() == get_replica_mode::all) {
-                return {};
-            }
             continue;
         }
         if (use_preferred_server_group) {
