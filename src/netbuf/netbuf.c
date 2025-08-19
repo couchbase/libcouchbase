@@ -729,6 +729,20 @@ void netbuf_init(nb_MGR *mgr, const nb_SETTINGS *user_settings)
     mblock_init(bufpool);
 }
 
+void netbuf_cleanup_packet(nb_MGR *mgr, const void *packet)
+{
+    sllist_iterator iter;
+
+    SLLIST_ITERFOR(&mgr->sendq.pending, &iter)
+    {
+        nb_SNDQELEM *e = SLLIST_ITEM(iter.cur, nb_SNDQELEM, slnode);
+        if (e->parent == packet) {
+            sllist_iter_remove(&mgr->sendq.pending, &iter);
+            mblock_release_ptr(&mgr->sendq.elempool, (char *)e, sizeof(*e));
+        }
+    }
+}
+
 void netbuf_cleanup(nb_MGR *mgr)
 {
     sllist_iterator iter;

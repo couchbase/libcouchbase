@@ -341,6 +341,7 @@ void netbuf_init(nb_MGR *mgr, const nb_SETTINGS *settings);
  * @param mgr the manager for which to release resources
  */
 void netbuf_cleanup(nb_MGR *mgr);
+void netbuf_cleanup_packet(nb_MGR *mgr, const void *packet);
 
 /**
  * Populates the settings structure with the default settings. This structure
