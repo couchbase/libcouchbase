@@ -125,7 +125,7 @@ static nb_MBLOCK *find_free_block(nb_MBPOOL *pool, nb_SIZE capacity)
     SLLIST_ITERFOR(&pool->avail, &iter)
     {
         nb_MBLOCK *cur = SLLIST_ITEM(iter.cur, nb_MBLOCK, slnode);
-        if (cur->nalloc >= capacity) {
+        if (cur->nalloc >= capacity && !BLOCK_HAS_DEALLOCS(cur)) {
             sllist_iter_remove(&pool->avail, &iter);
             pool->curblocks--;
             return cur;
