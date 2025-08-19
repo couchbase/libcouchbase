@@ -682,7 +682,9 @@ void netbuf_end_flush2(nb_MGR *mgr, unsigned int nflushed, nb_getsize_fn callbac
 void netbuf_mblock_release(nb_MGR *mgr, nb_SPAN *span)
 {
 #ifdef NETBUF_LIBC_PROXY
-    free(span->parent);
+    if (span->offset == 0) {
+        free(span->parent);
+    }
     (void)mgr;
 #else
     mblock_release_data(&mgr->datapool, span->parent, span->size, span->offset);
