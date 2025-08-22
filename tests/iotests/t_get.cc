@@ -488,13 +488,13 @@ TEST_F(GetUnitTest, testGetReplica)
         lcb_wait(instance, LCB_WAIT_DEFAULT);
         ASSERT_EQ(0, rck.remaining);
 
-        // Try with ALL again (should give an error)
+        // Try with ALL again (should not give an error)
         lcb_cmdgetreplica_create(&rcmd, LCB_REPLICA_MODE_ALL);
         lcb_cmdgetreplica_key(rcmd, key.c_str(), key.size());
         lcb_sched_enter(instance);
         err = lcb_getreplica(instance, nullptr, rcmd);
         lcb_cmdgetreplica_destroy(rcmd);
-        ASSERT_EQ(LCB_ERR_NO_MATCHING_SERVER, err);
+        ASSERT_EQ(LCB_SUCCESS, err);
         lcb_sched_leave(instance);
 
         vb->servers[2] = oldix;

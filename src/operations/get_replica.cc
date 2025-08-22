@@ -171,6 +171,7 @@ struct RGetCookie : mc_REQDATAEX {
     unsigned r_cur{0};
     unsigned r_max;
     int remaining{0};
+    bool skip{false};
     int vbucket;
     get_replica_mode strategy;
     lcb_INSTANCE *instance;
@@ -210,35 +211,10 @@ static void rget_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_CALLBACK_TY
         }
         callback(instance, LCB_CALLBACK_GETREPLICA, (const lcb_RESPBASE *)resp);
     } else {
-        mc_CMDQUEUE *cq = &instance->cmdq;
-        mc_PIPELINE *nextpl = nullptr;
-
-        /** FIRST */
-        do {
-            int nextix;
-            rck->r_cur++;
-            nextix = lcbvb_vbreplica(cq->config, rck->vbucket, rck->r_cur);
-            if (nextix > -1 && nextix < (int)cq->npipelines) {
-                /* have a valid next index? */
-                nextpl = cq->pipelines[nextix];
-                break;
-            }
-        } while (rck->r_cur < rck->r_max);
-
-        if (err == LCB_SUCCESS || rck->r_cur == rck->r_max || nextpl == nullptr) {
+        if (!rck->skip && (err == LCB_SUCCESS || rck->remaining == 1)) {
+            rck->skip = true;
             resp->rflags |= LCB_RESP_F_FINAL;
             callback(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPBASE *)resp);
-            /* refcount=1 . Free this now */
-            rck->remaining = 1;
-        } else if (err != LCB_SUCCESS) {
-            mc_PACKET *newpkt = mcreq_renew_packet(pkt);
-            newpkt->flags &= ~MCREQ_STATE_FLAGS;
-            mcreq_sched_add(nextpl, newpkt);
-            /* Use this, rather than lcb_sched_leave(), because this is being
-             * invoked internally by the library. */
-            mcreq_sched_leave(cq, 1);
-            /* wait */
-            rck->remaining = 2;
         }
     }
     rck->decref();
@@ -306,16 +282,6 @@ static std::vector<readable_node> select_effective_node_indexes(lcb_INSTANCE *in
         }
     }
 
-    if (cmd->mode() == get_replica_mode::any) {
-        if (effective_nodes.empty()) {
-            return {};
-        }
-        static std::random_device rd;
-        std::mt19937 g(rd());
-        std::shuffle(effective_nodes.begin(), effective_nodes.end(), g);
-        return {effective_nodes.front()};
-    }
-
     /* read from active, if it is accessible */
     if (active_index >= 0) {
         if (use_preferred_server_group) {
@@ -359,17 +325,6 @@ static lcb_STATUS get_replica_validate(lcb_INSTANCE *instance, const lcb_CMDGETR
             break;
 
         case get_replica_mode::any:
-            for (r0 = 0; r0 < LCBT_NREPLICAS(instance); r0++) {
-                if (lcbvb_vbreplica(cq->config, vbid, r0) > -1) {
-                    r1 = r0;
-                    break;
-                }
-            }
-            if (r0 == LCBT_NREPLICAS(instance)) {
-                return LCB_ERR_NO_MATCHING_SERVER;
-            }
-            break;
-
         case get_replica_mode::all:
             if (cmd->read_preference() == LCB_REPLICA_READ_PREFERENCE_SELECTED_SERVER_GROUP) {
                 auto effective_nodes = select_effective_node_indexes(instance, cmd);
@@ -378,11 +333,18 @@ static lcb_STATUS get_replica_validate(lcb_INSTANCE *instance, const lcb_CMDGETR
                 }
             }
 
-            r0 = 0;
-            r1 = LCBT_NREPLICAS(instance);
-            /* Make sure they're all online */
-            for (unsigned ii = 0; ii < LCBT_NREPLICAS(instance); ii++) {
-                if (lcbvb_vbreplica(cq->config, vbid, ii) < 0) {
+            {
+                bool no_replicas = true;
+                r0 = 0;
+                r1 = LCBT_NREPLICAS(instance);
+                /* Make sure at least one of them is online */
+                for (unsigned ii = 0; ii < LCBT_NREPLICAS(instance); ii++) {
+                    if (lcbvb_vbreplica(cq->config, vbid, ii) >= 0) {
+                        no_replicas = false;
+                        break;
+                    }
+                }
+                if (no_replicas) {
                     return LCB_ERR_NO_MATCHING_SERVER;
                 }
             }
@@ -422,27 +384,21 @@ static lcb_STATUS get_replica_schedule(lcb_INSTANCE *instance, std::shared_ptr<l
             break;
 
         case get_replica_mode::all:
+        case get_replica_mode::any: {
+            bool no_replicas = true;
             r0 = 0;
             r1 = LCBT_NREPLICAS(instance);
-            /* Make sure they're all online */
+            /* Make sure at least one of them is online */
             for (unsigned ii = 0; ii < LCBT_NREPLICAS(instance); ii++) {
-                if ((ixtmp = lcbvb_vbreplica(cq->config, vbid, ii)) < 0) {
-                    return LCB_ERR_NO_MATCHING_SERVER;
-                }
-            }
-            break;
-
-        case get_replica_mode::any:
-            for (r0 = 0; r0 < LCBT_NREPLICAS(instance); r0++) {
-                if ((ixtmp = lcbvb_vbreplica(cq->config, vbid, r0)) > -1) {
-                    r1 = r0;
+                if (lcbvb_vbreplica(cq->config, vbid, ii) >= 0) {
+                    no_replicas = false;
                     break;
                 }
             }
-            if (r0 == LCBT_NREPLICAS(instance)) {
+            if (no_replicas) {
                 return LCB_ERR_NO_MATCHING_SERVER;
             }
-            break;
+        }
     }
 
     if (r1 < r0 || r1 >= cq->npipelines) {
