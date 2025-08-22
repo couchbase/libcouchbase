@@ -16,7 +16,7 @@
  */
 
 /* small utility for retrieving host/port information from the CTX */
-static const lcb_host_t *get_ctx_host(const lcbio_CTX *ctx)
+static const lcb_host_t *get_ctx_host_remote(const lcbio_CTX *ctx)
 {
     static lcb_host_t host = {"NOHOST", "NOPORT", 0};
     if (!ctx) {
@@ -31,10 +31,26 @@ static const lcb_host_t *get_ctx_host(const lcbio_CTX *ctx)
     return &ctx->sock->info->ep_remote;
 }
 
-#define CTX_LOGFMT_PRE "<" LCB_LOG_SPEC("%s%s%s:%s") "> (CTX=%p,%s"
+static const lcb_host_t *get_ctx_host_local(const lcbio_CTX *ctx)
+{
+    static lcb_host_t host = {"NOHOST", "NOPORT", 0};
+    if (!ctx) {
+        return &host;
+    }
+    if (!ctx->sock) {
+        return &host;
+    }
+    if (!ctx->sock->info) {
+        return &host;
+    }
+    return &ctx->sock->info->ep_local;
+}
+
+#define CTX_LOGFMT_PRE "<" LCB_LOG_SPEC("%s:%s%s%s:%s") "> (CTX=%p,%s"
 #define CTX_LOGFMT CTX_LOGFMT_PRE ") "
 #define CTX_LOGID(ctx)                                                                                                 \
-    (ctx && ctx->sock && ctx->sock->settings->log_redaction) ? LCB_LOG_SD_OTAG : "",                                   \
-        (get_ctx_host(ctx)->ipv6 ? "[" : ""), get_ctx_host(ctx)->host, (get_ctx_host(ctx)->ipv6 ? "]" : ""),           \
-        get_ctx_host(ctx)->port, (ctx && ctx->sock && ctx->sock->settings->log_redaction) ? LCB_LOG_SD_CTAG : "",      \
-        (void *)ctx, ctx ? ctx->subsys : ""
+    (ctx && ctx->sock && ctx->sock->settings->log_redaction) ? LCB_LOG_SD_OTAG : "", get_ctx_host_local(ctx)->port,    \
+        (get_ctx_host_remote(ctx)->ipv6 ? "[" : ""), get_ctx_host_remote(ctx)->host,                                   \
+        (get_ctx_host_remote(ctx)->ipv6 ? "]" : ""), get_ctx_host_remote(ctx)->port,                                   \
+        (ctx && ctx->sock && ctx->sock->settings->log_redaction) ? LCB_LOG_SD_CTAG : "", (void *)ctx,                  \
+        ctx ? ctx->subsys : ""

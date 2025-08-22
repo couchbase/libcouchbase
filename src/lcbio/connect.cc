@@ -30,7 +30,7 @@ using namespace lcb::io;
 #define EAI_SYSTEM 0
 #endif
 #define LOGARGS(conn, lvl) conn->settings, "connection", LCB_LOG_##lvl, __FILE__, __LINE__
-static const lcb_host_t *get_loghost(lcbio_SOCKET *s)
+static const lcb_host_t *get_loghost_remote(lcbio_SOCKET *s)
 {
     static lcb_host_t host = {"NOHOST", "NOPORT", 0};
     if (!s) {
@@ -41,13 +41,25 @@ static const lcb_host_t *get_loghost(lcbio_SOCKET *s)
     }
     return &s->info->ep_remote;
 }
+static const lcb_host_t *get_loghost_local(lcbio_SOCKET *s)
+{
+    static lcb_host_t host = {"NOHOST", "NOPORT", 0};
+    if (!s) {
+        return &host;
+    }
+    if (!s->info) {
+        return &host;
+    }
+    return &s->info->ep_local;
+}
 
 /** Format string arguments for %p%s:%s */
 #define CSLOGID(sock)                                                                                                  \
-    sock->settings->log_redaction ? LCB_LOG_SD_OTAG : "", get_loghost(sock)->ipv6 ? "[" : "", get_loghost(sock)->host, \
-        get_loghost(sock)->ipv6 ? "]" : "", get_loghost(sock)->port,                                                   \
+    sock->settings->log_redaction ? LCB_LOG_SD_OTAG : "", get_loghost_local(sock)->port,                               \
+        get_loghost_remote(sock)->ipv6 ? "[" : "", get_loghost_remote(sock)->host,                                     \
+        get_loghost_remote(sock)->ipv6 ? "]" : "", get_loghost_remote(sock)->port,                                     \
         sock->settings->log_redaction ? LCB_LOG_SD_CTAG : "", sock->id
-#define CSLOGFMT "<" LCB_LOG_SPEC("%s%s%s:%s") "> (SOCK=%016" PRIx64 ") "
+#define CSLOGFMT "<" LCB_LOG_SPEC("%s:%s%s%s:%s") "> (SOCK=%016" PRIx64 ") "
 
 #define LOGARGS_T(lvl) LOGARGS(this->sock, lvl)
 #define CSLOGID_T() CSLOGID(this->sock)
