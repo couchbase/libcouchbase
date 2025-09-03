@@ -366,13 +366,14 @@ void mcreq_wipe_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 {
     if (!(packet->flags & MCREQ_F_KEY_NOCOPY)) {
         if ((packet->flags & MCREQ_F_DETACHED)) {
-            if (pipeline) {
-                netbuf_cleanup_packet(&pipeline->nbmgr, packet);
-            }
             free(SPAN_BUFFER(&packet->kh_span));
         } else {
             netbuf_mblock_release(&pipeline->nbmgr, &packet->kh_span);
         }
+    }
+
+    if (pipeline) {
+        netbuf_cleanup_packet(&pipeline->nbmgr, packet);
     }
 
     if (!(packet->flags & MCREQ_F_HASVALUE)) {

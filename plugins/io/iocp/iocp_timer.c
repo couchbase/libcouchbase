@@ -67,7 +67,7 @@ iocp_timer_t *iocp_tmq_pop(lcb_list_t *list, lcb_uint64_t now)
 
 void iocp_tmq_add(lcb_list_t *list, iocp_timer_t *timer)
 {
-    IOCP_LOG(IOCP_TRACE, "Adding timer %p with ms %lu", timer, timer->ms);
+    IOCP_LOG(IOCP_TRACE, "Adding timer %p with ms %lu", timer, (unsigned long)timer->ms);
     lcb_list_add_sorted(list, &timer->list, iocp_timer_cmp_asc);
 }
 

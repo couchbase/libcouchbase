@@ -605,7 +605,7 @@ nb_SIZE netbuf_start_flush(nb_MGR *mgr, nb_IOV *iovs, int niov, int *nused)
     return ret;
 }
 
-void netbuf_end_flush(nb_MGR *mgr, unsigned int nflushed)
+unsigned int netbuf_end_flush(nb_MGR *mgr, unsigned int nflushed)
 {
     nb_SENDQ *q = &mgr->sendq;
     sllist_iterator iter;
@@ -635,7 +635,7 @@ void netbuf_end_flush(nb_MGR *mgr, unsigned int nflushed)
             break;
         }
     }
-    lcb_assert(!nflushed);
+    return nflushed;
 }
 
 void netbuf_pdu_enqueue(nb_MGR *mgr, void *pdu, nb_SIZE lloff)
@@ -644,11 +644,17 @@ void netbuf_pdu_enqueue(nb_MGR *mgr, void *pdu, nb_SIZE lloff)
     sllist_append(&q->pdus, (sllist_node *)(void *)((char *)pdu + lloff));
 }
 
-void netbuf_end_flush2(nb_MGR *mgr, unsigned int nflushed, nb_getsize_fn callback, nb_SIZE lloff, void *arg)
+unsigned netbuf_end_flush2(nb_MGR *mgr, unsigned int nflushed, nb_getsize_fn callback, nb_SIZE lloff, void *arg)
 {
     sllist_iterator iter;
     nb_SENDQ *q = &mgr->sendq;
-    netbuf_end_flush(mgr, nflushed);
+
+    unsigned nflushed_extra = netbuf_end_flush(mgr, nflushed);
+
+    /* some operations has been discarded while waiting for IO,
+     * adjusting nflushed to account for the extra */
+    lcb_assert(nflushed_extra <= nflushed);
+    nflushed -= nflushed_extra;
 
     /** Add to the nflushed overflow from last call */
     nflushed += q->pdu_offset;
@@ -672,6 +678,8 @@ void netbuf_end_flush2(nb_MGR *mgr, unsigned int nflushed, nb_getsize_fn callbac
 
     /** Store the remainder of data that wasn't processed for next call */
     q->pdu_offset = nflushed;
+
+    return nflushed_extra;
 }
 
 /******************************************************************************
@@ -741,6 +749,9 @@ void netbuf_cleanup_packet(nb_MGR *mgr, const void *packet)
         if (e->parent == packet) {
             sllist_iter_remove(&mgr->sendq.pending, &iter);
             mblock_release_ptr(&mgr->sendq.elempool, (char *)e, sizeof(*e));
+            if (e == mgr->sendq.last_requested) {
+                netbuf_reset_flush(mgr);
+            }
         }
     }
 }

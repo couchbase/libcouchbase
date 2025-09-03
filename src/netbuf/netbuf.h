@@ -280,7 +280,7 @@ nb_SIZE netbuf_start_flush(nb_MGR *mgr, nb_IOV *iovs, int niov, int *nused);
  * @param mgr the manager object
  * @param nflushed how much data in bytes was flushed to the network.
  */
-void netbuf_end_flush(nb_MGR *mgr, nb_SIZE nflushed);
+unsigned netbuf_end_flush(nb_MGR *mgr, nb_SIZE nflushed);
 
 /**
  * Reset the flush context for the buffer. This should be called only when the
@@ -405,7 +405,7 @@ void netbuf_pdu_enqueue(nb_MGR *mgr, void *pdu, nb_SIZE lloff);
  */
 typedef nb_SIZE (*nb_getsize_fn)(void *pdu, nb_SIZE remaining, void *arg);
 
-void netbuf_end_flush2(nb_MGR *mgr, unsigned int nflushed, nb_getsize_fn callback, nb_SIZE lloff, void *arg);
+unsigned netbuf_end_flush2(nb_MGR *mgr, unsigned int nflushed, nb_getsize_fn callback, nb_SIZE lloff, void *arg);
 
 /**
  * Ensures that the given internal structures of the manager are not allocated

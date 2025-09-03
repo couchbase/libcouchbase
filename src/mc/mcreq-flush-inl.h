@@ -89,11 +89,13 @@ static nb_SIZE mcreq__pktflush_callback(void *p, nb_SIZE hint, void *arg)
  */
 static void mcreq_flush_done_ex(mc_PIPELINE *pl, unsigned nflushed, unsigned expected, lcb_U64 now)
 {
+    unsigned nflushed_extra = 0; // number of bytes flushed by IO, but discarded already
     if (nflushed) {
         mc__FLUSHINFO info = {pl, now};
-        netbuf_end_flush2(&pl->nbmgr, nflushed, mcreq__pktflush_callback, offsetof(mc_PACKET, sl_flushq), &info);
+        nflushed_extra =
+            netbuf_end_flush2(&pl->nbmgr, nflushed, mcreq__pktflush_callback, offsetof(mc_PACKET, sl_flushq), &info);
     }
-    if (nflushed < expected) {
+    if (nflushed < expected || nflushed_extra) {
         netbuf_reset_flush(&pl->nbmgr);
     }
 }

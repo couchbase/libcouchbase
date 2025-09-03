@@ -1151,6 +1151,9 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
     lcbio_CTXPROCS procs{};
     procs.cb_err = on_error;
     procs.cb_read = on_read;
+
+    netbuf_reset_flush(&nbmgr);
+
     procs.cb_flush_done = on_flush_done;
     procs.cb_flush_ready = on_flush_ready;
     connctx = lcbio_ctx_new(sock, this, &procs, "memcached");

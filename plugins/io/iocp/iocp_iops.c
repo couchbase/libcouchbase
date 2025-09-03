@@ -370,7 +370,8 @@ static void iops_dtor(lcb_io_opt_t iobase)
     {
         iocp_sockdata_t *sd = LCB_LIST_ITEM(cur, iocp_sockdata_t, list);
 
-        IOCP_LOG(IOCP_WARN, "Leak detected in socket %p (%lu). Refcount=%d", sd, sd->sSocket, sd->refcount);
+        IOCP_LOG(IOCP_WARN, "Leak detected in socket %p (%lu). Refcount=%d", sd, (unsigned long)sd->sSocket,
+                 sd->refcount);
         if (sd->sSocket != INVALID_SOCKET) {
             closesocket(sd->sSocket);
             sd->sSocket = INVALID_SOCKET;

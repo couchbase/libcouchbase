@@ -24,6 +24,11 @@
 #endif
 #include "netbuf/netbuf.h"
 
+#include "sllist.h"
+#include "sllist-inl.h"
+
+#include <array>
+
 #define BIG_BUF_SIZE 5000
 #define SMALL_BUF_SIZE 50
 
@@ -452,6 +457,137 @@ TEST_F(NetbufTest, testOutOfOrder)
 
     for (ii = 0; ii < 3; ii++) {
         netbuf_mblock_release(&mgr, spans + ii);
+    }
+
+    clean_check(&mgr);
+}
+
+struct my_PACKET {
+    sllist_node slnode{nullptr};
+    nb_SPAN key_{};
+    nb_SPAN value_{};
+    bool is_flushed_{false};
+
+    my_PACKET(nb_MGR *mgr, std::string key, std::string value)
+    {
+        key_.size = key.size();
+        netbuf_mblock_reserve(mgr, &key_);
+
+        value_.size = value.size();
+        netbuf_mblock_reserve(mgr, &value_);
+    }
+
+    void remove_pdu_from(nb_MGR *mgr)
+    {
+        sllist_iterator iter;
+        SLLIST_ITERFOR(&mgr->sendq.pdus, &iter)
+        {
+            my_PACKET *el = SLLIST_ITEM(iter.cur, my_PACKET, slnode);
+            if (el == this) {
+                sllist_iter_remove(&mgr->sendq.pdus, &iter);
+            }
+        }
+    }
+
+    [[nodiscard]] auto key() -> nb_SPAN *
+    {
+        return &key_;
+    }
+
+    [[nodiscard]] auto value() -> nb_SPAN *
+    {
+        return &value_;
+    }
+
+    [[nodiscard]] auto is_flushed() const -> bool
+    {
+        return is_flushed_;
+    }
+
+    void mark_as_flushed()
+    {
+        is_flushed_ = true;
+    }
+
+    [[nodiscard]] auto size() const -> std::size_t
+    {
+        return key_.size + value_.size;
+    }
+};
+
+static nb_SIZE packet_flush_callback(void *pdu, nb_SIZE hint, void * /* arg */)
+{
+    my_PACKET *packet = (my_PACKET *)pdu;
+    if (hint >= packet->size()) {
+        packet->mark_as_flushed();
+    }
+    return packet->size();
+}
+
+TEST_F(NetbufTest, testPacketCleanup)
+{
+    nb_MGR mgr;
+    nb_SETTINGS settings;
+    netbuf_default_settings(&settings);
+    settings.data_basealloc = 1;
+    netbuf_init(&mgr, &settings);
+
+    std::array<my_PACKET, 3> packets{
+        my_PACKET{&mgr, "key_1", "value_1"},
+        my_PACKET{&mgr, "key_2", "value_2"},
+        my_PACKET{&mgr, "key_3", "value_3"},
+    };
+
+    /* enqueue first two packets */
+    for (std::size_t i = 0; i < 2; ++i) {
+        netbuf_enqueue_span(&mgr, packets[i].key(), &packets[i]);
+        netbuf_enqueue_span(&mgr, packets[i].value(), &packets[i]);
+        netbuf_pdu_enqueue(&mgr, &packets[i], offsetof(my_PACKET, slnode));
+    }
+
+    nb_IOV iov[10];
+    nb_SIZE to_flush;
+
+    /* start flushing first two packets */
+    to_flush = netbuf_start_flush(&mgr, iov, 4, NULL);
+    ASSERT_EQ(packets[0].size() + packets[1].size(), to_flush);
+
+    /* discard second packet
+     *
+     * this simulates network failure and relocation of the packet
+     * to some other pipeline while the IO still being processed by
+     * the OS kernel
+     */
+    packets[1].remove_pdu_from(&mgr);
+    netbuf_cleanup_packet(&mgr, &packets[1]);
+
+    /*
+     * OS kernel returned and completed flushing
+     */
+    netbuf_end_flush2(&mgr, to_flush, packet_flush_callback, offsetof(my_PACKET, slnode), NULL);
+    ASSERT_TRUE(packets[0].is_flushed());
+    ASSERT_FALSE(packets[1].is_flushed());
+    ASSERT_FALSE(packets[2].is_flushed());
+
+    /*
+     * enqueue last packet
+     */
+    netbuf_enqueue_span(&mgr, packets[2].key(), &packets[2]);
+    netbuf_enqueue_span(&mgr, packets[2].value(), &packets[2]);
+    netbuf_pdu_enqueue(&mgr, &packets[2], offsetof(my_PACKET, slnode));
+
+    /* start flushing last packet */
+    to_flush = netbuf_start_flush(&mgr, iov, 10, NULL);
+    ASSERT_EQ(packets[2].size(), to_flush);
+
+    netbuf_end_flush2(&mgr, to_flush, packet_flush_callback, 0, NULL);
+    ASSERT_TRUE(packets[0].is_flushed());
+    ASSERT_FALSE(packets[1].is_flushed());
+    ASSERT_TRUE(packets[2].is_flushed());
+
+    for (auto &packet : packets) {
+        netbuf_mblock_release(&mgr, packet.key());
+        netbuf_mblock_release(&mgr, packet.value());
     }
 
     clean_check(&mgr);
