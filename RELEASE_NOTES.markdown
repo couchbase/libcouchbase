@@ -1,5 +1,48 @@
 # Release Notes
 
+# 3.3.18 (2025-09-10)
+
+* CCBC-1672: Fixed protocol violation on new connections.
+  In certain cases, extra bytes could be sent at the start of a new connection.
+  Most of the time, this caused the server to drop the connection and the
+  client would reconnect automatically, so users did not notice. However, in
+  rare cases the server would accept the data as valid, leading to protocol
+  issues. This has been corrected so that invalid data is properly discarded
+  and connections stay consistent.
+
+* CCBC-1671: Send requests to all replica nodes for strategy "ANY".
+  This change makes implementation of `get_any_replica` behave the same way as
+  other SDKs.
+
+  - The old behavior: "get any replica" would send requests sequentially one by
+    one. So that next request will be dispatched only when previous fails.
+
+  - The new behavior: "get any replica" send requests to active and replica
+    nodes simulaneously and returns only first response to the user, discarding
+    everything else.
+
+* CCBC-1669: Fail `get_all_replicas` only if none nodes are available.
+
+* CCBC-1668: Do not assume that missing active node means none available for
+  replica read. With this change reading replica will be more reliable during
+  failover and rebalance events.
+
+* CCBC-1667: Do not schedule config update during instance termination. This
+  change fixes use-after-free during `lcb_destroy`.
+
+* CCBC-1674: Do not use non-owning spans to release memory with `NETBUF_LIBC_PROXY`.
+  Fix use-after-free for build with `NETBUF_LIBC_PROXY` when snappy compression
+  is enabled. This is special build when caching allocator is replaced with
+  just libc malloc. It is used only during development and testing, and never
+  enabled in production.
+
+* CCBC-1673: Do not return block with `deallocs` as free in `find_free_block`
+  of the netbuf subsystem.
+
+* Raise minimum cmake version to 3.17
+
+* Log local port to make it easier to correlate logs with the server
+
 # 3.3.17 (2025-06-11)
 
 * CCBC-1666: Do not schedule config request during shutdown. With
