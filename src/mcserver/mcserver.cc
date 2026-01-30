@@ -291,7 +291,7 @@ bool Server::handle_unknown_collection(MemcachedResponse &resp, mc_PACKET *oldpk
         instance->retryq->ucadd((mc_EXPACKET *)newpkt, LCB_ERR_TIMEOUT, orig_status);
         return true;
     }
-    std::string name = instance->collcache->id_to_name(cid);
+    const std::string &name = instance->collcache->id_to_name(cid);
 
     packet_wrapper wrapper;
     mcreq_get_key(oldpkt, (const char **)&wrapper.key.contig.bytes, &wrapper.key.contig.nbytes);

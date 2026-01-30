@@ -41,7 +41,11 @@ class CollectionCache
 
     void put(const std::string &path, uint32_t cid);
 
-    std::string id_to_name(uint32_t cid);
+    /* Returns a reference into the cache; valid until erase(cid) for the same
+     * cid or cache destruction. On miss, returns an empty-string sentinel.
+     * Not thread-safe: the caller must consume the reference on the same thread
+     * that owns the cache. */
+    const std::string &id_to_name(uint32_t cid);
 
     void erase(uint32_t cid);
 };

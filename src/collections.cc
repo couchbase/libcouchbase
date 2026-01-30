@@ -34,13 +34,14 @@ CollectionCache::CollectionCache()
     put(default_collection, 0);
 }
 
-std::string CollectionCache::id_to_name(uint32_t cid)
+const std::string &CollectionCache::id_to_name(uint32_t cid)
 {
     std::map<uint32_t, std::string>::const_iterator pos = cache_i2n.find(cid);
     if (pos != cache_i2n.end()) {
         return pos->second;
     }
-    return "";
+    static const std::string empty_string;
+    return empty_string;
 }
 
 bool CollectionCache::get(const std::string &path, uint32_t *cid)
