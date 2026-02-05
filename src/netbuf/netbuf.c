@@ -426,8 +426,11 @@ static int mblock_get_next_size(const nb_MBPOOL *pool, int allow_wrap)
 
 static void mblock_wipe_block(nb_MBLOCK *block)
 {
+    int is_standalone = mblock_is_standalone(block);
+
     if (block->root) {
         free(block->root);
+        block->root = NULL;
     }
     if (block->deallocs) {
         sllist_iterator dea_iter;
@@ -445,7 +448,7 @@ static void mblock_wipe_block(nb_MBLOCK *block)
         block->deallocs = NULL;
     }
 
-    if (mblock_is_standalone(block)) {
+    if (is_standalone) {
         free(block);
     }
 }

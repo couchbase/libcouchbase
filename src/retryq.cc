@@ -357,9 +357,9 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, protocol_binary_res
         lcb_assert(mcreq_epkt_insert(pkt, op) == 0);
     }
 
-    if (op->pkt) {
-        /* if there is an old packet associated, we make sure that none
-         * of the pipelines use it in the pending/flush queues
+    if (op->pkt && op->pkt != &pkt->base) {
+        /* If there is an old packet associated AND it's different from the new one,
+         * we make sure that none of the pipelines use it in the pending/flush queues.
          */
         for (size_t ii = 0; ii < cq->npipelines; ii++) {
             sllist_iterator iter;
@@ -389,6 +389,7 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, protocol_binary_res
                         nb_SNDQELEM *el = SLLIST_ITEM(iter.cur, nb_SNDQELEM, slnode);
                         if (el->parent == op->pkt) {
                             sllist_iter_remove(&sq->pending, &iter);
+                            break; /* Iterator invalid after remove, and packet should be unique */
                         }
                     }
                 }
@@ -400,11 +401,37 @@ void RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err, protocol_binary_res
                 mc_PACKET *el = SLLIST_ITEM(iter.cur, mc_PACKET, sl_flushq);
                 if (el == op->pkt) {
                     sllist_iter_remove(&server->nbmgr.sendq.pdus, &iter);
+                    break; /* Iterator invalid after remove, and packet should be unique */
                 }
             }
         }
-        /* by setting this flag we allow the caller to release the packet */
-        op->pkt->flags |= MCREQ_F_FLUSHED;
+
+        /* The old packet has been removed from queues (ctxqueued, pending, pdus) and will be replaced */
+        mc_PACKET *old_pkt = op->pkt;
+
+        /* Find the pipeline for this packet */
+        mc_PIPELINE *pl = nullptr;
+        for (size_t ii = 0; ii < cq->npipelines; ii++) {
+            auto *server = static_cast<lcb::Server *>(cq->pipelines[ii]);
+            if (server) {
+                /* Check if packet is in this pipeline's requests queue */
+                sllist_iterator iter;
+                SLLIST_ITERFOR(&server->requests, &iter)
+                {
+                    mc_PACKET *req_pkt = SLLIST_ITEM(iter.cur, mc_PACKET, slnode);
+                    if (req_pkt == old_pkt) {
+                        /* Found it! Remove from requests queue */
+                        sllist_iter_remove(&server->requests, &iter);
+                        pl = server;
+                        break;
+                    }
+                }
+                if (pl)
+                    break;
+            }
+        }
+
+        op->pkt = nullptr;
     }
 
     op->origstatus = status;

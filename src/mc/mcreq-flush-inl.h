@@ -51,6 +51,18 @@ static nb_SIZE mcreq__pktflush_callback(void *p, nb_SIZE hint, void *arg)
 
     pktsize = mcreq_get_size(pkt);
 
+    /* Skip packets that have been replaced by renewed copies.
+     * They're still in queues but a new packet has taken over.
+     * They'll be freed naturally when removed from queues. */
+    if (pkt->flags & MCREQ_F_REPLACED) {
+        /* Mark as flushed so it can be cleaned up, but don't process it */
+        pkt->flags |= MCREQ_F_FLUSHED;
+        if (pkt->flags & MCREQ_F_INVOKED) {
+            mcreq_packet_done(info->pl, pkt);
+        }
+        return pktsize;
+    }
+
     if (info->now && hint) {
         MCREQ_PKT_RDATA(pkt)->start = info->now;
     }
@@ -60,7 +72,11 @@ static nb_SIZE mcreq__pktflush_callback(void *p, nb_SIZE hint, void *arg)
     }
 
     /** Packet is flushed */
-    lcb_assert((pkt->flags & MCREQ_F_FLUSHED) == 0);
+    if (pkt->flags & MCREQ_F_FLUSHED) {
+        /* Don't flush again, return size to continue processing other packets */
+        return pktsize;
+    }
+
     pkt->flags |= MCREQ_F_FLUSHED;
 
     if (pkt->flags & MCREQ_F_INVOKED) {

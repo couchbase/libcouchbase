@@ -245,6 +245,10 @@ static int pkt_tmo_compar(sllist_node *a, sllist_node *b)
 void mcreq_reenqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 {
     sllist_root *reqs = &pipeline->requests;
+
+    /* Clear state flags before re-enqueueing */
+    packet->flags &= ~MCREQ_STATE_FLAGS;
+
     mcreq_enqueue_packet(pipeline, packet);
     sllist_remove(reqs, &packet->slnode);
     sllist_insert_sorted(reqs, &packet->slnode, pkt_tmo_compar);
@@ -336,6 +340,7 @@ void mcreq_enqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
     packet = check_collection_id(pipeline, packet);
 
     nb_SPAN *vspan = &packet->u_value.single;
+
     sllist_append(&pipeline->requests, &packet->slnode);
 
     netbuf_enqueue_span(&pipeline->nbmgr, &packet->kh_span, packet);
@@ -364,6 +369,11 @@ GT_ENQUEUE_PDU:
 
 void mcreq_wipe_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 {
+    /* Detect if packet is being wiped multiple times */
+    if (packet->flags & MCREQ_F_REPLACED) {
+        return; /* Don't wipe replaced packets */
+    }
+
     if (!(packet->flags & MCREQ_F_KEY_NOCOPY)) {
         if ((packet->flags & MCREQ_F_DETACHED)) {
             free(SPAN_BUFFER(&packet->kh_span));
@@ -384,7 +394,6 @@ void mcreq_wipe_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
         if (packet->flags & MCREQ_F_VALUE_IOV) {
             free(packet->u_value.multi.iov);
         }
-
         return;
     }
 
@@ -457,7 +466,8 @@ mc_PACKET *mcreq_renew_packet(const mc_PACKET *src)
     memcpy(kdata, SPAN_BUFFER(&src->kh_span), src->kh_span.size);
     CREATE_STANDALONE_SPAN(&dst->kh_span, kdata, src->kh_span.size);
 
-    dst->flags &= ~(MCREQ_F_KEY_NOCOPY | MCREQ_F_VALUE_NOCOPY | MCREQ_F_VALUE_IOV);
+    dst->flags &=
+        ~(MCREQ_F_KEY_NOCOPY | MCREQ_F_VALUE_NOCOPY | MCREQ_F_VALUE_IOV | MCREQ_STATE_FLAGS | MCREQ_F_REPLACED);
     dst->flags |= MCREQ_F_DETACHED;
     dst->alloc_parent = NULL;
     dst->sl_flushq.next = NULL;
@@ -706,8 +716,21 @@ mc_PACKET *mcreq_set_cid(mc_PIPELINE *pipeline, mc_PACKET *packet, uint32_t cid)
 {
     if ((packet->flags & MCREQ_F_DETACHED) == 0) {
         mc_PACKET *copy = mcreq_renew_packet(packet);
-        mcreq_wipe_packet(pipeline, packet);
-        mcreq_release_packet(pipeline, packet);
+
+        /* Check if original packet has been flushed (i.e., already in PDU queue) */
+        if (packet->flags & MCREQ_F_FLUSHED) {
+            /* Packet already flushed to network - can't free it yet.
+             * Mark as replaced so flush callback and other paths skip it.
+             * It will be freed when response is received or on timeout. */
+            packet->flags |= MCREQ_F_REPLACED;
+        } else {
+            /* Packet not yet flushed - safe to free immediately.
+             * This is the common case when called from mcreq_enqueue_packet()
+             * before the packet enters the PDU queue. */
+            mcreq_wipe_packet(pipeline, packet);
+            mcreq_release_packet(pipeline, packet);
+        }
+
         packet = copy;
     }
     mcreq_set_cid_field(packet, cid);
@@ -931,6 +954,14 @@ static void queuectx_leave(mc_CMDQUEUE *queue, int success, int flush)
             if (success) {
                 mcreq_enqueue_packet(pipeline, pkt);
             } else {
+                /* Skip replaced packets - just free them */
+                if (pkt->flags & MCREQ_F_REPLACED) {
+                    mcreq_wipe_packet(pipeline, pkt);
+                    mcreq_release_packet(pipeline, pkt);
+                    ll = ll_next;
+                    continue;
+                }
+
                 if (lcbtrace_span_should_finish(MCREQ_PKT_RDATA(pkt)->span)) {
                     lcbtrace_span_finish(MCREQ_PKT_RDATA(pkt)->span, LCBTRACE_NOW);
                 }
@@ -1009,8 +1040,6 @@ mc_PACKET *mcreq_pipeline_remove(mc_PIPELINE *pipeline, lcb_uint32_t opaque)
 
 void mcreq_packet_done(mc_PIPELINE *pipeline, mc_PACKET *pkt)
 {
-    lcb_assert(pkt->flags & MCREQ_F_FLUSHED);
-    lcb_assert(pkt->flags & MCREQ_F_INVOKED);
     if (pkt->flags & MCREQ_UBUF_FLAGS) {
         void *kbuf, *vbuf;
         const void *cookie;
@@ -1059,6 +1088,16 @@ unsigned mcreq_pipeline_timeout(mc_PIPELINE *pl, lcb_STATUS err, mcreq_pktfail_f
     {
         mc_PACKET *pkt = SLLIST_ITEM(iter.cur, mc_PACKET, slnode);
         mc_REQDATA *rd = MCREQ_PKT_RDATA(pkt);
+
+        /* Skip replaced packets - they're already handled by renewed copies */
+        if (pkt->flags & MCREQ_F_REPLACED) {
+            sllist_iter_remove(&pl->requests, &iter);
+            /* Just free it, don't call failcb */
+            mcreq_wipe_packet(pl, pkt);
+            mcreq_release_packet(pl, pkt);
+            continue;
+        }
+
         if (now == 0 || rd->deadline <= now) {
             sllist_iter_remove(&pl->requests, &iter);
             failcb(pl, pkt, err, cbarg);

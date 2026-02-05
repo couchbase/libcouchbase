@@ -301,6 +301,13 @@ typedef enum {
      * collection id is prepended to the key
      */
     MCREQ_F_HASCID = 1u << 12u,
+
+    /**
+     * This packet has been replaced by a renewed copy (e.g., after CID update).
+     * The packet may still be in queues but should be skipped during flush/processing.
+     * It will be freed naturally when removed from queues.
+     */
+    MCREQ_F_REPLACED = 1u << 13u,
 } mcreq_flags;
 
 typedef enum {
