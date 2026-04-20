@@ -64,7 +64,15 @@ static nb_SIZE mcreq__pktflush_callback(void *p, nb_SIZE hint, void *arg)
     }
 
     if (info->now && hint) {
-        MCREQ_PKT_RDATA(pkt)->start = info->now;
+        /* Rebase both start and deadline to the flush time, preserving the packet's remaining
+         * timeout budget. Updating only `start` breaks the `deadline >= start` invariant that
+         * mcreq_reset_timeouts relies on, which can abort the process when the flush callback runs
+         * after the original deadline (e.g. with a short per-op timeout and a stalled event loop).
+         * See CCBC-1685. */
+        mc_REQDATA *rd = MCREQ_PKT_RDATA(pkt);
+        hrtime_t remaining = rd->deadline > rd->start ? (rd->deadline - rd->start) : 0;
+        rd->start = info->now;
+        rd->deadline = info->now + remaining;
     }
 
     if (hint < pktsize) {

@@ -1072,10 +1072,13 @@ void mcreq_reset_timeouts(mc_PIPELINE *pl, lcb_U64 nstime)
     SLLIST_ITERBASIC(&pl->requests, nn)
     {
         mc_PACKET *pkt = SLLIST_ITEM(nn, mc_PACKET, slnode);
-        lcb_assert(MCREQ_PKT_RDATA(pkt)->deadline >= MCREQ_PKT_RDATA(pkt)->start);
-        hrtime_t old_timeout = (MCREQ_PKT_RDATA(pkt)->deadline - MCREQ_PKT_RDATA(pkt)->start);
-        MCREQ_PKT_RDATA(pkt)->start = nstime;
-        MCREQ_PKT_RDATA(pkt)->deadline = nstime + old_timeout;
+        mc_REQDATA *rd = MCREQ_PKT_RDATA(pkt);
+        /* Clamp rather than abort if the invariant is broken by a buggy caller. The primary fix
+         * lives in mcreq__pktflush_callback (CCBC-1684); this clamp downgrades any residual bug to
+         * a spurious immediate timeout instead of a crash. */
+        hrtime_t old_timeout = rd->deadline > rd->start ? (rd->deadline - rd->start) : 0;
+        rd->start = nstime;
+        rd->deadline = nstime + old_timeout;
     }
 }
 
