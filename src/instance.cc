@@ -860,6 +860,25 @@ static void destroy_cb(void *arg)
 }
 
 LIBCOUCHBASE_API
+void lcb_trim_memory(lcb_INSTANCE *instance)
+{
+    if (instance == nullptr) {
+        return;
+    }
+    mc_CMDQUEUE *cq = &instance->cmdq;
+    nb_SIZE released = 0;
+    for (unsigned ii = 0; ii < cq->_npipelines_ex; ++ii) {
+        mc_PIPELINE *pl = cq->pipelines[ii];
+        if (pl == nullptr) {
+            continue;
+        }
+        released += netbuf_shrink(&pl->nbmgr);
+        released += netbuf_shrink(&pl->reqpool);
+    }
+    lcb_log(LOGARGS(instance, DEBUG), "lcb_trim_memory released %u bytes of idle pool memory", (unsigned)released);
+}
+
+LIBCOUCHBASE_API
 void lcb_destroy_async(lcb_INSTANCE *instance, const void *arg)
 {
     instance->dtor_timer = lcbio_timer_new(instance->iotable, instance, destroy_cb);

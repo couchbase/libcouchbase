@@ -774,6 +774,55 @@ void netbuf_cleanup(nb_MGR *mgr)
     mblock_cleanup(&mgr->datapool);
 }
 
+/**
+ * Release the backing buffers of every block in @p pool->avail.
+ *
+ * For cache-slot headers (those owned by @p pool->cacheblocks) the header
+ * itself is left in place so it can be reused by @c alloc_new_block; only
+ * the @c root buffer is freed and the block is reset to its pre-allocation
+ * state. Standalone blocks are freed whole. In either case the block leaves
+ * the @c avail list.
+ *
+ * @return bytes of backing buffer memory released
+ */
+static nb_SIZE mblock_shrink(nb_MBPOOL *pool)
+{
+    sllist_iterator iter;
+    nb_SIZE released = 0;
+
+    SLLIST_ITERFOR(&pool->avail, &iter)
+    {
+        nb_MBLOCK *block = SLLIST_ITEM(iter.cur, nb_MBLOCK, slnode);
+        int is_standalone = mblock_is_standalone(block);
+        nb_SIZE block_size = block->nalloc;
+
+        sllist_iter_remove(&pool->avail, &iter);
+        pool->curblocks--;
+
+        mblock_wipe_block(block);
+
+        if (!is_standalone) {
+            /* Reset the cache-slot so alloc_new_block sees it as free. */
+            block->nalloc = 0;
+            block->start = 0;
+            block->cursor = 0;
+            block->wrap = 0;
+        }
+
+        released += block_size;
+    }
+
+    return released;
+}
+
+nb_SIZE netbuf_shrink(nb_MGR *mgr)
+{
+    nb_SIZE released = 0;
+    released += mblock_shrink(&mgr->datapool);
+    released += mblock_shrink(&mgr->sendq.elempool);
+    return released;
+}
+
 /******************************************************************************
  ******************************************************************************
  ** Block Dumping                                                            **

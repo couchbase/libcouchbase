@@ -344,6 +344,22 @@ void netbuf_cleanup(nb_MGR *mgr);
 void netbuf_cleanup_packet(nb_MGR *mgr, const void *packet);
 
 /**
+ * @brief Release idle memory back to the system.
+ *
+ * Walks every pool owned by @p mgr and frees the backing buffers of blocks
+ * sitting in the available list (blocks not currently servicing reservations).
+ * The active list is never touched. Cache-slot headers are kept but marked
+ * free so they can be re-used by a subsequent @c netbuf_mblock_reserve.
+ *
+ * Intended for long-lived instances that occasionally burst and then idle.
+ * See CCBC-1685.
+ *
+ * @param mgr the manager to shrink
+ * @return number of bytes released
+ */
+nb_SIZE netbuf_shrink(nb_MGR *mgr);
+
+/**
  * Populates the settings structure with the default settings. This structure
  * may then be modified or tuned and passed to netbuf_init()
  */

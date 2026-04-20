@@ -2116,6 +2116,52 @@ LIBCOUCHBASE_API
 void lcb_destroy_async(lcb_INSTANCE *instance, const void *arg);
 /**@} (Group: Destroy) */
 
+/**
+ * @brief Release cached pool memory back to the OS.
+ *
+ * libcouchbase services its hot path from per-pipeline buffer pools. When a
+ * packet is released, its backing block is parked on a "free" list inside the
+ * owning pool so the next reservation can be satisfied without calling
+ * `malloc`. The pools grow to match the peak concurrent working set and do
+ * not shrink: a long-lived @c lcb_INSTANCE that briefly bursts and then
+ * idles will retain that peak footprint until it is destroyed.
+ *
+ * Calling this function walks every pipeline owned by @p instance and frees
+ * the backing buffers of blocks sitting on the free list. Active blocks
+ * (those whose memory is currently handed out to an in-flight operation)
+ * are never touched, and no open server connection is closed. After the
+ * call, the next allocation will go back through `malloc`, so the cost of
+ * shrinking only pays off when the process would otherwise hold excess
+ * memory through a quiet period.
+ *
+ * Intended usage is periodic invocation from an application-level idle
+ * tick (e.g. once a minute, or after a batch completes) when the process
+ * runs close to a memory limit. There is no benefit to calling this on a
+ * busy instance — the freed blocks will be reallocated on the next burst.
+ * The call is synchronous and does not issue network I/O.
+ *
+ * Thread safety: this function must be called from the same thread that
+ * owns the I/O loop for @p instance, or with external synchronization that
+ * excludes all other libcouchbase calls on @p instance. It acquires no
+ * internal locks.
+ *
+ * @param instance the instance whose pools should be trimmed. Must be a
+ *                 valid, initialized instance (i.e. one returned by
+ *                 @ref lcb_create and not yet passed to @ref lcb_destroy).
+ *
+ * @uncommitted This function is provided to address operational scenarios
+ *              observed with long-lived instances in memory-constrained
+ *              containers. Its existence and signature may change in a
+ *              future release as the underlying pool implementation
+ *              evolves. Do not rely on it from code that must remain
+ *              compatible across future libcouchbase versions without
+ *              re-validation.
+ *
+ * @see lcb_destroy
+ */
+LIBCOUCHBASE_API
+void lcb_trim_memory(lcb_INSTANCE *instance);
+
 /** @internal */
 #define LCB_DATATYPE_JSON 0x01
 

@@ -592,3 +592,100 @@ TEST_F(NetbufTest, testPacketCleanup)
 
     clean_check(&mgr);
 }
+
+/*
+ * Regression tests for CCBC-1685.
+ *
+ * Long-lived lcb instances accumulate netbuf blocks on the avail list after
+ * bursty workloads. Without a way to release them, RSS plateaus at the peak
+ * working set until the instance is destroyed. netbuf_shrink() walks every
+ * pool's avail list and frees the backing buffers, leaving active blocks
+ * untouched.
+ */
+TEST_F(NetbufTest, shrinkFreesAvailBlocksAfterBurst)
+{
+    nb_MGR mgr;
+    netbuf_init(&mgr, nullptr);
+
+    /* Reserve enough independent blocks that multiple go on avail when
+     * released. With the default basealloc of 32 KB, 40 spans of 20 KB each
+     * force a new block every 2 spans. */
+    constexpr int n_spans = 40;
+    constexpr unsigned span_size = 20 * 1024;
+    std::array<nb_SPAN, n_spans> spans{};
+    for (int ii = 0; ii < n_spans; ++ii) {
+        spans[ii].size = span_size;
+        ASSERT_EQ(0, netbuf_mblock_reserve(&mgr, &spans[ii]));
+    }
+
+    /* Release in reverse order so trailing spans flip blocks to empty
+     * quickly and populate the avail list. */
+    for (int ii = n_spans - 1; ii >= 0; --ii) {
+        netbuf_mblock_release(&mgr, &spans[ii]);
+    }
+
+    ASSERT_NE(0, netbuf_is_clean(&mgr));
+    ASSERT_GT(mgr.datapool.curblocks, 0u) << "burst should have populated avail";
+
+    nb_SIZE before_curblocks = mgr.datapool.curblocks;
+    nb_SIZE released = netbuf_shrink(&mgr);
+
+    EXPECT_GE(released, before_curblocks * span_size)
+        << "shrink must return at least the total nalloc of the blocks it frees";
+    EXPECT_EQ(0u, mgr.datapool.curblocks) << "avail list must be empty after shrink";
+
+    /* After shrink, the pool must still be usable. */
+    nb_SPAN span;
+    span.size = 32;
+    ASSERT_EQ(0, netbuf_mblock_reserve(&mgr, &span));
+    netbuf_mblock_release(&mgr, &span);
+
+    clean_check(&mgr);
+}
+
+TEST_F(NetbufTest, shrinkLeavesActiveBlocksAlone)
+{
+    nb_MGR mgr;
+    netbuf_init(&mgr, nullptr);
+
+    /* Reserve a span and hold onto it — active list, not avail. */
+    nb_SPAN active;
+    active.size = 1024;
+    ASSERT_EQ(0, netbuf_mblock_reserve(&mgr, &active));
+
+    /* Cause a separate block to land on avail by allocating and releasing
+     * a larger span. */
+    nb_SPAN transient;
+    transient.size = 64 * 1024;
+    ASSERT_EQ(0, netbuf_mblock_reserve(&mgr, &transient));
+    netbuf_mblock_release(&mgr, &transient);
+
+    nb_SIZE released = netbuf_shrink(&mgr);
+    EXPECT_GT(released, 0u) << "the transient block should be reclaimed";
+
+    /* The active span must still be readable after shrink. */
+    memset(SPAN_BUFFER(&active), 0xAB, active.size);
+    char expected[1024];
+    memset(expected, 0xAB, sizeof(expected));
+    EXPECT_EQ(0, memcmp(SPAN_BUFFER(&active), expected, sizeof(expected)));
+
+    netbuf_mblock_release(&mgr, &active);
+    clean_check(&mgr);
+}
+
+TEST_F(NetbufTest, shrinkOnCleanPoolIsNoop)
+{
+    nb_MGR mgr;
+    netbuf_init(&mgr, nullptr);
+
+    EXPECT_EQ(0u, netbuf_shrink(&mgr));
+
+    /* Cycle a span to confirm the manager is still healthy. */
+    nb_SPAN span;
+    span.size = 500;
+    ASSERT_EQ(0, netbuf_mblock_reserve(&mgr, &span));
+    netbuf_mblock_release(&mgr, &span);
+    EXPECT_NE(0, netbuf_is_clean(&mgr));
+
+    netbuf_cleanup(&mgr);
+}
