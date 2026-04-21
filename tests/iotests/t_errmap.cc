@@ -131,6 +131,99 @@ TEST_F(ErrmapUnitTest, closesOnUnrecognizedError)
     lcb_cmdstore_destroy(scmd);
 }
 
+// Server::handle_unknown_error used to have an inverted guard around `newerr`.
+// When an errmap entry is tagged `conn-state-invalidated` and no earlier
+// branch (TEMPORARY/AUTH/ITEM_LOCKED) populates `newerr`, the code is supposed
+// to default it to LCB_ERR_GENERIC before calling lcbio_ctx_senderr() so the
+// per-command completion surfaces a non-success status. The original code
+// defaulted `newerr` to LCB_ERR_GENERIC only when it was already non-success,
+// which meant the common case (EINTERNAL, whose errmap entry carries
+// `internal` + `conn-state-invalidated` and no other populating attribute)
+// propagated LCB_SUCCESS through the dispatch path.
+//
+// This test exercises the conn-state-invalidated-only branch deterministically
+// on every platform regardless of how the real errmap evolves. It replaces the
+// connected instance's errmap with one that maps 0x7ff0 (a mock-accepted code)
+// to *only* the conn-state-invalidated attribute, then drives the mock via
+// OPFAIL to return that code. ErrorMap::parse() uses std::map::insert() which
+// does not overwrite existing entries, so the test frees and recreates the
+// errmap before parsing.
+TEST_F(ErrmapUnitTest, connStateInvalidatedPropagatesNonSuccessStatus)
+{
+    SKIP_UNLESS_MOCK();
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    createErrmapConnection(hw, &instance);
+
+    // Prime the connection with a successful store so the mock has a real
+    // socket to target and so we're sure negotiation is complete before we
+    // start injecting failures.
+    const char *key = "cs-inv-only";
+    lcb_CMDSTORE *scmd;
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
+    lcb_cmdstore_key(scmd, key, strlen(key));
+    lcb_cmdstore_value(scmd, "val", 3);
+
+    ResultCookie cookie;
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)opcb);
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &cookie, scmd));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(LCB_SUCCESS, cookie.rc);
+
+    // Replace the instance's errmap entirely with one that maps a synthetic
+    // code that the mock accepts (0x7ff0) to conn-state-invalidated only.
+    const uint16_t synthetic_code = 0x7ff0;
+    const char *synthetic_errmap_json =
+        "{"
+        "  \"version\": 1,"
+        "  \"revision\": 1,"
+        "  \"errors\": {"
+        "    \"7FF0\": {"
+        "      \"name\": \"CS_INV_ONLY\","
+        "      \"desc\": \"synthetic conn-state-invalidated\","
+        "      \"attrs\": [\"conn-state-invalidated\"]"
+        "    }"
+        "  }"
+        "}";
+    lcb_errmap_free(instance->settings->errmap);
+    instance->settings->errmap = lcb_errmap_new();
+    std::string errmsg;
+    ASSERT_TRUE(instance->settings->errmap->parse(synthetic_errmap_json, strlen(synthetic_errmap_json), errmsg))
+        << errmsg;
+
+    // Sanity: the injected code carries only conn-state-invalidated.
+    const lcb::errmap::Error &injected = instance->settings->errmap->getError(synthetic_code);
+    ASSERT_TRUE(injected.isValid());
+    ASSERT_TRUE(injected.hasAttribute(lcb::errmap::CONN_STATE_INVALIDATED));
+    ASSERT_FALSE(injected.hasAttribute(lcb::errmap::TEMPORARY));
+    ASSERT_FALSE(injected.hasAttribute(lcb::errmap::AUTH));
+    ASSERT_FALSE(injected.hasAttribute(lcb::errmap::ITEM_LOCKED));
+    ASSERT_FALSE(injected.hasAttribute(lcb::errmap::SPECIAL_HANDLING));
+    ASSERT_FALSE(injected.hasAttribute(lcb::errmap::AUTO_RETRY));
+
+    // Arrange for the mock to fail the next operation on this server with
+    // the synthetic code.
+    int srvix = instance->map_key(key);
+    MockCommand cmd(MockCommand::OPFAIL);
+    cmd.set("server", srvix);
+    cmd.set("code", synthetic_code);
+    cmd.set("count", 1);
+    doMockTxn(cmd);
+
+    // Issue the store that must hit our synthetic error. With the pre-fix
+    // code this assertion fails: cookie.rc comes back as LCB_SUCCESS because
+    // newerr was never populated and LCB_SUCCESS was carried through err_override
+    // all the way to the operation callback. After the fix newerr is defaulted
+    // to LCB_ERR_GENERIC and the callback sees a non-success rc.
+    cookie.reset();
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &cookie, scmd));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_TRUE(cookie.called);
+    ASSERT_NE(LCB_SUCCESS, cookie.rc);
+
+    lcb_cmdstore_destroy(scmd);
+}
+
 void ErrmapUnitTest::checkRetryVerify(uint16_t errcode)
 {
     HandleWrap hw;

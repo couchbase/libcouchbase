@@ -451,7 +451,7 @@ int Server::handle_unknown_error(const mc_PACKET *request, const MemcachedRespon
     }
 
     if (err.hasAttribute(errmap::CONN_STATE_INVALIDATED)) {
-        if (newerr != LCB_SUCCESS) {
+        if (newerr == LCB_SUCCESS) {
             newerr = LCB_ERR_GENERIC;
         }
         lcbio_ctx_senderr(connctx, newerr);
