@@ -578,15 +578,12 @@ TEST_F(GetUnitTest, testFailoverAndGetReplica)
     ASSERT_EQ(3, lcb_get_num_replicas(instance));
     ASSERT_EQ(4, lcb_get_num_nodes(instance));
 
-    // Set the timeout for 100 ms
-    lcb_uint32_t tmoval = 100000;
-    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
-    // Reduce configuration poll interval to get new configuration sooner
-    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFIG_POLL_INTERVAL, &tmoval);
-    std::uint32_t yes = 1;
-    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_WAIT_FOR_CONFIG, &yes);
-
-    // store keys
+    // store keys first, using the default operation timeout. The short
+    // 100ms timeout configured below is only required to accelerate the
+    // failover + replica-read path later in this test; applying it to the
+    // initial UPSERT makes the test flaky on slow CI workers (e.g. Windows
+    // Debug builds), where just the SCRAM-SHA-512 handshake + SELECT_BUCKET
+    // on the first connection to a KV node already exceeds 100ms.
     size_t counter = 0;
     lcb_CMDSTORE *scmd;
     lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
@@ -598,6 +595,14 @@ TEST_F(GetUnitTest, testFailoverAndGetReplica)
     lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
     lcb_wait(instance, LCB_WAIT_NOCHECK);
     ASSERT_EQ(1U, counter);
+
+    // Set the timeout for 100 ms
+    lcb_uint32_t tmoval = 100000;
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
+    // Reduce configuration poll interval to get new configuration sooner
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFIG_POLL_INTERVAL, &tmoval);
+    std::uint32_t yes = 1;
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_WAIT_FOR_CONFIG, &yes);
 
     // check server index
     int nodeFirstReplica = mock->getKeyIndex(instance, key, "default", 1);
