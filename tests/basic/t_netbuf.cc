@@ -489,17 +489,17 @@ struct my_PACKET {
         }
     }
 
-    [[nodiscard]] auto key() -> nb_SPAN *
+    auto key() -> nb_SPAN *
     {
         return &key_;
     }
 
-    [[nodiscard]] auto value() -> nb_SPAN *
+    auto value() -> nb_SPAN *
     {
         return &value_;
     }
 
-    [[nodiscard]] auto is_flushed() const -> bool
+    auto is_flushed() const -> bool
     {
         return is_flushed_;
     }
@@ -509,7 +509,7 @@ struct my_PACKET {
         is_flushed_ = true;
     }
 
-    [[nodiscard]] auto size() const -> std::size_t
+    auto size() const -> std::size_t
     {
         return key_.size + value_.size;
     }
