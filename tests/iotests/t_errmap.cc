@@ -18,7 +18,11 @@
 #include "config.h"
 #include "iotests.h"
 #include "internal.h"
+#include "bucketconfig/clconfig.h"
+#include <cstdarg>
+#include <cstdio>
 #include <map>
+#include <vector>
 
 class ErrmapUnitTest : public MockUnitTest
 {
@@ -324,6 +328,251 @@ TEST_F(ErrmapUnitTest, destroyDuringConnStateInvalidatedRefreshIsSafe)
 
     ASSERT_FALSE(cookie.called) << "operation callback fired after lcb_destroy returned";
     ASSERT_EQ(LCB_ERR_SDK_INTERNAL, cookie.rc) << "cookie memory was written after lcb_destroy returned";
+}
+
+// CCBC-1687: asserts that the "skip non-clean server in CCCP refresh" guard
+// actually fires on the exact path that crashes on Windows/TLS/IOCP
+// (CV2870). The race is: a conn-state-invalidated KV error drives
+// Server::socket_failed(), which must flip the pipeline's state to
+// S_ERRDRAIN BEFORE purge(REFRESH_ALWAYS) -> instance->bootstrap() ->
+// CccpProvider::refresh() -> schedule_next_request() runs. The guard in
+// schedule_next_request() rejects any find_server() result whose state is
+// not S_CLEAN and falls through to opening a fresh CCCP connection via
+// memd_sockpool, avoiding the use-after-free on the dying pipeline's
+// lcbio_CTX.
+//
+// The fix has two parts and both must be in place for the guard to fire:
+//   1. src/mcserver/mcserver.cc: Server::socket_failed() pre-flips
+//      Server::state = S_ERRDRAIN before calling purge(REFRESH_ALWAYS).
+//      Without this, state is still S_CLEAN inside
+//      CccpProvider::schedule_next_request() when it runs synchronously
+//      out of instance->bootstrap(), and the guard passes through.
+//   2. src/bucketconfig/bc_cccp.cc: the guard itself in
+//      schedule_next_request() that rejects non-clean servers returned
+//      by find_server() and falls through to memd_sockpool->get().
+//
+// The assertion is observational: we install a custom logger via
+// lcb_cntl(LCB_CNTL_LOGGER) and verify that the sentinel DEBUG line
+// "Skipping server struct ... for CCCP refresh" appears in the captured
+// output. A future regression that either undoes the pre-flip or removes
+// the guard trips this test on every platform, not just IOCP.
+//
+// Determinism across IO plugins: the guard only fires when
+// CccpProvider::schedule_next_request() picks the dying pipeline's host
+// as `next_host` AND find_server(*next_host) returns that still-errored
+// Server. On a default 4-node mock, Hostlist::next() may return any of
+// the four nodes depending on internal ix state, and on synchronous IO
+// plugins (select) start_errored_ctx() -> finalize_errored_ctx() flips
+// the pipeline's state back to S_CLEAN within the same tick, collapsing
+// the guard window. To make the assertion reliable across IOCP, select,
+// and any future plugin, we replace the CCCP provider's nodes list with
+// a single-entry list containing only the dying server's host before
+// driving the failing store. Hostlist::assign() (called from
+// CccpProvider::configure_nodes) resets the iterator, so the first
+// nodes->next() returned during the post-error refresh is guaranteed to
+// be the dying host, find_server() resolves to the pipeline we just
+// flipped to S_ERRDRAIN, and the guard's state != S_CLEAN check fires.
+//
+// Timing note: lcb_wait() returns the moment the KV operation callback
+// fires, but the socket_failed -> purge -> bootstrap chain is scheduled
+// from the async timer armed by lcbio_ctx_senderr() and therefore does
+// not run until the next event-loop tick. After the failing store's
+// lcb_wait() we pump the loop explicitly with lcb_tick_nowait() so the
+// capture logger has a chance to receive the sentinel before we assert
+// on it. Without this pump the assertion race-fails on platforms whose
+// event loops exit the moment the pending count reaches zero.
+//
+// The crash itself only manifests on IOCP (because the UAF requires an
+// async completion firing against a freed ctx, which synchronous-send
+// plugins never produce). The guard is still a correctness invariant
+// everywhere, so this test is portable across the plugins CV2870
+// reproduced on. The deterministic destroy-during-refresh reproducer is
+// ErrmapUnitTest.destroyDuringConnStateInvalidatedRefreshIsSafe above;
+// this test is the observational companion that specifically checks the
+// guard's code path was exercised on the failing store's error flow.
+namespace
+{
+struct CaptureLogger {
+    CaptureLogger() : base(nullptr) {}
+    lcb_LOGGER *base;
+    std::vector< std::string > messages;
+
+    bool contains(const std::string &needle) const
+    {
+        for (const std::string &m : messages) {
+            if (m.find(needle) != std::string::npos) {
+                return true;
+            }
+        }
+        return false;
+    }
+};
+} // namespace
+
+extern "C" {
+static void capture_logger_cb(const lcb_LOGGER *logger, uint64_t, const char *, lcb_LOG_SEVERITY, const char *, int,
+                              const char *fmt, va_list ap)
+{
+    char buf[4096];
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    CaptureLogger *cookie = nullptr;
+    lcb_logger_cookie(logger, reinterpret_cast< void ** >(&cookie));
+    if (cookie != nullptr) {
+        cookie->messages.emplace_back(buf);
+    }
+}
+}
+
+TEST_F(ErrmapUnitTest, refreshAfterConnStateInvalidatedSkipsErroredPipeline)
+{
+    SKIP_UNLESS_MOCK();
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    createErrmapConnection(hw, &instance);
+
+    // Prime the connection so negotiation is complete before we start
+    // swapping the errmap and installing the capture logger.
+    const char *key = "cs-inv-refresh";
+    lcb_CMDSTORE *scmd;
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
+    lcb_cmdstore_key(scmd, key, strlen(key));
+    lcb_cmdstore_value(scmd, "v", 1);
+
+    ResultCookie cookie;
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)opcb);
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &cookie, scmd));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(LCB_SUCCESS, cookie.rc);
+
+    // Replace the errmap so 0x7ff0 carries only conn-state-invalidated.
+    // See the commentary in connStateInvalidatedPropagatesNonSuccessStatus
+    // for why we free-and-recreate the errmap here rather than merging.
+    const uint16_t synthetic_code = 0x7ff0;
+    const char *synthetic_errmap_json =
+        "{"
+        "  \"version\": 1,"
+        "  \"revision\": 1,"
+        "  \"errors\": {"
+        "    \"7FF0\": {"
+        "      \"name\": \"CS_INV_ONLY\","
+        "      \"desc\": \"synthetic conn-state-invalidated\","
+        "      \"attrs\": [\"conn-state-invalidated\"]"
+        "    }"
+        "  }"
+        "}";
+    lcb_errmap_free(instance->settings->errmap);
+    instance->settings->errmap = lcb_errmap_new();
+    std::string errmsg;
+    ASSERT_TRUE(instance->settings->errmap->parse(synthetic_errmap_json, strlen(synthetic_errmap_json), errmsg))
+        << errmsg;
+
+    // Identify the pipeline that is about to enter S_ERRDRAIN and override
+    // the CCCP provider's nodes list so the post-error refresh is forced
+    // to select that pipeline's host. Without this override, Hostlist::next()
+    // may return any of the 4 mock nodes on the refresh that runs out of
+    // socket_failed(), and on synchronous-IO plugins the dying pipeline's
+    // state is already back to S_CLEAN by the time the iteration reaches
+    // it. See the comment block above this test for the full rationale.
+    int srvix = instance->map_key(key);
+    lcb::Server *dying = instance->get_server(srvix);
+    ASSERT_NE(nullptr, dying);
+    lcb::Hostlist single;
+    single.add(dying->get_host());
+    lcb::clconfig::Provider *cccp = instance->confmon->get_provider(lcb::clconfig::CLCONFIG_CCCP);
+    ASSERT_NE(nullptr, cccp);
+    cccp->configure_nodes(single);
+
+    // Disable the Bootstrap::bootstrap() error-counter throttle for this
+    // test. Server::purge(REFRESH_ALWAYS) triggers an immediate
+    // bootstrap(BS_REFRESH_THROTTLE | BS_REFRESH_INCRERR) synchronously out
+    // of socket_failed(). With the default error threshold of 100 and the
+    // 10ms weird_things_delay, the first refresh after the KV error is
+    // silently dropped if the primer's post-connect bootstrap set
+    // last_refresh within the last 10ms -- which it does consistently on
+    // fast local mocks. The throttle's return-without-calling-
+    // schedule_next_request branch means the guard never runs at a moment
+    // when the dying pipeline is still in S_ERRDRAIN; by the time a later
+    // refresh fires, start_errored_ctx() -> finalize_errored_ctx() has
+    // already reset state to S_CLEAN. Setting the threshold to 1 makes the
+    // throttle's `errcounter < errthresh` check fall through after the
+    // very first BS_REFRESH_INCRERR, so the synchronous refresh from
+    // socket_failed() runs schedule_next_request() with the pipeline's
+    // state still at S_ERRDRAIN. Only schedule_next_request() emits the
+    // sentinel we assert on.
+    std::size_t errthresh_override = 1;
+    ASSERT_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFERRTHRESH, &errthresh_override));
+
+    // Install the capture logger now that negotiation is done. We do not
+    // care about connect/bootstrap chatter; we only want to observe the
+    // CCCP provider's behaviour during the post-error refresh. User
+    // loggers receive every severity level regardless of the console
+    // minlevel filter, so the DEBUG-level sentinel line will be delivered.
+    CaptureLogger cap;
+    ASSERT_EQ(LCB_SUCCESS, lcb_logger_create(&cap.base, &cap));
+    ASSERT_EQ(LCB_SUCCESS, lcb_logger_callback(cap.base, capture_logger_cb));
+    ASSERT_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_LOGGER, cap.base));
+
+    // Arrange for the mock to fail the next operation on the target server
+    // with the synthetic code.
+    MockCommand cmd(MockCommand::OPFAIL);
+    cmd.set("server", srvix);
+    cmd.set("code", synthetic_code);
+    cmd.set("count", 1);
+    doMockTxn(cmd);
+
+    // Issue the store that triggers the disconnect. The library path is:
+    //   try_read -> Server::handle_unknown_error (ERRMAP_ACTION_DISCONN)
+    //     -> operation callback dispatched synchronously (cookie fires)
+    //     -> lcbio_ctx_senderr: async_signal(ctx->as_err)
+    //   lcb_wait() returns here because pending count is zero.
+    //
+    //   Next event-loop tick (driven by lcb_tick_nowait below):
+    //     on_error -> Server::socket_failed
+    //       state = S_ERRDRAIN                        [pre-flip]
+    //       purge(REFRESH_ALWAYS)
+    //         -> instance->bootstrap(BS_REFRESH_THROTTLE|BS_REFRESH_INCRERR)
+    //              -> CccpProvider::refresh
+    //                   -> schedule_next_request
+    //                        [guard sees state != S_CLEAN, logs
+    //                         "Skipping server struct ..." and falls
+    //                         through to memd_sockpool->get()]
+    //       start_errored_ctx(S_ERRDRAIN)             [drain / finalize]
+    cookie.reset();
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &cookie, scmd));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_TRUE(cookie.called);
+    ASSERT_NE(LCB_SUCCESS, cookie.rc);
+
+    // Pump the event loop so the async on_error -> socket_failed ->
+    // purge -> bootstrap chain runs while the capture logger is still
+    // installed. We iterate up to a bounded number of ticks and break
+    // as soon as the sentinel has been observed so the test stays
+    // fast in the happy case. Both the select and iocp IO plugins
+    // implement the tick entry, so this loop is portable across the
+    // platforms CV2870 reproduced on.
+    for (int ii = 0; ii < 50 && !cap.contains("Skipping server struct"); ++ii) {
+        ASSERT_EQ(LCB_SUCCESS, lcb_tick_nowait(instance));
+    }
+
+    // The sentinel line only appears when the guard fires, which only
+    // happens when (a) socket_failed pre-flips state before calling
+    // purge, and (b) schedule_next_request rejects non-clean servers. If
+    // either part of the fix regresses, this assertion fails and points
+    // directly at the hazard that caused the CV2870 SEHs.
+    EXPECT_TRUE(cap.contains("Skipping server struct"))
+        << "CCCP refresh guard (CCBC-1687) did not fire during socket_failed -> "
+           "purge -> bootstrap. Either Server::socket_failed no longer pre-flips "
+           "state to S_ERRDRAIN, or CccpProvider::schedule_next_request no longer "
+           "rejects non-clean servers. Captured log lines: "
+        << cap.messages.size();
+
+    lcb_cmdstore_destroy(scmd);
+
+    // Tear the instance down before the capture logger so that any
+    // destroy-time log messages cannot re-enter cap after it goes out of
+    // scope. Then destroy the logger object itself.
+    hw.destroy();
+    lcb_logger_destroy(cap.base);
 }
 
 void ErrmapUnitTest::checkRetryVerify(uint16_t errcode)

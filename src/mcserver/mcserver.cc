@@ -1271,6 +1271,19 @@ void Server::socket_failed(lcb_STATUS err)
         return;
     }
 
+    /*
+     * CCBC-1687: flip state to S_ERRDRAIN *before* purge(REFRESH_ALWAYS) so
+     * the CCCP refresh that purge() kicks off via instance->bootstrap() sees
+     * a non-clean pipeline and skips it in
+     * CccpProvider::schedule_next_request(). Note that we only flip the
+     * state flag here -- we do NOT invoke start_errored_ctx() yet, because
+     * its side effects (finalize_errored_ctx() -> close connctx + reconnect,
+     * or flush_start = flush_errdrain) must run after purge() has failed
+     * the pipeline's pending packets, not before. start_errored_ctx() below
+     * is idempotent on the state assignment (it re-sets state = next_state
+     * unconditionally).
+     */
+    state = S_ERRDRAIN;
     purge(err, 0, REFRESH_ALWAYS);
     lcb_maybe_breakout(instance);
     start_errored_ctx(S_ERRDRAIN);

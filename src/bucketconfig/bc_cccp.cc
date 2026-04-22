@@ -249,6 +249,25 @@ lcb_STATUS CccpProvider::schedule_next_request(lcb_STATUS err, bool can_rollover
         }
     } while (next_host != nullptr);
 
+    /*
+     * CCBC-1687: reject the result of find_server() if the pipeline is not in a clean state.
+     * When the refresh is triggered from Server::socket_failed() -> purge(REFRESH_ALWAYS) ->
+     * instance->bootstrap(), the very server that just errored is still present in
+     * cmdq.pipelines, so find_server() can return it even though it has just been flipped
+     * to S_ERRDRAIN. Queuing GET_CLUSTER_CONFIG onto such a pipeline races with
+     * start_errored_ctx() and leads to a use-after-free on completion-style IO plugins
+     * (IOCP). Falling through to memd_sockpool->get() opens a fresh connection that is not
+     * shared with the errored pipeline.
+     */
+    if (server != nullptr && server->state != lcb::Server::S_CLEAN) {
+        lcb_log(LOGARGS(this, DEBUG),
+                "Skipping server struct %p (" LCB_HOST_FMT
+                ") for CCCP refresh: pipeline is not in clean state (state=%d). "
+                "Will open a fresh CCCP connection instead.",
+                (void *)server, LCB_HOST_ARG(this->parent->settings, next_host), (int)server->state);
+        server = nullptr;
+    }
+
     /* there is no connected sockets */
     if (server != nullptr) {
         if (skip_if_push_supported && server->supports_config_push()) {
