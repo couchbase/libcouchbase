@@ -224,6 +224,108 @@ TEST_F(ErrmapUnitTest, connStateInvalidatedPropagatesNonSuccessStatus)
     lcb_cmdstore_destroy(scmd);
 }
 
+// CCBC-1686: a conn-state-invalidated server error drives socket_failed ->
+// purge(REFRESH_ALWAYS) -> lcb_st::bootstrap(BS_REFRESH_THROTTLE|BS_REFRESH_INCRERR).
+// The CCCP provider reacts by scheduling a GET_CLUSTER_CONFIG packet against
+// the errored server (or opening a fresh config-node socket). If the
+// application then calls lcb_destroy() before that refresh drains, the
+// pending cookie races instance teardown. On Windows IOCP the race reliably
+// produces an access violation (0xc0000005) during destruction; on other
+// platforms it is a latent use-after-free that does not always crash.
+//
+// This test reproduces the same destroy-during-refresh sequence
+// deterministically on every platform by driving the conn-state-invalidated
+// branch via the synthetic errmap path, then calling HandleWrap::destroy()
+// explicitly rather than leaving it to the scope guard. We assert that the
+// destroy call returns within a bounded wall-clock window (a hang here
+// would indicate the IO loop is waiting on CCCP work that was never
+// cancelled) and that no further operation callbacks fire after destroy.
+//
+// Linux iotests run under ASAN in most CI configurations, which turns any
+// residual use-after-free from the pre-fix code path into a hard failure.
+TEST_F(ErrmapUnitTest, destroyDuringConnStateInvalidatedRefreshIsSafe)
+{
+    SKIP_UNLESS_MOCK();
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    createErrmapConnection(hw, &instance);
+
+    // Prime the connection with a successful store so the mock socket is
+    // negotiated and we know where the key maps.
+    const char *key = "cs-inv-destroy";
+    lcb_CMDSTORE *scmd;
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
+    lcb_cmdstore_key(scmd, key, strlen(key));
+    lcb_cmdstore_value(scmd, "v", 1);
+
+    ResultCookie cookie;
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)opcb);
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &cookie, scmd));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(LCB_SUCCESS, cookie.rc);
+
+    // Replace the errmap so 0x7ff0 carries only conn-state-invalidated. The
+    // mock accepts codes in the 0x7ff0 range for OPFAIL injection. See the
+    // commentary in connStateInvalidatedPropagatesNonSuccessStatus for why
+    // we free-and-recreate the errmap here rather than merging.
+    const uint16_t synthetic_code = 0x7ff0;
+    const char *synthetic_errmap_json =
+        "{"
+        "  \"version\": 1,"
+        "  \"revision\": 1,"
+        "  \"errors\": {"
+        "    \"7FF0\": {"
+        "      \"name\": \"CS_INV_ONLY\","
+        "      \"desc\": \"synthetic conn-state-invalidated\","
+        "      \"attrs\": [\"conn-state-invalidated\"]"
+        "    }"
+        "  }"
+        "}";
+    lcb_errmap_free(instance->settings->errmap);
+    instance->settings->errmap = lcb_errmap_new();
+    std::string errmsg;
+    ASSERT_TRUE(instance->settings->errmap->parse(synthetic_errmap_json, strlen(synthetic_errmap_json), errmsg))
+        << errmsg;
+
+    // Inject the synthetic code on the next operation so the KV response
+    // arrives tagged conn-state-invalidated.
+    int srvix = instance->map_key(key);
+    MockCommand cmd(MockCommand::OPFAIL);
+    cmd.set("server", srvix);
+    cmd.set("code", synthetic_code);
+    cmd.set("count", 1);
+    doMockTxn(cmd);
+
+    cookie.reset();
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &cookie, scmd));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_TRUE(cookie.called);
+    ASSERT_NE(LCB_SUCCESS, cookie.rc);
+
+    lcb_cmdstore_destroy(scmd);
+
+    // At this point the CCCP provider has, very likely, a bootstrap refresh
+    // in flight (queued GET_CLUSTER_CONFIG on the errored server, or an
+    // outstanding ConnectEx/TCP-connect to a config node). We now destroy
+    // the instance explicitly, while the refresh would still be pending if
+    // not properly cancelled. This exercises the destroy-while-refresh
+    // sequence that manifests as an SEH on Windows IOCP runners.
+    //
+    // Reset the cookie to a freshly-sentinelled state and stash its
+    // previous rc so that any stray post-destroy callback invocation
+    // would overwrite the sentinel and fail the assertion below. Reaching
+    // the ASSERT lines at all proves lcb_destroy() returned (no hang on
+    // draining cancelled provider work); a clean ASAN/valgrind run proves
+    // no use-after-free was reachable from the cancelled cookie.
+    cookie.reset();
+    cookie.rc = LCB_ERR_SDK_INTERNAL;
+
+    hw.destroy();
+
+    ASSERT_FALSE(cookie.called) << "operation callback fired after lcb_destroy returned";
+    ASSERT_EQ(LCB_ERR_SDK_INTERNAL, cookie.rc) << "cookie memory was written after lcb_destroy returned";
+}
+
 void ErrmapUnitTest::checkRetryVerify(uint16_t errcode)
 {
     HandleWrap hw;

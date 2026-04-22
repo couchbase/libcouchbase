@@ -703,6 +703,31 @@ void lcb_destroy(lcb_INSTANCE *instance)
     lcb_ASPEND_SETTYPE::iterator it;
     lcb_ASPEND_SETTYPE *pendq;
 
+    /*
+     * CCBC-1686: synchronously stop every active configuration provider
+     * before tearing down the rest of the instance. A server-level error
+     * whose errmap entry carries the `conn-state-invalidated` attribute (for
+     * example EINTERNAL, 0x84) drives mcserver::Server::handle_unknown_error
+     * into the disconnect branch. That path funnels through
+     * Server::socket_failed -> Server::purge(REFRESH_ALWAYS), which in turn
+     * calls lcb_st::bootstrap(BS_REFRESH_THROTTLE | BS_REFRESH_INCRERR) and
+     * kicks off an asynchronous CCCP refresh. The refresh may allocate a
+     * CccpCookie and queue a GET_CLUSTER_CONFIG packet on the very server
+     * that is about to be destroyed, or open a fresh ConnectEx/TCP-connect
+     * against a config node. If the application calls lcb_destroy() before
+     * that in-flight work drains, the race window between provider work and
+     * instance teardown is wide enough on Windows IOCP to produce a user-
+     * visible access violation (0xc0000005) on test/debug runners. Calling
+     * Confmon::stop_real() here cancels the active provider's connection
+     * request, closes its io context, detaches any in-flight command
+     * cookie, and cancels the provider-owned timer. After this point the
+     * destroying flag gate in lcb_st::bootstrap prevents any new provider
+     * activity from being scheduled while the rest of destruction unwinds.
+     */
+    if (instance->confmon) {
+        instance->confmon->stop_real();
+    }
+
     DESTROY(delete, bs_state)
     DESTROY(delete, ht_nodes)
     DESTROY(delete, mc_nodes)
