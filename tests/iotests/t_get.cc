@@ -674,9 +674,26 @@ TEST_F(GetUnitTest, testFailoverAndGetReplica)
         lcb_CMDGETREPLICA *rcmd;
         lcb_cmdgetreplica_create(&rcmd, LCB_REPLICA_MODE_IDX0); // first replica
         lcb_cmdgetreplica_key(rcmd, key.c_str(), key.size());
-        /* here we definitely have new configuration already and the library will reject get_with_replica request */
-        EXPECT_EQ(LCB_ERR_NO_MATCHING_SERVER, lcb_getreplica(instance, nullptr, rcmd));
+        /* By this point the library has usually absorbed the new
+         * configuration and will reject the getreplica. But the config
+         * refresh is asynchronous; on slow CI the library may still
+         * accept, schedule and later time the op out. Accept either
+         * outcome, as the IDX1 block above does. Using a non-null cookie
+         * keeps replicaget_callback safe in the accepted-then-timed-out
+         * path. */
+        ReplicaGetCookie rck;
+        rck.remaining = 1;
+        rck.expectrc.insert(LCB_ERR_MAP_CHANGED);
+        rck.expectrc.insert(LCB_ERR_TIMEOUT);
+        lcb_STATUS rc = lcb_getreplica(instance, &rck, rcmd);
+        EXPECT_TRUE(rc == LCB_SUCCESS || rc == LCB_ERR_NO_MATCHING_SERVER);
         lcb_cmdgetreplica_destroy(rcmd);
+        if (rc == LCB_SUCCESS) {
+            lcb_install_callback(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)replicaget_callback);
+            lcb_log(LOGARGS(instance, INFO), "get first replica");
+            lcb_wait(instance, LCB_WAIT_DEFAULT);
+            EXPECT_EQ(0, rck.remaining);
+        }
     }
 
     counter = 0;
