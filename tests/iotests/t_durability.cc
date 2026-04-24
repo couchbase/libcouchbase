@@ -507,6 +507,13 @@ TEST_F(DurabilityUnitTest, testModified)
 TEST_F(DurabilityUnitTest, testQuickTimeout)
 {
     LCB_TEST_REQUIRE_FEATURE("observe")
+    const char *io_plugin = getenv("LCB_IOPS_NAME");
+    if (io_plugin != nullptr && strcmp(io_plugin, "libuv") == 0) {
+        MockEnvironment::printSkipMessage(__FILE__, __LINE__,
+                                          "libuv caches loop->time once per iteration; the 5us timer races "
+                                          "OBSERVE completion and the test stays flaky on libuv only (see CCBC-1690)");
+        return;
+    }
     lcb_INSTANCE *instance;
     HandleWrap hwrap;
     lcb_durability_opts_t opts = {0};
