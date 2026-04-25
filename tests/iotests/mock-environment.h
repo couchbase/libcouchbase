@@ -482,6 +482,7 @@ class MockEnvironment : public ::testing::Environment
     static MockEnvironment *instance_;
 
     void bootstrapRealCluster();
+    void waitForWriteReady(lcb_INSTANCE *instance);
     const struct test_server_info *mock{nullptr};
     ServerParams serverParams;
     int numNodes{4};

@@ -505,7 +505,74 @@ void MockEnvironment::bootstrapRealCluster()
     featureRegistry.insert("lock");
 
     numNodes = ii;
+
+    waitForWriteReady(tmphandle);
+
     lcb_destroy(tmphandle);
+}
+
+extern "C" {
+static void warmupStoreCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
+{
+    lcb_STATUS *out = nullptr;
+    lcb_respstore_cookie(resp, reinterpret_cast<void **>(&out));
+    *out = lcb_respstore_status(resp);
+}
+}
+
+void MockEnvironment::waitForWriteReady(lcb_INSTANCE *instance)
+{
+    /*
+     * After a contaminating test drops a scope holding many collections, the
+     * Couchbase Server data engine continues to evict the collection contents
+     * asynchronously even though the manifest UID has propagated. KV writes
+     * during that window can come back as ETMPFAIL (errmap TEMPORARY) which
+     * lcb retries up to LCB_CNTL_OP_TIMEOUT (default 2.5s) and then surfaces
+     * as LCB_ERR_TEMPORARY_FAILURE. Each ctest plugin entry runs in its own
+     * process and starts a fresh test binary roughly 1-2 seconds after the
+     * previous contaminating test's drop_scope returns -- well inside that
+     * window on Server 8.0+. Probe the bucket here, on the bootstrap handle,
+     * until a small upsert succeeds (or an outright non-transient error
+     * shows up). This runs once per process during global SetUp, so the
+     * cost is paid at most once per ctest entry.
+     */
+    auto *old_callback = lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)warmupStoreCallback);
+
+    const std::string key = "_lcb_test_warmup";
+    const std::string value = "1";
+    constexpr int max_attempts = 60;
+    /*
+     * 500ms in microseconds. Plain unsigned int rather than POSIX
+     * useconds_t so the file builds on MSVC, which does not provide
+     * the type. mocksupport/server.h defines usleep as
+     * Sleep((us) / 1000) on Windows, accepting any integral input.
+     */
+    constexpr unsigned int backoff_us = 500000;
+
+    lcb_STATUS rc = LCB_SUCCESS;
+    for (int attempt = 0; attempt < max_attempts; ++attempt) {
+        rc = LCB_ERR_TIMEOUT;
+
+        lcb_CMDSTORE *cmd;
+        lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
+        lcb_cmdstore_key(cmd, key.data(), key.size());
+        lcb_cmdstore_value(cmd, value.data(), value.size());
+        lcb_STATUS sched_rc = lcb_store(instance, &rc, cmd);
+        lcb_cmdstore_destroy(cmd);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, sched_rc);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
+
+        if (rc == LCB_SUCCESS) {
+            break;
+        }
+        if (rc != LCB_ERR_TEMPORARY_FAILURE && rc != LCB_ERR_TIMEOUT) {
+            FAIL() << "Bucket warmup probe failed: " << lcb_strerror_short(rc);
+        }
+        usleep(backoff_us);
+    }
+    ASSERT_STATUS_EQ(LCB_SUCCESS, rc) << "Bucket failed to accept writes after warmup probe";
+
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)old_callback);
 }
 
 extern "C" {
