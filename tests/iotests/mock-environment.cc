@@ -440,6 +440,18 @@ static void statsCallback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_R
                         break;
                 }
                 break;
+            case 8:
+                switch (minor) {
+                    case 0:
+                        version = MockEnvironment::VERSION_80;
+                        break;
+                    case 1:
+                        version = MockEnvironment::VERSION_81;
+                        break;
+                    default:
+                        break;
+                }
+                break;
             default:
                 break;
         }

@@ -250,6 +250,8 @@ class MockEnvironment : public ::testing::Environment
         VERSION_71 = 14,
         VERSION_72 = 15,
         VERSION_76 = 16,
+        VERSION_80 = 17,
+        VERSION_81 = 18,
     };
 
     void SetUp() override;
