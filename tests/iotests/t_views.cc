@@ -244,6 +244,53 @@ static void viewCallback(lcb_INSTANCE *, int cbtype, const lcb_RESPVIEW *resp)
 }
 }
 
+/*
+ * Issue a view query and re-run it on CI when CouchbaseMock.jar's
+ * Rhino-based view indexer hands back an empty 200 OK -- the symptom
+ * of the NativeArray.js_sort exception observed on the iocp/VS2017
+ * matrix entry in cv-2923 (testReduce). The mock occasionally throws
+ * inside Indexer.run before producing the row stream; lcb still sees
+ * a clean HTTP response, just empty. Re-issuing the same query a few
+ * times almost always yields the expected dataset on the next attempt.
+ *
+ * Outside CI we keep max_attempts == 1 so a real regression that
+ * leaves vi.rows empty surfaces on the very first run instead of
+ * being papered over. Tests that legitimately expect zero rows must
+ * not call this helper -- it would loop until the attempt budget
+ * exhausts.
+ *
+ * The configure callable receives the lcb_CMDVIEW * after creation
+ * and is responsible for setting the design-document, view name and
+ * any options. The helper installs the row callback and tears the
+ * cmd down. Only the final successful (or last-attempt-failing)
+ * result is left in vi.
+ */
+template <typename Configure>
+static lcb_STATUS run_view_until_nonempty(lcb_INSTANCE *instance, ViewInfo &vi, Configure configure)
+{
+    const int max_attempts = running_under_ci() ? 3 : 1;
+    lcb_STATUS rc = LCB_SUCCESS;
+    for (int attempt = 0; attempt < max_attempts; ++attempt) {
+        if (attempt > 0) {
+            vi.clear();
+        }
+        lcb_CMDVIEW *vq;
+        lcb_cmdview_create(&vq);
+        configure(vq);
+        lcb_cmdview_callback(vq, viewCallback);
+        rc = lcb_view(instance, &vi, vq);
+        lcb_cmdview_destroy(vq);
+        if (rc != LCB_SUCCESS) {
+            return rc;
+        }
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
+        if (!vi.rows.empty() || vi.err != LCB_SUCCESS) {
+            break;
+        }
+    }
+    return rc;
+}
+
 TEST_F(ViewsUnitTest, testSimpleView)
 {
     SKIP_UNLESS_MOCK();
@@ -254,20 +301,12 @@ TEST_F(ViewsUnitTest, testSimpleView)
     connectBeerSample(hw, &instance);
 
     const char *ddoc = "beer", *view = "brewery_beers";
-
-    lcb_CMDVIEW *vq;
-    lcb_cmdview_create(&vq);
-    lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
-    lcb_cmdview_view_name(vq, view, strlen(view));
-    lcb_cmdview_callback(vq, viewCallback);
-
     ViewInfo vi;
 
-    lcb_STATUS rc = lcb_view(instance, &vi, vq);
-    lcb_cmdview_destroy(vq);
-    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
-
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, run_view_until_nonempty(instance, vi, [&](lcb_CMDVIEW *vq) {
+                         lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
+                         lcb_cmdview_view_name(vq, view, strlen(view));
+                     }));
     ASSERT_STATUS_EQ(LCB_SUCCESS, vi.err);
     ASSERT_GT(vi.rows.size(), 0U);
     ASSERT_EQ(7303, vi.totalRows);
@@ -280,32 +319,33 @@ TEST_F(ViewsUnitTest, testSimpleView)
     vi.clear();
 
     // apply limit
-    const char *optstr = "limit=10";
-    lcb_cmdview_create(&vq);
-    lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
-    lcb_cmdview_view_name(vq, view, strlen(view));
-    lcb_cmdview_option_string(vq, optstr, strlen(optstr));
-    lcb_cmdview_callback(vq, viewCallback);
-    rc = lcb_view(instance, &vi, vq);
-    lcb_cmdview_destroy(vq);
-    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    {
+        const char *optstr = "limit=10";
+        ASSERT_STATUS_EQ(LCB_SUCCESS, run_view_until_nonempty(instance, vi, [&](lcb_CMDVIEW *vq) {
+                             lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
+                             lcb_cmdview_view_name(vq, view, strlen(view));
+                             lcb_cmdview_option_string(vq, optstr, strlen(optstr));
+                         }));
+    }
     ASSERT_STATUS_EQ(LCB_SUCCESS, vi.err);
     ASSERT_EQ(10, vi.rows.size());
     ASSERT_EQ(7303, vi.totalRows);
     vi.clear();
 
-    // Set the limit to 0
-    optstr = "limit=0";
-    lcb_cmdview_create(&vq);
-    lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
-    lcb_cmdview_view_name(vq, view, strlen(view));
-    lcb_cmdview_option_string(vq, optstr, strlen(optstr));
-    lcb_cmdview_callback(vq, viewCallback);
-    rc = lcb_view(instance, &vi, vq);
-    lcb_cmdview_destroy(vq);
-    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    // Set the limit to 0 -- legitimately expects zero rows, do not retry.
+    {
+        const char *optstr = "limit=0";
+        lcb_CMDVIEW *vq;
+        lcb_cmdview_create(&vq);
+        lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
+        lcb_cmdview_view_name(vq, view, strlen(view));
+        lcb_cmdview_option_string(vq, optstr, strlen(optstr));
+        lcb_cmdview_callback(vq, viewCallback);
+        lcb_STATUS rc = lcb_view(instance, &vi, vq);
+        lcb_cmdview_destroy(vq);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
+    }
     ASSERT_EQ(0, vi.rows.size());
     ASSERT_EQ(7303, vi.totalRows);
 }
@@ -315,21 +355,15 @@ TEST_F(ViewsUnitTest, testIncludeDocs)
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
     lcb_INSTANCE *instance;
-    lcb_STATUS rc;
     connectBeerSample(hw, &instance);
 
     ViewInfo vi;
     const char *ddoc = "beer", *view = "brewery_beers";
-    lcb_CMDVIEW *vq;
-    lcb_cmdview_create(&vq);
-    lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
-    lcb_cmdview_view_name(vq, view, strlen(view));
-    lcb_cmdview_callback(vq, viewCallback);
-    lcb_cmdview_include_docs(vq, true);
-    rc = lcb_view(instance, &vi, vq);
-    lcb_cmdview_destroy(vq);
-    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, run_view_until_nonempty(instance, vi, [&](lcb_CMDVIEW *vq) {
+                         lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
+                         lcb_cmdview_view_name(vq, view, strlen(view));
+                         lcb_cmdview_include_docs(vq, true);
+                     }));
 
     // Again, ensure everything is OK
     ASSERT_EQ(7303, vi.totalRows);
@@ -348,49 +382,38 @@ TEST_F(ViewsUnitTest, testReduce)
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
     lcb_INSTANCE *instance;
-    lcb_STATUS rc;
     connectBeerSample(hw, &instance);
 
     const char *ddoc = "beer", *view = "by_location";
     ViewInfo vi;
-    lcb_CMDVIEW *vq;
-    lcb_cmdview_create(&vq);
-    lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
-    lcb_cmdview_view_name(vq, view, strlen(view));
-    lcb_cmdview_callback(vq, viewCallback);
-    rc = lcb_view(instance, &vi, vq);
-    lcb_cmdview_destroy(vq);
-    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
+
+    ASSERT_STATUS_EQ(LCB_SUCCESS, run_view_until_nonempty(instance, vi, [&](lcb_CMDVIEW *vq) {
+                         lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
+                         lcb_cmdview_view_name(vq, view, strlen(view));
+                     }));
     ASSERT_EQ(1, vi.rows.size());
     ASSERT_STREQ("1411", vi.rows[0].value.c_str());
 
     vi.clear();
     // Try with include_docs
-    lcb_cmdview_create(&vq);
-    lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
-    lcb_cmdview_view_name(vq, view, strlen(view));
-    lcb_cmdview_callback(vq, viewCallback);
-    lcb_cmdview_include_docs(vq, true);
-    rc = lcb_view(instance, &vi, vq);
-    lcb_cmdview_destroy(vq);
-    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, run_view_until_nonempty(instance, vi, [&](lcb_CMDVIEW *vq) {
+                         lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
+                         lcb_cmdview_view_name(vq, view, strlen(view));
+                         lcb_cmdview_include_docs(vq, true);
+                     }));
     ASSERT_EQ(1, vi.rows.size());
 
     vi.clear();
     // Try with reduce=false
-    const char *optstr = "reduce=false&limit=10";
-    lcb_cmdview_create(&vq);
-    lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
-    lcb_cmdview_view_name(vq, view, strlen(view));
-    lcb_cmdview_option_string(vq, optstr, strlen(optstr));
-    lcb_cmdview_callback(vq, viewCallback);
-    lcb_cmdview_include_docs(vq, true);
-    rc = lcb_view(instance, &vi, vq);
-    lcb_cmdview_destroy(vq);
-    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    {
+        const char *optstr = "reduce=false&limit=10";
+        ASSERT_STATUS_EQ(LCB_SUCCESS, run_view_until_nonempty(instance, vi, [&](lcb_CMDVIEW *vq) {
+                             lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
+                             lcb_cmdview_view_name(vq, view, strlen(view));
+                             lcb_cmdview_option_string(vq, optstr, strlen(optstr));
+                             lcb_cmdview_include_docs(vq, true);
+                         }));
+    }
     ASSERT_EQ(10, vi.rows.size());
     ASSERT_EQ(1411, vi.totalRows);
 
@@ -401,17 +424,15 @@ TEST_F(ViewsUnitTest, testReduce)
 
     // try with grouplevel
     vi.clear();
-    optstr = "group_level=1";
-    lcb_cmdview_create(&vq);
-    lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
-    lcb_cmdview_view_name(vq, view, strlen(view));
-    lcb_cmdview_option_string(vq, optstr, strlen(optstr));
-    lcb_cmdview_callback(vq, viewCallback);
-    lcb_cmdview_include_docs(vq, true);
-    rc = lcb_view(instance, &vi, vq);
-    lcb_cmdview_destroy(vq);
-    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    {
+        const char *optstr = "group_level=1";
+        ASSERT_STATUS_EQ(LCB_SUCCESS, run_view_until_nonempty(instance, vi, [&](lcb_CMDVIEW *vq) {
+                             lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
+                             lcb_cmdview_view_name(vq, view, strlen(view));
+                             lcb_cmdview_option_string(vq, optstr, strlen(optstr));
+                             lcb_cmdview_include_docs(vq, true);
+                         }));
+    }
 
     firstRow = &vi.rows[0];
     ASSERT_EQ("[\"Argentina\"]", firstRow->key);
@@ -513,7 +534,6 @@ TEST_F(ViewsUnitTest, testBackslashDocid)
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
     lcb_INSTANCE *instance;
-    lcb_STATUS rc;
     connectBeerSample(hw, &instance);
 
     string key("backslash\\docid");
@@ -524,34 +544,42 @@ TEST_F(ViewsUnitTest, testBackslashDocid)
     const char *optstr = R"(stale=false&key=["backslash\\docid"])";
 
     ViewInfo vi;
-    lcb_CMDVIEW *cmd;
 
-    lcb_cmdview_create(&cmd);
-    lcb_cmdview_callback(cmd, viewCallback);
-    lcb_cmdview_design_document(cmd, ddoc, strlen(ddoc));
-    lcb_cmdview_view_name(cmd, view, strlen(view));
-    lcb_cmdview_option_string(cmd, optstr, strlen(optstr));
-    rc = lcb_view(instance, &vi, cmd);
-    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, run_view_until_nonempty(instance, vi, [&](lcb_CMDVIEW *cmd) {
+                         lcb_cmdview_design_document(cmd, ddoc, strlen(ddoc));
+                         lcb_cmdview_view_name(cmd, view, strlen(view));
+                         lcb_cmdview_option_string(cmd, optstr, strlen(optstr));
+                     }));
     ASSERT_STATUS_EQ(LCB_SUCCESS, vi.err);
     ASSERT_EQ(1, vi.rows.size());
     ASSERT_EQ(key, vi.rows[0].docid);
 
     vi.clear();
-    lcb_cmdview_include_docs(cmd, true);
-    rc = lcb_view(instance, &vi, cmd);
-    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, run_view_until_nonempty(instance, vi, [&](lcb_CMDVIEW *cmd) {
+                         lcb_cmdview_design_document(cmd, ddoc, strlen(ddoc));
+                         lcb_cmdview_view_name(cmd, view, strlen(view));
+                         lcb_cmdview_option_string(cmd, optstr, strlen(optstr));
+                         lcb_cmdview_include_docs(cmd, true);
+                     }));
     ASSERT_EQ(1, vi.rows.size());
     ASSERT_EQ(doc.size(), vi.rows[0].docContents.nvalue);
 
+    // Post-remove the view legitimately returns zero rows; do not retry.
     removeKey(instance, key);
     vi.clear();
-    rc = lcb_view(instance, &vi, cmd);
-    ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    {
+        lcb_CMDVIEW *cmd;
+        lcb_cmdview_create(&cmd);
+        lcb_cmdview_design_document(cmd, ddoc, strlen(ddoc));
+        lcb_cmdview_view_name(cmd, view, strlen(view));
+        lcb_cmdview_option_string(cmd, optstr, strlen(optstr));
+        lcb_cmdview_include_docs(cmd, true);
+        lcb_cmdview_callback(cmd, viewCallback);
+        lcb_STATUS rc = lcb_view(instance, &vi, cmd);
+        lcb_cmdview_destroy(cmd);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, rc);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
+    }
     ASSERT_EQ(0, vi.rows.size());
-    lcb_cmdview_destroy(cmd);
 }
 } // namespace

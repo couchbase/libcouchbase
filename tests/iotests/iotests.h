@@ -18,6 +18,7 @@
 #include <libcouchbase/couchbase.h>
 #include <gtest/gtest.h>
 #include <mocksupport/server.h>
+#include <cstdlib>
 #include "testutil.h"
 #include "mock-unit-test.h"
 #include "mock-environment.h"
@@ -27,4 +28,23 @@ static inline void doLcbCreate(lcb_INSTANCE **instance, const lcb_CREATEOPTS *op
     lcb_STATUS err = lcb_create(instance, options);
     ASSERT_EQ(LCB_SUCCESS, err);
     env->postCreate(*instance);
+}
+
+/*
+ * True when the test binary is being driven by a recognised CI runner.
+ * Used by tests that re-run a request against the mock to ride out a
+ * known mock-side flake (e.g. CouchbaseMock.jar's Mozilla Rhino view
+ * indexer occasionally throwing inside NativeArray.js_sort and
+ * returning an empty result instead of the dataset). Local runs keep
+ * a single attempt so a real regression surfaces immediately; CI runs
+ * widen the window so the matrix does not go red on a known mock bug.
+ *
+ * Recognises Jenkins (JENKINS_URL / BUILD_NUMBER) and the generic CI
+ * convention (CI=true, set by GitHub Actions, GitLab CI, CircleCI,
+ * Travis, etc.).
+ */
+static inline bool running_under_ci()
+{
+    return std::getenv("JENKINS_URL") != nullptr || std::getenv("BUILD_NUMBER") != nullptr ||
+           std::getenv("CI") != nullptr;
 }
