@@ -883,7 +883,20 @@ TEST_F(GetUnitTest, testPessimisticLock)
     lcb_install_callback(instance, LCB_CALLBACK_UNLOCK, reinterpret_cast<lcb_RESPCALLBACK>(pl_unlock_callback));
 
     std::string key(unique_name("testPessimisticLock"));
-    std::uint32_t lock_time_s = 10;
+    /*
+     * The test runs three sequential blocks where lcb's retry queue is
+     * expected to exhaust against a server returning LOCKED: the second
+     * GET-LOCK on the already-locked key, and the no-CAS UPSERT on the
+     * locked key. Each block can spend up to LCB_CNTL_OP_TIMEOUT inside
+     * the retry queue. The default real-cluster OP_TIMEOUT is 5s
+     * (postCreate in mock-environment.cc), so two retry storms can
+     * consume up to ~10s back-to-back. Use a 30s server-side lock so
+     * that even with maxed-out retry budget the lock has not expired
+     * before the test reaches the assertion -- otherwise the UPSERT
+     * lands inside an expired lock and the server correctly returns
+     * SUCCESS, tripping the LOCKED assertion at line 966 below.
+     */
+    std::uint32_t lock_time_s = 30;
 
     std::uint64_t cas{0};
     {

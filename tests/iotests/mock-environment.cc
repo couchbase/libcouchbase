@@ -272,6 +272,27 @@ void MockEnvironment::postCreate(lcb_INSTANCE *instance) const
         lcb_HTCONFIG_URLTYPE urltype = LCB_HTCONFIG_URLTYPE_COMPAT;
         err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_HTCONFIG_URLTYPE, &urltype);
         ASSERT_EQ(LCB_SUCCESS, err);
+    } else {
+        /*
+         * Real Couchbase Server clusters periodically dip into TMPFAIL
+         * during background work (notably the post-drop_scope collection
+         * eviction on Server 8.0+). lcb's retry queue handles TMPFAIL with
+         * non-idempotent retry but exits once LCB_CNTL_OP_TIMEOUT elapses
+         * without progress. The default 2.5s budget is shorter than the
+         * eviction-induced TMPFAIL window we observe on freshly-restarted
+         * 8.x clusters across the contaminating-* test boundary, which
+         * makes early ops in subsequent plugin runs abort before the
+         * cluster recovers. Bump the default budget to 5s -- twice the
+         * default, but still well under the 10s GET_AND_LOCK locktime
+         * used by t_get.cc:testPessimisticLock so the retry storm in
+         * that test still completes inside the locked window. Tests that
+         * need a short timeout (e.g. the intentional-timeout regressions
+         * in t_regression.cc and t_durability.cc) set their own
+         * LCB_CNTL_OP_TIMEOUT after createConnection and are unaffected.
+         */
+        lcb_U32 op_timeout_us = 5 * 1000 * 1000;
+        err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout_us);
+        ASSERT_EQ(LCB_SUCCESS, err);
     }
     err = lcb_cntl_string(instance, "enable_mutation_tokens", "true");
     ASSERT_EQ(LCB_SUCCESS, err);
