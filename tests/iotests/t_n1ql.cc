@@ -1153,31 +1153,39 @@ TEST_F(QueryUnitTest, testReadOnlyWithNoResults)
     }
 
     /*
-     * The query below targets the bucket's default scope/collection, which
-     * needs a primary index to plan SELECT *. Older Couchbase Server
-     * releases (verified on 7.2.9) do not auto-create one when the bucket
-     * is provisioned via cbdinocluster, so the query returns N1QL error
-     * 4000 ("No index available") and lcb's idempotent-query retry loop
-     * pounds on it until the 3s query timeout fires -- the test then
-     * trips on LCB_ERR_TIMEOUT instead of the expected LCB_SUCCESS.
-     * Create the primary index up-front (idempotent via IF NOT EXISTS)
-     * so the test exercises the intended code path on every supported
-     * server release. The CREATE PRIMARY INDEX itself runs on a separate
-     * cmd because makeCommand resets the cached command object.
+     * The query below targets the bucket's default scope/collection,
+     * which needs a primary index to plan SELECT *. Older Couchbase
+     * Server releases (verified on 7.1.6 and 7.2.9) do not auto-create
+     * one when the bucket is provisioned via cbdinocluster, so the
+     * query returns N1QL error 4000 ("No index available") and lcb's
+     * idempotent-query retry loop pounds on it until the 3s query
+     * timeout fires -- the test then trips on LCB_ERR_TIMEOUT instead
+     * of the expected LCB_SUCCESS. Create the primary index up-front;
+     * the CREATE PRIMARY INDEX itself runs on a separate cmd because
+     * makeCommand resets the cached command object.
+     *
+     * Cannot use the IF NOT EXISTS guard -- that clause was added in
+     * 7.6 and a 7.1 parser rejects it with N1QL error 3000 (syntax),
+     * which lcb maps to LCB_ERR_PARSING_FAILURE. Plain CREATE PRIMARY
+     * INDEX parses on every supported release; on a re-run against a
+     * bucket where the index already exists we get N1QL error 4300
+     * (LCB_ERR_INDEX_EXISTS), which is fine -- the index we needed is
+     * still there.
      */
     {
         N1QLResult create_res;
         lcb_CMDQUERY *create_cmd = nullptr;
         lcb_cmdquery_create(&create_cmd);
         std::string create_stmt =
-            "CREATE PRIMARY INDEX IF NOT EXISTS ON `" + MockEnvironment::getInstance()->getBucket() + "`";
+            "CREATE PRIMARY INDEX ON `" + MockEnvironment::getInstance()->getBucket() + "`";
         lcb_cmdquery_statement(create_cmd, create_stmt.c_str(), create_stmt.size());
         lcb_cmdquery_callback(create_cmd, rowcb);
         lcb_STATUS create_rc = lcb_query(instance, &create_res, create_cmd);
         lcb_cmdquery_destroy(create_cmd);
         ASSERT_STATUS_EQ(LCB_SUCCESS, create_rc);
         lcb_wait(instance, LCB_WAIT_DEFAULT);
-        ASSERT_STATUS_EQ(LCB_SUCCESS, create_res.rc);
+        ASSERT_TRUE(create_res.rc == LCB_SUCCESS || create_res.rc == LCB_ERR_INDEX_EXISTS)
+            << "CREATE PRIMARY INDEX: " << lcb_strerror_short(create_res.rc);
     }
 
     N1QLResult res;
