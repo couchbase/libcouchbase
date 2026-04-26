@@ -20,6 +20,18 @@
 #include "internal.h"
 #include <chrono>
 
+/*
+ * The per-user rate-limit feature shipped in Couchbase Server 7.1 as an
+ * early cut and stabilised in 7.2. On 7.1.x the connection-count, KV
+ * ingress, and Search rate-limit tests below reproduce intermittent
+ * "expected RATE_LIMITED, got SUCCESS" mismatches: the server takes
+ * longer to reflect freshly-applied limits than the test waits, and
+ * connection-pool cleanup races with the next tryCreateConnection. The
+ * feature was removed in 7.6+. The SKIP gates on each test case below
+ * are therefore set to run only on 7.2 (LOWER_THAN VERSION_72 +
+ * HIGHER_THAN VERSION_72), which is the only release line where the
+ * tests are deterministic.
+ */
 class RateLimitTest : public MockUnitTest
 {
   public:
@@ -88,7 +100,7 @@ static void concurrent_search_callback(lcb_INSTANCE *, int, const lcb_RESPSEARCH
 TEST_F(RateLimitTest, testRateLimitsKVNumOps)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -131,7 +143,7 @@ TEST_F(RateLimitTest, testRateLimitsKVNumOps)
 TEST_F(RateLimitTest, testRateLimitsKVIngress)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -163,7 +175,7 @@ TEST_F(RateLimitTest, testRateLimitsKVIngress)
 TEST_F(RateLimitTest, testRateLimitsKVEgress)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -200,7 +212,7 @@ TEST_F(RateLimitTest, testRateLimitsKVEgress)
 TEST_F(RateLimitTest, testRateLimitsKVMaxConnections)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -245,7 +257,7 @@ TEST_F(RateLimitTest, testRateLimitsKVMaxConnections)
 TEST_F(RateLimitTest, testRateLimitsQueryNumQueries)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -291,7 +303,7 @@ TEST_F(RateLimitTest, testRateLimitsQueryNumQueries)
 TEST_F(RateLimitTest, testRateLimitsQueryEgress)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -344,7 +356,7 @@ TEST_F(RateLimitTest, testRateLimitsQueryEgress)
 TEST_F(RateLimitTest, testRateLimitsQueryIngress)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -395,7 +407,7 @@ TEST_F(RateLimitTest, testRateLimitsQueryIngress)
 TEST_F(RateLimitTest, testRateLimitsQueryConcurrentRequests)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -445,7 +457,7 @@ TEST_F(RateLimitTest, testRateLimitsQueryConcurrentRequests)
 TEST_F(RateLimitTest, testRateLimitsKVScopeDataSize)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -486,7 +498,7 @@ TEST_F(RateLimitTest, testRateLimitsKVScopeDataSize)
 TEST_F(RateLimitTest, testRateLimitsQueryNumIndexes)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -536,7 +548,7 @@ TEST_F(RateLimitTest, testRateLimitsQueryNumIndexes)
 TEST_F(RateLimitTest, testRateLimitsSearchNumQueries)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -586,7 +598,7 @@ TEST_F(RateLimitTest, testRateLimitsSearchNumQueries)
 TEST_F(RateLimitTest, testRateLimitsSearchEgress)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -642,7 +654,7 @@ TEST_F(RateLimitTest, testRateLimitsSearchEgress)
 TEST_F(RateLimitTest, testRateLimitsSearchIngress)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
@@ -696,7 +708,7 @@ TEST_F(RateLimitTest, testRateLimitsSearchIngress)
 TEST_F(RateLimitTest, testRateLimitsSearchConcurrentRequests)
 {
     SKIP_IF_MOCK()
-    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_71)
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;

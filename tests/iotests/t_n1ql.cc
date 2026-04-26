@@ -1166,6 +1166,16 @@ TEST_F(QueryUnitTest, testReadOnlyWithNoResults)
 TEST_F(QueryUnitTest, testQueryServerTimeout)
 {
     SKIP_IF_MOCK()
+    /*
+     * The probe query relies on ARRAY_RANGE(0, 100000) being a legal but
+     * slow expression so the server-side timeout fires before the client
+     * gives up. Couchbase Server 7.1.x caps ARRAY_RANGE at 10000 elements
+     * and rejects the call with N1QL execution.range_error (5035), which
+     * lcb surfaces as LCB_ERR_INTERNAL_SERVER_FAILURE -- not the
+     * LCB_ERR_TIMEOUT this test asserts on. The cap was lifted in 7.2,
+     * so gate the test there.
+     */
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_72)
     HandleWrap hw;
     lcb_INSTANCE *instance;
     createConnection(hw, &instance);
