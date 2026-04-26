@@ -1151,6 +1151,35 @@ TEST_F(QueryUnitTest, testReadOnlyWithNoResults)
     if (!createClusterQueryConnection(hw, &instance)) {
         SKIP_CLUSTER_QUERY_TEST();
     }
+
+    /*
+     * The query below targets the bucket's default scope/collection, which
+     * needs a primary index to plan SELECT *. Older Couchbase Server
+     * releases (verified on 7.2.9) do not auto-create one when the bucket
+     * is provisioned via cbdinocluster, so the query returns N1QL error
+     * 4000 ("No index available") and lcb's idempotent-query retry loop
+     * pounds on it until the 3s query timeout fires -- the test then
+     * trips on LCB_ERR_TIMEOUT instead of the expected LCB_SUCCESS.
+     * Create the primary index up-front (idempotent via IF NOT EXISTS)
+     * so the test exercises the intended code path on every supported
+     * server release. The CREATE PRIMARY INDEX itself runs on a separate
+     * cmd because makeCommand resets the cached command object.
+     */
+    {
+        N1QLResult create_res;
+        lcb_CMDQUERY *create_cmd = nullptr;
+        lcb_cmdquery_create(&create_cmd);
+        std::string create_stmt =
+            "CREATE PRIMARY INDEX IF NOT EXISTS ON `" + MockEnvironment::getInstance()->getBucket() + "`";
+        lcb_cmdquery_statement(create_cmd, create_stmt.c_str(), create_stmt.size());
+        lcb_cmdquery_callback(create_cmd, rowcb);
+        lcb_STATUS create_rc = lcb_query(instance, &create_res, create_cmd);
+        lcb_cmdquery_destroy(create_cmd);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, create_rc);
+        lcb_wait(instance, LCB_WAIT_DEFAULT);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, create_res.rc);
+    }
+
     N1QLResult res;
     std::string query = "SELECT * FROM " + MockEnvironment::getInstance()->getBucket() + " LIMIT 0";
     makeCommand(query.c_str());
