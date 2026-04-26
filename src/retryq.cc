@@ -78,13 +78,6 @@ hrtime_t RetryQueue::get_retry_interval() const
     return LCB_US2NS(settings->retry_interval);
 }
 
-/**
- * Fuzz offset. When callback is received to schedule an operation, we may
- * retry commands whose expiry is up to this many seconds in the future. This
- * is to avoid excessive callbacks into the timer function
- */
-#define TIMEFUZZ_NS LCB_US2NS(LCB_MS2US(5))
-
 void RetryQueue::update_trytime(RetryOp *op, hrtime_t now)
 {
     /**
@@ -240,12 +233,27 @@ void RetryQueue::flush(bool throttle)
     {
         protocol_binary_request_header hdr;
         int vbid, srvix;
-        hrtime_t curnext;
 
         RetryOp *op = from_schednode(ll);
-        curnext = op->trytime - TIMEFUZZ_NS;
-
-        if (curnext > now && throttle) {
+        /*
+         * Wait until the op's scheduled trytime has actually arrived
+         * before flushing it to the network. Earlier revisions
+         * (CCBC-382, 4e03b96e, 2014) subtracted a 5ms fuzz here to
+         * coalesce timer callbacks: any op whose trytime fell within
+         * 5ms of `now` was dispatched on the current tick instead of
+         * waiting for its own timer fire. That predates the errmap
+         * retry-spec machinery, which carries a strict "wait at least
+         * `after` milliseconds before the first retry" contract -- the
+         * mock's CHECK_RETRY_VERIFY enforces it with a 1ms tolerance
+         * (Verifier.java:72) and rejects with FirstRetryTooSoonException
+         * if the wire-observed gap is shorter. With the 5ms fuzz, an op
+         * with spec->after = 50ms could be dispatched at trytime - 5ms
+         * = 45ms wall-clock since the failing response, well below the
+         * verifier's 49ms floor. The alpine/libuv flake on cv-3131
+         * reproduced this exactly. Removing the fuzz costs at most one
+         * extra timer callback per retry batch; correctness wins.
+         */
+        if (op->trytime > now && throttle) {
             break;
         }
 
