@@ -94,7 +94,34 @@ typedef lcb_time_t lcb_SECS;   /**< @brief Unsigned 'seconds time' type */
 #define LCB_DEPRECATED2(X, reason) __declspec(deprecated(reason)) X
 #else
 #define LCB_DEPRECATED(X) X
-#define LCB_DEPRECATED2(X, reason)
+#define LCB_DEPRECATED2(X, reason) X
+#endif
+
+/**
+ * CCBC-1678: Couchbase Server views are deprecated since 7.0+ and slated for
+ * removal. Wrap a view-related declaration with this macro to emit a compile
+ * time warning at each user call site, without changing the ABI or removing
+ * the symbol. The diagnostic message is identical for every view API entry
+ * so the deprecation can be located and lifted as a single change later.
+ *
+ * A translation unit that legitimately implements or exercises the views API
+ * (the views implementation files, view-specific tests, examples, and the
+ * `cbc` tool) can suppress the diagnostic for itself by defining the macro
+ * to `X` *before* including any libcouchbase header, e.g.:
+ *
+ *     #define LCB_DEPRECATE_VIEWS(X) X
+ *     #include <libcouchbase/couchbase.h>
+ *
+ * The `#ifndef` guard below honours that pre-definition. Note that the scope
+ * is the whole translation unit: the deprecation attribute is attached to the
+ * declaration, so once the public header has been preprocessed, redefining
+ * the macro further down the file has no effect. For sub-file granularity
+ * use `#pragma GCC diagnostic ignored "-Wdeprecated-declarations"` blocks.
+ */
+#ifndef LCB_DEPRECATE_VIEWS
+#define LCB_DEPRECATE_VIEWS(X)                                                                                         \
+    LCB_DEPRECATED2(X,                                                                                                 \
+                    "Views are deprecated in Couchbase Server 7.0+. Instead of views, use the Query Service (SQL++).")
 #endif
 
 #ifdef __cplusplus

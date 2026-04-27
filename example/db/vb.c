@@ -31,6 +31,11 @@
  *      vb.exe key size <connstr> <passwd>
  */
 
+/* CCBC-1678: this example exercises the deprecated views API on purpose;
+ * suppress the deprecation diagnostic for view declarations in this
+ * translation unit. */
+#define LCB_DEPRECATE_VIEWS(X) X
+
 #include <stdio.h>
 #include <libcouchbase/couchbase.h>
 #include <stdlib.h>

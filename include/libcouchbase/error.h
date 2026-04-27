@@ -285,22 +285,26 @@ LIBCOUCHBASE_API lcb_STATUS lcb_errctx_analytics_endpoint(const lcb_ANALYTICS_ER
                                                           size_t *endpoint_len);
 
 typedef struct lcb_VIEW_ERROR_CONTEXT_ lcb_VIEW_ERROR_CONTEXT;
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_rc(const lcb_VIEW_ERROR_CONTEXT *ctx);
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_first_error_code(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **code,
-                                                             size_t *code_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_first_error_message(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **message,
-                                                                size_t *message_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_design_document(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **name,
-                                                            size_t *name_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_view(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **name,
-                                                 size_t *name_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_query_params(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **params,
-                                                         size_t *params_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_http_response_code(const lcb_VIEW_ERROR_CONTEXT *ctx, uint32_t *code);
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_http_response_body(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **body,
-                                                               size_t *body_len);
-LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_endpoint(const lcb_VIEW_ERROR_CONTEXT *ctx, const char **endpoint,
-                                                     size_t *endpoint_len);
+/* CCBC-1678: View error-context accessors are deprecated together with the views API. */
+LCB_DEPRECATE_VIEWS(LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_rc(const lcb_VIEW_ERROR_CONTEXT *ctx));
+LCB_DEPRECATE_VIEWS(LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_first_error_code(const lcb_VIEW_ERROR_CONTEXT *ctx,
+                                                                                 const char **code, size_t *code_len));
+LCB_DEPRECATE_VIEWS(LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_first_error_message(const lcb_VIEW_ERROR_CONTEXT *ctx,
+                                                                                    const char **message,
+                                                                                    size_t *message_len));
+LCB_DEPRECATE_VIEWS(LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_design_document(const lcb_VIEW_ERROR_CONTEXT *ctx,
+                                                                                const char **name, size_t *name_len));
+LCB_DEPRECATE_VIEWS(LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_view(const lcb_VIEW_ERROR_CONTEXT *ctx,
+                                                                     const char **name, size_t *name_len));
+LCB_DEPRECATE_VIEWS(LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_query_params(const lcb_VIEW_ERROR_CONTEXT *ctx,
+                                                                             const char **params, size_t *params_len));
+LCB_DEPRECATE_VIEWS(LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_http_response_code(const lcb_VIEW_ERROR_CONTEXT *ctx,
+                                                                                   uint32_t *code));
+LCB_DEPRECATE_VIEWS(LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_http_response_body(const lcb_VIEW_ERROR_CONTEXT *ctx,
+                                                                                   const char **body,
+                                                                                   size_t *body_len));
+LCB_DEPRECATE_VIEWS(LIBCOUCHBASE_API lcb_STATUS lcb_errctx_view_endpoint(const lcb_VIEW_ERROR_CONTEXT *ctx,
+                                                                         const char **endpoint, size_t *endpoint_len));
 
 typedef struct lcb_SEARCH_ERROR_CONTEXT_ lcb_SEARCH_ERROR_CONTEXT;
 LIBCOUCHBASE_API lcb_STATUS lcb_errctx_search_rc(const lcb_SEARCH_ERROR_CONTEXT *ctx);

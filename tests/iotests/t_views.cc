@@ -15,6 +15,11 @@
  *   limitations under the License.
  */
 
+/* CCBC-1678: this file exercises the deprecated views API on purpose;
+ * suppress the deprecation diagnostic for view declarations in this
+ * translation unit. */
+#define LCB_DEPRECATE_VIEWS(X) X
+
 #include "config.h"
 #include "iotests.h"
 #include <map>

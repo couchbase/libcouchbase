@@ -15,6 +15,11 @@
  *   limitations under the License.
  */
 
+/* CCBC-1678: this example exercises the deprecated views API on purpose;
+ * suppress the deprecation diagnostic for view declarations in this
+ * translation unit. */
+#define LCB_DEPRECATE_VIEWS(X) X
+
 #include <libcouchbase/couchbase.h>
 #include <string>
 #include <cstring>
