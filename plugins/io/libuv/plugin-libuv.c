@@ -36,6 +36,50 @@ static void decref_iops(my_iops_t *io)
     free(io);
 }
 
+static void timer_close_cb(uv_handle_t *handle);
+
+/* Walk callback used by iops_lcb_dtor: force-close leaked timer and TCP
+ * handles. The lcb higher layer can leak both:
+ *
+ * - lcbio_TIMER objects whose backing my_timer_t / uv_timer_t was never
+ *   destroyed via the destroy_timer hook (e.g. SSL ctx whose sockpool entry
+ *   never drained, or a Server connctx pending finalize).
+ * - lcbio_SOCKETs whose refcount is held above zero by an in-flight
+ *   uv_connect_t when the higher layer aborts the connect (e.g.
+ *   Connstart::handler at CS_TIMEDOUT does lcbio_unref but the matching
+ *   decrement from C_conncb has not fired yet). lcbio__destroy never runs,
+ *   close_socket is never called, and the my_sockdata_t / uv_tcp_t stays in
+ *   the loop.
+ *
+ * Without this force-close, uv_loop_delete -> uv_loop_close asserts UV_EBUSY.
+ *
+ * Both close paths route through the plugin's normal close callbacks
+ * (timer_close_cb / socket_closed_callback) so the matching incref_iops from
+ * create_timer / create_socket are balanced and the my_timer_t /
+ * my_sockdata_t structs are freed. */
+static void force_close_walk_cb(uv_handle_t *h, void *arg)
+{
+    (void)arg;
+    if (uv_is_closing(h)) {
+        return;
+    }
+    switch (uv_handle_get_type(h)) {
+        case UV_TIMER:
+            uv_close(h, timer_close_cb);
+            break;
+        case UV_TCP: {
+            my_sockdata_t *sock = PTR_FROM_FIELD(my_sockdata_t, h, tcp);
+            sock->uv_close_called = 1;
+            uv_close(h, socket_closed_callback);
+            break;
+        }
+        default:
+            /* Other handle types are not produced by this plugin; if the
+             * embedder's loop has them they are not ours to close. */
+            break;
+    }
+}
+
 static void iops_lcb_dtor(lcb_io_opt_t iobase)
 {
     my_iops_t *io = (my_iops_t *)iobase;
@@ -44,9 +88,42 @@ static void iops_lcb_dtor(lcb_io_opt_t iobase)
         return;
     }
 
-    while (io->iops_refcount > 1) {
-        UVC_RUN_ONCE(io->loop);
+    /* Drain pending close callbacks the higher layer queued during teardown.
+     * The chain that has to complete here is the TCP close -> read_callback
+     * -> lcbio_table_unref -> Cssl_dtor -> lcbio_timer_destroy sequence: every
+     * lcbio_TIMER and SSL ctx the higher layer owns is destroyed via this
+     * chain on instance destroy, and only then are the underlying my_timer_t
+     * / my_sockdata_t structs released and iops_refcount balanced.
+     *
+     * UV_RUN_NOWAIT (not UV_RUN_ONCE) is load-bearing here: any leaked timer
+     * the higher layer never destroyed is still ref'd in the loop, so
+     * UV_RUN_ONCE would block indefinitely waiting for that timer to fire
+     * (e.g. an SSL ping timer armed for tens of seconds). NOWAIT processes
+     * whatever close-callback / pending work is ready on this iteration and
+     * returns, letting the spin make forward progress without waiting. */
+    int spins = 0;
+    while (io->iops_refcount > 1 && spins < 1024) {
+        uv_run(io->loop, UV_RUN_NOWAIT);
+        spins++;
     }
+
+    /* Anything still registered with the loop after the drain is a true leak
+     * the higher layer never cleaned up. Force-close any leftover timer
+     * handles so the iops_refcount is balanced and uv_loop_delete ->
+     * uv_loop_close does not assert UV_EBUSY. The drain ran first so SSL ctx
+     * destruction had its turn to disarm and destroy its own timers normally;
+     * force-closing only what survived avoids the use-after-free where the
+     * higher layer would re-enter uv_timer_stop on memory we already freed
+     * in timer_close_cb. */
+    uv_walk(io->loop, force_close_walk_cb, NULL);
+
+    /* Drive the loop two more times to fire the queued close callbacks for
+     * what force_close_walk_cb just closed. The first iteration fires close
+     * callbacks for force-closed timers/TCPs; on TCPs that still had an
+     * in-flight uv_connect_t, libuv fires connect_callback (which can call
+     * back into the plugin via decref_sock) on the second iteration. */
+    uv_run(io->loop, UV_RUN_NOWAIT);
+    uv_run(io->loop, UV_RUN_NOWAIT);
 
     if (io->external_loop == 0) {
         uv_loop_delete(io->loop);
@@ -254,8 +331,10 @@ static void socket_closed_callback(uv_handle_t *handle)
 static unsigned int close_socket(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase)
 {
     my_sockdata_t *sock = (my_sockdata_t *)sockbase;
-    sock->uv_close_called = 1;
-    uv_close((uv_handle_t *)&sock->tcp, socket_closed_callback);
+    if (!sock->uv_close_called) {
+        sock->uv_close_called = 1;
+        uv_close((uv_handle_t *)&sock->tcp, socket_closed_callback);
+    }
     (void)iobase;
     return 0;
 }
