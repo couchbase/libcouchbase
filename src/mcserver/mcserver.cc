@@ -1357,6 +1357,28 @@ void Server::start_errored_ctx(State next_state)
             lcbio_shutdown(lcbio_ctx_sock(ctx));
             if (next_state == Server::S_ERRDRAIN) {
                 flush_start = (mcreq_flushstart_fn)flush_errdrain;
+            } else if (next_state == Server::S_CLOSED && connreq == nullptr) {
+                /* Established TLS connections in steady state keep
+                 * connctx->npending == 1 for the inbound read watcher (the
+                 * duplex re-arm at on_read for cluster-config push notices
+                 * and other unsolicited server messages). Under TLS, the
+                 * underlying TCP close-callback chain that would normally
+                 * decrement npending and propagate an error up to
+                 * Cr_handler -> on_error -> check_closed -> here is broken:
+                 * Cssl::appdata_read returns early when cs->urd_cb is null,
+                 * which is the steady-state between Cssl_read2 calls (urd_cb
+                 * is cleared inside appdata_read and not re-set until the
+                 * next lcbio_ctx_schedule). With urd_cb null when the close
+                 * callback fires, the error never reaches Cr_handler;
+                 * connctx->npending stays at 1 forever; the Server is never
+                 * destroyed; lcb_settings_unref's count never hits zero;
+                 * settings->dtorcb never fires; lcb_run_loop deadlocks for
+                 * lcb_destroy_async callers (testAsyncDestroy).
+                 *
+                 * Force-finalize synchronously here. The connection is
+                 * already shut down and we are inside instance teardown --
+                 * there is no recovery path waiting on the read chain. */
+                finalize_errored_ctx();
             }
         } else {
             finalize_errored_ctx();

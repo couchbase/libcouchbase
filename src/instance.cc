@@ -808,6 +808,30 @@ void lcb_destroy(lcb_INSTANCE *instance)
         instance->settings->logger = nullptr;
     }
 
+    /* Destroy the operation-metrics meter (and its periodic flush timer) here,
+     * tied to the instance lifetime rather than to settings->refcount.
+     *
+     * The settings object can outlive lcb_destroy when async-destruction
+     * (lcb_destroy_async + lcb_run_loop) is in flight and a Server's
+     * connctx still has pending I/O at server->close() time -- particularly
+     * under TLS, where the SSL ctx wrapper's pending-write queue and
+     * read-watcher can keep the underlying lcbio_SOCKET alive past the
+     * point at which lcb_destroy returns. Each such stuck Server holds a
+     * lcb_settings_ref2, so settings->refcount stays > 0 indefinitely.
+     *
+     * If the meter's flush timer were still armed at that moment, the libuv
+     * loop would sit in epoll_pwait waiting on its op_metrics_flush_interval
+     * deadline (default 600 s) and `lcb_run_loop` would block until the
+     * test harness's SIGALRM. Destroying the meter here drops its
+     * lcbio_TIMER, so the loop becomes idle and lcb_run_loop returns
+     * promptly even if a Server is leaking a settings ref. The matching
+     * lcbmetrics_meter_destroy in lcb_settings_unref's destructor becomes
+     * a no-op because settings->meter is now null. */
+    if (instance->settings && instance->settings->meter) {
+        lcbmetrics_meter_destroy(instance->settings->meter);
+        instance->settings->meter = nullptr;
+    }
+
     DESTROY(lcbio_table_unref, iotable)
     DESTROY(lcb_settings_unref, settings)
     DESTROY(lcb_histogram_destroy, kv_timings)

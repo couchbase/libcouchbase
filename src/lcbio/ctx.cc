@@ -538,7 +538,28 @@ GT_WRITE0:
 
 static void Cw_ex_handler(lcb_sockdata_t *sd, int status, void *wdata)
 {
+    /* sd->lcbconn was nulled by lcbio_shutdown when the lcbio_SOCKET was
+     * detached. A pending uv_write_t completing after that point has no
+     * lcbio_CTX to deliver to -- the higher layer has already torn the ctx
+     * down. Drop the completion silently. */
+    if (sd->lcbconn == nullptr) {
+        (void)wdata;
+        (void)status;
+        return;
+    }
     auto *ctx = static_cast<lcbio_CTX *>(((lcbio_SOCKET *)sd->lcbconn)->ctx);
+    if (ctx == nullptr) {
+        /* Same reasoning: lcbio_ctx_close_ex sets sock->ctx = nullptr just
+         * before lcbio_unref(sock), which can free the socket if its
+         * refcount hits zero. The ctx itself may still be alive (if it had
+         * pending I/O when close_ex was called) but its sock back-pointer
+         * is gone, and we have no other route to it from here. The pending
+         * write completes and is dropped on the floor; there is no observer
+         * left to care. */
+        (void)wdata;
+        (void)status;
+        return;
+    }
     unsigned nflushed = (uintptr_t)wdata;
     ctx->npending--;
 

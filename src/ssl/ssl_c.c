@@ -406,7 +406,31 @@ static unsigned Cssl_close(lcb_io_opt_t io, lcb_sockdata_t *sd)
 static void Cssl_dtor(void *arg)
 {
     lcbio_CSSL *cs = arg;
-    lcb_assert(SLLIST_IS_EMPTY(&cs->writes));
+    /* Drain any my_WCTX entries that were queued by Cssl_write2 but never
+     * delivered to the user via appdata_free_flushed. This happens when an
+     * SSL_write succeeded immediately (encrypted bytes parked in BIO, niov
+     * consumed) and Cssl_write2 scheduled the as_write timer for completion
+     * delivery, but lcb_destroy ran the entire teardown chain inside the
+     * same callback frame -- no event-loop iteration boundary occurred, so
+     * the as_write timer never fired and write_callback never ran. The SSL
+     * iotable refcount then drops to 0 inside lcbio__destroy and we land
+     * here with cs->writes still populated.
+     *
+     * We do not invoke wc->cb. By Cssl_dtor time the SSL iotable refcount
+     * is 0; every higher-layer state that wc->uarg would point at
+     * (lcbio_CTX, server pipeline, instance) has already been destroyed by
+     * the cascading lcb_destroy chain that brought us here. Calling cb
+     * with a dangling uarg would be a use-after-free. The user's pending
+     * writes are dropped on the floor; that is the only safe option once
+     * everyone who could have observed the completion is gone. */
+    sllist_iterator iter;
+    SLLIST_ITERFOR(&cs->writes, &iter)
+    {
+        my_WCTX *cur = SLLIST_ITEM(iter.cur, my_WCTX, slnode);
+        sllist_iter_remove(&cs->writes, &iter);
+        free(cur->iovroot_);
+        free(cur);
+    }
     lcbio_timer_destroy(cs->as_read);
     lcbio_timer_destroy(cs->as_write);
     iotssl_destroy_common((lcbio_XSSL *)cs);

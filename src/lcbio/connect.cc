@@ -567,6 +567,15 @@ void lcbio_shutdown(lcbio_SOCKET *s)
         }
     } else {
         if (s->u.sd) {
+            /* Disconnect the back-pointer before closing. C_close starts an
+             * async close (uv_close) but pending uv_write_t requests will
+             * still complete and fire Cw_ex_handler later, which reaches the
+             * lcbio_CTX through `sd->lcbconn->ctx`. By the time those write
+             * completions fire, lcbio__destroy may already have free()'d
+             * this lcbio_SOCKET (s), leaving sd->lcbconn dangling. Null it
+             * here so Cw_ex_handler can detect the closed-socket case and
+             * skip the deref instead of UAF-crashing. */
+            s->u.sd->lcbconn = nullptr;
             io->C_close(s->u.sd);
             s->u.sd = nullptr;
         }
