@@ -1357,7 +1357,7 @@ void Server::start_errored_ctx(State next_state)
             lcbio_shutdown(lcbio_ctx_sock(ctx));
             if (next_state == Server::S_ERRDRAIN) {
                 flush_start = (mcreq_flushstart_fn)flush_errdrain;
-            } else if (next_state == Server::S_CLOSED && connreq == nullptr) {
+            } else if (next_state == Server::S_CLOSED && connreq == nullptr && instance->destroying) {
                 /* Established TLS connections in steady state keep
                  * connctx->npending == 1 for the inbound read watcher (the
                  * duplex re-arm at on_read for cluster-config push notices
@@ -1377,7 +1377,13 @@ void Server::start_errored_ctx(State next_state)
                  *
                  * Force-finalize synchronously here. The connection is
                  * already shut down and we are inside instance teardown --
-                 * there is no recovery path waiting on the read chain. */
+                 * there is no recovery path waiting on the read chain.
+                 *
+                 * Guard with instance->destroying: Server::close() is also
+                 * called from newconfig.cc:replace_config() during live
+                 * config updates (rebalance/failover). In that context the
+                 * instance is still alive; synchronous delete this would
+                 * corrupt live state. */
                 finalize_errored_ctx();
             }
         } else {
