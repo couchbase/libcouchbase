@@ -104,6 +104,20 @@
 #define LCB_DEFAULT_TCP_NODELAY 1
 #define LCB_DEFAULT_SELECT_BUCKET 1
 #define LCB_DEFAULT_TCP_KEEPALIVE 1
+/* Keepalive timing in seconds, applied once SO_KEEPALIVE is on. The kernel
+ * probes an idle connection after 5 s, re-probes every 2 s and abandons it
+ * after 3 unanswered probes, so a peer that stops answering surfaces as
+ * ECONNRESET in 11 s rather than the 7200 s the kernel default implies. */
+#define LCB_DEFAULT_TCP_KEEPALIVE_IDLE 5
+#define LCB_DEFAULT_TCP_KEEPALIVE_INTERVAL 2
+#define LCB_DEFAULT_TCP_KEEPALIVE_COUNT 3
+/* TCP_USER_TIMEOUT in milliseconds: how long transmitted data may stay
+ * unacknowledged before the kernel aborts the connection with ETIMEDOUT.
+ * The keepalive timer above is armed only while nothing is outstanding, so a
+ * connection that goes silent with a request on the wire is governed by the
+ * retransmission budget instead -- roughly 15 minutes at the default
+ * tcp_retries2. 11000 puts both cases in the same window. */
+#define LCB_DEFAULT_TCP_USER_TIMEOUT 11000
 /* 2.5 s */
 #define LCB_DEFAULT_CONFIG_POLL_INTERVAL LCB_MS2US(2500)
 /* 50 ms */
@@ -200,6 +214,14 @@ typedef struct lcb_settings_st {
     unsigned readj_ts_wait : 1;
     unsigned select_bucket : 1;
     unsigned tcp_keepalive : 1;
+    /* CCBC-1701: aggressive TCP keepalive timing in seconds. Used after
+     * SO_KEEPALIVE is enabled. 0 means "leave kernel default in place".
+     * See LCB_DEFAULT_TCP_KEEPALIVE_{IDLE,INTERVAL,COUNT} for defaults. */
+    lcb_U32 tcp_keepalive_idle;
+    lcb_U32 tcp_keepalive_interval;
+    lcb_U32 tcp_keepalive_count;
+    /* TCP_USER_TIMEOUT in milliseconds. 0 means "leave kernel default". */
+    lcb_U32 tcp_user_timeout;
     unsigned use_collections : 1;
     unsigned log_redaction : 1;
     unsigned use_tracing : 1;

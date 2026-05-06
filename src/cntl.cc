@@ -229,6 +229,14 @@ HANDLER(tcp_nodelay_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, tcp_node
 
 HANDLER(tcp_keepalive_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, tcp_keepalive))}
 
+HANDLER(tcp_keepalive_idle_handler){RETURN_GET_SET(std::uint32_t, LCBT_SETTING(instance, tcp_keepalive_idle))}
+
+HANDLER(tcp_keepalive_interval_handler){RETURN_GET_SET(std::uint32_t, LCBT_SETTING(instance, tcp_keepalive_interval))}
+
+HANDLER(tcp_keepalive_count_handler){RETURN_GET_SET(std::uint32_t, LCBT_SETTING(instance, tcp_keepalive_count))}
+
+HANDLER(tcp_user_timeout_handler){RETURN_GET_SET(std::uint32_t, LCBT_SETTING(instance, tcp_user_timeout))}
+
 HANDLER(readj_ts_wait_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, readj_ts_wait))}
 
 HANDLER(kv_hg_handler){RETURN_GET_ONLY(lcb_HISTOGRAM *, instance->kv_timings)}
@@ -886,6 +894,10 @@ static ctl_handler handlers[] = {
     enable_op_metrics_handler,            /* LCB_CNTL_ENABLE_OP_METRICS */
     preferred_server_group_handler,       /* LCB_CNTL_PREFERRED_SERVER_GROUP */
     use_credentials_with_client_certificate, /* LCB_CNTL_USE_CREDENTIALS_WITH_CLIENT_CERTIFICATE */
+    tcp_keepalive_idle_handler,           /* LCB_CNTL_TCP_KEEPALIVE_IDLE */
+    tcp_keepalive_interval_handler,       /* LCB_CNTL_TCP_KEEPALIVE_INTERVAL */
+    tcp_keepalive_count_handler,          /* LCB_CNTL_TCP_KEEPALIVE_COUNT */
+    tcp_user_timeout_handler,             /* LCB_CNTL_TCP_USER_TIMEOUT */
     nullptr
 };
 /* clang-format on */
@@ -1096,6 +1108,10 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"read_chunk_size", LCB_CNTL_READ_CHUNKSIZE, convert_u32},
     {"select_bucket", LCB_CNTL_SELECT_BUCKET, convert_intbool},
     {"tcp_keepalive", LCB_CNTL_TCP_KEEPALIVE, convert_intbool},
+    {"tcp_keepalive_idle", LCB_CNTL_TCP_KEEPALIVE_IDLE, convert_u32},
+    {"tcp_keepalive_interval", LCB_CNTL_TCP_KEEPALIVE_INTERVAL, convert_u32},
+    {"tcp_keepalive_count", LCB_CNTL_TCP_KEEPALIVE_COUNT, convert_u32},
+    {"tcp_user_timeout", LCB_CNTL_TCP_USER_TIMEOUT, convert_u32},
     {"config_poll_interval", LCB_CNTL_CONFIG_POLL_INTERVAL, convert_timevalue},
     {"ipv6", LCB_CNTL_IP6POLICY, convert_ipv6},
     {"metrics", LCB_CNTL_METRICS, convert_intbool},

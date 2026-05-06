@@ -63,6 +63,10 @@ void lcb_default_settings(lcb_settings *settings)
     settings->vb_noremap = LCB_DEFAULT_VB_NOREMAP;
     settings->select_bucket = LCB_DEFAULT_SELECT_BUCKET;
     settings->tcp_keepalive = LCB_DEFAULT_TCP_KEEPALIVE;
+    settings->tcp_keepalive_idle = LCB_DEFAULT_TCP_KEEPALIVE_IDLE;
+    settings->tcp_keepalive_interval = LCB_DEFAULT_TCP_KEEPALIVE_INTERVAL;
+    settings->tcp_keepalive_count = LCB_DEFAULT_TCP_KEEPALIVE_COUNT;
+    settings->tcp_user_timeout = LCB_DEFAULT_TCP_USER_TIMEOUT;
     settings->config_poll_interval = LCB_DEFAULT_CONFIG_POLL_INTERVAL;
     settings->use_collections = 1;
     settings->log_redaction = 0;

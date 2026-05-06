@@ -1343,10 +1343,54 @@ typedef enum {
 #define LCB_CNTL_PREFERRED_SERVER_GROUP 0x68
 
 /**
+ * @brief Idle time before the first TCP keepalive probe, in seconds
+ *
+ * Sets `TCP_KEEPIDLE`, and takes effect only where @ref LCB_CNTL_TCP_KEEPALIVE
+ * is enabled and the platform offers the option. Defaults to 5 seconds against
+ * a kernel default of 7200. 0 leaves the kernel default in place.
+ *
+ * @cntl_arg_both{lcb_U32*}
+ */
+#define LCB_CNTL_TCP_KEEPALIVE_IDLE 0x6a
+
+/**
+ * @brief Interval between unanswered TCP keepalive probes, in seconds
+ *
+ * Sets `TCP_KEEPINTVL`. Defaults to 2 seconds. 0 leaves the kernel default in
+ * place.
+ *
+ * @cntl_arg_both{lcb_U32*}
+ */
+#define LCB_CNTL_TCP_KEEPALIVE_INTERVAL 0x6b
+
+/**
+ * @brief Unanswered TCP keepalive probes before the connection is abandoned
+ *
+ * Sets `TCP_KEEPCNT`. Defaults to 3, so with the default idle and interval an
+ * idle connection whose peer stops answering reports ECONNRESET after 11
+ * seconds. 0 leaves the kernel default in place.
+ *
+ * @cntl_arg_both{lcb_U32*}
+ */
+#define LCB_CNTL_TCP_KEEPALIVE_COUNT 0x6c
+
+/**
+ * @brief Maximum time transmitted data may stay unacknowledged, in milliseconds
+ *
+ * Sets `TCP_USER_TIMEOUT`. The keepalive settings above are armed only while
+ * nothing is outstanding, so they do not cover a connection that goes silent
+ * with a request on the wire; this does. Defaults to 11000. 0 leaves the
+ * kernel default in place.
+ *
+ * @cntl_arg_both{lcb_U32*}
+ */
+#define LCB_CNTL_TCP_USER_TIMEOUT 0x6d
+
+/**
  * This is not a command, but rather an indicator of the last item.
  * @internal
  */
-#define LCB_CNTL__MAX 0x6a
+#define LCB_CNTL__MAX 0x6e
 /**@}*/
 
 #ifdef __cplusplus
