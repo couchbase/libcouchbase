@@ -80,6 +80,15 @@
 #define LCB_DEFAULT_TOPORETRY LCB_RETRY_CMDS_ALL
 #define LCB_DEFAULT_NETRETRY LCB_RETRY_CMDS_ALL
 #define LCB_DEFAULT_NMVRETRY LCB_RETRY_CMDS_ALL
+/* Retry an op against the retry queue when the vbucket map briefly has no
+ * master mapped (srvix < 0 || srvix >= cq->npipelines). The default flipped
+ * from 0 to 1 in CCBC-1702 because, during replace_config(), the cmdq
+ * transiently has cq->npipelines == 0 between take_pipelines() and
+ * add_pipelines(); any retryq tick inside that window would otherwise fail
+ * the op with LCB_ERR_NO_MATCHING_SERVER even though a healthy map is
+ * about to be installed. The op deadline still bounds how long we keep
+ * retrying. */
+#define LCB_DEFAULT_MISSINGNODERETRY LCB_RETRY_CMDS_ALL
 #define LCB_DEFAULT_HTCONFIG_URLTYPE LCB_HTCONFIG_URLTYPE_TRYALL
 #define LCB_DEFAULT_COMPRESSOPTS LCB_COMPRESS_INOUT
 

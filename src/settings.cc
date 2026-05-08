@@ -46,7 +46,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->retry[LCB_RETRY_ON_SOCKERR] = LCB_DEFAULT_NETRETRY;
     settings->retry[LCB_RETRY_ON_TOPOCHANGE] = LCB_DEFAULT_TOPORETRY;
     settings->retry[LCB_RETRY_ON_VBMAPERR] = LCB_DEFAULT_NMVRETRY;
-    settings->retry[LCB_RETRY_ON_MISSINGNODE] = 0;
+    settings->retry[LCB_RETRY_ON_MISSINGNODE] = LCB_DEFAULT_MISSINGNODERETRY;
     settings->bc_http_urltype = LCB_DEFAULT_HTCONFIG_URLTYPE;
     settings->compressopts = LCB_DEFAULT_COMPRESSOPTS;
     settings->compress_min_size = LCB_DEFAULT_COMPRESS_MIN_SIZE;

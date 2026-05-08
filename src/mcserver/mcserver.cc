@@ -144,6 +144,26 @@ bool Server::handle_nmv(MemcachedResponse &resinfo, mc_PACKET *oldpkt)
 
     MC_INCR_METRIC(this, packets_nmv, 1);
 
+    /* CCBC-1702: pin the current config for the duration of this call.
+     *
+     * Without this ref, lcb_vbguess_remap() and the NMV-driven cccp_update()
+     * below can race: cccp_update() (or any other config-replace path that
+     * runs in a nested event-handler stack frame) decrefs the old
+     * lcb_pCONFIGINFO and lcbvb_destroy() frees its lcbvb_CONFIG. A
+     * subsequent dereference of that lcbvb_CONFIG -- via cmdq.config or via
+     * a cached pointer -- is then a UAF. We have observed this as a SIGSEGV
+     * inside lcbvb_nmv_remap_ex during FoRecoverDelta scenarios when the
+     * retryq keeps ops in flight long enough to reach this handler.
+     *
+     * Holding a ref here keeps the at-entry config (and its vbc) alive
+     * until we return, which is sufficient: even if cur_configinfo is
+     * swapped to a new ConfigInfo during the call, the new one carries its
+     * own ref via lcb_update_vbconfig(), so cmdq.config remains valid. */
+    auto *info_at_entry = instance->cur_configinfo;
+    if (info_at_entry) {
+        info_at_entry->incref();
+    }
+
     mcreq_read_hdr(oldpkt, &hdr);
     vbid = ntohs(hdr.request.vbucket);
     lcb_log(LOGARGS_T(WARN), LOGFMT "NOT_MY_VBUCKET. Packet=%p (S=%u). VBID=%u, has_config=%s", LOGID_T(),
@@ -178,6 +198,9 @@ bool Server::handle_nmv(MemcachedResponse &resinfo, mc_PACKET *oldpkt)
     }
     lcb_RETRY_ACTION retry = lcb_kv_should_retry(settings, oldpkt, LCB_ERR_NOT_MY_VBUCKET);
     if (!retry.should_retry) {
+        if (info_at_entry) {
+            info_at_entry->decref();
+        }
         return false;
     }
 
@@ -185,6 +208,9 @@ bool Server::handle_nmv(MemcachedResponse &resinfo, mc_PACKET *oldpkt)
     mc_PACKET *newpkt = mcreq_renew_packet(oldpkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
     instance->retryq->nmvadd((mc_EXPACKET *)newpkt);
+    if (info_at_entry) {
+        info_at_entry->decref();
+    }
     return true;
 }
 

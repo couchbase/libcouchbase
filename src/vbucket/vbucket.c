@@ -900,6 +900,23 @@ void lcbvb_destroy(lcbvb_CONFIG *conf)
     free(conf->vbuckets);
     free(conf->ffvbuckets);
     free(conf->randbuf);
+    /* CCBC-1702: poison freed pointers so that any latent UAF on this
+     * struct (e.g. through cmdq.config or a captured lcbvb_CONFIG*) faults
+     * deterministically at the offending field rather than reading garbage
+     * from a recycled allocation. The struct itself is freed below; if
+     * anyone deref'd the struct after this returns, AddressSanitizer would
+     * have caught it -- but in production builds, NULL-deref is a far more
+     * actionable signal than reading whatever the next allocator hands out. */
+    conf->servers = NULL;
+    conf->continuum = NULL;
+    conf->buuid = NULL;
+    conf->bname = NULL;
+    conf->vbuckets = NULL;
+    conf->ffvbuckets = NULL;
+    conf->randbuf = NULL;
+    conf->nsrv = 0;
+    conf->ndatasrv = 0;
+    conf->nvb = 0;
     free(conf);
 }
 

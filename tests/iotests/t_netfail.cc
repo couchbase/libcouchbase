@@ -868,3 +868,250 @@ TEST_F(MockUnitTest, testNegativeIndex)
     lcb_cmdget_destroy(gcmd);
     // That's it
 }
+
+namespace
+{
+struct RestoreCtx {
+    lcbvb_CONFIG *vbc;
+    int vb;
+    int saved_master;
+    bool fired;
+    lcb_INSTANCE *instance;
+};
+
+extern "C" {
+static void restore_master_callback(void *cookie)
+{
+    auto *ctx = static_cast<RestoreCtx *>(cookie);
+    ctx->vbc->vbuckets[ctx->vb].servers[0] = ctx->saved_master;
+    ctx->fired = true;
+    lcb_loop_unref(ctx->instance);
+}
+}
+} // namespace
+
+/**
+ * Reproduces the rebound failure mode seen in SDKD situational tests
+ * (CCBC-1702): a brief window where the vbucket map's master index is
+ * unresolvable for the requested key. In production this happens during
+ * replace_config(), where mcreq_queue_take_pipelines() sets
+ * cq->npipelines = 0 before mcreq_queue_add_pipelines() reinstalls the
+ * new array. Any retryq tick that fires inside that window sees
+ * srvix >= cq->npipelines (or srvix < 0 when a vbucket has no master
+ * yet) and -- with the historical default of LCB_RETRY_ON_MISSINGNODE = 0
+ * -- fails the op with LCB_ERR_NO_MATCHING_SERVER.
+ *
+ * We exercise the same code path without iptables by:
+ *   1. Storing a key normally (warm up).
+ *   2. Stopping the config monitor so retryq cannot get a fresh map
+ *      from the cluster.
+ *   3. Setting vbuckets[vb].servers[0] = -1 to force lcbvb_vbmaster()
+ *      to return -1 -- the precise condition retryq.cc:264 trips on.
+ *   4. Scheduling a timer 200 ms into the future that restores the
+ *      original master index (simulating the new config arriving).
+ *   5. Issuing a GET with a 2 s deadline and waiting.
+ *
+ * On gerrit/master (RETRY_ON_MISSINGNODE = 0), retryq fails the op at
+ * the first tick with LCB_ERR_NO_MATCHING_SERVER, well before the
+ * timer fires. With RETRY_ON_MISSINGNODE = 1 the op stays in retryq
+ * across ticks; once the timer restores the map, the next tick
+ * dispatches the op to the correct pipeline and the GET succeeds.
+ */
+TEST_F(MockUnitTest, testRetryOnMissingNodeAfterMapRepair)
+{
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
+    lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback3);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback3);
+
+    std::string key("ni_repair_key");
+    lcbvb_CONFIG *vbc = instance->cur_configinfo->vbc;
+    instance->confmon->stop();
+    instance->confmon->stop_real();
+    int vb = lcbvb_k2vb(vbc, key.c_str(), key.size());
+    int saved_master = vbc->vbuckets[vb].servers[0];
+
+    lcb_cntl_setu32(instance, LCB_CNTL_OP_TIMEOUT, 2000000); // 2 s
+
+    NegativeIx ni{};
+    lcb_STATUS err;
+
+    /* warm up: store the key with a healthy map */
+    lcb_CMDSTORE *scmd;
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
+    lcb_cmdstore_key(scmd, key.c_str(), key.size());
+    std::string value("{}");
+    lcb_cmdstore_value(scmd, value.c_str(), value.size());
+    ni.err = LCB_SUCCESS;
+    ni.callCount = 0;
+    err = lcb_store(instance, &ni, scmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, err);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(1, ni.callCount);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, ni.err);
+    lcb_cmdstore_destroy(scmd);
+
+    /* corrupt the map so vbmaster() returns -1 for this key */
+    vbc->vbuckets[vb].servers[0] = -1;
+
+    /* schedule the repair 200 ms out -- comfortably inside the 2 s op
+     * deadline and well past retryq's first tick (default 10 ms) */
+    RestoreCtx ctx{vbc, vb, saved_master, false, instance};
+    lcbio_pTIMER timer = lcbio_timer_new(instance->iotable, &ctx, restore_master_callback);
+    lcb_loop_ref(instance);
+    lcbio_timer_rearm(timer, 200000);
+
+    /* dispatch GET; with the fix it sits in retryq until the timer fires */
+    lcb_CMDGET *gcmd;
+    lcb_cmdget_create(&gcmd);
+    lcb_cmdget_key(gcmd, key.c_str(), key.size());
+    ni.err = LCB_ERR_GENERIC;
+    ni.callCount = 0;
+    err = lcb_get(instance, &ni, gcmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, err);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    lcbio_timer_destroy(timer);
+    lcb_cmdget_destroy(gcmd);
+
+    ASSERT_TRUE(ctx.fired) << "Restore timer should have fired before lcb_wait returned";
+    ASSERT_EQ(1, ni.callCount);
+    EXPECT_STATUS_EQ(LCB_SUCCESS, ni.err);
+}
+
+namespace
+{
+struct ReplaceConfigCtx {
+    lcb_INSTANCE *instance;
+    lcbvb_CONFIG *new_vbc; /* ownership transferred to ConfigInfo when fired */
+    bool fired;
+};
+
+extern "C" {
+static void replace_config_callback(void *cookie)
+{
+    auto *ctx = static_cast<ReplaceConfigCtx *>(cookie);
+    /* Wrap the prebuilt new vbc into a ConfigInfo and install via the
+     * full replace path. lcb_update_vbconfig will:
+     *   1. Set instance->cur_configinfo to the new ConfigInfo and incref
+     *      it (refcount goes 1 -> 2).
+     *   2. Update cmdq.config to the new vbc.
+     *   3. Call replace_config(), which atomically swaps cmdq.pipelines
+     *      and friends.
+     *   4. Decref the old ConfigInfo (refcount 1 -> 0), which destroys
+     *      its lcbvb_CONFIG via lcbvb_destroy().
+     * After return, the old vbc is freed; any captured raw lcbvb_CONFIG*
+     * pointers that hadn't taken a ConfigInfo ref are now dangling. The
+     * subsequent retryq tick in the main flow exercises post-replace
+     * dispatch on the new map. */
+    auto *new_info =
+        lcb::clconfig::ConfigInfo::create(ctx->new_vbc, lcb::clconfig::CLCONFIG_CCCP, "synthetic-replace");
+    lcb_update_vbconfig(ctx->instance, new_info);
+    /* lcb_update_vbconfig() incref'd new_info to 2; create() left it at 1.
+     * So after lcb_update_vbconfig returns, refcount is 2. We decref to
+     * release our local ref; cur_configinfo still owns the remaining
+     * one. */
+    new_info->decref();
+    ctx->fired = true;
+    lcb_loop_unref(ctx->instance);
+}
+}
+} // namespace
+
+/**
+ * Drives a real config-replace mid-retry, exercising the full
+ * lcb_update_vbconfig -> replace_config code path that the simpler
+ * testRetryOnMissingNodeAfterMapRepair does not reach (that test mutates
+ * the live vbc in place rather than installing a new ConfigInfo).
+ *
+ * The bug surface this guards against -- and which on gerrit/master
+ * required FoRecoverDelta in the SDKD situational suite to expose --
+ * is the lifetime of the old lcbvb_CONFIG once lcb_update_vbconfig
+ * decrefs it: any code path that captured a raw lcbvb_CONFIG* (e.g.,
+ * Server::handle_nmv via LCBT_VBCONFIG, or anyone holding cmdq.config
+ * across an event-loop callback) without a ConfigInfo ref now points
+ * at freed memory. CCBC-1702 plugs the two known holders (handle_nmv
+ * via incref/decref guard) and adds defensive zeroing in
+ * lcbvb_destroy() so that a missed holder NULL-derefs deterministically
+ * rather than reading garbage.
+ *
+ * The test corrupts the live vbmap so the GET goes into retryq, then
+ * 100 ms later swaps in a brand-new ConfigInfo (built from a JSON
+ * round-trip of the live config with the master restored). With all
+ * the fixes in place, the retryq tick following the swap dispatches
+ * the GET on the freshly-installed pipelines and the op succeeds.
+ */
+TEST_F(MockUnitTest, testConfigReplaceMidRetry)
+{
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
+    lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback3);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback3);
+
+    std::string key("repl_replace_key");
+    lcbvb_CONFIG *vbc = instance->cur_configinfo->vbc;
+    instance->confmon->stop();
+    instance->confmon->stop_real();
+    int vb = lcbvb_k2vb(vbc, key.c_str(), key.size());
+
+    lcb_cntl_setu32(instance, LCB_CNTL_OP_TIMEOUT, 2000000); // 2 s
+
+    NegativeIx ni{};
+    lcb_STATUS err;
+
+    /* warm up under the healthy map */
+    lcb_CMDSTORE *scmd;
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
+    lcb_cmdstore_key(scmd, key.c_str(), key.size());
+    std::string value("{}");
+    lcb_cmdstore_value(scmd, value.c_str(), value.size());
+    ni.err = LCB_SUCCESS;
+    ni.callCount = 0;
+    err = lcb_store(instance, &ni, scmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, err);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_EQ(1, ni.callCount);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, ni.err);
+    lcb_cmdstore_destroy(scmd);
+
+    /* Snapshot the (still-healthy) live vbc as JSON. We will load this
+     * into a fresh lcbvb_CONFIG and feed it back through
+     * lcb_update_vbconfig() to drive a full replace cycle. */
+    char *cfg_json = lcbvb_save_json(vbc);
+    ASSERT_TRUE(cfg_json != nullptr) << "lcbvb_save_json returned NULL";
+
+    auto *new_vbc = lcbvb_create();
+    ASSERT_TRUE(new_vbc != nullptr);
+    int rv = lcbvb_load_json(new_vbc, cfg_json);
+    free(cfg_json);
+    ASSERT_EQ(0, rv) << "lcbvb_load_json failed";
+
+    /* Now corrupt the live map so the GET enters retryq */
+    vbc->vbuckets[vb].servers[0] = -1;
+
+    /* Schedule the swap 100 ms out -- comfortably past retryq's first
+     * tick (default 10 ms) so the op is sitting in retryq when the
+     * config flips. */
+    ReplaceConfigCtx ctx{instance, new_vbc, false};
+    lcbio_pTIMER timer = lcbio_timer_new(instance->iotable, &ctx, replace_config_callback);
+    lcb_loop_ref(instance);
+    lcbio_timer_rearm(timer, 100000);
+
+    /* dispatch GET; it lands in retryq, waits for the swap, then
+     * dispatches on the new pipelines */
+    lcb_CMDGET *gcmd;
+    lcb_cmdget_create(&gcmd);
+    lcb_cmdget_key(gcmd, key.c_str(), key.size());
+    ni.err = LCB_ERR_GENERIC;
+    ni.callCount = 0;
+    err = lcb_get(instance, &ni, gcmd);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, err);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    lcbio_timer_destroy(timer);
+    lcb_cmdget_destroy(gcmd);
+
+    ASSERT_TRUE(ctx.fired) << "Replace timer should have fired before lcb_wait returned";
+    ASSERT_EQ(1, ni.callCount);
+    EXPECT_STATUS_EQ(LCB_SUCCESS, ni.err);
+}
