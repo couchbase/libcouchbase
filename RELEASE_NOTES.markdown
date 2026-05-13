@@ -1,5 +1,104 @@
 # Release Notes
 
+# 3.3.19 (2026-05-13)
+
+* CCBC-1685: Add `lcb_trim_memory()` to release cached pool memory.
+  Long-lived instances that occasionally burst and then idle retain the
+  peak working set of every pipeline's internal allocator until
+  `lcb_destroy()`. In memory-constrained environments (containers, tight
+  cgroup limits) this plateau is easily mistaken for a leak and can
+  trigger the OOM killer once several instances are stacked in one
+  process. The new API releases the backing buffers of cached blocks
+  without touching in-flight operations or connections. Intended for
+  periodic invocation from an application's idle tick when RSS
+  approaches a configured limit.
+
+* CCBC-1702: Requeue operations when the vBucket map briefly has no
+  master. During failover, rebalance, and the moment a new
+  configuration is being installed the vbmap can transiently show no
+  master for a vBucket. Previously such operations failed immediately
+  with `LCB_ERR_NO_MATCHING_SERVER`; they are now retried until the
+  operation deadline expires, matching the contract customers expect
+  during topology changes. Opt-out remains available via
+  `retry=missingnode=0`. This change also closes several latent
+  use-after-free races on the configuration-replacement path that the
+  longer retry window made reachable.
+
+* CCBC-1699, CCBC-1695, CCBC-1694: Fix TLS + `libuv` crashes and hangs
+  around instance teardown and live configuration updates. Pre-fix
+  symptoms included `SIGABRT` in the SSL context destructor on
+  Couchbase Server 7.6 and 6.6, a deadlock in `lcb_destroy()` that
+  prevented async-destroy callbacks from firing, and a use-after-free
+  crash during rebalance and failover against CBS 6.0.x under TLS. The
+  libuv I/O plugin now caps its teardown drain and force-closes
+  orphaned timers and sockets so `lcb_destroy_io_ops()` no longer
+  hangs or asserts on `uv_loop_close`.
+
+* CCBC-1686, CCBC-1687, CCBC-1692: Harden the `conn-state-invalidated`
+  error path. A server-side error carrying this errmap attribute
+  (e.g. `EINTERNAL` 0x84) could leave the client exposed to a
+  destroy/refresh race that crashed on Windows IOCP and was a latent
+  use-after-free on Linux. Configuration providers are now paused
+  synchronously at the start of `lcb_destroy()`, and an inverted
+  guard in the error handler that could deliver `LCB_SUCCESS` to
+  user callbacks (or clobber a more specific status with
+  `LCB_ERR_GENERIC`) has been corrected.
+
+* CCBC-1688: Fix use-after-free in the threshold-logging tracer.
+  Host and port tags attached to a span used to point into the owning
+  socket's connection info, which could be freed before the span was
+  finished — for example when a sockpool entry was torn down by its
+  timer while the outer HTTP/View request was still draining. The
+  tracer now copies these short strings.
+
+* CCBC-1684: Preserve the `deadline >= start` invariant when an
+  operation is re-stamped at flush time. With
+  `LCB_CNTL_RESET_TIMEOUT_ON_WAIT` enabled and a short per-op timeout,
+  the flush callback could produce a packet with `start > deadline`
+  and abort the process via an assertion on the next `lcb_wait()`.
+  Both fields are now rebased to flush time, preserving the remaining
+  timeout budget.
+
+* Fix packet replacement and memory management in the retry queue.
+  When a collection is being flushed and packets are renewed in
+  place, the old packet's bytes can still be referenced by the
+  netbuf PDU queue or an in-flight kernel write. The new
+  `MCREQ_F_REPLACED` flag lets the retry path safely replace such
+  packets without freeing memory that is still on the wire.
+
+* CCBC-1693: Avoid copying the cached collection path on every KV
+  response. `CollectionCache::id_to_name` now returns a stable
+  reference into the cache instead of a fresh `std::string`,
+  eliminating a per-reply allocation for collection paths longer
+  than the small-string optimisation threshold.
+
+* CCBC-1682: Fix Analytics discovery with Alternate Addresses. When
+  connecting to Couchbase Operational or Enterprise Analytics using
+  `LCB_TYPE_CLUSTER`, the client used `/poolsStreaming/default`,
+  which returns a legacy configuration without `nodesExt` and
+  triggers the 2.x parser fallback. As a result the Analytics
+  service was not discovered, alternate addresses were ignored, and
+  callers saw `LCB_ERR_UNSUPPORTED_OPERATION`. The cluster-level
+  HTTP bootstrap now uses `/pools/default/nodeServicesStreaming`.
+
+* CCBC-1678: Deprecate the Views (Map-Reduce) API in public headers.
+  Couchbase Server 7.0 deprecated the Views service in favour of the
+  Query Service (SQL++). All public view entry points now emit
+  `-Wdeprecated-declarations` at call sites with a guiding message.
+  ABI is preserved; existing binaries continue to link and run.
+  Translation units that legitimately use the Views API can opt out
+  by predefining `LCB_DEPRECATE_VIEWS(X)` before including
+  `couchbase.h`.
+
+* Honor `op->trytime` strictly when flushing scheduled retries.
+  The previous 5 ms early-fire window could let a retry land below
+  the errmap retry-spec's documented "wait at least N ms before the
+  first retry" floor, observable on slower CI runners.
+
+* CCBC-1689, CCBC-1690, CCBC-1691: Stabilise the test suite around
+  failover/replica-read, libuv-specific timer races, and slow
+  Windows Debug bootstrap. SDK behaviour is unchanged.
+
 # 3.3.18 (2025-09-10)
 
 * CCBC-1672: Fixed protocol violation on new connections.
