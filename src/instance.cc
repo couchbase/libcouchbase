@@ -14,6 +14,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+/* This TU implements lcb_trim_memory(); suppress the @uncommitted warning for itself. */
+#define LCB_UNCOMMITTED_API(X) X
 #include "internal.h"
 #include "collections.h"
 #include "auth-priv.h"

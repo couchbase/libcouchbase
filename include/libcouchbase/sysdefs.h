@@ -124,6 +124,36 @@ typedef lcb_time_t lcb_SECS;   /**< @brief Unsigned 'seconds time' type */
                     "Views are deprecated in Couchbase Server 7.0+. Instead of views, use the Query Service (SQL++).")
 #endif
 
+/**
+ * Mark a public API entry point as @uncommitted: experimental, not part of
+ * the stable libcouchbase contract, and subject to change or removal in a
+ * future release without prior announcement. Wrap a declaration with this
+ * macro to emit a compile-time warning at every user call site, without
+ * changing the ABI or removing the symbol. The diagnostic message is shared
+ * across every uncommitted entry point so all such APIs can be located and
+ * promoted (or retired) as a single change later.
+ *
+ * A translation unit that legitimately implements, tests, or demonstrates
+ * an uncommitted API (the implementation source files, the dedicated unit
+ * tests, the in-tree examples) can suppress the diagnostic for itself by
+ * defining the macro to `X` *before* including any libcouchbase header,
+ * e.g.:
+ *
+ *     #define LCB_UNCOMMITTED_API(X) X
+ *     #include <libcouchbase/couchbase.h>
+ *
+ * Scope rule is the same as for LCB_DEPRECATE_VIEWS: the attribute is
+ * attached during preprocessing, so redefining the macro further down the
+ * file has no effect on already-preprocessed declarations. For sub-file
+ * granularity use a `#pragma GCC diagnostic ignored "-Wdeprecated-declarations"`
+ * block.
+ */
+#ifndef LCB_UNCOMMITTED_API
+#define LCB_UNCOMMITTED_API(X)                                                                                         \
+    LCB_DEPRECATED2(X, "This API is uncommitted: experimental, not covered by the libcouchbase compatibility "         \
+                       "guarantee, and may change or be removed in a future release without notice.")
+#endif
+
 #ifdef __cplusplus
 }
 #endif

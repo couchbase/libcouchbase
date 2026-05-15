@@ -2159,8 +2159,7 @@ void lcb_destroy_async(lcb_INSTANCE *instance, const void *arg);
  *
  * @see lcb_destroy
  */
-LIBCOUCHBASE_API
-void lcb_trim_memory(lcb_INSTANCE *instance);
+LCB_UNCOMMITTED_API(LIBCOUCHBASE_API void lcb_trim_memory(lcb_INSTANCE *instance));
 
 /** @internal */
 #define LCB_DATATYPE_JSON 0x01
