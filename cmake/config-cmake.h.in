@@ -18,6 +18,7 @@
 #cmakedefine HAVE_GETTIMEOFDAY
 #cmakedefine HAVE_INTTYPES_H
 #cmakedefine HAVE_NETDB_H
+#cmakedefine HAVE_RES_NINIT
 #cmakedefine HAVE_SETITIMER
 #cmakedefine HAVE_STDINT_H
 #cmakedefine HAVE_STDDEF_H

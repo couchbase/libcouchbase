@@ -232,9 +232,9 @@ class LCB_CLASS_EXPORT Connspec
 #define LCB_SPECSCHEME_SRV_SSL "couchbases+dnssrv://"
 
 // Standalone functionality:
-lcb_STATUS dnssrv_query(const char *name, Hostlist &hostlist);
+lcb_STATUS dnssrv_query(const char *name, Hostlist &hostlist, uint32_t timeout_us);
 
-Hostlist *dnssrv_getbslist(const char *addr, bool is_ssl, lcb_STATUS &errout);
+Hostlist *dnssrv_getbslist(const char *addr, bool is_ssl, lcb_STATUS &errout, uint32_t timeout_us);
 
 } // namespace lcb
 

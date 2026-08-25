@@ -218,7 +218,8 @@ lcb_STATUS lcb_st::process_dns_srv(Connspec &spec)
 
     const Spechost &host = spec.hosts().front();
     lcb_STATUS rc = LCB_ERR_SDK_INTERNAL;
-    Hostlist *hl = dnssrv_getbslist(host.hostname.c_str(), spec.sslopts() & LCB_SSL_ENABLED, rc);
+    Hostlist *hl =
+        dnssrv_getbslist(host.hostname.c_str(), spec.sslopts() & LCB_SSL_ENABLED, rc, settings->config_node_timeout);
 
     if (hl == nullptr) {
         lcb_log(LOGARGS(this, INFO), "DNS SRV lookup failed: %s. Ignore this if not relying on DNS SRV records",

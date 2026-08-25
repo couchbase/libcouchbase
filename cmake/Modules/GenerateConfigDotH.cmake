@@ -2,6 +2,7 @@
 INCLUDE(CheckFunctionExists)
 INCLUDE(CheckIncludeFiles)
 INCLUDE(CheckSymbolExists)
+INCLUDE(CheckCSourceCompiles)
 
 IF(UNIX)
     CHECK_FUNCTION_EXISTS(gethrtime HAVE_GETHRTIME)
@@ -10,6 +11,29 @@ IF(UNIX)
     CHECK_FUNCTION_EXISTS(setitimer HAVE_SETITIMER)
     CHECK_SYMBOL_EXISTS(htonll arpa/inet.h HAVE_HTONLL)
     CHECK_SYMBOL_EXISTS(res_search "netinet/in.h;resolv.h" HAVE_RES_SEARCH)
+    # res_ninit is a macro on glibc and CHECK_SYMBOL_EXISTS is satisfied by the
+    # macro alone, without linking anything. The bounded lookup also calls
+    # res_nsearch, which lives in libresolv rather than libc before glibc 2.34,
+    # so the probe compiles and links all three calls against the library the
+    # build links.
+    SET(CMAKE_REQUIRED_LIBRARIES resolv)
+    CHECK_C_SOURCE_COMPILES("
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/nameser.h>
+#include <resolv.h>
+int main(void)
+{
+    struct __res_state state;
+    unsigned char buf[16];
+    if (res_ninit(&state) != 0) {
+        return 1;
+    }
+    (void)res_nsearch(&state, \"example.com\", ns_c_in, ns_t_srv, buf, sizeof(buf));
+    res_nclose(&state);
+    return 0;
+}" HAVE_RES_NINIT)
+    UNSET(CMAKE_REQUIRED_LIBRARIES)
     CHECK_INCLUDE_FILES(dlfcn.h HAVE_DLFCN_H)
     CHECK_INCLUDE_FILES(netdb.h HAVE_NETDB_H)
     CHECK_INCLUDE_FILES(stdint.h HAVE_STDINT_H)

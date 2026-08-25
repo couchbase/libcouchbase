@@ -22,7 +22,7 @@
 
 #define LCB_NSRESSZ 4096
 
-lcb_STATUS lcb::dnssrv_query(const char *name, lcb::Hostlist &hostlist)
+lcb_STATUS lcb::dnssrv_query(const char *name, lcb::Hostlist &hostlist, uint32_t timeout_us)
 {
     ns_msg msg;
 
@@ -30,7 +30,37 @@ lcb_STATUS lcb::dnssrv_query(const char *name, lcb::Hostlist &hostlist)
     lcb_U16 dns_rv;
 
     std::vector<unsigned char> pkt(LCB_NSRESSZ);
+
+#ifdef HAVE_RES_NINIT
+    /* The resolver waits `retrans` seconds on each nameserver on each of its
+     * `retry` passes, so an unanswered query costs retrans * retry * nscount
+     * before it gives up -- tens of seconds with the system defaults. This
+     * lookup runs inside lcb_create(), which returns to the caller only when
+     * it completes, so the wait is bounded by the budget the caller already
+     * set for reaching one configuration node.
+     *
+     * Giving up early is not a failure: process_dns_srv() falls back to the
+     * hostname it was given unless the scheme demanded SRV. The ceiling still
+     * scales with the resolver's search list, which res_nsearch() walks one
+     * name at a time. */
+    struct __res_state state;
+    memset(&state, 0, sizeof(state));
+    if (res_ninit(&state) != 0) {
+        return LCB_ERR_UNKNOWN_HOST;
+    }
+    unsigned nameservers = state.nscount > 0 ? static_cast<unsigned>(state.nscount) : 1u;
+    state.retry = 1;
+    state.retrans = static_cast<int>((timeout_us / 1000000u) / nameservers);
+    if (state.retrans < 1) {
+        state.retrans = 1;
+    }
+    nresp = res_nsearch(&state, name, ns_c_in, ns_t_srv, &pkt[0], pkt.size());
+    res_nclose(&state);
+#else
+    (void)timeout_us;
     nresp = res_search(name, ns_c_in, ns_t_srv, &pkt[0], pkt.size());
+#endif
+
     if (nresp < 0) {
         return LCB_ERR_UNKNOWN_HOST;
     }
@@ -94,7 +124,7 @@ lcb_STATUS lcb::dnssrv_query(const char *name, lcb::Hostlist &hostlist)
 #include <windns.h>
 #define CAN_SRV_LOOKUP
 /* Implement via DnsQuery() */
-lcb_STATUS lcb::dnssrv_query(const char *addr, Hostlist &hs)
+lcb_STATUS lcb::dnssrv_query(const char *addr, Hostlist &hs, uint32_t)
 {
     DNS_STATUS status;
     PDNS_RECORDA root, cur;
@@ -118,7 +148,7 @@ lcb_STATUS lcb::dnssrv_query(const char *addr, Hostlist &hs)
 #endif /* !WIN32 */
 
 #ifndef CAN_SRV_LOOKUP
-lcb_STATUS lcb::dnssrv_query(const char *, Hostlist &)
+lcb_STATUS lcb::dnssrv_query(const char *, Hostlist &, uint32_t)
 {
     return LCB_ERR_SDK_FEATURE_UNAVAILABLE;
 }
@@ -127,14 +157,14 @@ lcb_STATUS lcb::dnssrv_query(const char *, Hostlist &)
 #define SVCNAME_PLAIN "_couchbase._tcp."
 #define SVCNAME_SSL "_couchbases._tcp."
 
-lcb::Hostlist *lcb::dnssrv_getbslist(const char *addr, bool is_ssl, lcb_STATUS &errp)
+lcb::Hostlist *lcb::dnssrv_getbslist(const char *addr, bool is_ssl, lcb_STATUS &errp, uint32_t timeout_us)
 {
     std::string ss;
     auto *ret = new Hostlist();
     ss.append(is_ssl ? SVCNAME_SSL : SVCNAME_PLAIN);
     ss.append(addr);
 
-    errp = dnssrv_query(ss.c_str(), *ret);
+    errp = dnssrv_query(ss.c_str(), *ret, timeout_us);
     if (errp != LCB_SUCCESS) {
         delete ret;
         return nullptr;
