@@ -100,6 +100,12 @@ IF(HAVE_LIBEVENT2)
     ADD_EXAMPLE(libevent-direct libeventdirect ${LIBEVENT_LIBRARIES} ${LIBEVENT_INCLUDE_DIR})
 ENDIF()
 
+IF(HAVE_LIBEVENT2 AND NOT WIN32)
+    ADD_EXAMPLE(pool-connect-race pool-connect-race
+            "${LIBEVENT_LIBRARIES};pthread;${CMAKE_DL_LIBS}"
+            "${LIBEVENT_INCLUDE_DIR};${PROJECT_SOURCE_DIR}/plugins/io/libevent")
+ENDIF()
+
 IF(HAVE_LIBUV AND LCB_BUILD_LIBUV)
     ADD_EXAMPLE(libuv-direct libuvdirect ${LIBUV_LIBRARIES} ${LIBUV_INCLUDE_DIR})
 ENDIF()

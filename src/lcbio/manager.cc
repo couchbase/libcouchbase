@@ -97,6 +97,7 @@ namespace io
 {
 struct PoolConnInfo : lcbio_PROTOCTX, CinfoNode {
     inline PoolConnInfo(PoolHost *he, uint32_t timeout);
+    inline void start(uint32_t timeout);
     inline ~PoolConnInfo();
     inline void on_idle_timeout();
     inline void on_connected(lcbio_SOCKET *sock, lcb_STATUS err);
@@ -394,25 +395,32 @@ void PoolConnInfo::on_connected(lcbio_SOCKET *sock_, lcb_STATUS err)
     }
 }
 
-PoolConnInfo::PoolConnInfo(PoolHost *he, uint32_t timeout)
-    : lcbio_PROTOCTX(), parent(he), sock(nullptr), cs(nullptr), idle_timer(he->parent->io, this), state(PENDING)
+PoolConnInfo::PoolConnInfo(PoolHost *he, uint32_t)
+    : lcbio_PROTOCTX(), CinfoNode(), parent(he), sock(nullptr), cs(nullptr), idle_timer(he->parent->io, this),
+      state(PENDING)
 {
-
     // protoctx fields
     id = LCBIO_PROTOCTX_POOL;
     dtor = cinfo_protoctx_dtor;
 
+    lcb_log(LOGARGS(he->parent, TRACE), HE_LOGFMT "New pool entry: I=%p", HE_LOGID(he), (void *)this);
+}
+
+/* Connecting is separate from construction because lcbio_connect() publishes
+ * this object to ::on_connected, which unlinks it from PoolHost::ll_pending and
+ * may delete it. The caller must have linked it and taken its references first. */
+void PoolConnInfo::start(uint32_t timeout)
+{
     lcb_host_t tmphost = {"", "", 0};
-    lcb_STATUS err = lcb_host_parsez(&tmphost, he->key.c_str(), 80);
+    lcb_STATUS err = lcb_host_parsez(&tmphost, parent->key.c_str(), 80);
     if (err != LCB_SUCCESS) {
-        lcb_log(LOGARGS(he->parent, ERROR), HE_LOGFMT "Could not parse host! Will supply dummy host (I=%p)",
-                HE_LOGID(he), (void *)this);
+        lcb_log(LOGARGS(parent->parent, ERROR), HE_LOGFMT "Could not parse host! Will supply dummy host (I=%p)",
+                HE_LOGID(parent), (void *)this);
         strcpy(tmphost.host, "BADHOST");
         strcpy(tmphost.port, "BADPORT");
     }
-    lcb_log(LOGARGS(he->parent, TRACE), HE_LOGFMT "New pool entry: I=%p", HE_LOGID(he), (void *)this);
 
-    cs = lcbio_connect(he->parent->io, he->parent->settings, &tmphost, timeout, ::on_connected, this);
+    cs = lcbio_connect(parent->parent->io, parent->parent->settings, &tmphost, timeout, ::on_connected, this);
 }
 
 void PoolHost::start_new_connection(uint32_t timeout)
@@ -421,6 +429,7 @@ void PoolHost::start_new_connection(uint32_t timeout)
     lcb_clist_append(&ll_pending, info);
     n_total++;
     refcount++;
+    info->start(timeout);
 }
 
 void PoolRequest::timer_handler()
@@ -494,8 +503,6 @@ GT_POPAGAIN:
                 HE_LOGID(he));
 
     } else {
-        req->set_pending(timeout);
-
         lcb_clist_append(&he->requests, req);
         if (he->num_pending() < he->num_requests()) {
             lcb_log(LOGARGS(this, DEBUG), HE_LOGFMT "Creating new connection because none are available in the pool",
@@ -506,6 +513,11 @@ GT_POPAGAIN:
             lcb_log(LOGARGS(this, DEBUG), HE_LOGFMT "Not creating a new connection. There are still pending ones",
                     HE_LOGID(he));
         }
+        /* Armed last: start_new_connection() resolves a name synchronously, so
+         * a timer armed before it is already due and can be dispatched into
+         * timer_handler() -- which completes and deletes this request -- before
+         * get() has returned it to the caller. */
+        req->set_pending(timeout);
     }
     return req;
 }

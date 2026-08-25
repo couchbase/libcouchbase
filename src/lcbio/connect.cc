@@ -553,9 +553,6 @@ Connstart::Connstart(lcbio_TABLE *iot_, lcb_settings *settings_, const lcb_host_
         event = iot_->E_event_create();
     }
 
-    timer.rearm(timeout);
-    lcb_log(LOGARGS_T(INFO), CSLOGFMT "Starting. Timeout=%uus", CSLOGID_T(), timeout);
-
     /** Hostname lookup: */
     memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_PASSIVE;
@@ -573,6 +570,14 @@ Connstart::Connstart(lcbio_TABLE *iot_, lcb_settings *settings_, const lcb_host_
         lcb_log(LOGARGS_T(ERR), CSLOGFMT "Couldn't look up %s (%s) [EAI=%d]", CSLOGID_T(), dest->host, errstr, rv);
         notify_error(LCB_ERR_UNKNOWN_HOST);
     } else {
+        /* Arm the timeout only now. getaddrinfo() above is synchronous and may
+         * take longer than `timeout`; arming before it spends the budget on
+         * name resolution and leaves an already-expired timer that the next
+         * turn of the event loop will dispatch into handler() before the
+         * caller has finished constructing its own state. */
+        timer.rearm(timeout);
+        lcb_log(LOGARGS_T(INFO), CSLOGFMT "Starting. Timeout=%uus", CSLOGID_T(), timeout);
+
         ai = ai_root;
 
         /** Figure out how to connect */
