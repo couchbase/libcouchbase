@@ -784,9 +784,9 @@ static void flush_noop(mc_PIPELINE *pipeline)
     (void)pipeline;
 }
 
-static void server_connect(Server *server)
+static void server_connect(mc_PIPELINE *pipeline)
 {
-    server->connect();
+    static_cast<Server *>(pipeline)->connect();
 }
 
 bool Server::maybe_retry_packet(mc_PACKET *pkt, lcb_STATUS err, protocol_binary_response_status status)
@@ -1234,9 +1234,9 @@ static void on_connected(lcbio_SOCKET *sock, void *data, lcb_STATUS err, lcbio_O
     server->handle_connected(sock, err, syserr);
 }
 
-static void mcserver_flush(Server *s)
+static void mcserver_flush(mc_PIPELINE *pipeline)
 {
-    s->flush();
+    static_cast<Server *>(pipeline)->flush();
 }
 
 void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR syserr)
@@ -1314,7 +1314,7 @@ void Server::handle_connected(lcbio_SOCKET *sock, lcb_STATUS err, lcbio_OSERR sy
     procs.cb_flush_ready = on_flush_ready;
     connctx = lcbio_ctx_new(sock, this, &procs, "memcached");
     sock->service = LCBIO_SERVICE_KV;
-    flush_start = (mcreq_flushstart_fn)mcserver_flush;
+    flush_start = mcserver_flush;
     if (try_to_select_bucket) {
         bucket.assign(settings->bucket, strlen(settings->bucket));
         lcb::MemcachedRequest req(PROTOCOL_BINARY_CMD_SELECT_BUCKET);
@@ -1347,7 +1347,7 @@ Server::Server(lcb_INSTANCE *instance_, int ix)
       mutation_tokens(0), new_durability(-1), selected_bucket(0), connctx(nullptr), curhost(new lcb_host_t())
 {
     mcreq_pipeline_init(this);
-    flush_start = (mcreq_flushstart_fn)server_connect;
+    flush_start = server_connect;
     buf_done_callback = buf_done_cb;
     index = ix;
 
@@ -1498,7 +1498,7 @@ void Server::start_errored_ctx(State next_state)
                 connect();
             } else {
                 // Connect once someone actually wants a connection.
-                flush_start = (mcreq_flushstart_fn)server_connect;
+                flush_start = server_connect;
             }
         }
 
@@ -1512,7 +1512,7 @@ void Server::start_errored_ctx(State next_state)
             /* Close the socket not to leak resources */
             lcbio_shutdown(lcbio_ctx_sock(ctx));
             if (next_state == Server::S_ERRDRAIN) {
-                flush_start = (mcreq_flushstart_fn)flush_errdrain;
+                flush_start = flush_errdrain;
             } else if (next_state == Server::S_CLOSED && connreq == nullptr && instance->destroying) {
                 /* Established TLS connections in steady state keep
                  * connctx->npending == 1 for the inbound read watcher (the

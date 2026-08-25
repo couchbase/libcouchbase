@@ -35,7 +35,7 @@
 using namespace lcb;
 
 #define LOGARGS(ctx, lvl) ctx->settings, "negotiation", LCB_LOG_##lvl, __FILE__, __LINE__
-static void cleanup_negotiated(SessionInfo *info);
+static void cleanup_negotiated(lcbio_PROTOCTX *ctx);
 static void handle_ioerr(lcbio_CTX *ctx, lcb_STATUS err);
 
 #define LOGFMT CTX_LOGFMT_PRE ",SOCK=%016" PRIx64 ",SASLREQ=%p) "
@@ -220,7 +220,7 @@ static int sasl_get_password(cbsasl_conn_t *conn, void *context, int id, cbsasl_
 SessionInfo::SessionInfo() : lcbio_PROTOCTX()
 {
     lcbio_PROTOCTX::id = LCBIO_PROTOCTX_SESSINFO;
-    lcbio_PROTOCTX::dtor = (void (*)(lcbio_PROTOCTX *))cleanup_negotiated;
+    lcbio_PROTOCTX::dtor = cleanup_negotiated;
 }
 
 bool SessionRequestImpl::setup(const lcbio_NAMEINFO &nistrs, const lcb_host_t &host, const lcb::Authenticator &auth)
@@ -418,7 +418,9 @@ bool SessionRequestImpl::check_auth(const lcb::MemcachedResponse &packet)
     return true;
 }
 
-static const char *protocol_feature_2_text(protocol_binary_hello_features feature)
+/* Takes the wire value rather than the enumeration: a server may reply with a
+ * feature this build does not name, and that is not a value of the enum. */
+static const char *protocol_feature_2_text(std::uint16_t feature)
 {
     switch (feature) {
         case PROTOCOL_BINARY_FEATURE_TLS:
@@ -560,10 +562,10 @@ bool SessionRequestImpl::read_hello(const lcb::MemcachedResponse &packet)
     size_t ii;
     std::string fstr;
     for (ii = 0, cur = payload; cur < limit; cur += 2, ii++) {
-        protocol_binary_hello_features tmp;
+        std::uint16_t tmp;
         char buf[50] = {0};
         memcpy(&tmp, cur, sizeof(tmp));
-        tmp = static_cast<protocol_binary_hello_features>(ntohs(tmp));
+        tmp = ntohs(tmp);
         info->server_features.push_back(tmp);
         snprintf(buf, sizeof(buf), "%s0x%02x (%s)", ii > 0 ? ", " : "", tmp, protocol_feature_2_text(tmp));
         fstr.append(buf);
@@ -810,9 +812,9 @@ static void handle_ioerr(lcbio_CTX *ctx, lcb_STATUS err)
     sreq->fail(err, "IO Error");
 }
 
-static void cleanup_negotiated(SessionInfo *info)
+static void cleanup_negotiated(lcbio_PROTOCTX *ctx)
 {
-    delete info;
+    delete static_cast<SessionInfo *>(ctx);
 }
 
 void SessionRequestImpl::start(lcbio_SOCKET *sock)

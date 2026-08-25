@@ -262,22 +262,26 @@ static mc_PACKET *check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
 
     // before adding packet to pipeline lets see if we need add or remove collection id prefix
     char *header_and_key = SPAN_BUFFER(&packet->kh_span);
-    protocol_binary_request_header *request = (protocol_binary_request_header *)header_and_key;
+    /* The span starts wherever the pipeline's buffer had room, so the header is
+     * not aligned for its own type. Work on an aligned copy and write it back
+     * only where a field changes. */
+    protocol_binary_request_header request;
+    memcpy(&request, header_and_key, sizeof(request));
 
     uint16_t key_length;
     uint8_t flexible_extras_length = 0;
 
-    if (request->request.magic == PROTOCOL_BINARY_AREQ) {
-        flexible_extras_length = request->request.keylen & 0xff;
-        key_length = request->request.keylen >> 8;
+    if (request.request.magic == PROTOCOL_BINARY_AREQ) {
+        flexible_extras_length = request.request.keylen & 0xff;
+        key_length = request.request.keylen >> 8;
     } else {
-        key_length = ntohs(request->request.keylen);
+        key_length = ntohs(request.request.keylen);
     }
     if (key_length == 0) {
         return packet;
     }
 
-    char *key = header_and_key + sizeof(*request) + request->request.extlen + flexible_extras_length;
+    char *key = header_and_key + sizeof(request) + request.request.extlen + flexible_extras_length;
     uint32_t collection_id = 0;
 
     uint16_t collection_id_length = 0;
@@ -302,13 +306,14 @@ static mc_PACKET *check_collection_id(mc_PIPELINE *pipeline, mc_PACKET *packet)
                 // but the packet has encoded collection id
                 if (collection_id == 0) {
                     // strip it if it is default collection
-                    request->request.bodylen = htonl(ntohl(request->request.bodylen) - collection_id_length);
+                    request.request.bodylen = htonl(ntohl(request.request.bodylen) - collection_id_length);
                     uint16_t new_key_length = key_length - collection_id_length;
-                    if (request->request.magic == PROTOCOL_BINARY_AREQ) {
-                        request->request.keylen = (new_key_length << 8U) | (flexible_extras_length & 0xffU);
+                    if (request.request.magic == PROTOCOL_BINARY_AREQ) {
+                        request.request.keylen = (new_key_length << 8U) | (flexible_extras_length & 0xffU);
                     } else {
-                        request->request.keylen = htons(new_key_length);
+                        request.request.keylen = htons(new_key_length);
                     }
+                    memcpy(header_and_key, &request, sizeof(request));
 
                     // shift the key content to the left
                     for (int i = 0; i < new_key_length; ++i) {
