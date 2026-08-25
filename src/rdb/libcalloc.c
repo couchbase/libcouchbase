@@ -31,6 +31,9 @@ static rdb_ROPESEG *seg_alloc(rdb_pALLOCATOR alloc, unsigned size)
     rdb_ROPESEG *ret;
     newsize = size + sizeof(*ret);
     ret = malloc(newsize);
+    if (ret == NULL) {
+        return NULL;
+    }
     memset(ret, 0, sizeof(*ret));
     ret->nalloc = size;
     ret->root = ((char *)ret) + sizeof(*ret);
@@ -43,11 +46,15 @@ static rdb_ROPESEG *seg_alloc(rdb_pALLOCATOR alloc, unsigned size)
 static rdb_ROPESEG *seg_realloc(rdb_pALLOCATOR alloc, rdb_ROPESEG *seg, unsigned size)
 {
     unsigned newsize = size + sizeof(*seg);
-    seg = realloc(seg, newsize);
-    seg->root = ((char *)seg) + sizeof(*seg);
+    rdb_ROPESEG *newseg = realloc(seg, newsize);
+    if (newseg == NULL) {
+        /* The segment keeps the buffer it already has. */
+        return NULL;
+    }
+    newseg->root = ((char *)newseg) + sizeof(*newseg);
 
     (void)alloc;
-    return seg;
+    return newseg;
 }
 
 static void seg_free(rdb_pALLOCATOR alloc, rdb_ROPESEG *seg)
@@ -70,6 +77,9 @@ static void buf_reserve(rdb_pALLOCATOR alloc, rdb_ROPEBUF *buf, unsigned cap)
         to_alloc -= lastseg->nalloc - lastseg->start;
     }
     newseg = alloc->s_alloc(alloc, to_alloc);
+    if (newseg == NULL) {
+        return;
+    }
     lcb_list_append(&buf->segments, &newseg->llnode);
 }
 

@@ -114,6 +114,26 @@ TARGET_LINK_LIBRARIES(sock-tests couchbaseS gtest)
 TARGET_LINK_LIBRARIES(vbucket-tests gtest couchbaseS)
 TARGET_LINK_LIBRARIES(htparse-tests gtest couchbaseS)
 
+# t_oom.cc refuses allocations to reach the out-of-memory paths in rdb. --wrap
+# redirects the calls compiled into rdb-tests and leaves the loader and the C
+# library on the real allocator, so nothing is refused before main() runs.
+INCLUDE(CheckCSourceCompiles)
+SET(CMAKE_REQUIRED_LINK_OPTIONS "-Wl,--wrap=malloc")
+# The probe has to reference __real_malloc, not just define __wrap_malloc: a
+# linker that ignores --wrap still links the latter, and the tests would then be
+# compiled in against __real_* symbols that resolve nowhere.
+CHECK_C_SOURCE_COMPILES("
+#include <stddef.h>
+void *__real_malloc(size_t n);
+void *__wrap_malloc(size_t n) { return __real_malloc(n); }
+int main(void) { return __wrap_malloc(1) == NULL; }" LCB_HAVE_LD_WRAP)
+UNSET(CMAKE_REQUIRED_LINK_OPTIONS)
+
+IF(LCB_HAVE_LD_WRAP)
+    TARGET_LINK_OPTIONS(rdb-tests PRIVATE "-Wl,--wrap=malloc,--wrap=calloc,--wrap=realloc")
+    TARGET_COMPILE_DEFINITIONS(rdb-tests PRIVATE LCB_TEST_WRAP_ALLOC=1)
+ENDIF()
+
 IF(WIN32)
     TARGET_LINK_LIBRARIES(mc-tests ws2_32.lib)
     TARGET_LINK_LIBRARIES(mc-malloc-tests ws2_32.lib)

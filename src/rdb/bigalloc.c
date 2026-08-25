@@ -86,7 +86,14 @@ static rdb_ROPESEG *seg_alloc(rdb_ALLOCATOR *abase, unsigned size)
         alloc->n_toobig++;
         alloc->total_malloc++;
         newseg = calloc(1, sizeof(*newseg));
+        if (newseg == NULL) {
+            return NULL;
+        }
         newseg->root = malloc(size);
+        if (newseg->root == NULL) {
+            free(newseg);
+            return NULL;
+        }
         newseg->nalloc = size;
         goto GT_RETNEW;
     } else if (size < alloc->min_blk_alloc) {
@@ -113,6 +120,9 @@ static rdb_ROPESEG *seg_alloc(rdb_ALLOCATOR *abase, unsigned size)
             free(newseg->root);
         } else {
             newseg = calloc(1, sizeof(*newseg));
+            if (newseg == NULL) {
+                return NULL;
+            }
             alloc->total_malloc++;
         }
 
@@ -121,6 +131,12 @@ static rdb_ROPESEG *seg_alloc(rdb_ALLOCATOR *abase, unsigned size)
         }
 
         newseg->root = malloc(newsize);
+        if (newseg->root == NULL) {
+            /* Whether it came off the free list or from calloc() above, it is
+             * on no list now and its previous buffer has been released. */
+            free(newseg);
+            return NULL;
+        }
         newseg->nalloc = newsize;
     }
 
@@ -145,6 +161,9 @@ static void buf_reserve(rdb_pALLOCATOR abase, rdb_ROPEBUF *buf, unsigned size)
     }
 
     newseg = seg_alloc(&alloc->base, size);
+    if (newseg == NULL) {
+        return;
+    }
     lcb_list_append(&buf->segments, &newseg->llnode);
 }
 
@@ -158,7 +177,14 @@ static rdb_ROPESEG *seg_realloc(rdb_ALLOCATOR *abase, rdb_ROPESEG *seg, unsigned
         alloc->n_toobig++;
     }
 
-    seg->root = realloc(seg->root, size);
+    {
+        char *newroot = realloc(seg->root, size);
+        if (newroot == NULL) {
+            /* The segment keeps the buffer it already has. */
+            return NULL;
+        }
+        seg->root = newroot;
+    }
     seg->nalloc = size;
     alloc->total_malloc++;
     recheck_thresholds((rdb_BIGALLOC *)abase);
@@ -187,6 +213,9 @@ rdb_ALLOCATOR *rdb_bigalloc_new(void)
 {
     rdb_ALLOCATOR *abase;
     rdb_BIGALLOC *alloc = calloc(1, sizeof(*alloc));
+    if (alloc == NULL) {
+        return NULL;
+    }
     lcb_clist_init(&alloc->bufs);
     alloc->max_blk_alloc = RDB_BIGALLOC_ALLOCSZ_MAX;
     alloc->min_blk_alloc = RDB_BIGALLOC_ALLOCSZ_MIN;

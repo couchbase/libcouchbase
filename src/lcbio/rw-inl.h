@@ -56,6 +56,11 @@ static INLINE lcbio_IOSTATUS lcbio_E_rdb_slurp(lcbio_CTX *ctx, rdb_IOROPE *ior)
 
     do {
         niov = rdb_rdstart(ior, (nb_IOV *)iov, RWINL_IOVSIZE);
+        if (niov == 0) {
+            /* No read buffer could be allocated. Reporting a shutdown closes
+             * the socket, which is what frees the memory the rope wanted. */
+            return LCBIO_SHUTDOWN;
+        }
     GT_READ:
         rv = IOT_V0IO(iot).recvv(IOT_ARG(iot), CTX_FD(ctx), iov, niov);
         if (rv > 0) {

@@ -52,9 +52,20 @@ unsigned rdb_rdstart(rdb_IOROPE *ior, nb_IOV *iov, unsigned niov)
         return orig_niov - niov;
     }
 
+    if (ior->avail.allocator == NULL) {
+        /* The allocator factory was refused when the socket was set up. There
+         * is nothing to reserve from, now or later. */
+        return orig_niov - niov;
+    }
+
     ior->avail.allocator->r_reserve(ior->avail.allocator, &ior->avail, ior->rdsize - cur_rdsize);
 
-    lcb_assert(!LCB_LIST_IS_EMPTY(&ior->avail.segments));
+    if (LCB_LIST_IS_EMPTY(&ior->avail.segments)) {
+        /* The allocator could not provide a buffer. The caller sees only the
+         * space already on the rope, and none at all if there was none; it
+         * must not read into a segment that does not exist. */
+        return orig_niov - niov;
+    }
 
     LCB_LIST_FOR(ll, &ior->avail.segments)
     {
@@ -191,9 +202,21 @@ static void rope_consolidate(rdb_ROPEBUF *rope, unsigned nr)
     if (rdb_seg_recyclable(seg)) {
         unsigned to_alloc = nr + seg->start;
         newseg = SEG_REALLOC(seg, to_alloc);
+        if (newseg == NULL) {
+            /* The rope is left as it was, holding the same bytes across the
+             * same segments. The first segment is then shorter than the caller
+             * asked for, which rdb_get_consolidated() checks before handing
+             * back a buffer. */
+            lcb_list_prepend(&rope->segments, &seg->llnode);
+            return;
+        }
         /* We re-add it back after traversal */
     } else {
         newseg = ROPE_SALLOC(rope, nr);
+        if (newseg == NULL) {
+            lcb_list_prepend(&rope->segments, &seg->llnode);
+            return;
+        }
         memcpy(RDB_SEG_WBUF(newseg), RDB_SEG_RBUF(seg), seg->nused);
         newseg->nused = seg->nused;
         /* "Free" it. Since this buffer is in use, we just unset our own flag */
@@ -292,7 +315,11 @@ char *rdb_get_consolidated(rdb_IOROPE *ior, unsigned n)
     lcb_assert(ior->recvd.nused >= n);
     rdb_consolidate(ior, n);
     rdb_ROPESEG *seg = RDB_SEG_FIRST(&ior->recvd);
-    if (!seg) {
+    if (!seg || seg->nused < n) {
+        /* Consolidation is refused when it cannot get a segment to gather into,
+         * and leaves the rope as it was. The first segment then still holds
+         * less than was asked for, and the rest of the bytes are not contiguous
+         * with it, so there is no buffer to hand back. */
         return NULL;
     }
     return RDB_SEG_RBUF(seg);
@@ -339,7 +366,9 @@ void rdb_cleanup(rdb_IOROPE *ior)
 {
     wipe_rope(&ior->recvd);
     wipe_rope(&ior->avail);
-    ior->recvd.allocator->a_release(ior->recvd.allocator);
+    if (ior->recvd.allocator) {
+        ior->recvd.allocator->a_release(ior->recvd.allocator);
+    }
 }
 
 void rdb_challoc(rdb_IOROPE *ior, rdb_ALLOCATOR *alloc)

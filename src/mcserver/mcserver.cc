@@ -744,7 +744,11 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
         nb_IOV iov;
 
         rdb_consolidate(ior, pktsize);
-        rdb_refread_ex(ior, &iov, &segs, 1, pktsize);
+        /* The response is forwarded as one buffer, so a refused consolidation
+         * leaves nothing correct to hand over: the first segment alone would
+         * present a prefix of the packet as the whole of it. */
+        int niov = rdb_refread_ex(ior, &iov, &segs, 1, pktsize);
+        lcb_assert(niov == 1);
 
         resp.bufs = &segs;
         resp.iovs = (lcb_IOV *)&iov;

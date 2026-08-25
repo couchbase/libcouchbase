@@ -71,7 +71,14 @@ static rdb_ROPESEG *standalone_alloc(rdb_ALLOCATOR *abase, unsigned size)
     rdb_ROPESEG *seg;
 
     seg = calloc(1, sizeof(*seg));
+    if (seg == NULL) {
+        return NULL;
+    }
     seg->root = malloc(size);
+    if (seg->root == NULL) {
+        free(seg);
+        return NULL;
+    }
     seg->nalloc = size;
     seg->shflags = RDB_ROPESEG_F_LIB;
     seg->allocid = RDB_ALLOCATOR_CHUNKED;
@@ -105,6 +112,9 @@ static rdb_ROPESEG *chunked_alloc(my_CHUNKALLOC *alloc)
         alloc->refcount++;
     } else {
         chunk = standalone_alloc(&alloc->base, alloc->chunksize);
+        if (chunk == NULL) {
+            return NULL;
+        }
     }
 
     chunk->start = 0;
@@ -129,6 +139,9 @@ static void buf_reserve(rdb_ALLOCATOR *abase, rdb_ROPEBUF *buf, unsigned n)
 
     while (allocated < n) {
         rdb_ROPESEG *seg = chunked_alloc(alloc);
+        if (seg == NULL) {
+            return;
+        }
         lcb_list_append(&buf->segments, &seg->llnode);
         allocated += seg->nalloc;
     }
@@ -136,8 +149,13 @@ static void buf_reserve(rdb_ALLOCATOR *abase, rdb_ROPEBUF *buf, unsigned n)
 
 static rdb_ROPESEG *seg_realloc(rdb_ALLOCATOR *abase, rdb_ROPESEG *seg, unsigned n)
 {
+    char *newroot = realloc(seg->root, n);
+    if (newroot == NULL) {
+        /* The segment keeps the buffer it already has. */
+        return NULL;
+    }
     seg->nalloc = n;
-    seg->root = realloc(seg->root, n);
+    seg->root = newroot;
 
     (void)abase;
     return seg;
@@ -154,6 +172,9 @@ rdb_ALLOCATOR *rdb_chunkalloc_new(unsigned chunksize)
 {
     rdb_ALLOCATOR *ret;
     my_CHUNKALLOC *alloc = calloc(1, sizeof(*alloc));
+    if (alloc == NULL) {
+        return NULL;
+    }
     alloc->refcount = 1;
     alloc->chunksize = chunksize;
     alloc->max_chunks = 512;
