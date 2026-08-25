@@ -618,6 +618,20 @@ Server::ReadState Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     /* copy bytes into the info structure */
     rdb_copyread(ior, mcresp.hdrbytes(), mcresp.hdrsize());
 
+    if (!mcresp.has_consistent_lengths()) {
+        /* Every handler below offsets into the payload using these fields. A
+         * peer that disagrees with the protocol, or a stream that has lost
+         * framing, would send them past the end of the body -- and past NULL
+         * when it declares no body -- so the connection goes rather than the
+         * packet, as for any other protocol violation. */
+        lcb_log(LOGARGS_T(ERR),
+                LOGFMT "Server sent a packet whose length fields overrun its body, closing the connection. "
+                       "(" PKTFMT ", KEY=%u, EXT=%u, FFEXT=%u, BODY=%u)",
+                LOGID_T(), PKTARGS(mcresp), mcresp.keylen(), mcresp.extlen(), mcresp.ffextlen(), mcresp.bodylen());
+        lcbio_ctx_senderr(ctx, LCB_ERR_PROTOCOL_ERROR);
+        return PKT_READ_ABORT;
+    }
+
     pktsize += mcresp.bodylen();
     if (rdb_get_nused(ior) < pktsize) {
         RETURN_NEED_MORE(pktsize);

@@ -104,6 +104,11 @@ IF(HAVE_LIBEVENT2 AND NOT WIN32)
     ADD_EXAMPLE(pool-connect-race pool-connect-race
             "${LIBEVENT_LIBRARIES};pthread;${CMAKE_DL_LIBS}"
             "${LIBEVENT_INCLUDE_DIR};${PROJECT_SOURCE_DIR}/plugins/io/libevent")
+
+    ADD_EXAMPLE(malformed-config malformed-config "${LIBEVENT_LIBRARIES};pthread" ${LIBEVENT_INCLUDE_DIR})
+    # The example resolves the I/O backend through lcb_create_io_ops, which
+    # dlopens the plugin, so it has to exist before the example can run.
+    ADD_DEPENDENCIES(malformed-config couchbase_libevent)
 ENDIF()
 
 IF(HAVE_LIBUV AND LCB_BUILD_LIBUV)

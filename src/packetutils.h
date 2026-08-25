@@ -203,20 +203,61 @@ class MemcachedResponse
     }
 
     /**
-     * Gets a pointer starting at the packet's value field. Only use if NVALUE is 0
+     * Whether the header's length fields fit inside the body it declares.
+     *
+     * ffext(), ext(), key() and value() each offset into the payload by some
+     * combination of these fields, so a packet that fails this check has
+     * accessors that point past its own body -- and past NULL entirely when it
+     * declares no body at all. Packets read off a socket are checked before
+     * they reach a handler; see lcb::Server::try_read().
+     */
+    bool has_consistent_lengths() const
+    {
+        return bodylen() >= static_cast<uint32_t>(keylen()) + extlen() + ffextlen();
+    }
+
+    /**
+     * Gets a pointer starting at the packet's value field, or NULL if the packet
+     * declared no body.
+     *
+     * A header with bodylen == 0 leaves payload unset, so the offset arithmetic
+     * would otherwise yield a pointer into the first page. Responses the library
+     * synthesises for a failed operation are body-less in exactly this way and
+     * never pass through load(), so the check is here rather than only at the
+     * point a packet is parsed.
      */
     const char *value() const
     {
+        if (payload == nullptr) {
+            return nullptr;
+        }
         return body<const char *>() + keylen() + extlen() + ffextlen();
     }
 
     /**
      * Gets the size of the packet value. The value is the part of the payload
      * which is after the key (if applicable) and extras (if applicable).
+     *
+     * A packet whose length fields cover its whole body, or overrun it, has no
+     * value. The subtraction is unsigned, so it must not be allowed to wrap:
+     * every caller treats the result as a byte count it may read, and several
+     * use it as their only emptiness guard.
+     *
+     * The same reasoning binds this to value(): a caller reads vallen() bytes
+     * from value(), so a null pointer must carry a zero count. load() leaves
+     * payload null when the read buffer could not be allocated, which says
+     * nothing about the length fields the header declares.
      */
     uint32_t vallen() const
     {
-        return bodylen() - (keylen() + extlen() + ffextlen());
+        if (payload == nullptr) {
+            return 0;
+        }
+        const uint32_t header_fields = keylen() + extlen() + ffextlen();
+        if (bodylen() <= header_fields) {
+            return 0;
+        }
+        return bodylen() - header_fields;
     }
 
     /**

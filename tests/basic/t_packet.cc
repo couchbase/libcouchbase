@@ -98,6 +98,31 @@ class Pkt
         rdb_copywrite(ior, hdr.bytes, sizeof(hdr.bytes));
     }
 
+    /**
+     * Writes a bare header with arbitrary length fields, as a peer that
+     * disagrees with the protocol -- or a desynchronised stream -- produces.
+     * PROTOCOL_BINARY_ARES splits the two key-length bytes into a
+     * framing-extras length followed by a key length.
+     */
+    void writeRawHeader(rdb_IOROPE *ior, uint8_t magic, uint8_t keylen, uint8_t ffextlen, uint8_t extlen,
+                        uint8_t datatype, uint32_t bodylen)
+    {
+        protocol_binary_response_header hdr;
+        memset(&hdr, 0, sizeof(hdr));
+        hdr.response.magic = magic;
+        hdr.response.opcode = PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG;
+        hdr.response.extlen = extlen;
+        hdr.response.datatype = datatype;
+        hdr.response.bodylen = htonl(bodylen);
+        if (magic == PROTOCOL_BINARY_ARES) {
+            hdr.bytes[2] = ffextlen;
+            hdr.bytes[3] = keylen;
+        } else {
+            hdr.response.keylen = htons(keylen);
+        }
+        rdb_copywrite(ior, hdr.bytes, sizeof(hdr.bytes));
+    }
+
     ~Pkt()
     {
         clear();
@@ -206,4 +231,193 @@ TEST_F(Packet, testKeys)
 
     pi.release(&ior);
     rdb_cleanup(&ior);
+}
+
+/*
+ * A header declaring no body leaves MemcachedResponse::payload unset. Reading
+ * the value of such a packet must not produce a pointer into the first page,
+ * and its length must not wrap: config response handlers pass both straight to
+ * snappy::Uncompress() and to the std::string constructor.
+ */
+TEST_F(Packet, testBodylessPacketHasNoValue)
+{
+    rdb_IOROPE ior;
+    rdb_init(&ior, rdb_libcalloc_new());
+
+    Pkt pkt;
+    pkt.writeRawHeader(&ior, PROTOCOL_BINARY_RES, 0, 0, 8, 0, 0);
+
+    lcb::MemcachedResponse pi;
+    unsigned wanted;
+    ASSERT_TRUE(pi.load(&ior, &wanted));
+
+    ASSERT_EQ(0, pi.bodylen());
+    ASSERT_EQ(8, pi.extlen());
+    ASSERT_EQ(nullptr, pi.value());
+    ASSERT_EQ(0, pi.vallen());
+
+    pi.release(&ior);
+    rdb_cleanup(&ior);
+}
+
+TEST_F(Packet, testBodylessFlexibleFramingPacketHasNoValue)
+{
+    rdb_IOROPE ior;
+    rdb_init(&ior, rdb_libcalloc_new());
+
+    Pkt pkt;
+    pkt.writeRawHeader(&ior, PROTOCOL_BINARY_ARES, 0, 8, 0, 0, 0);
+
+    lcb::MemcachedResponse pi;
+    unsigned wanted;
+    ASSERT_TRUE(pi.load(&ior, &wanted));
+
+    ASSERT_EQ(0, pi.keylen());
+    ASSERT_EQ(8, pi.ffextlen());
+    ASSERT_EQ(nullptr, pi.value());
+    ASSERT_EQ(0, pi.vallen());
+
+    pi.release(&ior);
+    rdb_cleanup(&ior);
+}
+
+/*
+ * A read buffer that could not be allocated leaves payload null while the
+ * header still declares a body. value() and vallen() are read as a pair -- the
+ * caller reads vallen() bytes from value() -- so the count must follow the
+ * pointer to zero. snappy::Uncompress(nullptr, n) with n > 0 dereferences on
+ * its first byte.
+ */
+/* payload is protected, so the state load() leaves behind when the read buffer
+ * could not be allocated -- a header declaring a body, with nothing read into
+ * it -- can only be installed from a derived class. */
+struct UnallocatedResponse : lcb::MemcachedResponse {
+    UnallocatedResponse(uint8_t extlen, uint32_t bodylen, uint8_t datatype = 0)
+    {
+        res.response.magic = PROTOCOL_BINARY_RES;
+        res.response.opcode = PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG;
+        res.response.extlen = extlen;
+        res.response.datatype = datatype;
+        res.response.bodylen = htonl(bodylen);
+        payload = nullptr;
+    }
+};
+
+TEST_F(Packet, testUnallocatedPayloadHasNoValueLength)
+{
+    UnallocatedResponse pi(4, 64);
+
+    ASSERT_EQ(64, pi.bodylen());
+    ASSERT_EQ(nullptr, pi.value());
+    ASSERT_EQ(0, pi.vallen());
+}
+
+/*
+ * The pair matters more than either half: inflated_value() hands value() and
+ * vallen() straight to snappy, and snappy::Uncompress(nullptr, n) with n > 0
+ * dereferences on its first byte.
+ */
+TEST_F(Packet, testUnallocatedPayloadInflatesToNothing)
+{
+    UnallocatedResponse pi(4, 64, PROTOCOL_BINARY_DATATYPE_COMPRESSED);
+
+    ASSERT_EQ(nullptr, pi.value());
+    ASSERT_EQ(0, pi.vallen());
+    ASSERT_TRUE(pi.inflated_value().empty());
+}
+
+/*
+ * Length fields that overrun the body are the same hazard without a null
+ * payload: the subtraction is unsigned, so vallen() must clamp rather than
+ * report a value the caller would then read.
+ */
+TEST_F(Packet, testLengthFieldsOverrunningBodyHaveNoValue)
+{
+    rdb_IOROPE ior;
+    rdb_init(&ior, rdb_libcalloc_new());
+
+    Pkt pkt;
+    pkt.writeRawHeader(&ior, PROTOCOL_BINARY_RES, 0, 0, 8, 0, 4);
+    char body[4] = {0};
+    rdb_copywrite(&ior, body, sizeof(body));
+
+    lcb::MemcachedResponse pi;
+    unsigned wanted;
+    ASSERT_TRUE(pi.load(&ior, &wanted));
+
+    ASSERT_EQ(4, pi.bodylen());
+    ASSERT_EQ(8, pi.extlen());
+    ASSERT_EQ(0, pi.vallen());
+
+    pi.release(&ior);
+    rdb_cleanup(&ior);
+}
+
+/*
+ * The crash site: inflated_value() on a body-less packet whose datatype claims
+ * snappy compression handed (value(), vallen()) to the decompressor.
+ */
+TEST_F(Packet, testInflatedValueOfBodylessPacketIsEmpty)
+{
+    rdb_IOROPE ior;
+    rdb_init(&ior, rdb_libcalloc_new());
+
+    Pkt pkt;
+    pkt.writeRawHeader(&ior, PROTOCOL_BINARY_RES, 0, 0, 8, PROTOCOL_BINARY_DATATYPE_COMPRESSED, 0);
+
+    lcb::MemcachedResponse pi;
+    unsigned wanted;
+    ASSERT_TRUE(pi.load(&ior, &wanted));
+
+    ASSERT_TRUE(pi.inflated_value().empty());
+
+    pi.release(&ior);
+    rdb_cleanup(&ior);
+}
+
+/**
+ * Loads a header with the given length fields and reports whether the packet
+ * satisfies the invariant the read path enforces before dispatching it.
+ */
+static bool lengths_consistent(uint8_t magic, uint8_t keylen, uint8_t ffextlen, uint8_t extlen, uint32_t bodylen)
+{
+    char body[32] = {0};
+    rdb_IOROPE ior;
+    rdb_init(&ior, rdb_libcalloc_new());
+
+    Pkt pkt;
+    pkt.writeRawHeader(&ior, magic, keylen, ffextlen, extlen, 0, bodylen);
+    if (bodylen) {
+        rdb_copywrite(&ior, body, bodylen);
+    }
+
+    lcb::MemcachedResponse pi;
+    unsigned wanted;
+    EXPECT_TRUE(pi.load(&ior, &wanted));
+    bool consistent = pi.has_consistent_lengths();
+
+    pi.release(&ior);
+    rdb_cleanup(&ior);
+    return consistent;
+}
+
+/*
+ * ffext(), ext(), key() and value() each offset into the payload by some
+ * combination of the header length fields, so a body that does not cover them
+ * puts every one of those accessors out of bounds -- and past NULL when the
+ * packet declares no body, since payload is then never assigned.
+ */
+TEST_F(Packet, testLengthFieldsAreCheckedAgainstTheBody)
+{
+    /* a body that covers the length fields, exactly or with a value after them */
+    ASSERT_TRUE(lengths_consistent(PROTOCOL_BINARY_RES, 0, 0, 0, 0));
+    ASSERT_TRUE(lengths_consistent(PROTOCOL_BINARY_RES, 0, 0, 8, 8));
+    ASSERT_TRUE(lengths_consistent(PROTOCOL_BINARY_RES, 4, 0, 4, 16));
+    ASSERT_TRUE(lengths_consistent(PROTOCOL_BINARY_ARES, 4, 4, 4, 16));
+
+    /* fields that overrun it */
+    ASSERT_FALSE(lengths_consistent(PROTOCOL_BINARY_RES, 0, 0, 8, 0));
+    ASSERT_FALSE(lengths_consistent(PROTOCOL_BINARY_RES, 8, 0, 0, 0));
+    ASSERT_FALSE(lengths_consistent(PROTOCOL_BINARY_ARES, 0, 8, 0, 0));
+    ASSERT_FALSE(lengths_consistent(PROTOCOL_BINARY_RES, 0, 0, 8, 4));
 }
