@@ -92,11 +92,16 @@ static void genCertificate(SSL_CTX *ctx) {
     X509_gmtime_adj(X509_get_notAfter(x509), 31536000L);
     X509_set_pubkey(x509, pkey);
 
-    X509_NAME *name = X509_get_subject_name(x509);
+    /* Built rather than borrowed from the certificate: X509_get_subject_name()
+     * returns a const pointer on OpenSSL 4.0, and the entries have to go
+     * somewhere writable. This is self-signed, so subject and issuer match. */
+    X509_NAME *name = X509_NAME_new();
     X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (unsigned char *)"CA", -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (unsigned char *)"MyCompany Inc.", -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (unsigned char *)"localhost", -1, -1, 0);
+    X509_set_subject_name(x509, name);
     X509_set_issuer_name(x509, name);
+    X509_NAME_free(name);
     X509_sign(x509, pkey, EVP_sha384());
 
     SSL_CTX_use_PrivateKey(ctx, pkey);
