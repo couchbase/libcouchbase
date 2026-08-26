@@ -26,8 +26,8 @@
 #include <openssl/opensslv.h>
 #include <openssl/ssl.h>
 
-#if OPENSSL_VERSION_NUMBER >= 0x1010100fL
-#define HAVE_CIPHERSUITES 1
+#if OPENSSL_VERSION_NUMBER < 0x1010100fL
+#error "libcouchbase requires OpenSSL >= 1.1.1; the build system should have caught this"
 #endif
 
 #define LOGARGS(ssl, lvl) ((lcbio_SOCKET *)SSL_get_app_data(ssl))->settings, "SSL", lvl, __FILE__, __LINE__
@@ -160,20 +160,6 @@ void iotssl_destroy_common(lcbio_XSSL *xs)
     lcbio_table_unref(xs->orig);
 }
 
-#if LCB_CAN_OPTIMIZE_SSL_BIO
-void iotssl_bm_reserve(BUF_MEM *bm)
-{
-    int oldlen;
-    oldlen = bm->length;
-    while (bm->max - bm->length < 4096) {
-        /* there's also a BUF_MEM_grow_clean() but that actually clears the
-         * used portion of the buffer */
-        BUF_MEM_grow(bm, bm->max + 4096);
-    }
-    bm->length = oldlen;
-}
-#endif
-
 void iotssl_log_errors(lcbio_XSSL *xs)
 {
     unsigned long curerr;
@@ -305,23 +291,38 @@ struct lcbio_SSLCTX {
 
 #define LOGARGS_S(settings, lvl) settings, "SSL", lvl, __FILE__, __LINE__
 
-static long decode_ssl_protocol(const char *protocol)
+/**
+ * Translates LCB_SSL_MINIMUM_TLS into the lowest protocol version the
+ * connection may negotiate. The floor is TLS 1.2: RFC 8996 deprecated TLS
+ * 1.0 and 1.1 in March 2021, NIST SP 800-52r2 requires 1.2 or above, and
+ * every supported Couchbase Server release speaks 1.2.
+ *
+ * An unrecognised value keeps that floor rather than lowering it, and says
+ * so; an operator who mistyped the variable would otherwise be left
+ * believing they had changed something.
+ */
+static int decode_ssl_protocol(const char *protocol, const lcb_settings *settings)
 {
-    long disallow = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
-    if (!protocol) {
-        // The caller didn't care.. allow all from TLS 1
-        return disallow;
+    if (protocol == NULL) {
+        return TLS1_2_VERSION;
+    }
+    if (strcasecmp(protocol, "tlsv1") == 0) {
+        return TLS1_VERSION;
     }
     if (strcasecmp(protocol, "tlsv1.1") == 0) {
-        disallow |= SSL_OP_NO_TLSv1;
-    } else if (strcasecmp(protocol, "tlsv1.2") == 0) {
-        disallow |= SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1;
-#ifdef HAVE_CIPHERSUITES
-    } else if (strcasecmp(protocol, "tlsv1.3") == 0) {
-        disallow |= SSL_OP_NO_TLSv1_2 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1;
-#endif
+        return TLS1_1_VERSION;
     }
-    return disallow;
+    if (strcasecmp(protocol, "tlsv1.2") == 0) {
+        return TLS1_2_VERSION;
+    }
+    if (strcasecmp(protocol, "tlsv1.3") == 0) {
+        return TLS1_3_VERSION;
+    }
+    lcb_log(LOGARGS_S(settings, LCB_LOG_WARN),
+            "Unrecognized LCB_SSL_MINIMUM_TLS value \"%s\", keeping the minimum at TLS 1.2. "
+            "Supported values are tlsv1, tlsv1.1, tlsv1.2 and tlsv1.3",
+            protocol);
+    return TLS1_2_VERSION;
 }
 
 #if (OPENSSL_VERSION_NUMBER < 0x30000000L)
@@ -395,21 +396,13 @@ lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *
     lcb_STATUS err_s;
     lcbio_pSSLCTX ret;
 
-    static const char *default_ssl_cipher_list =
-        "DHE-RSA-AES256-SHA:DHE-DSS-AES256-SHA:AES256-SHA:EDH-RSA-DES-CBC3-SHA:EDH-DSS-DES-CBC3-SHA:DES-CBC3-SHA:DES-"
-        "CBC3-MD5:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA:AES128-SHA:DHE-RSA-SEED-SHA:DHE-DSS-SEED-SHA:SEED-SHA:RC2-CBC-"
-        "MD5:RC4-SHA:RC4-MD5:RC4-MD5:EDH-RSA-DES-CBC-SHA:EDH-DSS-DES-CBC-SHA:DES-CBC-SHA:DES-CBC-MD5:EXP-EDH-RSA-DES-"
-        "CBC-SHA:EXP-EDH-DSS-DES-CBC-SHA:EXP-DES-CBC-SHA:EXP-RC2-CBC-MD5:EXP-RC2-CBC-MD5:EXP-RC4-MD5:EXP-RC4-MD5";
-
+    /* Cipher selection is delegated to OpenSSL's built-in defaults, which on
+     * 1.1.1+ exclude RC4, DES/3DES, MD5, and EXPORT-grade suites by default.
+     * A caller can still narrow or widen the list via LCB_SSL_CIPHER_LIST
+     * (TLS <= 1.2) or LCB_SSL_CIPHERSUITES (TLS 1.3). */
     const char *cipher_list = getenv("LCB_SSL_CIPHER_LIST");
-#ifdef HAVE_CIPHERSUITES
     const char *ciphersuites = getenv("LCB_SSL_CIPHERSUITES");
-#endif
     const char *minimum_tls = getenv("LCB_SSL_MINIMUM_TLS");
-
-    if (!cipher_list) {
-        cipher_list = default_ssl_cipher_list;
-    }
 
     if (!errp) {
         errp = &err_s;
@@ -420,27 +413,22 @@ lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *
         *errp = LCB_ERR_NO_MEMORY;
         goto GT_ERR;
     }
-    ret->ctx = SSL_CTX_new(SSLv23_client_method());
+    ret->ctx = SSL_CTX_new(TLS_client_method());
     if (!ret->ctx) {
         *errp = LCB_ERR_SSL_ERROR;
         goto GT_ERR;
     }
 
-    if (SSL_CTX_set_cipher_list(ret->ctx, cipher_list) == 0 && strlen(cipher_list) > 0) {
-        /*
-         * The client requested a list of ciphers, but openssl don't support
-         * any of them.
-         */
+    if (cipher_list && strlen(cipher_list) > 0 && SSL_CTX_set_cipher_list(ret->ctx, cipher_list) == 0) {
+        /* The user supplied a cipher list but OpenSSL supports none of them. */
         *errp = LCB_ERR_SSL_NO_CIPHERS;
         goto GT_ERR;
     }
 
-#ifdef HAVE_CIPHERSUITES
-    if (ciphersuites && SSL_CTX_set_ciphersuites(ret->ctx, ciphersuites) == 0 && strlen(ciphersuites) > 0) {
+    if (ciphersuites && strlen(ciphersuites) > 0 && SSL_CTX_set_ciphersuites(ret->ctx, ciphersuites) == 0) {
         *errp = LCB_ERR_SSL_INVALID_CIPHERSUITES;
         goto GT_ERR;
     }
-#endif
 
     if (tsfile) {
         lcb_log(LOGARGS_S(settings, LCB_LOG_DEBUG), "Load verify locations from \"%s\"", tsfile ? tsfile : cafile);
@@ -518,7 +506,13 @@ lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *
      * be using the same buffer.
      */
     SSL_CTX_set_mode(ret->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
-    SSL_CTX_set_options(ret->ctx, decode_ssl_protocol(minimum_tls));
+    /* A version floor, rather than a mask of SSL_OP_NO_* bits: the mask has to
+     * be extended every time a protocol version is added, and a floor does not.
+     * Any floor at TLS 1.0 or above excludes SSLv2 and SSLv3 on its own. */
+    if (!SSL_CTX_set_min_proto_version(ret->ctx, decode_ssl_protocol(minimum_tls, settings))) {
+        *errp = LCB_ERR_SSL_ERROR;
+        goto GT_ERR;
+    }
     return ret;
 
 GT_ERR:
@@ -586,106 +580,23 @@ lcb_STATUS lcbio_ssl_get_error(lcbio_SOCKET *sock)
     return xs->errcode;
 }
 
+int lcbio_ssl_min_proto_version(lcbio_pSSLCTX ctx)
+{
+    return (int)SSL_CTX_get_min_proto_version(ctx->ctx);
+}
+
 void lcbio_ssl_free(lcbio_pSSLCTX ctx)
 {
     SSL_CTX_free(ctx->ctx);
     free(ctx);
 }
 
-#if OPENSSL_VERSION_NUMBER < 0x1010100fL
-/**
- * According to https://www.openssl.org/docs/crypto/threads.html we need
- * to install two functions for locking support, a function that returns
- * a thread ID, and a function which performs locking/unlocking. However later
- * on in the link it says it will select a default implementation to return
- * the thread ID, and thus we only need supply the locking function.
- */
-#if defined(_POSIX_THREADS)
-#include <pthread.h>
-typedef pthread_mutex_t ossl_LOCKTYPE;
-static void ossl_lock_init(ossl_LOCKTYPE *l)
-{
-    pthread_mutex_init(l, NULL);
-}
-static void ossl_lock_acquire(ossl_LOCKTYPE *l)
-{
-    pthread_mutex_lock(l);
-}
-static void ossl_lock_release(ossl_LOCKTYPE *l)
-{
-    pthread_mutex_unlock(l);
-}
-#elif defined(_WIN32)
-#include <windows.h>
-typedef CRITICAL_SECTION ossl_LOCKTYPE;
-static void ossl_lock_init(ossl_LOCKTYPE *l)
-{
-    InitializeCriticalSection(l);
-}
-static void ossl_lock_acquire(ossl_LOCKTYPE *l)
-{
-    EnterCriticalSection(l);
-}
-static void ossl_lock_release(ossl_LOCKTYPE *l)
-{
-    LeaveCriticalSection(l);
-}
-#else
-typedef char ossl_LOCKTYPE;
-#define ossl_lock_init(l)
-#define ossl_lock_acquire(l)
-#define ossl_lock_release(l)
-#endif
-
-static ossl_LOCKTYPE *ossl_locks;
-static void ossl_lockfn(int mode, int lkid, const char *f, int line)
-{
-    ossl_LOCKTYPE *l = ossl_locks + lkid;
-
-    if (mode & CRYPTO_LOCK) {
-        ossl_lock_acquire(l);
-    } else {
-        ossl_lock_release(l);
-    }
-
-    (void)f;
-    (void)line;
-}
-
-static void ossl_init_locks(void)
-{
-    unsigned ii, nlocks;
-    if (CRYPTO_get_locking_callback() != NULL) {
-        /* Someone already set the callback before us. Don't destroy it! */
-        return;
-    }
-    nlocks = CRYPTO_num_locks();
-    ossl_locks = malloc(sizeof(*ossl_locks) * nlocks);
-    for (ii = 0; ii < nlocks; ii++) {
-        ossl_lock_init(ossl_locks + ii);
-    }
-    /* TODO: locking API has been removed in OpenSSL 1.1 */
-    CRYPTO_set_locking_callback(ossl_lockfn);
-    (void)ossl_lockfn;
-}
-#endif
-
-static volatile int ossl_initialized = 0;
 void lcbio_ssl_global_init(void)
 {
-    if (ossl_initialized) {
-        return;
-    }
-    ossl_initialized = 1;
-    SSL_library_init();
-    // As of version 1.1.0, OpenSSL automatically allocate all resources that it
-    // needs, so explicit initialization is not necessary.
-    // More info at OPENSSL_init_ssl(3)
-#if OPENSSL_VERSION_NUMBER < 0x1010100fL
-    SSL_library_init();
-    SSL_load_error_strings();
-    ossl_init_locks();
-#endif
+    /* OpenSSL >= 1.1.0 initialises itself lazily on first use and handles
+     * threading internally (see OPENSSL_init_ssl(3)). Since this build
+     * requires >= 1.1.1 there is nothing to do here, but the symbol is
+     * retained so callers don't need to know that. */
 }
 
 lcb_STATUS lcbio_sslify_if_needed(lcbio_SOCKET *sock, lcb_settings *settings)

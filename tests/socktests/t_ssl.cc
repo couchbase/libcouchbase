@@ -20,6 +20,7 @@
 #ifndef LCB_NO_SSL
 
 #include <lcbio/ssl.h>
+#include <cstdlib>
 using namespace LCBTest;
 using std::string;
 using std::vector;
@@ -89,6 +90,76 @@ TEST_F(SSLTest, testBasic)
 
     // Clean it all up
     sock.close();
+}
+
+namespace
+{
+/* lcbio_ssl_new() reads the variable with getenv(), so the CRT's own copy of
+ * the environment is what has to change. SetEnvironmentVariable() updates the
+ * Win32 block and leaves that copy alone, which is why the other tests here
+ * cannot be followed. _putenv() copies the string it is given, and an empty
+ * value removes the variable. */
+void setMinimumTlsEnv(const char *value)
+{
+#ifdef _WIN32
+    std::string assignment("LCB_SSL_MINIMUM_TLS=");
+    if (value != nullptr) {
+        assignment += value;
+    }
+    _putenv(assignment.c_str());
+#else
+    if (value == nullptr) {
+        unsetenv("LCB_SSL_MINIMUM_TLS");
+    } else {
+        setenv("LCB_SSL_MINIMUM_TLS", value, 1);
+    }
+#endif
+}
+
+/* The floor is only observable on the context, because reaching it means a
+ * handshake the peer has to take part in. Comparing the settings against each
+ * other rather than against OpenSSL's version constants keeps the assertion
+ * independent of which header the test was compiled with. */
+int minProtoFor(lcb_settings *settings, const char *minimum_tls)
+{
+    setMinimumTlsEnv(minimum_tls);
+    lcb_STATUS err = LCB_SUCCESS;
+    lcbio_pSSLCTX ctx = lcbio_ssl_new(nullptr, nullptr, nullptr, nullptr, 0, 1, &err, settings);
+    EXPECT_FALSE(ctx == nullptr) << lcb_strerror_short(err);
+    int version = lcbio_ssl_min_proto_version(ctx);
+    lcbio_ssl_free(ctx);
+    setMinimumTlsEnv(nullptr);
+    return version;
+}
+} // namespace
+
+/**
+ * The default refuses TLS 1.0 and 1.1, and LCB_SSL_MINIMUM_TLS moves the floor
+ * in both directions from there.
+ */
+TEST_F(SSLTest, minimumProtocolFollowsTheEnvironment)
+{
+    lcb_settings *settings = loop->settings;
+
+    int by_default = minProtoFor(settings, nullptr);
+    ASSERT_EQ(by_default, minProtoFor(settings, "tlsv1.2"));
+    ASSERT_LT(minProtoFor(settings, "tlsv1"), by_default);
+    ASSERT_LT(minProtoFor(settings, "tlsv1.1"), by_default);
+    ASSERT_LT(minProtoFor(settings, "tlsv1"), minProtoFor(settings, "tlsv1.1"));
+    ASSERT_GT(minProtoFor(settings, "tlsv1.3"), by_default);
+}
+
+/**
+ * A value that names no protocol leaves the floor where it was. Lowering it
+ * would turn a typo into a downgrade.
+ */
+TEST_F(SSLTest, unrecognizedMinimumProtocolKeepsTheDefault)
+{
+    lcb_settings *settings = loop->settings;
+
+    int by_default = minProtoFor(settings, nullptr);
+    ASSERT_EQ(by_default, minProtoFor(settings, "tlsv1.4"));
+    ASSERT_EQ(by_default, minProtoFor(settings, "TLS1.2"));
 }
 
 #else

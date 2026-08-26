@@ -117,34 +117,13 @@ static int read_ssl_data(lcbio_ESSL *es)
     int nr, total = 0;
     lcbio_pTABLE iot = es->orig;
 
-#if LCB_CAN_OPTIMIZE_SSL_BIO
-    BUF_MEM *rmb;
-
-    /* This block is an optimization over BIO_write to avoid copying the memory
-     * to a temporary buffer and _then_ copying it into the BIO */
-
-    BIO_get_mem_ptr(es->rbio, &rmb);
-#endif
-
     while (1) {
-#if LCB_CAN_OPTIMIZE_SSL_BIO
-        /* I don't know why this is here, but it's found inside BIO_write */
-        BIO_clear_retry_flags(es->rbio);
-        iotssl_bm_reserve(rmb);
-        nr = IOT_V0IO(iot).recv(IOT_ARG(iot), es->fd, rmb->data + rmb->length, rmb->max - rmb->length, 0);
-#else
 #define BUFSZ 4096
         char buf[BUFSZ];
         nr = IOT_V0IO(iot).recv(IOT_ARG(iot), es->fd, buf, BUFSZ, 0);
-#endif
 
         if (nr > 0) {
-#if LCB_CAN_OPTIMIZE_SSL_BIO
-            /* Extend the BIO used length */
-            rmb->length += nr;
-#else
             BIO_write(es->rbio, buf, nr);
-#endif
             total += nr;
         } else if (nr == 0) {
             es->closed = 1;
@@ -211,16 +190,12 @@ static int flush_ssl_data(lcbio_ESSL *es)
  * calls. While we could have done this inline with the send() call this
  * would make future optimization more difficult. */
 GT_WRITE_DONE:
-#if !LCB_CAN_OPTIMIZE_SSL_BIO
     BIO_get_mem_ptr(es->wbio, &wmb);
-#endif
     while (wmb->length > (size_t)tmp_len) {
         char dummy[4096];
         unsigned to_read = MINIMUM(wmb->length - tmp_len, sizeof dummy);
         BIO_read(es->wbio, dummy, to_read);
-#if !LCB_CAN_OPTIMIZE_SSL_BIO
         BIO_get_mem_ptr(es->wbio, &wmb);
-#endif
     }
     BIO_clear_retry_flags(es->wbio);
     return 0;

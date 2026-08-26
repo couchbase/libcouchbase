@@ -276,23 +276,49 @@ IF(LCB_NO_SSL)
     MESSAGE(STATUS "SSL support will be disabled")
     ADD_DEFINITIONS(-DLCB_NO_SSL=1)
 ELSE()
+    # 1.1.1 is the floor because the TLS code now calls SSL_CTX_set_ciphersuites
+    # unconditionally, which arrived with TLS 1.3 in that release. The internal
+    # locking that replaced CRYPTO_set_locking_callback, and
+    # SSL_CTX_set_min_proto_version, both landed one release earlier.
+    #
+    # It is a compatibility floor for distributions still shipping 1.1.1 as
+    # their system OpenSSL, not a recommendation. Every branch at or below it
+    # is end of life upstream; new deployments want 3.x.
+    SET(LCB_OPENSSL_MIN_VERSION "1.1.1")
+
     IF(NOT OPENSSL_FOUND)
         # When building under Couchbase Server we've already detected
         # and set the appropriate OpenSSL variables
         IF(APPLE)
             IF(NOT OpenSSL_DIR)
-                EXECUTE_PROCESS(COMMAND brew --prefix openssl@1.1
+                # Prefer openssl@3; Homebrew core dropped openssl@1.1 after it
+                # reached EOL, so the fallback serves only a pinned tap that
+                # still carries it. An empty prefix covers every way the probe
+                # comes up short: no brew, no formula, or brew itself failing.
+                EXECUTE_PROCESS(COMMAND brew --prefix openssl@3
                     OUTPUT_VARIABLE OPENSSL_ROOT_DIR
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                    ERROR_QUIET)
+                IF(NOT OPENSSL_ROOT_DIR)
+                    EXECUTE_PROCESS(COMMAND brew --prefix openssl@1.1
+                        OUTPUT_VARIABLE OPENSSL_ROOT_DIR
+                        OUTPUT_STRIP_TRAILING_WHITESPACE
+                        ERROR_QUIET)
+                ENDIF()
                 MESSAGE(STATUS "Found OpenSSL Prefix: ${OPENSSL_ROOT_DIR}")
             ENDIF()
         ENDIF()
-        FIND_PACKAGE(OpenSSL)
+        FIND_PACKAGE(OpenSSL ${LCB_OPENSSL_MIN_VERSION})
         # If it still not found, try to locate it using pkg-config
         IF(NOT OPENSSL_FOUND AND UNIX)
             find_package(PkgConfig)
             IF(PkgConfig_FOUND)
-                pkg_check_modules(OPENSSL openssl11)
+                pkg_check_modules(OPENSSL openssl>=${LCB_OPENSSL_MIN_VERSION})
+                IF(NOT OPENSSL_FOUND)
+                    # RHEL and CentOS 7 carry 1.1.1 under a versioned module
+                    # name; their unversioned "openssl" is 1.0.2.
+                    pkg_check_modules(OPENSSL openssl11)
+                ENDIF()
                 IF(OPENSSL_FOUND)
                     SET(OPENSSL_INCLUDE_DIR ${OPENSSL_INCLUDE_DIRS})
                     SET(OPENSSL_LIBRARIES ${OPENSSL_LINK_LIBRARIES})

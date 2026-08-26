@@ -109,27 +109,6 @@ void iotssl_init_common(lcbio_XSSL *xs, lcbio_TABLE *orig, SSL_CTX *ctx);
  */
 void iotssl_destroy_common(lcbio_XSSL *xs);
 
-#if LCB_CAN_OPTIMIZE_SSL_BIO
-/**
- * Reserve a specified amount of bytes for reading into a `BUF_MEM*` structure.
- * Currently the amount reserved is hard coded.
- *
- * Use this function to retrievw a pointer to the unused (but allocated) portion
- * of the `BUF_MEM` structure rather than doing an explicit BIO_write which
- * will result in needless copying of memory. Unfortunately OpenSSL does not have
- * a clean way of growing this buffer but it is possible.
- *
- * @param bm The `BUF_MEM*` structure.
- *
- * @code{.c}
- * BUF_MEM *bm;
- * iotssl_bm_reserve(bm);
- * recv(fd, bm->data, bm->max-mb->length, 0);
- * @endcode
- */
-void iotssl_bm_reserve(BUF_MEM *bm);
-#endif
-
 /**
  * Prepare the SSL structure so that a subsequent call to SSL_pending will
  * actually determine if there's any data available for read
@@ -151,7 +130,7 @@ void iotssl_bm_reserve(BUF_MEM *bm);
  * See: http://stackoverflow.com/questions/22753221/openssl-read-write-handshake-data-with-memory-bio
  * See: http://www.opensubscriber.com/message/openssl-users@openssl.org/8638179.html
  */
-#define IOTSSL_IS_PENDING(ssl) (SSL_get_ssl_method(ssl) != SSLv23_client_method()) && SSL_pending(ssl)
+#define IOTSSL_IS_PENDING(ssl) (SSL_get_ssl_method(ssl) != TLS_client_method()) && SSL_pending(ssl)
 /**
  * Create and return a pointer to an lcbio_TABLE with an underlying
  * completion-based I/O model

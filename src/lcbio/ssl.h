@@ -26,16 +26,6 @@ extern "C" {
  * @file
  * @brief SSL Socket Routines
  */
-#ifndef LCB_NO_SSL
-#if defined(OPENSSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER < 0x10100000L
-// OpenSSL 1.1 has changed behavior of BIO_get_mem_ptr behavior, so we cannot
-// apply reduce-memory-copy optimization, and fallback to BIO_write
-// Reference: https://github.com/openssl/openssl/commit/9fe9d0461ea
-#define LCB_CAN_OPTIMIZE_SSL_BIO 1
-#else
-#define LCB_CAN_OPTIMIZE_SSL_BIO 0
-#endif
-#endif
 
 /**
  * @ingroup lcbio
@@ -81,6 +71,13 @@ lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *
 #else
 #define lcbio_ssl_new lcbio_ssl_new__fallback
 #endif
+
+/**
+ * Lowest protocol version the context will negotiate, as the OpenSSL version
+ * constant it was built with. Fixed at construction from LCB_SSL_MINIMUM_TLS.
+ * Returns 0 in a build without SSL.
+ */
+int lcbio_ssl_min_proto_version(lcbio_pSSLCTX ctx);
 
 /**
  * Free the SSL context. This should be done when libcouchbase has nothing else

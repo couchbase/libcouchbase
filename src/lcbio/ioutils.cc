@@ -319,6 +319,10 @@ lcbio_pSSLCTX lcbio_ssl_new__fallback(const char *, const char *, const char *, 
 }
 
 #ifdef LCB_NO_SSL
+int lcbio_ssl_min_proto_version(lcbio_pSSLCTX)
+{
+    return 0;
+}
 void lcbio_ssl_free(lcbio_pSSLCTX) {}
 lcb_STATUS lcbio_ssl_apply(lcbio_SOCKET *, lcbio_pSSLCTX)
 {
