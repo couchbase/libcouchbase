@@ -93,6 +93,14 @@ int lcbio_is_netclosed(lcbio_SOCKET *sock, int flags);
  */
 lcb_STATUS lcbio_enable_sockopt(lcbio_SOCKET *sock, int cntl);
 
+/**
+ * Set an option carrying a value on a socket
+ * @param sock The socket
+ * @param cntl The option (LCB_IO_CNTL_xxx)
+ * @param value The value to set
+ */
+lcb_STATUS lcbio_set_sockopt(lcbio_SOCKET *sock, int cntl, int value);
+
 const char *lcbio_strsockopt(int cntl);
 
 void lcbio__load_socknames(lcbio_SOCKET *sock);

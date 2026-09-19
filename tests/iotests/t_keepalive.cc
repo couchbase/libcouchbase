@@ -22,8 +22,7 @@
  * and check the cntl and connection-string plumbing that feeds them.
  *
  * Linux only: TCP_KEEPIDLE, TCP_KEEPINTVL, TCP_KEEPCNT and TCP_USER_TIMEOUT
- * are Linux spellings. Completion-mode plugins do not expose the kernel fd,
- * so the options never reach their sockets.
+ * are Linux spellings.
  */
 
 #include "iotests.h"
@@ -54,10 +53,9 @@ int get_int_sockopt(int fd, int level, int optname)
     return value;
 }
 
-/* First KV socket whose fd the kernel options could have reached.
- * -1 marks a completion-mode plugin, which is out of scope rather than a
- * failure; -2 means no KV connection is up yet. */
-int find_event_kv_fd(lcb_INSTANCE *instance)
+/* Descriptor of the first KV socket, whichever I/O model created it.
+ * -1 means no KV connection is up yet. */
+int find_kv_fd(lcb_INSTANCE *instance)
 {
     for (size_t ii = 0; ii < LCBT_NSERVERS(instance); ++ii) {
         lcb::Server *server = instance->get_server(ii);
@@ -68,15 +66,14 @@ int find_event_kv_fd(lcb_INSTANCE *instance)
         if (ctx->sock == nullptr || ctx->sock->io == nullptr) {
             continue;
         }
-        if (!ctx->sock->io->is_E()) {
-            return -1;
-        }
-        if (ctx->sock->u.fd == INVALID_SOCKET) {
+        lcb_socket_t fd =
+            ctx->sock->io->is_E() ? ctx->sock->u.fd : (ctx->sock->u.sd ? ctx->sock->u.sd->socket : INVALID_SOCKET);
+        if (fd == INVALID_SOCKET) {
             continue;
         }
-        return (int)ctx->sock->u.fd;
+        return (int)fd;
     }
-    return -2;
+    return -1;
 }
 
 /* makeConnectParams() yields a connection string with or without a query
@@ -97,12 +94,8 @@ TEST_F(KeepaliveUnitTest, testDefaultsApplied)
 
     storeKey(instance, "ka-defaults", "v");
 
-    int fd = find_event_kv_fd(instance);
-    if (fd == -1) {
-        SUCCEED() << "completion-mode plugin: the kernel fd is not exposed";
-        return;
-    }
-    ASSERT_GE(fd, 0) << "no active event-based KV socket to inspect";
+    int fd = find_kv_fd(instance);
+    ASSERT_GE(fd, 0) << "no active KV socket to inspect";
 
     EXPECT_NE(0, get_int_sockopt(fd, SOL_SOCKET, SO_KEEPALIVE));
     EXPECT_EQ((int)LCB_DEFAULT_TCP_KEEPALIVE_IDLE, get_int_sockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE));

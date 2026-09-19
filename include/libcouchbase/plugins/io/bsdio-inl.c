@@ -294,6 +294,27 @@ static int cntl_impl(lcb_io_opt_t io, lcb_socket_t sock, int mode, int option, v
             return cntl_getset_impl(io, sock, mode, IPPROTO_TCP, TCP_NODELAY, sizeof(int), arg);
         case LCB_IO_CNTL_TCP_KEEPALIVE:
             return cntl_getset_impl(io, sock, mode, SOL_SOCKET, SO_KEEPALIVE, sizeof(int), arg);
+#if defined(TCP_KEEPIDLE)
+        case LCB_IO_CNTL_TCP_KEEPALIVE_IDLE:
+            return cntl_getset_impl(io, sock, mode, IPPROTO_TCP, TCP_KEEPIDLE, sizeof(int), arg);
+#elif defined(TCP_KEEPALIVE) && defined(__APPLE__)
+        /* macOS spells the idle option the way every other platform spells
+         * the on/off switch. */
+        case LCB_IO_CNTL_TCP_KEEPALIVE_IDLE:
+            return cntl_getset_impl(io, sock, mode, IPPROTO_TCP, TCP_KEEPALIVE, sizeof(int), arg);
+#endif
+#if defined(TCP_KEEPINTVL)
+        case LCB_IO_CNTL_TCP_KEEPALIVE_INTERVAL:
+            return cntl_getset_impl(io, sock, mode, IPPROTO_TCP, TCP_KEEPINTVL, sizeof(int), arg);
+#endif
+#if defined(TCP_KEEPCNT)
+        case LCB_IO_CNTL_TCP_KEEPALIVE_COUNT:
+            return cntl_getset_impl(io, sock, mode, IPPROTO_TCP, TCP_KEEPCNT, sizeof(int), arg);
+#endif
+#if defined(TCP_USER_TIMEOUT)
+        case LCB_IO_CNTL_TCP_USER_TIMEOUT:
+            return cntl_getset_impl(io, sock, mode, IPPROTO_TCP, TCP_USER_TIMEOUT, sizeof(int), arg);
+#endif
         default:
             LCB_IOPS_ERRNO(io) = ENOTSUP;
             return -1;

@@ -23,12 +23,6 @@
 #include "timer-cxx.h"
 #include "rnd.h"
 
-#ifndef _WIN32
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <sys/socket.h>
-#endif
-
 using namespace lcb::io;
 
 /* win32 lacks EAI_SYSTEM */
@@ -127,101 +121,48 @@ static void try_enable_sockopt(lcbio_SOCKET *sock, int cntl)
     }
 }
 
-/* Override the kernel keepalive timing on a socket that already carries
- * SO_KEEPALIVE.
- *
- * SO_KEEPALIVE alone inherits tcp_keepalive_time, 7200 s on Linux, so a peer
- * that stops answering is not probed within any operation's lifetime. With
- * the timing applied the kernel abandons the connection after
- * idle + interval * count and reports ECONNRESET, which reaches
- * Server::socket_failed and rebuilds it.
- *
- * The keepalive timer is armed only while nothing is outstanding, so this
- * covers an idle connection. try_apply_tcp_user_timeout() below covers one
- * with a request on the wire.
- *
- * Needs the raw kernel fd, which only event-based plugins expose. Windows
- * carries these timings through WSAIoctl(SIO_KEEPALIVE_VALS) and keeps plain
- * SO_KEEPALIVE. */
-static void try_apply_tcp_keepalive_timing(lcbio_SOCKET *sock)
+/* Best-effort: an option the plugin or the platform does not carry is not an
+ * error, it only leaves the kernel default in place. 0 means the caller asked
+ * for the kernel default explicitly. */
+static void apply_sockopt(lcbio_SOCKET *sock, int cntl, unsigned value)
 {
-#if defined(_WIN32)
-    (void)sock;
-#else
-    if (!sock || !sock->io || !sock->settings) {
+    if (value == 0) {
         return;
     }
-    if (!sock->io->is_E() || sock->u.fd == INVALID_SOCKET) {
-        return;
+    lcb_STATUS rc = lcbio_set_sockopt(sock, cntl, (int)value);
+    if (rc == LCB_SUCCESS) {
+        lcb_log(LOGARGS(sock, DEBUG), CSLOGFMT "Set %s=%u", CSLOGID(sock), lcbio_strsockopt(cntl), value);
+    } else {
+        lcb_log(LOGARGS(sock, DEBUG), CSLOGFMT "Couldn't set %s=%u: %s", CSLOGID(sock), lcbio_strsockopt(cntl), value,
+                lcb_strerror_short(rc));
     }
-    int fd = (int)sock->u.fd;
-    auto set_int = [&](int level, int optname, unsigned value, const char *name) {
-        if (value == 0) {
-            return;
-        }
-        int v = (int)value;
-        int rv = setsockopt(fd, level, optname, &v, sizeof(v));
-        if (rv == 0) {
-            lcb_log(LOGARGS(sock, DEBUG), CSLOGFMT "Set %s=%d", CSLOGID(sock), name, v);
-        } else {
-            lcb_log(LOGARGS(sock, INFO), CSLOGFMT "Couldn't set %s=%d (errno=%d)", CSLOGID(sock), name, v, errno);
-        }
-    };
-
-#if defined(TCP_KEEPIDLE)
-    set_int(IPPROTO_TCP, TCP_KEEPIDLE, sock->settings->tcp_keepalive_idle, "TCP_KEEPIDLE");
-#elif defined(TCP_KEEPALIVE) && defined(__APPLE__)
-    /* macOS uses TCP_KEEPALIVE for what Linux calls TCP_KEEPIDLE. */
-    set_int(IPPROTO_TCP, TCP_KEEPALIVE, sock->settings->tcp_keepalive_idle, "TCP_KEEPALIVE(idle)");
-#endif
-
-#if defined(TCP_KEEPINTVL)
-    set_int(IPPROTO_TCP, TCP_KEEPINTVL, sock->settings->tcp_keepalive_interval, "TCP_KEEPINTVL");
-#endif
-
-#if defined(TCP_KEEPCNT)
-    set_int(IPPROTO_TCP, TCP_KEEPCNT, sock->settings->tcp_keepalive_count, "TCP_KEEPCNT");
-#endif
-#endif /* _WIN32 */
 }
 
-/* Cap how long transmitted data may remain unacknowledged.
+/* Bound how long a connection can stay silent before the kernel abandons it.
  *
- * The keepalive timing above only covers an idle connection: the kernel arms
- * that timer when nothing is outstanding. A connection that stops answering
- * with a request already on the wire falls to the retransmission budget
- * instead, which tcp_retries2 puts at roughly 15 minutes, so every operation
- * on that socket reaches its deadline first.
+ * The keepalive timings cover a connection with nothing outstanding, which the
+ * kernel probes after idle and abandons after interval * count. They do not
+ * reach a connection that went quiet with a request already on the wire: the
+ * keepalive timer is not armed while data is unacknowledged, and that case
+ * falls to the retransmission budget, roughly 15 minutes at the default
+ * tcp_retries2. TCP_USER_TIMEOUT bounds that directly.
  *
- * Which error ends the operation decides whether it gets another chance.
- * lcb_kv_should_retry() does not retry LCB_ERR_TIMEOUT; a socket error maps to
- * LCB_RETRY_REASON_SOCKET_NOT_AVAILABLE, which permits a non-idempotent retry.
- * Aborting the connection with ETIMEDOUT therefore re-dispatches the pending
- * operations on a fresh socket, within their original deadlines.
- *
- * Linux only; other platforms have no equivalent per-socket option. */
-static void try_apply_tcp_user_timeout(lcbio_SOCKET *sock)
+ * Which error ends the pending operations decides whether they get another
+ * chance. lcb_kv_should_retry() does not retry LCB_ERR_TIMEOUT; a socket error
+ * maps to LCB_RETRY_REASON_SOCKET_NOT_AVAILABLE, which permits a
+ * non-idempotent retry, so the operations re-dispatch on a fresh connection
+ * inside their original deadlines. */
+static void try_apply_socket_timeouts(lcbio_SOCKET *sock)
 {
-#if defined(TCP_USER_TIMEOUT)
-    if (!sock || !sock->io || !sock->settings) {
+    if (sock == nullptr || sock->settings == nullptr) {
         return;
     }
-    if (!sock->io->is_E() || sock->u.fd == INVALID_SOCKET) {
-        return;
+    if (sock->settings->tcp_keepalive) {
+        apply_sockopt(sock, LCB_IO_CNTL_TCP_KEEPALIVE_IDLE, sock->settings->tcp_keepalive_idle);
+        apply_sockopt(sock, LCB_IO_CNTL_TCP_KEEPALIVE_INTERVAL, sock->settings->tcp_keepalive_interval);
+        apply_sockopt(sock, LCB_IO_CNTL_TCP_KEEPALIVE_COUNT, sock->settings->tcp_keepalive_count);
     }
-    unsigned ms = sock->settings->tcp_user_timeout;
-    if (ms == 0) {
-        return;
-    }
-    int v = (int)ms;
-    if (setsockopt((int)sock->u.fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &v, sizeof(v)) == 0) {
-        lcb_log(LOGARGS(sock, DEBUG), CSLOGFMT "Set TCP_USER_TIMEOUT=%d", CSLOGID(sock), v);
-    } else {
-        lcb_log(LOGARGS(sock, INFO), CSLOGFMT "Couldn't set TCP_USER_TIMEOUT=%d (errno=%d)", CSLOGID(sock), v, errno);
-    }
-#else
-    (void)sock;
-#endif
+    apply_sockopt(sock, LCB_IO_CNTL_TCP_USER_TIMEOUT, sock->settings->tcp_user_timeout);
 }
 
 /**
@@ -278,9 +219,8 @@ void Connstart::handler()
             }
             if (sock->settings->tcp_keepalive) {
                 try_enable_sockopt(sock, LCB_IO_CNTL_TCP_KEEPALIVE);
-                try_apply_tcp_keepalive_timing(sock);
             }
-            try_apply_tcp_user_timeout(sock);
+            try_apply_socket_timeouts(sock);
         } else {
             lcb_log(LOGARGS_T(ERR), CSLOGFMT "Failed to establish connection: %s, os errno=%u", CSLOGID_T(),
                     lcb_strerror_short(err), syserr);

@@ -346,6 +346,18 @@ typedef int (*lcb_ioE_chkclosed_fn)(lcb_io_opt_t iops, lcb_socket_t sock, int fl
 /** Enable/Disable TCP Keepalive */
 #define LCB_IO_CNTL_TCP_KEEPALIVE 2
 
+/** Seconds of idleness before the first keepalive probe (`TCP_KEEPIDLE`) */
+#define LCB_IO_CNTL_TCP_KEEPALIVE_IDLE 3
+
+/** Seconds between unanswered keepalive probes (`TCP_KEEPINTVL`) */
+#define LCB_IO_CNTL_TCP_KEEPALIVE_INTERVAL 4
+
+/** Unanswered keepalive probes before the connection is dropped (`TCP_KEEPCNT`) */
+#define LCB_IO_CNTL_TCP_KEEPALIVE_COUNT 5
+
+/** Milliseconds transmitted data may stay unacknowledged (`TCP_USER_TIMEOUT`) */
+#define LCB_IO_CNTL_TCP_USER_TIMEOUT 6
+
 /**
  * @brief Execute a specificied operation on a socket.
  * @param iops The iops

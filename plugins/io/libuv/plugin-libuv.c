@@ -339,23 +339,73 @@ static unsigned int close_socket(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase)
     return 0;
 }
 
+/* The TCP timing options have no libuv equivalent beyond uv_tcp_keepalive()'s
+ * idle time, so they go straight onto the descriptor. base.socket is not used
+ * here: it is filled in at the end of the connect routine and is still
+ * INVALID_SOCKET on the sockets whose options are applied from the connect
+ * callback. uv_fileno() answers for the handle itself. */
+static int cntl_socket_fd(lcb_io_opt_t iobase, my_sockdata_t *sd, int oslevel, int osopt, int value)
+{
+#if defined(_WIN32) || UV_VERSION_HEX < 0x010000
+    (void)sd;
+    (void)oslevel;
+    (void)osopt;
+    (void)value;
+    LCB_IOPS_ERRNO(iobase) = ENOTSUP;
+    return -1;
+#else
+    uv_os_fd_t fd = (uv_os_fd_t)INVALID_SOCKET;
+    int rv = uv_fileno((uv_handle_t *)&sd->tcp.t, &fd);
+    if (rv != 0) {
+        set_last_error((my_iops_t *)iobase, rv);
+        return -1;
+    }
+    if (setsockopt((int)fd, oslevel, osopt, &value, sizeof(value)) != 0) {
+        LCB_IOPS_ERRNO(iobase) = errno;
+        return -1;
+    }
+    return 0;
+#endif
+}
+
 static int cntl_socket(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase, int mode, int option, void *arg)
 {
     my_sockdata_t *sd = (my_sockdata_t *)sockbase;
     int rv;
 
+    if (mode != LCB_IO_CNTL_SET) {
+        LCB_IOPS_ERRNO(iobase) = ENOTSUP;
+        return -1;
+    }
+
     switch (option) {
         case LCB_IO_CNTL_TCP_NODELAY:
-            if (mode == LCB_IO_CNTL_SET) {
-                rv = uv_tcp_nodelay(&sd->tcp.t, *(int *)arg);
-                if (rv != 0) {
-                    set_last_error((my_iops_t *)iobase, rv);
-                }
-                return rv;
-            } else {
-                LCB_IOPS_ERRNO(iobase) = ENOTSUP;
-                return -1;
+            rv = uv_tcp_nodelay(&sd->tcp.t, *(int *)arg);
+            if (rv != 0) {
+                set_last_error((my_iops_t *)iobase, rv);
             }
+            return rv;
+        case LCB_IO_CNTL_TCP_KEEPALIVE:
+            return cntl_socket_fd(iobase, sd, SOL_SOCKET, SO_KEEPALIVE, *(int *)arg);
+#if defined(TCP_KEEPIDLE)
+        case LCB_IO_CNTL_TCP_KEEPALIVE_IDLE:
+            return cntl_socket_fd(iobase, sd, IPPROTO_TCP, TCP_KEEPIDLE, *(int *)arg);
+#elif defined(TCP_KEEPALIVE) && defined(__APPLE__)
+        case LCB_IO_CNTL_TCP_KEEPALIVE_IDLE:
+            return cntl_socket_fd(iobase, sd, IPPROTO_TCP, TCP_KEEPALIVE, *(int *)arg);
+#endif
+#if defined(TCP_KEEPINTVL)
+        case LCB_IO_CNTL_TCP_KEEPALIVE_INTERVAL:
+            return cntl_socket_fd(iobase, sd, IPPROTO_TCP, TCP_KEEPINTVL, *(int *)arg);
+#endif
+#if defined(TCP_KEEPCNT)
+        case LCB_IO_CNTL_TCP_KEEPALIVE_COUNT:
+            return cntl_socket_fd(iobase, sd, IPPROTO_TCP, TCP_KEEPCNT, *(int *)arg);
+#endif
+#if defined(TCP_USER_TIMEOUT)
+        case LCB_IO_CNTL_TCP_USER_TIMEOUT:
+            return cntl_socket_fd(iobase, sd, IPPROTO_TCP, TCP_USER_TIMEOUT, *(int *)arg);
+#endif
         default:
             LCB_IOPS_ERRNO(iobase) = ENOTSUP;
             return -1;

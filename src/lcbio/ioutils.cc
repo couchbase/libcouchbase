@@ -288,6 +288,25 @@ lcb_STATUS lcbio_enable_sockopt(lcbio_SOCKET *s, int cntl)
     }
 }
 
+lcb_STATUS lcbio_set_sockopt(lcbio_SOCKET *s, int cntl, int value)
+{
+    lcbio_pTABLE iot = s->io;
+    int rv;
+
+    if (!iot->has_cntl()) {
+        return LCB_ERR_UNSUPPORTED_OPERATION;
+    }
+    if (iot->is_E()) {
+        rv = iot->E_cntl(s->u.fd, LCB_IO_CNTL_SET, cntl, &value);
+    } else {
+        rv = iot->C_cntl(s->u.sd, LCB_IO_CNTL_SET, cntl, &value);
+    }
+    if (rv != 0) {
+        return lcbio_mklcberr(IOT_ERRNO(iot), s->settings);
+    }
+    return LCB_SUCCESS;
+}
+
 const char *lcbio_strsockopt(int cntl)
 {
     switch (cntl) {
@@ -295,6 +314,14 @@ const char *lcbio_strsockopt(int cntl)
             return "TCP_KEEPALIVE";
         case LCB_IO_CNTL_TCP_NODELAY:
             return "TCP_NODELAY";
+        case LCB_IO_CNTL_TCP_KEEPALIVE_IDLE:
+            return "TCP_KEEPIDLE";
+        case LCB_IO_CNTL_TCP_KEEPALIVE_INTERVAL:
+            return "TCP_KEEPINTVL";
+        case LCB_IO_CNTL_TCP_KEEPALIVE_COUNT:
+            return "TCP_KEEPCNT";
+        case LCB_IO_CNTL_TCP_USER_TIMEOUT:
+            return "TCP_USER_TIMEOUT";
         default:
             return "FIXME: Unknown option";
     }
