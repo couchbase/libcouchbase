@@ -1079,6 +1079,72 @@ void Server::io_timeout()
     lcb_maybe_breakout(instance);
 }
 
+namespace
+{
+void handle_probe(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_CALLBACK_TYPE, lcb_STATUS err, const void *);
+void probe_failed_to_schedule(mc_PACKET *pkt);
+
+const mc_REQDATAPROCS probe_procs = {handle_probe, probe_failed_to_schedule};
+
+/* One cookie per probe: the handler and the failed-schedule destructor are
+ * mutually exclusive, so neither needs a reference count. */
+struct ProbeCookie : mc_REQDATAEX {
+    explicit ProbeCookie(std::uint32_t timeout_us) : mc_REQDATAEX(nullptr, probe_procs, gethrtime())
+    {
+        deadline = start + LCB_US2NS(timeout_us);
+    }
+};
+
+void handle_probe(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_CALLBACK_TYPE, lcb_STATUS err, const void *)
+{
+    static_cast<lcb::Server *>(pipeline)->probe_finished(err);
+    delete static_cast<ProbeCookie *>(req->u_rdata.exdata);
+}
+
+void probe_failed_to_schedule(mc_PACKET *pkt)
+{
+    delete static_cast<ProbeCookie *>(pkt->u_rdata.exdata);
+}
+} // namespace
+
+/* A NOOP is the one operation lcb_kv_should_retry() never retries, so it
+ * reports a connection error instead of being quietly re-dispatched. That
+ * makes it the probe: on a peer that is merely slow it comes back and the
+ * connection is spared; on a peer that has stopped serving it does not. */
+void Server::send_probe()
+{
+    mc_PACKET *pkt = mcreq_allocate_packet(this);
+    if (pkt == nullptr) {
+        return;
+    }
+    if (mcreq_reserve_header(this, pkt, MCREQ_PKT_BASESIZE) != LCB_SUCCESS) {
+        mcreq_release_packet(this, pkt);
+        return;
+    }
+
+    auto *cookie = new ProbeCookie(LCBT_SETTING(instance, unresponsive_timeout));
+    pkt->u_rdata.exdata = cookie;
+    pkt->flags |= MCREQ_F_REQEXT;
+
+    protocol_binary_request_header hdr{};
+    hdr.request.magic = PROTOCOL_BINARY_REQ;
+    hdr.request.opcode = PROTOCOL_BINARY_CMD_NOOP;
+    hdr.request.opaque = pkt->opaque;
+    memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof(hdr.bytes));
+
+    probe_state = PROBE_SENT;
+    mcreq_sched_enter(&instance->cmdq);
+    mcreq_sched_add(this, pkt);
+    mcreq_sched_leave(&instance->cmdq, 1);
+    lcb_log(LOGARGS_T(INFO), LOGFMT "Probing silent connection with NOOP", LOGID_T());
+}
+
+void Server::probe_finished(lcb_STATUS err)
+{
+    probe_state = (err == LCB_SUCCESS) ? PROBE_IDLE : PROBE_FAILED;
+    lcb_log(LOGARGS_T(INFO), LOGFMT "Probe finished with %s", LOGID_T(), lcb_strerror_short(err));
+}
+
 /* An operation just died on this connection. If nothing has arrived on it for
  * longer than unresponsive_timeout, the peer is acknowledging at the TCP level
  * and not answering -- the one shape the socket-level timeouts cannot see,
@@ -1114,6 +1180,20 @@ bool Server::check_unresponsive(hrtime_t now)
         return false;
     }
 
+    if (LCBT_SETTING(instance, unresponsive_probe)) {
+        switch (probe_state) {
+            case PROBE_IDLE:
+                send_probe();
+                return false;
+            case PROBE_SENT:
+                /* the verdict is still on the wire */
+                return false;
+            case PROBE_FAILED:
+                break;
+        }
+    }
+
+    probe_state = PROBE_IDLE;
     lcb_log(LOGARGS_T(INFO), LOGFMT "Closing unresponsive connection", LOGID_T());
     socket_failed(LCB_ERR_SOCKET_SHUTDOWN);
     return true;

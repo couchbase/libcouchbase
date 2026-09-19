@@ -207,6 +207,15 @@ class Server : public mc_PIPELINE
      * the caller must not touch this pipeline's socket state. */
     bool check_unresponsive(hrtime_t now);
 
+    /** Queue a NOOP on a silent connection. Its outcome arrives through
+     * probe_finished(). */
+    void send_probe();
+
+    /** Record the outcome of the NOOP queued by send_probe(). Called from
+     * inside the response dispatch, so it only stores the verdict; the
+     * connection is closed by the next check_unresponsive(). */
+    void probe_finished(lcb_STATUS err);
+
     void flush_unflushed_data();
     void start_errored_ctx(State next_state);
     void finalize_errored_ctx();
@@ -278,6 +287,16 @@ class Server : public mc_PIPELINE
      * cannot advance while the peer is silent, so comparing against it
      * reports each silent stretch once. */
     hrtime_t reported_silent_atime{0};
+
+    enum ProbeState {
+        /* No NOOP outstanding: the next detected silence may send one. */
+        PROBE_IDLE,
+        /* A NOOP is on the wire; wait for it rather than closing. */
+        PROBE_SENT,
+        /* The NOOP did not come back. The peer is not serving. */
+        PROBE_FAILED
+    };
+    ProbeState probe_state{PROBE_IDLE};
 
     /** Request for current connection */
     lcb_host_t *curhost;

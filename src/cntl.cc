@@ -243,6 +243,8 @@ HANDLER(unresponsive_timeout_handler){RETURN_GET_SET(std::uint32_t, LCBT_SETTING
 
 HANDLER(unresponsive_close_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, unresponsive_close))}
 
+HANDLER(unresponsive_probe_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, unresponsive_probe))}
+
 HANDLER(readj_ts_wait_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, readj_ts_wait))}
 
 HANDLER(kv_hg_handler){RETURN_GET_ONLY(lcb_HISTOGRAM *, instance->kv_timings)}
@@ -906,6 +908,7 @@ static ctl_handler handlers[] = {
     tcp_user_timeout_handler,             /* LCB_CNTL_TCP_USER_TIMEOUT */
     unresponsive_timeout_handler,         /* LCB_CNTL_UNRESPONSIVE_TIMEOUT */
     unresponsive_close_handler,           /* LCB_CNTL_UNRESPONSIVE_CLOSE */
+    unresponsive_probe_handler,           /* LCB_CNTL_UNRESPONSIVE_PROBE */
     nullptr
 };
 /* clang-format on */
@@ -1122,6 +1125,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"tcp_user_timeout", LCB_CNTL_TCP_USER_TIMEOUT, convert_u32},
     {"unresponsive_timeout", LCB_CNTL_UNRESPONSIVE_TIMEOUT, convert_timevalue},
     {"unresponsive_close", LCB_CNTL_UNRESPONSIVE_CLOSE, convert_intbool},
+    {"unresponsive_probe", LCB_CNTL_UNRESPONSIVE_PROBE, convert_intbool},
     {"config_poll_interval", LCB_CNTL_CONFIG_POLL_INTERVAL, convert_timevalue},
     {"ipv6", LCB_CNTL_IP6POLICY, convert_ipv6},
     {"metrics", LCB_CNTL_METRICS, convert_intbool},

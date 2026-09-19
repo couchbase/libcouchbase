@@ -222,6 +222,8 @@ typedef struct lcb_settings_st {
     unsigned tcp_keepalive : 1;
     /* Close an unresponsive connection instead of only reporting it. */
     unsigned unresponsive_close : 1;
+    /* Confirm with a NOOP before closing an unresponsive connection. */
+    unsigned unresponsive_probe : 1;
     /* CCBC-1701: aggressive TCP keepalive timing in seconds. Used after
      * SO_KEEPALIVE is enabled. 0 means "leave kernel default in place".
      * See LCB_DEFAULT_TCP_KEEPALIVE_{IDLE,INTERVAL,COUNT} for defaults. */

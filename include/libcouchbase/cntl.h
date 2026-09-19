@@ -1411,10 +1411,23 @@ typedef enum {
 #define LCB_CNTL_UNRESPONSIVE_CLOSE 0x6f
 
 /**
+ * @brief Confirm with a NOOP before closing an unresponsive KV connection
+ *
+ * On by default, and only consulted when @ref LCB_CNTL_UNRESPONSIVE_CLOSE is
+ * enabled. A NOOP is sent to the silent connection and answered only if the
+ * peer is still serving, which separates a slow peer from a dead one at the
+ * cost of one packet per silent stretch. Turning it off closes the connection
+ * as soon as the silence is detected.
+ *
+ * @cntl_arg_both{int*}
+ */
+#define LCB_CNTL_UNRESPONSIVE_PROBE 0x70
+
+/**
  * This is not a command, but rather an indicator of the last item.
  * @internal
  */
-#define LCB_CNTL__MAX 0x70
+#define LCB_CNTL__MAX 0x71
 /**@}*/
 
 #ifdef __cplusplus
