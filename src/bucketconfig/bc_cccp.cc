@@ -268,6 +268,20 @@ lcb_STATUS CccpProvider::schedule_next_request(lcb_STATUS err, bool can_rollover
         server = nullptr;
     }
 
+    /*
+     * A connection that has stopped delivering cannot carry the map either, and
+     * a refresh issued over it waits out config_node_timeout before another node
+     * is tried. Fall through to memd_sockpool->get(), which opens a fresh
+     * connection to the same host, exactly as the guard above does.
+     */
+    if (server != nullptr && server->is_unresponsive(gethrtime())) {
+        lcb_log(LOGARGS(this, DEBUG),
+                "Skipping server struct %p (" LCB_HOST_FMT ") for CCCP refresh: connection is not delivering. "
+                "Will open a fresh CCCP connection instead.",
+                (void *)server, LCB_HOST_ARG(this->parent->settings, next_host));
+        server = nullptr;
+    }
+
     /* there is no connected sockets */
     if (server != nullptr) {
         if (skip_if_push_supported && server->supports_config_push()) {

@@ -202,6 +202,11 @@ class Server : public mc_PIPELINE
 
     bool check_closed();
 
+    /** Whether nothing has arrived on the current connection for longer
+     * than unresponsive_timeout. False when the check is disabled or there
+     * is no connection to judge. */
+    bool is_unresponsive(hrtime_t now) const;
+
     /** Report, and optionally close, a connection that has stopped
      * delivering. Returns true when the connection was closed, after which
      * the caller must not touch this pipeline's socket state. */

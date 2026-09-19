@@ -1155,24 +1155,29 @@ void Server::probe_finished(lcb_STATUS err)
  * non-idempotent retry on a fresh connection inside the original deadline. It
  * also re-sends operations the peer may already have applied, so it is off by
  * default. */
-bool Server::check_unresponsive(hrtime_t now)
+bool Server::is_unresponsive(hrtime_t now) const
 {
     std::uint32_t threshold = LCBT_SETTING(instance, unresponsive_timeout);
     if (threshold == 0 || connctx == nullptr || connctx->sock == nullptr) {
         return false;
     }
-
-    hrtime_t atime = connctx->sock->atime;
     hrtime_t now_us = LCB_NS2US(now);
-    if (now_us <= atime || now_us - atime < threshold) {
+    return now_us > connctx->sock->atime && now_us - connctx->sock->atime >= threshold;
+}
+
+bool Server::check_unresponsive(hrtime_t now)
+{
+    if (!is_unresponsive(now)) {
         return false;
     }
 
+    hrtime_t atime = connctx->sock->atime;
+    hrtime_t now_us = LCB_NS2US(now);
     if (atime != reported_silent_atime) {
         reported_silent_atime = atime;
         lcb_log(LOGARGS_T(WARN),
                 LOGFMT "Connection has delivered nothing for %" PRIu64 "us, threshold is %uus (local=%s)", LOGID_T(),
-                (std::uint64_t)(now_us - atime), threshold,
+                (std::uint64_t)(now_us - atime), LCBT_SETTING(instance, unresponsive_timeout),
                 connctx->sock->info ? connctx->sock->info->ep_local_host_and_port : "");
     }
 
