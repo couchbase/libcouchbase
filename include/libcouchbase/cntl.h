@@ -1387,10 +1387,34 @@ typedef enum {
 #define LCB_CNTL_TCP_USER_TIMEOUT 0x6d
 
 /**
+ * @brief Silence after which a KV connection is reported unresponsive
+ *
+ * When an operation reaches its deadline and no byte has arrived on its
+ * connection for longer than this, the connection is reported unresponsive.
+ * This covers a peer that keeps acknowledging at the TCP level and stops
+ * answering, which no socket-level timeout can see. Defaults to 10 seconds.
+ * 0 disables the check.
+ *
+ * @cntl_arg_both{lcb_U32*}
+ */
+#define LCB_CNTL_UNRESPONSIVE_TIMEOUT 0x6e
+
+/**
+ * @brief Close an unresponsive KV connection rather than only report it
+ *
+ * Off by default, so that @ref LCB_CNTL_UNRESPONSIVE_TIMEOUT only emits a
+ * warning. When on, the connection is closed and its pending operations are
+ * re-dispatched on a fresh one within their original deadlines.
+ *
+ * @cntl_arg_both{int*}
+ */
+#define LCB_CNTL_UNRESPONSIVE_CLOSE 0x6f
+
+/**
  * This is not a command, but rather an indicator of the last item.
  * @internal
  */
-#define LCB_CNTL__MAX 0x6e
+#define LCB_CNTL__MAX 0x70
 /**@}*/
 
 #ifdef __cplusplus

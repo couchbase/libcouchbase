@@ -67,6 +67,8 @@ void lcb_default_settings(lcb_settings *settings)
     settings->tcp_keepalive_interval = LCB_DEFAULT_TCP_KEEPALIVE_INTERVAL;
     settings->tcp_keepalive_count = LCB_DEFAULT_TCP_KEEPALIVE_COUNT;
     settings->tcp_user_timeout = LCB_DEFAULT_TCP_USER_TIMEOUT;
+    settings->unresponsive_timeout = LCB_DEFAULT_UNRESPONSIVE_TIMEOUT;
+    settings->unresponsive_close = 0;
     settings->config_poll_interval = LCB_DEFAULT_CONFIG_POLL_INTERVAL;
     settings->use_collections = 1;
     settings->log_redaction = 0;

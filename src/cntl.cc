@@ -237,6 +237,10 @@ HANDLER(tcp_keepalive_count_handler){RETURN_GET_SET(std::uint32_t, LCBT_SETTING(
 
 HANDLER(tcp_user_timeout_handler){RETURN_GET_SET(std::uint32_t, LCBT_SETTING(instance, tcp_user_timeout))}
 
+HANDLER(unresponsive_timeout_handler){RETURN_GET_SET(std::uint32_t, LCBT_SETTING(instance, unresponsive_timeout))}
+
+HANDLER(unresponsive_close_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, unresponsive_close))}
+
 HANDLER(readj_ts_wait_handler){RETURN_GET_SET(int, LCBT_SETTING(instance, readj_ts_wait))}
 
 HANDLER(kv_hg_handler){RETURN_GET_ONLY(lcb_HISTOGRAM *, instance->kv_timings)}
@@ -898,6 +902,8 @@ static ctl_handler handlers[] = {
     tcp_keepalive_interval_handler,       /* LCB_CNTL_TCP_KEEPALIVE_INTERVAL */
     tcp_keepalive_count_handler,          /* LCB_CNTL_TCP_KEEPALIVE_COUNT */
     tcp_user_timeout_handler,             /* LCB_CNTL_TCP_USER_TIMEOUT */
+    unresponsive_timeout_handler,         /* LCB_CNTL_UNRESPONSIVE_TIMEOUT */
+    unresponsive_close_handler,           /* LCB_CNTL_UNRESPONSIVE_CLOSE */
     nullptr
 };
 /* clang-format on */
@@ -1112,6 +1118,8 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"tcp_keepalive_interval", LCB_CNTL_TCP_KEEPALIVE_INTERVAL, convert_u32},
     {"tcp_keepalive_count", LCB_CNTL_TCP_KEEPALIVE_COUNT, convert_u32},
     {"tcp_user_timeout", LCB_CNTL_TCP_USER_TIMEOUT, convert_u32},
+    {"unresponsive_timeout", LCB_CNTL_UNRESPONSIVE_TIMEOUT, convert_timevalue},
+    {"unresponsive_close", LCB_CNTL_UNRESPONSIVE_CLOSE, convert_intbool},
     {"config_poll_interval", LCB_CNTL_CONFIG_POLL_INTERVAL, convert_timevalue},
     {"ipv6", LCB_CNTL_IP6POLICY, convert_ipv6},
     {"metrics", LCB_CNTL_METRICS, convert_intbool},

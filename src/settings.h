@@ -118,6 +118,12 @@
  * retransmission budget instead -- roughly 15 minutes at the default
  * tcp_retries2. 11000 puts both cases in the same window. */
 #define LCB_DEFAULT_TCP_USER_TIMEOUT 11000
+/* A KV connection that has delivered nothing for this long, at the moment an
+ * operation on it reaches its deadline, is reported as unresponsive. The
+ * kernel-level timeouts above cover a path that stops carrying packets; this
+ * covers a peer that keeps acknowledging and stops answering. 0 disables the
+ * check. */
+#define LCB_DEFAULT_UNRESPONSIVE_TIMEOUT LCB_MS2US(10000)
 /* 2.5 s */
 #define LCB_DEFAULT_CONFIG_POLL_INTERVAL LCB_MS2US(2500)
 /* 50 ms */
@@ -214,6 +220,8 @@ typedef struct lcb_settings_st {
     unsigned readj_ts_wait : 1;
     unsigned select_bucket : 1;
     unsigned tcp_keepalive : 1;
+    /* Close an unresponsive connection instead of only reporting it. */
+    unsigned unresponsive_close : 1;
     /* CCBC-1701: aggressive TCP keepalive timing in seconds. Used after
      * SO_KEEPALIVE is enabled. 0 means "leave kernel default in place".
      * See LCB_DEFAULT_TCP_KEEPALIVE_{IDLE,INTERVAL,COUNT} for defaults. */
@@ -222,6 +230,9 @@ typedef struct lcb_settings_st {
     lcb_U32 tcp_keepalive_count;
     /* TCP_USER_TIMEOUT in milliseconds. 0 means "leave kernel default". */
     lcb_U32 tcp_user_timeout;
+    /* Silence after which a KV connection is reported unresponsive, in
+     * microseconds. 0 disables the check. */
+    lcb_U32 unresponsive_timeout;
     unsigned use_collections : 1;
     unsigned log_redaction : 1;
     unsigned use_tracing : 1;

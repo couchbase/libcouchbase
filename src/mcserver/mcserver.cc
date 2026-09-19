@@ -1065,6 +1065,11 @@ void Server::io_timeout()
         MC_INCR_METRIC(this, packets_timeout, npurged);
         lcb_log(LOGARGS_T(DEBUG), LOGFMT "Server timed out. Some commands have failed (npurged=%d)", LOGID_T(),
                 npurged);
+        if (check_unresponsive(now)) {
+            /* the connection is gone and socket_failed() has already rearmed
+             * the timer and broken out of the event loop */
+            return;
+        }
     }
 
     uint32_t next_us = next_timeout();
@@ -1072,6 +1077,46 @@ void Server::io_timeout()
             next_us / 1000);
     lcbio_timer_rearm(io_timer, next_us);
     lcb_maybe_breakout(instance);
+}
+
+/* An operation just died on this connection. If nothing has arrived on it for
+ * longer than unresponsive_timeout, the peer is acknowledging at the TCP level
+ * and not answering -- the one shape the socket-level timeouts cannot see,
+ * because the kernel has no unacknowledged data to give up on.
+ *
+ * Closing converts the pending LCB_ERR_TIMEOUT, which lcb_kv_should_retry()
+ * refuses to retry, into LCB_ERR_SOCKET_SHUTDOWN, which permits a
+ * non-idempotent retry on a fresh connection inside the original deadline. It
+ * also re-sends operations the peer may already have applied, so it is off by
+ * default. */
+bool Server::check_unresponsive(hrtime_t now)
+{
+    std::uint32_t threshold = LCBT_SETTING(instance, unresponsive_timeout);
+    if (threshold == 0 || connctx == nullptr || connctx->sock == nullptr) {
+        return false;
+    }
+
+    hrtime_t atime = connctx->sock->atime;
+    hrtime_t now_us = LCB_NS2US(now);
+    if (now_us <= atime || now_us - atime < threshold) {
+        return false;
+    }
+
+    if (atime != reported_silent_atime) {
+        reported_silent_atime = atime;
+        lcb_log(LOGARGS_T(WARN),
+                LOGFMT "Connection has delivered nothing for %" PRIu64 "us, threshold is %uus (local=%s)", LOGID_T(),
+                (std::uint64_t)(now_us - atime), threshold,
+                connctx->sock->info ? connctx->sock->info->ep_local_host_and_port : "");
+    }
+
+    if (!LCBT_SETTING(instance, unresponsive_close)) {
+        return false;
+    }
+
+    lcb_log(LOGARGS_T(INFO), LOGFMT "Closing unresponsive connection", LOGID_T());
+    socket_failed(LCB_ERR_SOCKET_SHUTDOWN);
+    return true;
 }
 
 bool Server::maybe_reconnect_on_fake_timeout(lcb_STATUS err)

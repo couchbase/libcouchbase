@@ -202,6 +202,11 @@ class Server : public mc_PIPELINE
 
     bool check_closed();
 
+    /** Report, and optionally close, a connection that has stopped
+     * delivering. Returns true when the connection was closed, after which
+     * the caller must not touch this pipeline's socket state. */
+    bool check_unresponsive(hrtime_t now);
+
     void flush_unflushed_data();
     void start_errored_ctx(State next_state);
     void finalize_errored_ctx();
@@ -268,6 +273,11 @@ class Server : public mc_PIPELINE
 
     lcbio_CTX *connctx;
     lcb::io::ConnectionRequest *connreq{};
+
+    /** sock->atime that was last reported as unresponsive. The timestamp
+     * cannot advance while the peer is silent, so comparing against it
+     * reports each silent stretch once. */
+    hrtime_t reported_silent_atime{0};
 
     /** Request for current connection */
     lcb_host_t *curhost;
