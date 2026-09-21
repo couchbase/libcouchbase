@@ -87,4 +87,32 @@ TEST_F(SockoptUnitTest, testEnableSockoptReportsSuccess)
     EXPECT_NE(0, nodelay);
 }
 
+/* The GET half of the plugin option interface. Nothing in the library reads an
+ * option back, so this path had no caller and no coverage; the setter beside it
+ * is exercised constantly. cntl_getset_impl() is the implementation every
+ * event-based plugin compiles in from bsdio-inl.c, and completion-mode plugins
+ * carry their own cntl which does not offer GET. */
+TEST_F(SockoptUnitTest, testCntlGetReadsTheOptionBack)
+{
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
+    storeKey(instance, "sockopt-get", "v");
+
+    lcbio_SOCKET *sock = first_kv_socket(instance);
+    ASSERT_TRUE(sock != nullptr) << "no active KV socket to inspect";
+    if (!sock->io->is_E()) {
+        MockEnvironment::printSkipMessage(__FILE__, __LINE__,
+                                          "completion-mode plugin: its cntl implements SET only, so "
+                                          "cntl_getset_impl is not on this path");
+        return;
+    }
+
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcbio_enable_sockopt(sock, LCB_IO_CNTL_TCP_NODELAY));
+
+    int value = 0;
+    ASSERT_EQ(0, sock->io->E_cntl(sock->u.fd, LCB_IO_CNTL_GET, LCB_IO_CNTL_TCP_NODELAY, &value));
+    EXPECT_NE(0, value);
+}
+
 #endif /* __linux__ */

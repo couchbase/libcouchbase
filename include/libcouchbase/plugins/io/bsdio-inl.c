@@ -263,13 +263,13 @@ static int cntl_getset_impl(lcb_io_opt_t io, lcb_socket_t sock, int mode, int os
 {
     int rv;
 #ifndef _WIN32
-    socklen_t dummy = optsize;
+    socklen_t optlen = (socklen_t)optsize;
 #else
-    char dummy = optsize;
+    int optlen = optsize;
 #endif
 
     if (mode == LCB_IO_CNTL_GET) {
-        rv = getsockopt(sock, oslevel, osopt, &dummy, (socklen_t *)optval);
+        rv = getsockopt(sock, oslevel, osopt, (char *)optval, &optlen);
     } else {
         rv = setsockopt(sock, oslevel, osopt, (const char *)optval, (socklen_t)optsize);
     }
