@@ -122,6 +122,25 @@ TEST_F(ScramTest, ParseInvalidServerChallenge_WithDuplicateAttribute)
 }
 
 // the following tests are valid only if OpenSSL is linked to the library
+/**
+ * Catches a nonce generator that stops varying, which would repeat the client nonce across
+ * connections. A generator reseeded from a coarse clock before every call fails this.
+ */
+TEST_F(ScramTest, GenerateNonceVariesBetweenCalls)
+{
+    char first[SCRAM_NONCE_SIZE];
+    char second[SCRAM_NONCE_SIZE];
+
+    memset(first, 0, sizeof(first));
+    memset(second, 0, sizeof(second));
+
+    generate_nonce(first, sizeof(first));
+    generate_nonce(second, sizeof(second));
+
+    EXPECT_NE(0, memcmp(first, second, sizeof(first)));
+    EXPECT_NE(0, memcmp(first, "\0\0\0\0\0\0\0\0", sizeof(first)));
+}
+
 #ifndef LCB_NO_SSL
 TEST_F(ScramTest, GenerateSaltedPasswordWithSHA512)
 {

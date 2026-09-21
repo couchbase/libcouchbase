@@ -25,13 +25,6 @@ extern "C" {
 #endif
 
 /**
- * Ensures the seed for OpenSSL's RAND_bytes function is correctly filled.
- * Please note: as we use it only for the generation of the client nonce,
- * we don't need a strong entropy.
- */
-void seed_rand(void);
-
-/**
  * Generates a binary nonce of 'buffer_length' bytes at the given buffer address.
  * The buffer must be already allocated with enough space in it.
  */

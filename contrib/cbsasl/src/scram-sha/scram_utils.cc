@@ -16,56 +16,16 @@
 
 #include "scram_utils.h"
 #include "config.h"
-#include <ctime>
 #include <cctype>
+#include <cstring>
+#include "rnd.h"
 #include "strcodecs/strcodecs.h"
 
 #ifndef LCB_NO_SSL
-#include <openssl/rand.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
-
-#ifdef _WIN32
-#include <process.h> // for _getpid
-#else
-#include <unistd.h> // for getpid
 #endif
-
-#endif
-
-/**
- * Ensures the seed for the random generator is correctly filled.
- * Please note: as we use it only for the generation of the client nonce,
- * we don't need a strong entropy.
- */
-void seed_rand(void)
-{
-    // To keep the code as much platform-agnostic as possible, we use standard values
-    // like PID and current time for seeding the pseudo random generator.
-    // The entropy of these values is not good, but that's enough for generating nonces.
-
-#ifdef LCB_NO_SSL
-    srand(time(nullptr));
-#else
-    time_t current_time = time(nullptr);
-    clock_t clk;
-#ifdef _WIN32
-    int pid;
-#else
-    pid_t pid;
-#endif
-    RAND_add(&current_time, sizeof(current_time), 0.0);
-    clk = clock();
-    RAND_add(&clk, sizeof(clk), 0.0);
-#ifdef _WIN32
-    pid = _getpid();
-#else
-    pid = getpid();
-#endif // _WIN32
-    RAND_add(&pid, sizeof(pid), 0.0);
-#endif // LCB_NO_SSL
-}
 
 /**
  * Generates a binary nonce of 'buffer_length' bytes at the given buffer address.
@@ -73,44 +33,26 @@ void seed_rand(void)
  */
 void generate_nonce(char *buffer, int buffer_length)
 {
-    if ((nullptr == buffer) || (0 == buffer_length)) {
+    if ((nullptr == buffer) || (0 >= buffer_length)) {
         // invalid input arguments
         return;
     }
-    seed_rand();
 
-#ifndef LCB_NO_SSL
-    // we try first to use RAND_bytes from OpenSSL
-    if (!RAND_bytes((unsigned char *)buffer, buffer_length))
-    // RAND_bytes failed: we use the standard rand() function.
-#endif
-    {
-        int aRandom = 0;
-        unsigned int aMaxRandBits = 0, aRandRange,
-                     aMaxRand = RAND_MAX; // we have to compute how many bits the rand() function can return
-        while (aMaxRand >>= 1) {
-            aMaxRandBits++;
+    // lcb_next_rand64() is a per-thread mt19937 seeded from std::random_device. OpenSSL's
+    // generator is not used here: RAND_add() is unsynchronised on OpenSSL 1.0.x unless the
+    // application installs CRYPTO_set_locking_callback(), which libcouchbase does only for TLS
+    // connections.
+    for (int filled = 0; filled < buffer_length;) {
+        lcb_U64 chunk = lcb_next_rand64();
+        int span = buffer_length - filled;
+        if (span > static_cast<int>(sizeof(chunk))) {
+            span = static_cast<int>(sizeof(chunk));
         }
-        aRandRange = aMaxRandBits / 8; // number of bytes we can extract from a rand() value.
-        // To avoid generating a new random number for each character, we call rand() only once every 5 characters.
-        // A 32-bits integer can give 5 values of 6 bits.
-        for (int i = 0; i < buffer_length; ++i) {
-            if (i % aRandRange == 0) {
-                // we refill aRandom
-                aRandom = rand();
-            }
-            // we use only the last 8 bits of aRamdom
-            buffer[i] = (char)(aRandom & 0xFF);
-            aRandom >>= 8; // shift value by 8 bits
-        }
+        memcpy(buffer + filled, &chunk, span);
+        filled += span;
     }
 }
 
-/**
- * Computes the number of comma (',') and equal ('=') characters in the input string
- * for further substitution.
- * Returns a negative value in case the buffer contains an invalid (control) character.
- */
 int compute_special_chars(const char *buffer, int buffer_length)
 {
     int result = 0;
