@@ -569,7 +569,7 @@ typedef int (*lcb_ioC_chkclosed_fn)(lcb_io_opt_t iops, lcb_sockdata_t *sd, int f
  * @param mode
  * @param option
  * @param arg
- * @return
+ * @return zero on success, nonzero on failure.
  */
 typedef int (*lcb_ioC_cntl_fn)(lcb_io_opt_t iops, lcb_sockdata_t *sd, int mode, int option, void *arg);
 

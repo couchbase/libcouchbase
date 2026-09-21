@@ -177,7 +177,7 @@ typedef struct lcbio_TABLE {
 
     int C_cntl(lcb_sockdata_t *sd, int mode, int opt, void *val)
     {
-        return IOT_V1(this).cntl(p, sd, mode, opt, val) == 0;
+        return IOT_V1(this).cntl(p, sd, mode, opt, val);
     }
 
     bool has_cntl()
