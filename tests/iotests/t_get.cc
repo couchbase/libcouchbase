@@ -1316,12 +1316,21 @@ TEST_F(GetUnitTest, testTouchWithZeroExpiryResetsExpiry)
     (void)lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)test_get_and_touch_zero_reset);
     storeKey(instance, key, value);
 
+    /* The get-and-touch below has to reach the server while this expiry is
+     * still in the future, and the wait further down has to outlast it, or
+     * the final get succeeds whether or not the expiry was cleared. Both
+     * scale with this one value, so it trades tolerance of a stalled
+     * executor against the time every run spends asleep. One second is known
+     * to be too short; five leaves room for a stall several times longer
+     * than the one that was observed. */
+    const std::uint32_t expiry_s = 5;
+
     {
         touch_result res{};
         lcb_CMDTOUCH *cmd;
         ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdtouch_create(&cmd));
         ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdtouch_key(cmd, key.c_str(), key.size()));
-        ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdtouch_expiry(cmd, 1));
+        ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdtouch_expiry(cmd, expiry_s));
         ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_touch(instance, &res, cmd));
         ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cmdtouch_destroy(cmd));
         ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
@@ -1343,7 +1352,7 @@ TEST_F(GetUnitTest, testTouchWithZeroExpiryResetsExpiry)
         ASSERT_EQ(value, res.value);
     }
 
-    sleep(2);
+    sleep(expiry_s + 2);
 
     {
         gat_result res{};
