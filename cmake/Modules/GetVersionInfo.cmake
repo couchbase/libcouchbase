@@ -23,11 +23,16 @@ if (GIT_EXECUTABLE AND NOT LCB_SKIP_GIT_VERSION)
     MESSAGE(STATUS "Sanitized VERSION=${LCB_VERSION}")
     RUNGIT(LCB_VERSION_CHANGESET rev-parse HEAD)
 
-    EXECUTE_PROCESS(
-        COMMAND echo ${LCB_VERSION}
-        COMMAND awk -F. "{printf \"0x%0.2d%0.2d%0.2d\", $1, $2, $3}"
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        OUTPUT_VARIABLE LCB_VERSION_HEX)
+    # Only when describe produced something. Given an empty version awk prints
+    # the literal 0x000000, which CMake reads as true, and the fallback below
+    # is then skipped and the zero reaches the generated header.
+    IF(LCB_VERSION)
+        EXECUTE_PROCESS(
+            COMMAND echo ${LCB_VERSION}
+            COMMAND awk -F. "{printf \"0x%0.2d%0.2d%0.2d\", $1, $2, $3}"
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+            OUTPUT_VARIABLE LCB_VERSION_HEX)
+    ENDIF()
 ENDIF()
 
 IF(LCB_VERSION)
@@ -48,8 +53,10 @@ IF (NOT LCB_VERSION_CHANGESET)
     SET(LCB_VERSION_CHANGESET "0xdeadbeef")
 ENDIF()
 IF (NOT LCB_VERSION_HEX)
+    # Two decimal digits per field, concatenated and read as hex, which is the
+    # encoding the awk branch above produces: 3.3.19 is 0x030319.
     MATH(EXPR LCB_VERSION_HEX
-         "${libcouchbase_VERSION_MAJOR} * 0x10000 + ${libcouchbase_VERSION_MINOR} * 0x100 + ${libcouchbase_VERSION_PATCH}"
+         "(${libcouchbase_VERSION_MAJOR} / 10) * 0x100000 + (${libcouchbase_VERSION_MAJOR} % 10) * 0x10000 + (${libcouchbase_VERSION_MINOR} / 10) * 0x1000 + (${libcouchbase_VERSION_MINOR} % 10) * 0x100 + (${libcouchbase_VERSION_PATCH} / 10) * 0x10 + (${libcouchbase_VERSION_PATCH} % 10)"
          OUTPUT_FORMAT HEXADECIMAL)
 ENDIF()
 
