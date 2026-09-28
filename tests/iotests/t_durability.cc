@@ -507,13 +507,6 @@ TEST_F(DurabilityUnitTest, testModified)
 TEST_F(DurabilityUnitTest, testQuickTimeout)
 {
     LCB_TEST_REQUIRE_FEATURE("observe")
-    const char *io_plugin = getenv("LCB_IOPS_NAME");
-    if (io_plugin != nullptr && strcmp(io_plugin, "libuv") == 0) {
-        MockEnvironment::printSkipMessage(__FILE__, __LINE__,
-                                          "libuv caches loop->time once per iteration; the 5us timer races "
-                                          "OBSERVE completion and the test stays flaky on libuv only (see CCBC-1690)");
-        return;
-    }
     lcb_INSTANCE *instance;
     HandleWrap hwrap;
     lcb_durability_opts_t opts = {0};
@@ -525,6 +518,20 @@ TEST_F(DurabilityUnitTest, testQuickTimeout)
     Item itm = Item(key, key);
     KVOperation(&itm).store(instance);
 
+    /* Poll for a sequence number the vBucket has not reached. lcb_endure3_ctxnew
+     * polls by sequence number; a request above the observed one never satisfies
+     * the criteria, so the deadline below is the only outcome. A poll for the
+     * stored mutation is satisfied by the first OBSERVE_SEQNO response instead,
+     * which races that deadline. */
+    lcb_KEYBUF kb;
+    lcb_STATUS rc;
+    LCB_KREQ_SIMPLE(&kb, key.c_str(), key.size());
+    const lcb_MUTATION_TOKEN *stored = lcb_get_mutation_token(instance, &kb, &rc);
+    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_TRUE(LCB_MUTATION_TOKEN_ISVALID(stored));
+    lcb_MUTATION_TOKEN unreachable = *stored;
+    LCB_MUTATION_TOKEN_SEQ(&unreachable) += 1;
+
     defaultOptions(instance, opts);
 
     /* absurd */
@@ -532,8 +539,13 @@ TEST_F(DurabilityUnitTest, testQuickTimeout)
     opts.v.v0.interval = 2;
 
     for (unsigned ii = 0; ii < 10; ii++) {
+        lcb_CMDENDURE cmd = {0};
+        LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
+        cmd.mutation_token = &unreachable;
+        cmd.cmdflags |= LCB_CMDENDURE_F_MUTATION_TOKEN;
+
         DurabilityOperation dop;
-        dop.run(instance, &opts, itm);
+        dop.run(instance, &opts, cmd);
         ASSERT_EQ(LCB_ERR_TIMEOUT, dop.resp_.ctx.rc);
     }
 }
