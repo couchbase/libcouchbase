@@ -51,15 +51,24 @@ IF(NOT WIN32)
     SET_SOURCE_FILES_PROPERTIES(cbc-subdoc.cc PROPERTIES COMPILE_FLAGS "${LCB_CORE_CXXFLAGS}")
 
     FIND_PROGRAM(RE2C re2c)
+    SET(CBC_GEN_LEXER_SRC "${PROJECT_SOURCE_DIR}/tools/gen/lexer.re")
     IF(RE2C)
-        SET(CBC_GEN_LEXER_SRC "${PROJECT_SOURCE_DIR}/tools/gen/lexer.re")
-        SET(CBC_GEN_LEXER_GEN "${PROJECT_SOURCE_DIR}/tools/gen/lexer.c")
+        # Into the build tree. tools/gen/lexer.c is tracked, so generating over
+        # it leaves a build with a modified file under version control whenever
+        # the installed re2c is not the one that produced the committed copy.
+        SET(CBC_GEN_LEXER_GEN "${CMAKE_CURRENT_BINARY_DIR}/lexer.c")
         ADD_CUSTOM_COMMAND(OUTPUT ${CBC_GEN_LEXER_GEN} DEPENDS ${CBC_GEN_LEXER_SRC}
                 COMMENT "RE2C tools/gen/lexer.re"
                 COMMAND ${RE2C} --tags --no-debug-info --no-generation-date --output ${CBC_GEN_LEXER_GEN} ${CBC_GEN_LEXER_SRC})
+    ELSE()
+        # The committed copy, for a build without the generator.
+        SET(CBC_GEN_LEXER_GEN "${PROJECT_SOURCE_DIR}/tools/gen/lexer.c")
     ENDIF()
 
-    ADD_EXECUTABLE(cbc-gen cbc-gen.cc gen/lexer.c $<TARGET_OBJECTS:lcbtools> $<TARGET_OBJECTS:cliopts> $<TARGET_OBJECTS:linenoise>)
+    ADD_EXECUTABLE(cbc-gen cbc-gen.cc ${CBC_GEN_LEXER_GEN} $<TARGET_OBJECTS:lcbtools> $<TARGET_OBJECTS:cliopts> $<TARGET_OBJECTS:linenoise>)
+    # The lexer includes "lexer.h" from beside lexer.re, which is not beside the
+    # generated file.
+    TARGET_INCLUDE_DIRECTORIES(cbc-gen PRIVATE ${PROJECT_SOURCE_DIR}/tools/gen)
     TARGET_LINK_LIBRARIES(cbc-gen couchbase)
     INSTALL(TARGETS cbc-gen RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     SET_SOURCE_FILES_PROPERTIES(cbc-gen.cc PROPERTIES COMPILE_FLAGS "${LCB_CORE_CXXFLAGS}")
