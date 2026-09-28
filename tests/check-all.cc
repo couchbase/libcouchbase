@@ -24,6 +24,7 @@
 #include <libcouchbase/couchbase.h>
 
 #include <cstdlib>
+#include <cassert>
 #include <cstdio>
 
 #include <iostream>

@@ -1,6 +1,7 @@
 #include "socktest.h"
 #include <netbuf/netbuf.h>
 #include <algorithm>
+#include <cassert>
 using namespace LCBTest;
 using std::list;
 using std::string;

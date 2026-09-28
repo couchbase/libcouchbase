@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 #include "iotests.h"
 #include "internalstructs.h"
+#include <cassert>
 
 using std::string;
 using std::vector;

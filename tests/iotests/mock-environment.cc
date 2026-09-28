@@ -20,6 +20,7 @@
 #include <mocksupport/server.h>
 #include "mock-environment.h"
 #include <sstream>
+#include <cassert>
 #include "internal.h" /* settings from lcb_INSTANCE *for logging */
 #include "testutil.h"
 

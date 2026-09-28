@@ -18,6 +18,7 @@
 #undef NDEBUG
 #include "socktest.h"
 #include <lcbio/ssl.h>
+#include <cassert>
 using std::list;
 
 extern "C" {

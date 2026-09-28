@@ -1,4 +1,5 @@
 #include "ioserver.h"
+#include <cassert>
 using namespace LCBTest;
 
 SockFD::SockFD(int sock)

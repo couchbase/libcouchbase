@@ -2,6 +2,7 @@
 
 #ifndef LCB_NO_SSL
 #include <openssl/ssl.h>
+#include <cassert>
 
 using namespace LCBTest;
 using std::vector;
