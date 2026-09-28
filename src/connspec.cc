@@ -22,6 +22,7 @@
 #include <cstdio>
 #include <cctype>
 #include <cerrno>
+#include <cstdlib>
 
 #define SET_ERROR(msg)                                                                                                 \
     *errmsg = msg;                                                                                                     \

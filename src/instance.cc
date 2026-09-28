@@ -33,6 +33,8 @@
 #include <lcbio/ssl.h>
 #include "defer.h"
 
+#include <cstdlib>
+
 #define LOGARGS(obj, lvl) (obj)->settings, "instance", LCB_LOG_##lvl, __FILE__, __LINE__
 
 using namespace lcb;

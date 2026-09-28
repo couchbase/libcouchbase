@@ -18,6 +18,7 @@
 #include "iotests.h"
 
 #include <cinttypes>
+#include <cstdlib>
 
 class MutateUnitTest : public MockUnitTest
 {

@@ -23,6 +23,8 @@
 #include <lcbio/ssl.h>
 #include "n1ql/query_utils.hh"
 
+#include <cstdlib>
+
 #define LOGARGS(instance, lvl) instance->settings, "cntl", LCB_LOG_##lvl, __FILE__, __LINE__
 
 #define CNTL__MODE_SETSTRING 0x1000

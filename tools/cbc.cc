@@ -30,6 +30,7 @@
 #include <limits>
 #include <cstddef>
 #include <cerrno>
+#include <cstdlib>
 #ifdef _WIN32
 #ifndef sleep
 #define sleep(interval) Sleep((interval)*1000)
