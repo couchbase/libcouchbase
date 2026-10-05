@@ -299,9 +299,25 @@ static void cb_docq_throttle(lcb::docreq::Queue *q, int enabled)
     }
 }
 
+void lcb_VIEW_HANDLE_::finish_span()
+{
+    if (span_ == nullptr) {
+        return;
+    }
+    // The HTTP request tags this span when its response completes, which may be after a cancel.
+    if (http_request_ != nullptr) {
+        http_request_->span = nullptr;
+    }
+    lcb::trace::finish_http_span(span_, this);
+    span_ = nullptr;
+}
+
 lcb_VIEW_HANDLE_::~lcb_VIEW_HANDLE_()
 {
     invoke_last();
+
+    // Still set when the handle is deleted without a final response or a cancel().
+    finish_span();
 
     if (http_request_ != nullptr) {
         lcb_http_cancel(instance_, http_request_);
@@ -397,6 +413,7 @@ lcb_VIEW_HANDLE_::lcb_VIEW_HANDLE_(lcb_INSTANCE *instance, void *cookie, const l
 
 void lcb_VIEW_HANDLE_::cancel()
 {
+    finish_span();
     if (callback_ != nullptr) {
         callback_ = nullptr;
         lcb_aspend_del(&instance_->pendops, LCB_PENDTYPE_COUNTER, nullptr);

@@ -60,6 +60,10 @@ void ViewsUnitTest::connectBeerSample(HandleWrap &hw, lcb_INSTANCE **instance, b
 {
     lcb_CREATEOPTS *crparams = nullptr;
     MockEnvironment::getInstance()->makeConnectParams(crparams, nullptr, LCB_TYPE_CLUSTER);
+    TestTracer &tracer = MockEnvironment::getInstance()->getTracer();
+    if (tracer.enabled()) {
+        lcb_createopts_tracer(crparams, tracer.lcb_tracer());
+    }
 
     std::string bucket("beer-sample");
     std::string username("beer-sample");
@@ -266,12 +270,14 @@ static void viewCallback(lcb_INSTANCE *, int cbtype, const lcb_RESPVIEW *resp)
  *
  * The configure callable receives the lcb_CMDVIEW * after creation
  * and is responsible for setting the design-document, view name and
- * any options. The helper installs the row callback and tears the
+ * any options. The helper installs the row callback (viewCallback
+ * unless another is given) and tears the
  * cmd down. Only the final successful (or last-attempt-failing)
  * result is left in vi.
  */
 template <typename Configure>
-static lcb_STATUS run_view_until_nonempty(lcb_INSTANCE *instance, ViewInfo &vi, Configure configure)
+static lcb_STATUS run_view_until_nonempty(lcb_INSTANCE *instance, ViewInfo &vi, Configure configure,
+                                          lcb_VIEW_CALLBACK callback = viewCallback)
 {
     const int max_attempts = running_under_ci() ? 3 : 1;
     lcb_STATUS rc = LCB_SUCCESS;
@@ -282,7 +288,7 @@ static lcb_STATUS run_view_until_nonempty(lcb_INSTANCE *instance, ViewInfo &vi, 
         lcb_CMDVIEW *vq;
         lcb_cmdview_create(&vq);
         configure(vq);
-        lcb_cmdview_callback(vq, viewCallback);
+        lcb_cmdview_callback(vq, callback);
         rc = lcb_view(instance, &vi, vq);
         lcb_cmdview_destroy(vq);
         if (rc != LCB_SUCCESS) {
@@ -353,6 +359,49 @@ TEST_F(ViewsUnitTest, testSimpleView)
     }
     ASSERT_EQ(0, vi.rows.size());
     ASSERT_EQ(7303, vi.totalRows);
+}
+
+struct CancellingViewInfo : ViewInfo {
+    lcb_VIEW_HANDLE *handle{nullptr};
+};
+
+extern "C" {
+static void cancelOnFirstRowCallback(lcb_INSTANCE *instance, int, const lcb_RESPVIEW *resp)
+{
+    ViewInfo *info;
+    lcb_respview_cookie(resp, (void **)&info);
+    info->addRow(resp);
+    lcb_view_cancel(instance, static_cast<CancellingViewInfo *>(info)->handle);
+}
+}
+
+TEST_F(ViewsUnitTest, testCancellationAfterFirstRowFinishesSpan)
+{
+    SKIP_UNLESS_MOCK();
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    tracing_guard use_tracing;
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    connectBeerSample(hw, &instance);
+
+    const char *ddoc = "beer", *view = "brewery_beers";
+    CancellingViewInfo vi;
+    ASSERT_STATUS_EQ(LCB_SUCCESS, run_view_until_nonempty(
+                                      instance, vi,
+                                      [&](lcb_CMDVIEW *vq) {
+                                          lcb_cmdview_design_document(vq, ddoc, strlen(ddoc));
+                                          lcb_cmdview_view_name(vq, view, strlen(view));
+                                          lcb_cmdview_handle(vq, &vi.handle);
+                                      },
+                                      cancelOnFirstRowCallback));
+    ASSERT_EQ(1, vi.rows.size());
+
+    // Regression: a cancelled view request never finished its span.
+    auto spans = mock->getTracer().spans;
+    ASSERT_FALSE(spans.empty());
+    for (const auto &span : spans) {
+        ASSERT_TRUE(span->finished);
+    }
 }
 
 TEST_F(ViewsUnitTest, testIncludeDocs)

@@ -474,12 +474,28 @@ void lcb_ANALYTICS_HANDLE_::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
     }
 }
 
+void lcb_ANALYTICS_HANDLE_::finish_span()
+{
+    if (span_ == nullptr) {
+        return;
+    }
+    // The HTTP request tags this span when its response completes, which may be after a cancel.
+    if (http_request_ != nullptr) {
+        http_request_->span = nullptr;
+    }
+    lcb::trace::finish_http_span(span_, this);
+    span_ = nullptr;
+}
+
 lcb_ANALYTICS_HANDLE_::~lcb_ANALYTICS_HANDLE_()
 {
     if (callback_ != nullptr) {
         lcb_RESPANALYTICS resp{};
         invoke_row(&resp, true);
     }
+
+    // Still set when the handle is deleted without a final response or a cancel().
+    finish_span();
 
     if (http_request_ != nullptr) {
         lcb_http_cancel(instance_, http_request_);

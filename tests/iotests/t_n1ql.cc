@@ -227,6 +227,8 @@ TEST_F(QueryUnitTest, testInvalidJson)
 
 TEST_F(QueryUnitTest, testPrepareOk)
 {
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    tracing_guard use_tracing;
     lcb_INSTANCE *instance;
     HandleWrap hw;
     if (!createQueryConnection(hw, &instance)) {
@@ -273,6 +275,13 @@ TEST_F(QueryUnitTest, testPrepareOk)
     ASSERT_EQ(1, res.rows.size());
     lcb_n1qlcache_getplan(instance->n1ql_cache, query, plan);
     ASSERT_FALSE(plan.empty());
+
+    // Regression: the PREPARE request is cancelled from its own row callback and never finished its span.
+    auto spans = mock->getTracer().spans;
+    ASSERT_FALSE(spans.empty());
+    for (const auto &span : spans) {
+        ASSERT_TRUE(span->finished) << span->name;
+    }
 }
 
 TEST_F(QueryUnitTest, testPrepareStale)
@@ -326,6 +335,8 @@ TEST_F(QueryUnitTest, testPrepareStale)
 
 TEST_F(QueryUnitTest, testPrepareFailure)
 {
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    tracing_guard use_tracing;
     lcb_INSTANCE *instance;
     HandleWrap hw;
     if (!createQueryConnection(hw, &instance)) {
@@ -340,10 +351,18 @@ TEST_F(QueryUnitTest, testPrepareFailure)
     ASSERT_TRUE(res.called);
     ASSERT_NE(LCB_SUCCESS, res.rc);
     ASSERT_TRUE(res.rows.empty());
+
+    auto spans = mock->getTracer().spans;
+    ASSERT_FALSE(spans.empty());
+    for (const auto &span : spans) {
+        ASSERT_TRUE(span->finished) << span->name;
+    }
 }
 
 TEST_F(QueryUnitTest, testCancellation)
 {
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    tracing_guard use_tracing;
     lcb_INSTANCE *instance;
     HandleWrap hw;
     if (!createQueryConnection(hw, &instance)) {
@@ -359,6 +378,45 @@ TEST_F(QueryUnitTest, testCancellation)
     lcb_query_cancel(instance, handle);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     ASSERT_FALSE(res.called);
+
+    auto spans = mock->getTracer().spans;
+    ASSERT_EQ(1, spans.size());
+    ASSERT_TRUE(spans[0]->finished);
+}
+
+extern "C" {
+static void cancel_on_first_row(lcb_INSTANCE *instance, int, const lcb_RESPQUERY *resp)
+{
+    N1QLResult *res;
+    lcb_respquery_cookie(resp, (void **)&res);
+    res->called = true;
+    ASSERT_FALSE(lcb_respquery_is_final(resp));
+    lcb_QUERY_HANDLE *handle = nullptr;
+    lcb_respquery_handle(resp, &handle);
+    lcb_query_cancel(instance, handle);
+}
+}
+
+TEST_F(QueryUnitTest, testCancellationAfterFirstRowFinishesSpan)
+{
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    tracing_guard use_tracing;
+    lcb_INSTANCE *instance;
+    HandleWrap hw;
+    if (!createQueryConnection(hw, &instance)) {
+        SKIP_QUERY_TEST();
+    }
+    N1QLResult res;
+    makeCommand("SELECT mockrow");
+    lcb_cmdquery_callback(cmd, cancel_on_first_row);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_query(instance, &res, cmd));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    ASSERT_TRUE(res.called);
+
+    // Regression: a cancelled query never finished its span.
+    auto spans = mock->getTracer().spans;
+    ASSERT_EQ(1, spans.size());
+    ASSERT_TRUE(spans[0]->finished);
 }
 
 TEST_F(QueryUnitTest, testClusterwide)

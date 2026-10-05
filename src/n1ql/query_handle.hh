@@ -255,6 +255,7 @@ struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
             prepare_query_->cancel();
             prepare_query_ = nullptr;
         }
+        finish_span();
         callback_ = nullptr;
         return LCB_SUCCESS;
     }
@@ -285,6 +286,8 @@ struct lcb_QUERY_HANDLE_ : lcb::jsparse::Parser::Actions {
     }
 
   private:
+    void finish_span();
+
     void on_backoff();
 
     const lcb_RESPHTTP *http_response_{nullptr};

@@ -155,6 +155,11 @@ struct lcb_ANALYTICS_HANDLE_ : lcb::jsparse::Parser::Actions {
 
     lcb_STATUS cancel()
     {
+        // Ingest stores still in flight carry span_ as their parent, so with a
+        // document queue the destructor finishes it once they have completed.
+        if (document_queue_ == nullptr) {
+            finish_span();
+        }
         if (callback_ != nullptr) {
             callback_ = nullptr;
             if (document_queue_) {
@@ -239,6 +244,8 @@ struct lcb_ANALYTICS_HANDLE_ : lcb::jsparse::Parser::Actions {
     }
 
   private:
+    void finish_span();
+
     const lcb_RESPHTTP *http_response_{nullptr};
     lcb_HTTP_HANDLE *http_request_{nullptr};
     lcb::jsparse::Parser *parser_{nullptr};

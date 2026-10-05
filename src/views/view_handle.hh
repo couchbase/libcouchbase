@@ -144,6 +144,8 @@ struct lcb_VIEW_HANDLE_ : lcb::jsparse::Parser::Actions {
     }
 
   private:
+    void finish_span();
+
     /** Current HTTP response to provide in callbacks */
     const lcb_RESPHTTP *http_response_{nullptr};
     /** HTTP request object, in case we need to cancel prematurely */
