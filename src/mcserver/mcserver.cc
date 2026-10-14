@@ -1123,6 +1123,11 @@ void probe_failed_to_schedule(mc_PACKET *pkt)
 {
     delete static_cast<ProbeCookie *>(pkt->u_rdata.exdata);
 }
+
+bool is_probe(const mc_PACKET *pkt)
+{
+    return (pkt->flags & MCREQ_F_REQEXT) && pkt->u_rdata.exdata->procs == &probe_procs;
+}
 } // namespace
 
 /* A NOOP is the one operation lcb_kv_should_retry() never retries, so it
@@ -1620,13 +1625,19 @@ bool Server::check_closed()
     return true;
 }
 
-bool Server::has_pending(bool ignore_cfgreq) const
+bool Server::has_pending(bool ignore_internal) const
 {
-    if (ignore_cfgreq) {
+    if (ignore_internal) {
         sllist_node *ll;
         SLLIST_FOREACH(&requests, ll)
         {
             const mc_PACKET *pkt = SLLIST_ITEM(ll, mc_PACKET, slnode);
+            /* The probe is the library's own traffic. Counting it would hold
+             * lcb_wait() up to one unresponsive_timeout past the deadline of
+             * the operation that triggered it. */
+            if (is_probe(pkt)) {
+                continue;
+            }
             protocol_binary_request_header hdr = {};
             mcreq_read_hdr(pkt, &hdr);
             /*
@@ -1640,7 +1651,7 @@ bool Server::has_pending(bool ignore_cfgreq) const
         }
         /*
          * the pending requests list is empty or contains only configuration update requests
-         * in any case consider it empty, because of ignore_cfgreq flag
+         * in any case consider it empty, because of ignore_internal flag
          */
         return false;
     }

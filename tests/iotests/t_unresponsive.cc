@@ -71,24 +71,6 @@ void expire_one_operation(lcb_INSTANCE *instance, const char *key)
     lcb_wait(instance, LCB_WAIT_DEFAULT);
 }
 
-/* Leave the loop in the Server::io_timeout() pass that fails the operation.
- * That pass also runs check_unresponsive(), so what the connection looks like
- * on return is what silence detection left behind.
- *
- * Without this lcb_wait() returns several hundred milliseconds later. The
- * probe NOOP counts in has_pending(), so lcb_maybe_breakout() holds the loop
- * until the probe deadline, and by then the connection is up or down
- * according to whether the peer resumed first. */
-void break_out_on_response(lcb_INSTANCE *instance, int, const lcb_RESPBASE *)
-{
-    lcb_breakout(instance);
-}
-
-void stop_where_silence_is_detected(lcb_INSTANCE *instance)
-{
-    lcb_install_callback(instance, LCB_CALLBACK_STORE, break_out_on_response);
-}
-
 /* Let the peer answer again and run one operation through, so that whichever
  * connection the next operation will use is the one being inspected.
  *
@@ -245,10 +227,8 @@ TEST_F(UnresponsiveUnitTest, testConnectionStringKeys)
  * is ultimately answered cannot be observed here, because the mock withholds
  * every response on the node, the probe's own included.
  *
- * The first stops the loop where the silence is detected, because with the
- * probe enabled it would otherwise run on to the probe's own deadline. The
- * second runs the loop again instead: a completion-mode plugin finalises the
- * errored context on a later tick than an event-mode one. */
+ * The second runs the loop again before inspecting, because a completion-mode
+ * plugin finalises the errored context on a later tick than an event-mode one. */
 
 /* With the probe enabled the verdict waits for the NOOP, so detecting the
  * silence does not by itself cost the connection. */
@@ -270,7 +250,6 @@ TEST_F(UnresponsiveUnitTest, testProbeDefersClose)
     ASSERT_FALSE(before.empty());
 
     mock->hiccupNodes(1200, 1);
-    stop_where_silence_is_detected(instance);
     expire_one_operation(instance, "unresponsive-probe-ok");
 
     EXPECT_EQ(0, connections_rebuilt(before, kv_socket_ids(instance)));
@@ -313,4 +292,69 @@ TEST_F(UnresponsiveUnitTest, testProbeCntlRoundTrip)
     int get_probe = 1;
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_UNRESPONSIVE_PROBE, &get_probe));
     EXPECT_EQ(set_probe, get_probe);
+}
+
+/* Counting the probe as pending held lcb_wait() up to one unresponsive_timeout
+ * past the operation deadline. */
+TEST_F(UnresponsiveUnitTest, testWaitReturnsBeforeProbeVerdict)
+{
+    SKIP_UNLESS_MOCK()
+
+    HandleWrap hw;
+    createConnection(hw);
+    lcb_INSTANCE *instance = hw.getLcb();
+    MockEnvironment *mock = MockEnvironment::getInstance();
+
+    removeKey(instance, "unresponsive-probe-wait"); /* warms the connection */
+    const lcb_U32 op_timeout = 1000000;
+    const lcb_U32 unresponsive_timeout = 900000;
+    configure(instance, op_timeout, unresponsive_timeout, 1);
+    int probe = 1;
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_UNRESPONSIVE_PROBE, &probe));
+
+    mock->hiccupNodes(5000, 1);
+    hrtime_t start = gethrtime();
+    expire_one_operation(instance, "unresponsive-probe-wait");
+    hrtime_t elapsed_us = LCB_NS2US(gethrtime() - start);
+
+    int probing = 0;
+    for (size_t ii = 0; ii < LCBT_NSERVERS(instance); ++ii) {
+        if (instance->get_server(ii)->probe_state == lcb::Server::PROBE_SENT) {
+            ++probing;
+        }
+    }
+    EXPECT_EQ(1, probing);
+    EXPECT_GE(elapsed_us, op_timeout * 9 / 10);
+    EXPECT_LT(elapsed_us, op_timeout + unresponsive_timeout / 2);
+
+    settle(instance, "unresponsive-probe-wait");
+}
+
+/* A probe left in flight by a returned lcb_wait() still closes a connection
+ * that stays silent, during the next run of the event loop. */
+TEST_F(UnresponsiveUnitTest, testProbeVerdictClosesAfterWaitReturns)
+{
+    SKIP_UNLESS_MOCK()
+
+    HandleWrap hw;
+    createConnection(hw);
+    lcb_INSTANCE *instance = hw.getLcb();
+    MockEnvironment *mock = MockEnvironment::getInstance();
+
+    removeKey(instance, "unresponsive-probe-later"); /* warms the connection */
+    configure(instance, 1000000, 900000, 1);
+    int probe = 1;
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_UNRESPONSIVE_PROBE, &probe));
+
+    std::map<size_t, lcb_U64> before = kv_socket_ids(instance);
+    ASSERT_FALSE(before.empty());
+
+    mock->hiccupNodes(5000, 1);
+    expire_one_operation(instance, "unresponsive-probe-later");
+    EXPECT_EQ(0, connections_rebuilt(before, kv_socket_ids(instance)));
+
+    lcb_wait(instance, LCB_WAIT_NOCHECK); /* runs until the probe's deadline */
+    settle(instance, "unresponsive-probe-later");
+
+    EXPECT_GE(connections_rebuilt(before, kv_socket_ids(instance)), 1);
 }

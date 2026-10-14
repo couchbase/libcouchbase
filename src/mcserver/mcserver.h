@@ -79,9 +79,10 @@ class Server : public mc_PIPELINE
 
     /**
      * Returns true or false depending on whether there are pending commands on
-     * this server
+     * this server. With ignore_internal, configuration requests and the
+     * unresponsive-connection probe are not counted.
      */
-    bool has_pending(bool ignore_cfgreq = false) const;
+    bool has_pending(bool ignore_internal = false) const;
 
     int get_index() const
     {
