@@ -1115,3 +1115,112 @@ TEST_F(MockUnitTest, testConfigReplaceMidRetry)
     ASSERT_EQ(1, ni.callCount);
     EXPECT_STATUS_EQ(LCB_SUCCESS, ni.err);
 }
+
+namespace
+{
+struct deadline_cookie {
+    lcb_STATUS status{LCB_ERR_GENERIC};
+};
+
+void deadline_store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
+{
+    deadline_cookie *cookie;
+    lcb_respstore_cookie(resp, (void **)&cookie);
+    cookie->status = lcb_respstore_status(resp);
+}
+
+/* Ends a hiccup however the test exits; it would stall the tests after it. */
+struct hiccup_guard {
+    ~hiccup_guard()
+    {
+        MockEnvironment::getInstance()->hiccupNodes(0, 0);
+    }
+};
+
+void schedule_upsert(lcb_INSTANCE *instance, deadline_cookie *cookie, const char *key, lcb_U32 timeout_us)
+{
+    lcb_CMDSTORE *cmd;
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
+    lcb_cmdstore_key(cmd, key, strlen(key));
+    lcb_cmdstore_value(cmd, "v", 1);
+    if (timeout_us != 0) {
+        lcb_cmdstore_timeout(cmd, timeout_us);
+    }
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_store(instance, cookie, cmd));
+    lcb_cmdstore_destroy(cmd);
+}
+} // namespace
+
+/* Two operations time out before anything is written, and the second is last
+ * in the send queue. The operation scheduled between them still has to reach
+ * the server. */
+TEST_F(MockUnitTest, testPurgedUnsentPacketKeepsNeighbour)
+{
+    HandleWrap hw;
+    createConnection(hw);
+    lcb_INSTANCE *instance = hw.getLcb();
+
+    const char *key = "testPurgedUnsentPacketKeepsNeighbour";
+    removeKey(instance, key);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)deadline_store_callback);
+    lcb_U32 op_timeout = LCB_S2US(10);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
+
+    deadline_cookie first;
+    deadline_cookie middle;
+    deadline_cookie last;
+    hrtime_t start = gethrtime();
+    schedule_upsert(instance, &first, key, 1);
+    schedule_upsert(instance, &middle, key, 0);
+    schedule_upsert(instance, &last, key, 1);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+
+    EXPECT_STATUS_EQ(LCB_ERR_TIMEOUT, first.status);
+    EXPECT_STATUS_EQ(LCB_ERR_TIMEOUT, last.status);
+    EXPECT_STATUS_EQ(LCB_SUCCESS, middle.status);
+    EXPECT_LT(LCB_NS2US(gethrtime() - start), LCB_S2US(2));
+}
+
+/* A large store times out while the server is not reading, so only part of it
+ * has been written. The rest has to follow it on the connection, or the next
+ * request is read as the tail of its value. libuv hands the whole buffer to
+ * uv_write(), so the short write occurs only with the other plugins. */
+TEST_F(MockUnitTest, testTimedOutPartialWriteKeepsStream)
+{
+    SKIP_UNLESS_MOCK()
+
+    HandleWrap hw;
+    createConnection(hw);
+    lcb_INSTANCE *instance = hw.getLcb();
+    MockEnvironment *mock = MockEnvironment::getInstance();
+
+    const char *key = "testTimedOutPartialWriteKeepsStream";
+    removeKey(instance, key);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)deadline_store_callback);
+    lcb_U32 op_timeout = LCB_MS2US(500);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
+    /* the server thread sleeps after the first byte of the next response */
+    mock->hiccupNodes(2000, 1);
+    hiccup_guard guard;
+
+    deadline_cookie small_store;
+    deadline_cookie large_store;
+    std::string value(16 * 1024 * 1024, 'x');
+    schedule_upsert(instance, &small_store, key, 0);
+    lcb_CMDSTORE *cmd;
+    lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
+    lcb_cmdstore_key(cmd, key, strlen(key));
+    lcb_cmdstore_value(cmd, value.c_str(), value.size());
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_store(instance, &large_store, cmd));
+    lcb_cmdstore_destroy(cmd);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    mock->hiccupNodes(0, 0);
+    EXPECT_STATUS_EQ(LCB_ERR_TIMEOUT, large_store.status);
+
+    op_timeout = LCB_S2US(10);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
+    deadline_cookie next;
+    schedule_upsert(instance, &next, key, 0);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    EXPECT_STATUS_EQ(LCB_SUCCESS, next.status);
+}

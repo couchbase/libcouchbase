@@ -593,6 +593,125 @@ TEST_F(NetbufTest, testPacketCleanup)
     clean_check(&mgr);
 }
 
+/* Packets whose spans sit next to each other in one block. Discarding the
+ * second before any flush must leave the first one queued. */
+TEST_F(NetbufTest, testPacketCleanupKeepsAdjacentPacket)
+{
+    nb_MGR mgr;
+    nb_SETTINGS settings;
+    netbuf_default_settings(&settings);
+    netbuf_init(&mgr, &settings);
+
+    std::array<my_PACKET, 2> packets{
+        my_PACKET{&mgr, "key_1", "value_1"},
+        my_PACKET{&mgr, "key_2", "value_2"},
+    };
+    for (auto &packet : packets) {
+        netbuf_enqueue_span(&mgr, packet.key(), &packet);
+        netbuf_enqueue_span(&mgr, packet.value(), &packet);
+        netbuf_pdu_enqueue(&mgr, &packet, offsetof(my_PACKET, slnode));
+    }
+
+    packets[1].remove_pdu_from(&mgr);
+    netbuf_cleanup_packet(&mgr, &packets[1]);
+
+    nb_IOV iov[10];
+    nb_SIZE to_flush = netbuf_start_flush(&mgr, iov, 10, NULL);
+    ASSERT_EQ(packets[0].size(), to_flush);
+    netbuf_end_flush2(&mgr, to_flush, packet_flush_callback, offsetof(my_PACKET, slnode), NULL);
+    ASSERT_TRUE(packets[0].is_flushed());
+
+    for (auto &packet : packets) {
+        netbuf_mblock_release(&mgr, packet.key());
+        netbuf_mblock_release(&mgr, packet.value());
+    }
+
+    clean_check(&mgr);
+}
+
+/* The same, discarding the first: the second must still be queued, and
+ * nothing of the first may be written. */
+TEST_F(NetbufTest, testPacketCleanupKeepsFollowingPacket)
+{
+    nb_MGR mgr;
+    nb_SETTINGS settings;
+    netbuf_default_settings(&settings);
+    netbuf_init(&mgr, &settings);
+
+    std::array<my_PACKET, 2> packets{
+        my_PACKET{&mgr, "key_1", "value_1"},
+        my_PACKET{&mgr, "key_2", "value_2"},
+    };
+    for (auto &packet : packets) {
+        netbuf_enqueue_span(&mgr, packet.key(), &packet);
+        netbuf_enqueue_span(&mgr, packet.value(), &packet);
+        netbuf_pdu_enqueue(&mgr, &packet, offsetof(my_PACKET, slnode));
+    }
+
+    packets[0].remove_pdu_from(&mgr);
+    netbuf_cleanup_packet(&mgr, &packets[0]);
+
+    nb_IOV iov[10];
+    nb_SIZE to_flush = netbuf_start_flush(&mgr, iov, 10, NULL);
+    ASSERT_EQ(packets[1].size(), to_flush);
+    netbuf_end_flush2(&mgr, to_flush, packet_flush_callback, offsetof(my_PACKET, slnode), NULL);
+    ASSERT_TRUE(packets[1].is_flushed());
+
+    for (auto &packet : packets) {
+        netbuf_mblock_release(&mgr, packet.key());
+        netbuf_mblock_release(&mgr, packet.value());
+    }
+
+    clean_check(&mgr);
+}
+
+/* A packet counts as unsent until any of its bytes is handed out for writing,
+ * including by a write that stops partway through it. */
+TEST_F(NetbufTest, testPacketUnsentUntilHandedOut)
+{
+    nb_MGR mgr;
+    nb_SETTINGS settings;
+    netbuf_default_settings(&settings);
+    netbuf_init(&mgr, &settings);
+
+    std::array<my_PACKET, 2> packets{
+        my_PACKET{&mgr, "key_1", "value_1"},
+        my_PACKET{&mgr, "key_2", "value_2"},
+    };
+    for (auto &packet : packets) {
+        netbuf_enqueue_span(&mgr, packet.key(), &packet);
+        netbuf_enqueue_span(&mgr, packet.value(), &packet);
+        netbuf_pdu_enqueue(&mgr, &packet, offsetof(my_PACKET, slnode));
+    }
+    ASSERT_TRUE(netbuf_packet_unsent(&mgr, &packets[0], SPAN_BUFFER(packets[0].key())));
+    ASSERT_TRUE(netbuf_packet_unsent(&mgr, &packets[1], SPAN_BUFFER(packets[1].key())));
+
+    /* hand out the first packet only, and write three of its bytes */
+    nb_IOV iov[10];
+    nb_SIZE to_flush = netbuf_start_flush(&mgr, iov, 1, NULL);
+    ASSERT_EQ(packets[0].size(), to_flush);
+    ASSERT_FALSE(netbuf_packet_unsent(&mgr, &packets[0], SPAN_BUFFER(packets[0].key())));
+    netbuf_end_flush2(&mgr, 3, packet_flush_callback, offsetof(my_PACKET, slnode), NULL);
+
+    ASSERT_FALSE(netbuf_packet_unsent(&mgr, &packets[0], SPAN_BUFFER(packets[0].key())));
+    ASSERT_TRUE(netbuf_packet_unsent(&mgr, &packets[1], SPAN_BUFFER(packets[1].key())));
+
+    /* the rest of the first packet is still with the I/O layer; only the
+     * second is offered anew, and completing both flushes both */
+    to_flush = netbuf_start_flush(&mgr, iov, 10, NULL);
+    ASSERT_EQ(packets[1].size(), to_flush);
+    netbuf_end_flush2(&mgr, packets[0].size() - 3 + to_flush, packet_flush_callback, offsetof(my_PACKET, slnode), NULL);
+    ASSERT_TRUE(packets[0].is_flushed());
+    ASSERT_TRUE(packets[1].is_flushed());
+
+    for (auto &packet : packets) {
+        netbuf_mblock_release(&mgr, packet.key());
+        netbuf_mblock_release(&mgr, packet.value());
+    }
+
+    clean_check(&mgr);
+}
+
 /*
  * Regression tests for CCBC-1685.
  *

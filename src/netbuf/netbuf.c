@@ -542,7 +542,10 @@ void netbuf_enqueue(nb_MGR *mgr, const nb_IOV *bufinfo, const void *parent)
 
     } else {
         win = SLLIST_ITEM(q->pending.last, nb_SNDQELEM, slnode);
-        if (win->base + win->len == bufinfo->iov_base) {
+        /* Merge only within one packet. An element carries one parent tag, and
+         * netbuf_cleanup_packet() removes elements by that tag, so an element
+         * shared by two packets would be removed with the wrong one. */
+        if (win->parent == parent && win->base + win->len == bufinfo->iov_base) {
             win->len += bufinfo->iov_len;
 
         } else {
@@ -757,6 +760,25 @@ void netbuf_cleanup_packet(nb_MGR *mgr, const void *packet)
             }
         }
     }
+}
+
+int netbuf_packet_unsent(nb_MGR *mgr, const void *packet, const char *first)
+{
+    nb_SENDQ *q = &mgr->sendq;
+    int handed = q->last_requested != NULL; /* elements up to last_requested are handed out */
+    sllist_node *ll;
+
+    SLLIST_ITERBASIC(&q->pending, ll)
+    {
+        nb_SNDQELEM *e = SLLIST_ITEM(ll, nb_SNDQELEM, slnode);
+        if (e->parent == packet) {
+            return !handed && e->base == first;
+        }
+        if (e == q->last_requested) {
+            handed = 0;
+        }
+    }
+    return 0;
 }
 
 void netbuf_cleanup(nb_MGR *mgr)

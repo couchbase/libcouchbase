@@ -199,3 +199,78 @@ TEST_F(McFlush, testPartialFlush)
     mcreq_packet_handled(pw.pipeline, pw.pkt);
     ASSERT_EQ(1, cookie.ncalled);
 }
+
+extern "C" {
+static void count_timeout_callback(mc_PIPELINE *, mc_PACKET *, lcb_STATUS err, void *arg)
+{
+    EXPECT_EQ(LCB_ERR_TIMEOUT, err);
+    (*static_cast<int *>(arg))++;
+}
+}
+
+/* A packet that times out after part of it was written stays in the send
+ * queue: the next flush offers exactly its remaining bytes, and the packet is
+ * released only when they are written. */
+TEST_F(McFlush, testTimeoutKeepsPartlyWrittenPacket)
+{
+    CQWrap cq;
+    PacketWrap pw;
+    MyCookie cookie;
+
+    cq.setBufFreeCallback(buf_free_callback);
+    pw.setContigKey("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    ASSERT_TRUE(pw.reservePacket(&cq));
+    pw.setCookie(&cookie);
+    cookie.exp_kbuf = pw.pktbuf;
+    pw.setHeaderSize();
+    pw.copyHeader();
+    mcreq_enqueue_packet(pw.pipeline, pw.pkt);
+
+    nb_IOV iov[10];
+    unsigned total = mcreq_flush_iov_fill(pw.pipeline, iov, 10, nullptr);
+    ASSERT_GT(total, 8u);
+    mcreq_flush_done(pw.pipeline, 8, total);
+
+    int ntimeouts = 0;
+    MCREQ_PKT_RDATA(pw.pkt)->deadline = 1;
+    ASSERT_EQ(1u, mcreq_pipeline_timeout(pw.pipeline, LCB_ERR_TIMEOUT, count_timeout_callback, &ntimeouts, 2));
+    ASSERT_EQ(1, ntimeouts);
+    ASSERT_EQ(0, cookie.ncalled);
+
+    unsigned rest = mcreq_flush_iov_fill(pw.pipeline, iov, 10, nullptr);
+    ASSERT_EQ(total - 8, rest);
+    ASSERT_EQ(pw.pktbuf + 8, iov[0].iov_base);
+    mcreq_flush_done(pw.pipeline, rest, rest);
+    ASSERT_EQ(1, cookie.ncalled);
+}
+
+/* The same while the whole packet is handed to the I/O plugin and its write
+ * has not completed. */
+TEST_F(McFlush, testTimeoutKeepsHandedOutPacket)
+{
+    CQWrap cq;
+    PacketWrap pw;
+    MyCookie cookie;
+
+    cq.setBufFreeCallback(buf_free_callback);
+    pw.setContigKey("1234");
+    ASSERT_TRUE(pw.reservePacket(&cq));
+    pw.setCookie(&cookie);
+    cookie.exp_kbuf = pw.pktbuf;
+    pw.setHeaderSize();
+    pw.copyHeader();
+    mcreq_enqueue_packet(pw.pipeline, pw.pkt);
+
+    nb_IOV iov[10];
+    unsigned total = mcreq_flush_iov_fill(pw.pipeline, iov, 10, nullptr);
+    ASSERT_GT(total, 0u);
+
+    int ntimeouts = 0;
+    MCREQ_PKT_RDATA(pw.pkt)->deadline = 1;
+    ASSERT_EQ(1u, mcreq_pipeline_timeout(pw.pipeline, LCB_ERR_TIMEOUT, count_timeout_callback, &ntimeouts, 2));
+    ASSERT_EQ(1, ntimeouts);
+    ASSERT_EQ(0, cookie.ncalled);
+
+    mcreq_flush_done(pw.pipeline, total, total);
+    ASSERT_EQ(1, cookie.ncalled);
+}

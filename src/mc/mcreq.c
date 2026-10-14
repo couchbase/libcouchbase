@@ -1109,8 +1109,11 @@ unsigned mcreq_pipeline_timeout(mc_PIPELINE *pl, lcb_STATUS err, mcreq_pktfail_f
         if (now == 0 || rd->deadline <= now) {
             sllist_iter_remove(&pl->requests, &iter);
             failcb(pl, pkt, err, cbarg);
-            if ((pkt->flags & MCREQ_F_FLUSHED) == 0) {
-                /* the packet has not been flushed yet, remove it from sendq */
+            if ((pkt->flags & MCREQ_F_FLUSHED) == 0 &&
+                netbuf_packet_unsent(&pl->nbmgr, pkt, SPAN_BUFFER(&pkt->kh_span))) {
+                /* None of the packet has gone out, so it can leave the send
+                 * queue. A packet already partly written stays queued and is
+                 * written whole; flush completion releases it. */
                 nb_SENDQ *q = &pl->nbmgr.sendq;
                 sllist_iterator i;
                 SLLIST_ITERFOR(&q->pdus, &i)

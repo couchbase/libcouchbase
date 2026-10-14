@@ -344,6 +344,18 @@ void netbuf_cleanup(nb_MGR *mgr);
 void netbuf_cleanup_packet(nb_MGR *mgr, const void *packet);
 
 /**
+ * @brief Whether none of a packet's bytes has reached the I/O layer yet
+ * @param mgr the manager
+ * @param packet the parent the packet's buffers were enqueued with
+ * @param first the address of the packet's first enqueued byte
+ * @return nonzero when the packet's first byte still starts a queued element
+ *  and that element has not been handed to netbuf_start_flush()'s caller.
+ *  Once any byte has gone out, the rest has to follow, or the stream loses
+ *  its framing.
+ */
+int netbuf_packet_unsent(nb_MGR *mgr, const void *packet, const char *first);
+
+/**
  * @brief Release idle memory back to the system.
  *
  * Walks every pool owned by @p mgr and frees the backing buffers of blocks
