@@ -1132,6 +1132,11 @@ void deadline_store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPST
     cookie->done = gethrtime();
 }
 
+/* The mock sleeps for the hiccup before every write on a node, so a response
+ * can wait out more than one. An operation expected to succeed through a
+ * hiccup gets this timeout. */
+const lcb_U32 survives_hiccups_us = LCB_S2US(20);
+
 /* Ends a hiccup however the test exits; it would stall the tests after it. */
 struct hiccup_guard {
     ~hiccup_guard()
@@ -1194,7 +1199,7 @@ TEST_F(MockUnitTest, testPerOperationTimeoutBehindLongerDeadline)
     const char *key = "testPerOperationTimeoutBehindLongerDeadline";
     removeKey(instance, key);
     lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)deadline_store_callback);
-    lcb_U32 op_timeout = LCB_S2US(5);
+    lcb_U32 op_timeout = survives_hiccups_us;
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
     mock->hiccupNodes(3000, 1);
 
@@ -1229,7 +1234,7 @@ TEST_F(MockUnitTest, testPerOperationTimeoutLongerThanDefault)
     mock->hiccupNodes(2000, 1);
 
     deadline_cookie cookie;
-    schedule_upsert(instance, &cookie, key, LCB_S2US(4));
+    schedule_upsert(instance, &cookie, key, survives_hiccups_us);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     mock->hiccupNodes(0, 0);
 
@@ -1406,7 +1411,7 @@ TEST_F(MockUnitTest, testPerOperationTimeoutAfterRetry)
     removeKey(instance, key);
     lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)deadline_store_callback);
     lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)deadline_get_callback);
-    lcb_U32 op_timeout = LCB_S2US(5);
+    lcb_U32 op_timeout = survives_hiccups_us;
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
     mock->hiccupNodes(3000, 1);
     hiccup_guard guard;
@@ -1492,7 +1497,7 @@ TEST_F(MockUnitTest, testPerOperationTimeoutAfterRelocation)
     ASSERT_EQ(0, lcbvb_load_json(new_vbc.get(), Json::FastWriter().write(json).c_str()));
 
     lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)deadline_store_callback);
-    lcb_U32 op_timeout = LCB_S2US(5);
+    lcb_U32 op_timeout = survives_hiccups_us;
     ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
     mock->hiccupNodes(3000, 1);
     hiccup_guard guard;
