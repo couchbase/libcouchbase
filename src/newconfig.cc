@@ -370,6 +370,7 @@ static void replace_config(lcb_INSTANCE *instance, lcbvb_CONFIG *oldconfig, lcbv
 
     for (unsigned ii = 0; ii < nnew; ii++) {
         if (static_cast<lcb::Server *>(ppnew[ii])->has_pending()) {
+            mcreq_rearm_timeout(ppnew[ii]); /* relocated packets carry their own deadlines */
             ppnew[ii]->flush_start(ppnew[ii]);
         }
     }

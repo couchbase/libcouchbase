@@ -984,6 +984,12 @@ static void queuectx_leave(mc_CMDQUEUE *queue, int success, int flush)
             ll = ll_next;
         }
         SLLIST_FIRST(&pipeline->ctxqueued) = pipeline->ctxqueued.last = NULL;
+        if (success) {
+            /* next_timeout() reads only `requests`. Rearm after the packets are
+             * in it; otherwise the timer keeps a value computed without them,
+             * and a shorter per-operation timeout fires late. */
+            mcreq_rearm_timeout(pipeline);
+        }
         if (flush) {
             pipeline->flush_start(pipeline);
         }
@@ -1014,7 +1020,6 @@ void mcreq_sched_add(mc_PIPELINE *pipeline, mc_PACKET *pkt)
         cq->scheds[pipeline->index] = 1;
     }
     sllist_append(&pipeline->ctxqueued, &pkt->slnode);
-    mcreq_rearm_timeout(pipeline);
 }
 
 static mc_PACKET *pipeline_find(mc_PIPELINE *pipeline, lcb_uint32_t opaque, int do_remove)

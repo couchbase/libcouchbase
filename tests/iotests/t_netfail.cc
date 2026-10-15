@@ -16,6 +16,7 @@
  */
 #include "config.h"
 #include "iotests.h"
+#include <functional>
 #include <map>
 
 #include "internal.h" /* vbucket_* things from lcb_INSTANCE **/
@@ -1120,6 +1121,7 @@ namespace
 {
 struct deadline_cookie {
     lcb_STATUS status{LCB_ERR_GENERIC};
+    hrtime_t done{0};
 };
 
 void deadline_store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
@@ -1127,6 +1129,7 @@ void deadline_store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPST
     deadline_cookie *cookie;
     lcb_respstore_cookie(resp, (void **)&cookie);
     cookie->status = lcb_respstore_status(resp);
+    cookie->done = gethrtime();
 }
 
 /* Ends a hiccup however the test exits; it would stall the tests after it. */
@@ -1150,6 +1153,134 @@ void schedule_upsert(lcb_INSTANCE *instance, deadline_cookie *cookie, const char
     lcb_cmdstore_destroy(cmd);
 }
 } // namespace
+
+/* A lone operation's own deadline fires, not LCB_CNTL_OP_TIMEOUT. */
+TEST_F(MockUnitTest, testPerOperationTimeoutOnIdlePipeline)
+{
+    SKIP_UNLESS_MOCK()
+
+    HandleWrap hw;
+    createConnection(hw);
+    lcb_INSTANCE *instance = hw.getLcb();
+    MockEnvironment *mock = MockEnvironment::getInstance();
+
+    const char *key = "testPerOperationTimeoutOnIdlePipeline";
+    removeKey(instance, key); /* warms the connection, after which the pipeline is idle */
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)deadline_store_callback);
+    lcb_U32 op_timeout = LCB_S2US(5);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
+    mock->hiccupNodes(3000, 1);
+
+    deadline_cookie cookie;
+    hrtime_t start = gethrtime();
+    schedule_upsert(instance, &cookie, key, LCB_S2US(1));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    mock->hiccupNodes(0, 0);
+
+    EXPECT_STATUS_EQ(LCB_ERR_TIMEOUT, cookie.status);
+    EXPECT_LT(LCB_NS2US(cookie.done - start), LCB_S2US(2));
+}
+
+/* A shorter deadline fires while a later one is already in flight. */
+TEST_F(MockUnitTest, testPerOperationTimeoutBehindLongerDeadline)
+{
+    SKIP_UNLESS_MOCK()
+
+    HandleWrap hw;
+    createConnection(hw);
+    lcb_INSTANCE *instance = hw.getLcb();
+    MockEnvironment *mock = MockEnvironment::getInstance();
+
+    const char *key = "testPerOperationTimeoutBehindLongerDeadline";
+    removeKey(instance, key);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)deadline_store_callback);
+    lcb_U32 op_timeout = LCB_S2US(5);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
+    mock->hiccupNodes(3000, 1);
+
+    deadline_cookie longer;
+    deadline_cookie shorter;
+    hrtime_t start = gethrtime();
+    schedule_upsert(instance, &longer, key, 0);
+    schedule_upsert(instance, &shorter, key, LCB_S2US(1));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    mock->hiccupNodes(0, 0);
+
+    EXPECT_STATUS_EQ(LCB_ERR_TIMEOUT, shorter.status);
+    EXPECT_LT(LCB_NS2US(shorter.done - start), LCB_S2US(2));
+    EXPECT_STATUS_EQ(LCB_SUCCESS, longer.status);
+}
+
+/* A per-operation timeout longer than LCB_CNTL_OP_TIMEOUT outlives it. */
+TEST_F(MockUnitTest, testPerOperationTimeoutLongerThanDefault)
+{
+    SKIP_UNLESS_MOCK()
+
+    HandleWrap hw;
+    createConnection(hw);
+    lcb_INSTANCE *instance = hw.getLcb();
+    MockEnvironment *mock = MockEnvironment::getInstance();
+
+    const char *key = "testPerOperationTimeoutLongerThanDefault";
+    removeKey(instance, key);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)deadline_store_callback);
+    lcb_U32 op_timeout = LCB_S2US(1);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
+    mock->hiccupNodes(2000, 1);
+
+    deadline_cookie cookie;
+    schedule_upsert(instance, &cookie, key, LCB_S2US(4));
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    mock->hiccupNodes(0, 0);
+
+    EXPECT_STATUS_EQ(LCB_SUCCESS, cookie.status);
+}
+
+/* Runs against a real server as well as the mock: a per-operation timeout of
+ * 1us has passed before the request is written, so the operation must fail
+ * with a timeout however fast the server answers. */
+TEST_F(MockUnitTest, testExpiredPerOperationDeadlineFailsFirst)
+{
+    HandleWrap hw;
+    createConnection(hw);
+    lcb_INSTANCE *instance = hw.getLcb();
+
+    const char *key = "testExpiredPerOperationDeadlineFailsFirst";
+    removeKey(instance, key);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)deadline_store_callback);
+    lcb_U32 op_timeout = LCB_S2US(10);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
+
+    deadline_cookie cookie;
+    schedule_upsert(instance, &cookie, key, 1);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+
+    EXPECT_STATUS_EQ(LCB_ERR_TIMEOUT, cookie.status);
+}
+
+/* The same against a real server, with an operation on the default timeout
+ * scheduled first on the same connection. */
+TEST_F(MockUnitTest, testExpiredPerOperationDeadlineBehindLongerOne)
+{
+    HandleWrap hw;
+    createConnection(hw);
+    lcb_INSTANCE *instance = hw.getLcb();
+
+    const char *key = "testExpiredPerOperationDeadlineBehindLongerOne";
+    removeKey(instance, key);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)deadline_store_callback);
+    lcb_U32 op_timeout = LCB_S2US(10);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
+
+    deadline_cookie longer;
+    deadline_cookie expired;
+    schedule_upsert(instance, &longer, key, 0);
+    schedule_upsert(instance, &expired, key, 1);
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+
+    EXPECT_STATUS_EQ(LCB_ERR_TIMEOUT, expired.status);
+    EXPECT_STATUS_EQ(LCB_SUCCESS, longer.status);
+}
 
 /* Two operations time out before anything is written, and the second is last
  * in the send queue. The operation scheduled between them still has to reach
@@ -1223,4 +1354,173 @@ TEST_F(MockUnitTest, testTimedOutPartialWriteKeepsStream)
     schedule_upsert(instance, &next, key, 0);
     lcb_wait(instance, LCB_WAIT_DEFAULT);
     EXPECT_STATUS_EQ(LCB_SUCCESS, next.status);
+}
+
+namespace
+{
+/* Configuration requests go through the same pipelines and rearm their timers:
+ * no monitor, no polling, and no refresh when a master is missing. */
+void quiet_config(lcb_INSTANCE *instance)
+{
+    instance->confmon->stop();
+    instance->confmon->stop_real();
+    lcb_cntl_setu32(instance, LCB_CNTL_CONFIG_POLL_INTERVAL, 0);
+    lcb_cntl_setu32(instance, LCB_CNTL_CONFDELAY_THRESH, LCB_S2US(60));
+    lcb_cntl_setu32(instance, LCB_CNTL_CONFERRTHRESH, 1000);
+}
+
+struct probe_ctx {
+    lcb_INSTANCE *instance;
+    std::function<void()> probe;
+};
+
+extern "C" void probe_callback(void *cookie)
+{
+    auto *ctx = static_cast<probe_ctx *>(cookie);
+    ctx->probe();
+    lcb_loop_unref(ctx->instance);
+}
+
+void deadline_get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
+{
+    deadline_cookie *cookie;
+    lcb_respget_cookie(resp, (void **)&cookie);
+    cookie->status = lcb_respget_status(resp);
+    cookie->done = gethrtime();
+}
+} // namespace
+
+/* An operation sent from the retry queue times out at its own deadline while
+ * one with a later deadline is in flight on the same connection. */
+TEST_F(MockUnitTest, testPerOperationTimeoutAfterRetry)
+{
+    SKIP_UNLESS_MOCK()
+
+    HandleWrap hw;
+    createConnection(hw);
+    lcb_INSTANCE *instance = hw.getLcb();
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    quiet_config(instance);
+
+    const char *key = "testPerOperationTimeoutAfterRetry";
+    removeKey(instance, key);
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)deadline_store_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)deadline_get_callback);
+    lcb_U32 op_timeout = LCB_S2US(5);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
+    mock->hiccupNodes(3000, 1);
+    hiccup_guard guard;
+
+    deadline_cookie longer;
+    deadline_cookie shorter;
+    hrtime_t start = gethrtime();
+    schedule_upsert(instance, &longer, key, 0);
+
+    /* without a master a read waits in the retry queue */
+    lcbvb_CONFIG *vbc = LCBT_VBCONFIG(instance);
+    int vb = lcbvb_k2vb(vbc, key, strlen(key));
+    RestoreCtx ctx{vbc, vb, vbc->vbuckets[vb].servers[0], false, instance};
+    vbc->vbuckets[vb].servers[0] = -1;
+    lcb_CMDGET *get;
+    lcb_cmdget_create(&get);
+    lcb_cmdget_key(get, key, strlen(key));
+    lcb_cmdget_timeout(get, LCB_S2US(2));
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_get(instance, &shorter, get));
+    lcb_cmdget_destroy(get);
+    lcbio_pTIMER timer = lcbio_timer_new(instance->iotable, &ctx, restore_master_callback);
+    lcb_loop_ref(instance);
+    lcbio_timer_rearm(timer, LCB_MS2US(100));
+    /* the read has left the retry queue and is still pending */
+    bool sent = false;
+    probe_ctx probe{instance, [&] { sent = instance->retryq->empty() && shorter.done == 0; }};
+    lcbio_pTIMER probe_timer = lcbio_timer_new(instance->iotable, &probe, probe_callback);
+    lcb_loop_ref(instance);
+    lcbio_timer_rearm(probe_timer, LCB_S2US(1));
+
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    lcbio_timer_destroy(timer);
+    lcbio_timer_destroy(probe_timer);
+    mock->hiccupNodes(0, 0);
+
+    ASSERT_TRUE(ctx.fired);
+    ASSERT_TRUE(sent);
+    /* a retried operation that times out reports the error that queued it */
+    EXPECT_STATUS_EQ(LCB_ERR_NO_MATCHING_SERVER, shorter.status);
+    EXPECT_LT(LCB_NS2US(shorter.done - start), LCB_S2US(3));
+    EXPECT_STATUS_EQ(LCB_SUCCESS, longer.status);
+}
+
+/* An operation moved to another node by a configuration change times out at
+ * its own deadline while one with a later deadline is in flight there. */
+TEST_F(MockUnitTest, testPerOperationTimeoutAfterRelocation)
+{
+    SKIP_UNLESS_MOCK()
+
+    HandleWrap hw;
+    createConnection(hw);
+    lcb_INSTANCE *instance = hw.getLcb();
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    quiet_config(instance);
+
+    lcbvb_CONFIG *vbc = LCBT_VBCONFIG(instance);
+    std::string key_stay("testPerOperationTimeoutAfterRelocation");
+    std::string key_move;
+    int vb_stay, ix_stay, vb_move, ix_move;
+    lcbvb_map_key(vbc, key_stay.c_str(), key_stay.size(), &vb_stay, &ix_stay);
+    for (int ii = 0; ii < 1000 && key_move.empty(); ii++) {
+        std::string candidate = key_stay + "_" + std::to_string(ii);
+        lcbvb_map_key(vbc, candidate.c_str(), candidate.size(), &vb_move, &ix_move);
+        if (ix_move != ix_stay) {
+            key_move = candidate;
+        }
+    }
+    ASSERT_FALSE(key_move.empty());
+    removeKey(instance, key_stay);
+    removeKey(instance, key_move);
+
+    /* The same map with the node of key_move on an unreachable KV port, so it
+     * is no longer the same server, and its vbucket mastered by the node of
+     * key_stay. */
+    char *saved = lcbvb_save_json(vbc);
+    Json::Value json;
+    bool parsed = Json::Reader().parse(saved, json);
+    free(saved);
+    ASSERT_TRUE(parsed);
+    json["nodesExt"][ix_move]["services"]["kv"] = 1;
+    json["vBucketServerMap"]["vBucketMap"][vb_move][0] = ix_stay;
+    std::unique_ptr<lcbvb_CONFIG, void (*)(lcbvb_CONFIG *)> new_vbc(lcbvb_create(), lcbvb_destroy);
+    ASSERT_EQ(0, lcbvb_load_json(new_vbc.get(), Json::FastWriter().write(json).c_str()));
+
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)deadline_store_callback);
+    lcb_U32 op_timeout = LCB_S2US(5);
+    ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &op_timeout));
+    mock->hiccupNodes(3000, 1);
+    hiccup_guard guard;
+
+    deadline_cookie longer;
+    deadline_cookie shorter;
+    hrtime_t start = gethrtime();
+    schedule_upsert(instance, &longer, key_stay.c_str(), 0);
+    schedule_upsert(instance, &shorter, key_move.c_str(), LCB_S2US(1));
+    ReplaceConfigCtx ctx{instance, new_vbc.release(), false};
+    lcbio_pTIMER timer = lcbio_timer_new(instance->iotable, &ctx, replace_config_callback);
+    lcb_loop_ref(instance);
+    lcbio_timer_rearm(timer, LCB_MS2US(100));
+    /* the configuration changed while the moved operation was pending */
+    bool moved = false;
+    probe_ctx probe{instance, [&] { moved = ctx.fired && shorter.done == 0; }};
+    lcbio_pTIMER probe_timer = lcbio_timer_new(instance->iotable, &probe, probe_callback);
+    lcb_loop_ref(instance);
+    lcbio_timer_rearm(probe_timer, LCB_MS2US(500));
+
+    lcb_wait(instance, LCB_WAIT_DEFAULT);
+    lcbio_timer_destroy(timer);
+    lcbio_timer_destroy(probe_timer);
+    mock->hiccupNodes(0, 0);
+
+    ASSERT_TRUE(ctx.fired);
+    ASSERT_TRUE(moved);
+    EXPECT_STATUS_EQ(LCB_ERR_TIMEOUT, shorter.status);
+    EXPECT_LT(LCB_NS2US(shorter.done - start), LCB_S2US(2));
+    EXPECT_STATUS_EQ(LCB_SUCCESS, longer.status);
 }

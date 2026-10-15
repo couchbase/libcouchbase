@@ -290,6 +290,7 @@ void RetryQueue::flush(bool throttle)
                     LCB_NS2US(now - op->start), LCB_NS2US(op->deadline - now));
             mc_PIPELINE *newpl = cq->pipelines[srvix];
             mcreq_enqueue_packet(newpl, op->pkt);
+            mcreq_rearm_timeout(newpl); /* the timer has to see this packet's deadline */
             newpl->flush_start(newpl);
             erase(op);
         }
