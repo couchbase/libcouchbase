@@ -108,6 +108,24 @@ static int Cis_closed(lcb_io_opt_t io, lcb_sockdata_t *sd, int flags)
     lcbio_XSSL *xs = IOTSSL_FROM_IOPS(io);
     return xs->orig->u_io.completion.is_closed(IOT_ARG(xs->orig), sd, flags);
 }
+static int Ecntl(lcb_io_opt_t io, lcb_socket_t sock, int mode, int option, void *arg)
+{
+    lcbio_XSSL *xs = IOTSSL_FROM_IOPS(io);
+    int rv = xs->orig->u_io.v0.io.cntl(IOT_ARG(xs->orig), sock, mode, option, arg);
+    if (rv != 0) {
+        IOTSSL_ERRNO(xs) = IOT_ERRNO(xs->orig);
+    }
+    return rv;
+}
+static int Ccntl(lcb_io_opt_t io, lcb_sockdata_t *sd, int mode, int option, void *arg)
+{
+    lcbio_XSSL *xs = IOTSSL_FROM_IOPS(io);
+    int rv = xs->orig->u_io.completion.cntl(IOT_ARG(xs->orig), sd, mode, option, arg);
+    if (rv != 0) {
+        IOTSSL_ERRNO(xs) = IOT_ERRNO(xs->orig);
+    }
+    return rv;
+}
 
 /******************************************************************************
  ******************************************************************************
@@ -134,8 +152,14 @@ void iotssl_init_common(lcbio_XSSL *xs, lcbio_TABLE *orig, SSL_CTX *sctx)
         base->u_io.v0.ev.create = create_event;
         base->u_io.v0.ev.destroy = destroy_event;
         base->u_io.v0.io.is_closed = Eis_closed;
+        if (orig->u_io.v0.io.cntl != NULL) {
+            base->u_io.v0.io.cntl = Ecntl;
+        }
     } else {
         base->u_io.completion.is_closed = Cis_closed;
+        if (orig->u_io.completion.cntl != NULL) {
+            base->u_io.completion.cntl = Ccntl;
+        }
     }
 
     lcbio_table_ref(xs->orig);
