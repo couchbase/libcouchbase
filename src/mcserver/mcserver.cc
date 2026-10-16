@@ -330,7 +330,14 @@ bool Server::handle_unknown_collection(MemcachedResponse &resp, mc_PACKET *oldpk
     wrapper.instance = instance;
     wrapper.timeout = LCB_NS2US(MCREQ_PKT_RDATA(wrapper.pkt)->deadline - now);
     mc_PIPELINE *pipeline{this};
-    auto operation = [orig_status, pipeline](const lcb_RESPGETCID *, packet_wrapper *wrp) {
+    auto operation = [orig_status, pipeline](const lcb_RESPGETCID *resp, packet_wrapper *wrp) {
+        if (resp->ctx.rc != LCB_SUCCESS) {
+            /* wrp->cid is still 0, the id of _default._default: rescheduling would address it.
+             * Past the deadline the operation fails with LCB_ERR_TIMEOUT, not the GET_CID error. */
+            lcb_STATUS rc = gethrtime() >= MCREQ_PKT_RDATA(wrp->pkt)->deadline ? LCB_ERR_TIMEOUT : resp->ctx.rc;
+            wrp->instance->retryq->fail((mc_EXPACKET *)wrp->pkt, rc, orig_status);
+            return LCB_SUCCESS;
+        }
         if ((wrp->pkt->flags & MCREQ_F_NOCID) == 0) {
             wrp->pkt = mcreq_set_cid(pipeline, wrp->pkt, wrp->cid);
         }

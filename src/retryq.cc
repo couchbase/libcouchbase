@@ -517,6 +517,12 @@ void RetryQueue::config_only_add(mc_EXPACKET *pkt)
     add(pkt, LCB_ERR_UNSUPPORTED_OPERATION, PROTOCOL_BINARY_RESPONSE_CONFIG_ONLY, nullptr, 0);
 }
 
+void RetryQueue::fail(mc_EXPACKET *pkt, lcb_STATUS err, protocol_binary_response_status status)
+{
+    add(pkt, err, status, nullptr, 0);
+    fail(static_cast<RetryOp *>(mcreq_epkt_find(pkt, RETRY_PKT_KEY)), err, gethrtime());
+}
+
 static void fallback_handler(mc_CMDQUEUE *cq, mc_PACKET *pkt)
 {
     auto *instance = reinterpret_cast<lcb_INSTANCE *>(cq->cqdata);

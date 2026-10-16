@@ -594,6 +594,8 @@ struct operation_result {
     lcb_STATUS rc{LCB_SUCCESS};
     std::string key{};
     std::string value{};
+    std::string scope{};
+    std::string collection{};
 };
 
 extern "C" {
@@ -609,6 +611,14 @@ static void store_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTOR
     res->rc = lcb_respstore_status(resp);
     lcb_respstore_key(resp, &ptr, &len);
     res->key = std::string(ptr, len);
+    const lcb_KEY_VALUE_ERROR_CONTEXT *ctx = nullptr;
+    lcb_respstore_error_context(resp, &ctx);
+    if (lcb_errctx_kv_collection(ctx, &ptr, &len) == LCB_SUCCESS && ptr != nullptr) {
+        res->collection = std::string(ptr, len);
+    }
+    if (lcb_errctx_kv_scope(ctx, &ptr, &len) == LCB_SUCCESS && ptr != nullptr) {
+        res->scope = std::string(ptr, len);
+    }
 }
 
 static void get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
@@ -728,4 +738,73 @@ TEST_F(CollectionUnitTest, testItDoesNotRouteKeysToDefaultCollectionOnScopeDrop)
         ASSERT_EQ(LCB_ERR_DOCUMENT_NOT_FOUND, res.rc);
         ASSERT_EQ(key, res.key);
     }
+}
+
+/* A collection is dropped after its id was cached. The store fails as an operation on that
+ * collection. Rescheduled with collection id 0, it would be written to _default._default whenever
+ * the re-resolution fails before the deadline. */
+TEST_F(CollectionUnitTest, testDroppedCachedCollectionDoesNotFallBackToDefault)
+{
+    SKIP_IF_MOCK()
+    SKIP_IF_CLUSTER_VERSION_IS_LOWER_THAN(MockEnvironment::VERSION_70)
+    HandleWrap hw;
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
+
+    lcb_install_callback(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
+    lcb_install_callback(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
+
+    std::string key(unique_name("ccbc1551"));
+    std::string val("now_" + std::to_string(time(nullptr)));
+    std::string scope(unique_name("scope1551")), collection(unique_name("collection1551"));
+
+    create_scope(instance, scope);
+    create_collection(instance, scope, collection);
+
+    auto upsert = [&](uint32_t timeout_us) {
+        operation_result res{};
+        lcb_CMDSTORE *cmd;
+        lcb_cmdstore_create(&cmd, LCB_STORE_UPSERT);
+        lcb_cmdstore_timeout(cmd, timeout_us);
+        lcb_cmdstore_collection(cmd, scope.c_str(), scope.size(), collection.c_str(), collection.size());
+        lcb_cmdstore_key(cmd, key.c_str(), key.size());
+        lcb_cmdstore_value(cmd, val.c_str(), val.size());
+        EXPECT_STATUS_EQ(LCB_SUCCESS, lcb_store(instance, &res, cmd));
+        lcb_cmdstore_destroy(cmd);
+        EXPECT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+        return res;
+    };
+
+    {
+        // caches the collection id
+        operation_result res = upsert(LCB_S2US(10));
+        ASSERT_TRUE(res.called);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, res.rc);
+    }
+
+    drop_collection(instance, scope, collection);
+    sleep(1);
+
+    {
+        operation_result res = upsert(LCB_MS2US(500));
+        ASSERT_TRUE(res.called);
+        ASSERT_EQ(LCB_ERR_TIMEOUT, res.rc);
+        ASSERT_EQ(scope, res.scope);
+        ASSERT_EQ(collection, res.collection);
+    }
+
+    {
+        // the default collection does not have the key
+        operation_result res{};
+        lcb_CMDGET *cmd;
+        lcb_cmdget_create(&cmd);
+        lcb_cmdget_key(cmd, key.c_str(), key.size());
+        ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_get(instance, &res, cmd));
+        lcb_cmdget_destroy(cmd);
+        ASSERT_STATUS_EQ(LCB_SUCCESS, lcb_wait(instance, LCB_WAIT_DEFAULT));
+        ASSERT_TRUE(res.called);
+        ASSERT_EQ(LCB_ERR_DOCUMENT_NOT_FOUND, res.rc);
+    }
+
+    drop_scope(instance, scope);
 }

@@ -91,6 +91,18 @@ class RetryQueue
     void config_only_add(mc_EXPACKET *pkt);
 
     /**
+     * @brief Fail a detached packet now, without retrying it
+     *
+     * The packet passes through add() first, so it is logged as added, counted in
+     * packets_retried and may arm the retry timer before it fails.
+     *
+     * @param detchpkt A detached packet allocated with mcreq_renew_packet()
+     * @param err the error passed to the operation callback
+     * @param status the server status the packet was last answered with
+     */
+    void fail(mc_EXPACKET *detchpkt, lcb_STATUS err, protocol_binary_response_status status);
+
+    /**
      * @brief Retry all queued operations
      *
      * This should normally be called when a new server connection is made or when
